@@ -1,0 +1,369 @@
+{
+  "_comment": "HELIOS Installer – Pre-built Configuration Presets (v1.0)",
+
+  "presets": {
+
+    "minimal": {
+      "name": "Minimal Setup",
+      "description": "Fastest install – only essential components. Ideal for quick evaluation or resource-constrained systems.",
+      "estimated_time_minutes": 30,
+      "config": {
+        "installation": {
+          "name": "HELIOS Minimal",
+          "auto_reboot": false,
+          "logging_level": "WARNING"
+        },
+        "phases": {
+          "enabled": [1, 2, 7],
+          "rollback_on_error": false
+        },
+        "partitions": {
+          "C": { "enabled": true, "size_gb": 100, "label": "System", "purpose": "os" },
+          "D": { "enabled": true, "size_gb": 200, "label": "Data",   "purpose": "data" },
+          "E": { "enabled": false },
+          "F": { "enabled": false }
+        },
+        "security": {
+          "defender":      { "enabled": true,  "realtime_protection": true, "cloud_protection": false },
+          "bitlocker":     { "enabled": false },
+          "firewall":      { "enabled": true,  "inbound_policy": "allow" },
+          "applocker":     { "enabled": false },
+          "audit_logging": { "enabled": false },
+          "usb":           { "restrict": false }
+        },
+        "users": [
+          { "name": "HeliosAdmin", "type": "administrator", "enabled": true }
+        ],
+        "layers": {
+          "layer1_gui":          true,
+          "layer2_apps":         true,
+          "layer3_optimization": false,
+          "layer4_security":     false,
+          "layer5_data":         false,
+          "layer6_cloud":        false,
+          "layer7_hardware":     true
+        },
+        "optimization": { "level": "minimal" },
+        "features": {
+          "defender": true,
+          "bitlocker": false,
+          "firewall": true,
+          "applocker": false,
+          "audit_logging": false,
+          "usb_restrictions": false,
+          "seven_layer_setup": false,
+          "optimization": false
+        }
+      }
+    },
+
+    "developer": {
+      "name": "Developer Setup",
+      "description": "Optimized for software development – extra tools, relaxed security, dev-focused storage layout.",
+      "estimated_time_minutes": 75,
+      "config": {
+        "installation": {
+          "name": "HELIOS Developer",
+          "auto_reboot": false,
+          "logging_level": "INFO"
+        },
+        "phases": {
+          "enabled": [1, 2, 3, 4, 5, 6, 7],
+          "rollback_on_error": true
+        },
+        "partitions": {
+          "C": { "enabled": true, "size_gb": 150, "label": "System",   "purpose": "os"   },
+          "D": { "enabled": true, "size_gb": 500, "label": "Dev",      "purpose": "dev"  },
+          "E": { "enabled": true, "size_gb": 200, "label": "Projects", "purpose": "data" },
+          "F": { "enabled": false }
+        },
+        "security": {
+          "defender":      { "enabled": true, "realtime_protection": true, "cloud_protection": false },
+          "bitlocker":     { "enabled": false },
+          "firewall":      { "enabled": true, "inbound_policy": "allow", "outbound_policy": "allow" },
+          "applocker":     { "enabled": false },
+          "audit_logging": { "enabled": true, "level": "standard" },
+          "usb":           { "restrict": false, "allow_storage": true }
+        },
+        "users": [
+          { "name": "Developer", "type": "administrator", "enabled": true, "groups": ["Administrators", "docker-users"] },
+          { "name": "HeliosUser", "type": "standard", "enabled": false }
+        ],
+        "layers": {
+          "layer1_gui":          true,
+          "layer2_apps":         true,
+          "layer3_optimization": true,
+          "layer4_security":     true,
+          "layer5_data":         true,
+          "layer6_cloud":        true,
+          "layer7_hardware":     true
+        },
+        "optimization": {
+          "level": "standard",
+          "startup": { "disable_apps": ["OneDrive", "Teams"], "aggressive": false },
+          "power": { "plan": "high_performance" }
+        },
+        "features": {
+          "defender": true,
+          "bitlocker": false,
+          "firewall": true,
+          "applocker": false,
+          "audit_logging": true,
+          "usb_restrictions": false,
+          "seven_layer_setup": true,
+          "optimization": true
+        }
+      }
+    },
+
+    "secure": {
+      "name": "Secure Setup",
+      "description": "Maximum security hardening – all protection layers enabled, verbose auditing, USB restricted.",
+      "estimated_time_minutes": 90,
+      "config": {
+        "installation": {
+          "name": "HELIOS Secure",
+          "auto_reboot": false,
+          "logging_level": "INFO"
+        },
+        "phases": {
+          "enabled": [1, 2, 3, 4, 5, 6, 7],
+          "rollback_on_error": true
+        },
+        "partitions": {
+          "C": { "enabled": true, "size_gb": 200, "label": "System", "purpose": "os",   "encrypt": true, "encrypt_algorithm": "AES-256" },
+          "D": { "enabled": true, "size_gb": 500, "label": "Data",   "purpose": "data", "encrypt": true, "encrypt_algorithm": "AES-256" },
+          "E": { "enabled": true, "size_gb": 300, "label": "Backup", "purpose": "backup", "encrypt": true, "encrypt_algorithm": "AES-256" },
+          "F": { "enabled": false }
+        },
+        "security": {
+          "defender": {
+            "enabled": true,
+            "realtime_protection": true,
+            "cloud_protection": true,
+            "automatic_sample_submission": true
+          },
+          "bitlocker": {
+            "enabled": true,
+            "drives": ["C", "D", "E"],
+            "algorithm": "AES-256",
+            "require_tpm": true,
+            "recovery_key_path": "E:\\Recovery"
+          },
+          "firewall": {
+            "enabled": true,
+            "inbound_policy": "block",
+            "outbound_policy": "allow"
+          },
+          "applocker": {
+            "enabled": true,
+            "mode": "enforce"
+          },
+          "audit_logging": {
+            "enabled": true,
+            "level": "verbose",
+            "retention_days": 365
+          },
+          "usb": {
+            "restrict": true,
+            "allow_hid": true,
+            "allow_storage": false
+          }
+        },
+        "users": [
+          { "name": "SecureAdmin", "type": "administrator", "enabled": true, "password_policy": "strong" },
+          { "name": "HeliosUser",  "type": "standard",      "enabled": true, "password_policy": "strong" }
+        ],
+        "layers": {
+          "layer1_gui":          true,
+          "layer2_apps":         true,
+          "layer3_optimization": true,
+          "layer4_security":     true,
+          "layer5_data":         true,
+          "layer6_cloud":        false,
+          "layer7_hardware":     true
+        },
+        "optimization": { "level": "standard" },
+        "features": {
+          "defender": true,
+          "bitlocker": true,
+          "firewall": true,
+          "applocker": true,
+          "audit_logging": true,
+          "usb_restrictions": true,
+          "seven_layer_setup": true,
+          "optimization": true
+        }
+      }
+    },
+
+    "gaming": {
+      "name": "Gaming Setup",
+      "description": "Maximum performance for gaming – aggressive optimization, dedicated games drive, network tuning.",
+      "estimated_time_minutes": 60,
+      "config": {
+        "installation": {
+          "name": "HELIOS Gaming",
+          "auto_reboot": false,
+          "logging_level": "WARNING"
+        },
+        "phases": {
+          "enabled": [1, 2, 3, 4, 5, 7],
+          "rollback_on_error": true
+        },
+        "partitions": {
+          "C": { "enabled": true, "size_gb": 150, "label": "System", "purpose": "os"    },
+          "D": { "enabled": true, "size_gb": 300, "label": "Data",   "purpose": "data"  },
+          "E": { "enabled": false },
+          "F": { "enabled": true, "size_gb": 1000, "label": "Games", "purpose": "games" }
+        },
+        "security": {
+          "defender":      { "enabled": true,  "realtime_protection": true, "cloud_protection": false },
+          "bitlocker":     { "enabled": false },
+          "firewall":      { "enabled": true,  "inbound_policy": "allow" },
+          "applocker":     { "enabled": false },
+          "audit_logging": { "enabled": false },
+          "usb":           { "restrict": false, "allow_storage": true }
+        },
+        "users": [
+          { "name": "Gamer",     "type": "administrator", "enabled": true  },
+          { "name": "HeliosUser","type": "standard",      "enabled": false }
+        ],
+        "layers": {
+          "layer1_gui":          true,
+          "layer2_apps":         true,
+          "layer3_optimization": true,
+          "layer4_security":     true,
+          "layer5_data":         false,
+          "layer6_cloud":        false,
+          "layer7_hardware":     true
+        },
+        "optimization": {
+          "level": "aggressive",
+          "startup": {
+            "disable_apps": ["OneDrive", "Teams", "Spotify", "Discord"],
+            "aggressive": true
+          },
+          "services": { "disable_count": 20, "keep_essential": true },
+          "power": { "plan": "ultimate" },
+          "visual_effects": "performance",
+          "network": "gaming"
+        },
+        "features": {
+          "defender": true,
+          "bitlocker": false,
+          "firewall": true,
+          "applocker": false,
+          "audit_logging": false,
+          "usb_restrictions": false,
+          "seven_layer_setup": true,
+          "optimization": true
+        }
+      }
+    },
+
+    "enterprise": {
+      "name": "Enterprise Setup",
+      "description": "Full compliance posture – all security layers, audit everything, domain-ready, enterprise networking.",
+      "estimated_time_minutes": 120,
+      "config": {
+        "installation": {
+          "name": "HELIOS Enterprise",
+          "auto_reboot": false,
+          "logging_level": "INFO"
+        },
+        "phases": {
+          "enabled": [1, 2, 3, 4, 5, 6, 7],
+          "rollback_on_error": true
+        },
+        "partitions": {
+          "C": { "enabled": true, "size_gb": 250, "label": "System",    "purpose": "os",     "encrypt": true, "encrypt_algorithm": "AES-256" },
+          "D": { "enabled": true, "size_gb": 500, "label": "UserData",  "purpose": "data",   "encrypt": true, "encrypt_algorithm": "AES-256" },
+          "E": { "enabled": true, "size_gb": 300, "label": "Backup",    "purpose": "backup", "encrypt": true, "encrypt_algorithm": "AES-256" },
+          "F": { "enabled": false }
+        },
+        "security": {
+          "defender": {
+            "enabled": true,
+            "realtime_protection": true,
+            "cloud_protection": true,
+            "automatic_sample_submission": false
+          },
+          "bitlocker": {
+            "enabled": true,
+            "drives": ["C", "D", "E"],
+            "algorithm": "AES-256",
+            "require_tpm": true,
+            "recovery_key_path": "E:\\Recovery"
+          },
+          "firewall": {
+            "enabled": true,
+            "inbound_policy": "block",
+            "outbound_policy": "allow"
+          },
+          "applocker": {
+            "enabled": true,
+            "mode": "enforce"
+          },
+          "audit_logging": {
+            "enabled": true,
+            "level": "verbose",
+            "retention_days": 365,
+            "max_log_size_mb": 500
+          },
+          "usb": {
+            "restrict": true,
+            "allow_hid": true,
+            "allow_storage": false
+          }
+        },
+        "users": [
+          { "name": "EnterpriseAdmin", "type": "administrator", "enabled": true, "password_policy": "strong", "groups": ["Administrators", "Domain Admins"] },
+          { "name": "ITSupport",       "type": "administrator", "enabled": true, "password_policy": "strong", "groups": ["Administrators"] },
+          { "name": "EndUser",         "type": "standard",      "enabled": true, "password_policy": "strong", "groups": ["Users"] }
+        ],
+        "layers": {
+          "layer1_gui":          true,
+          "layer2_apps":         true,
+          "layer3_optimization": true,
+          "layer4_security":     true,
+          "layer5_data":         true,
+          "layer6_cloud":        true,
+          "layer7_hardware":     true
+        },
+        "optimization": { "level": "standard" },
+        "features": {
+          "defender": true,
+          "bitlocker": true,
+          "firewall": true,
+          "applocker": true,
+          "audit_logging": true,
+          "usb_restrictions": true,
+          "seven_layer_setup": true,
+          "optimization": true
+        }
+      }
+    },
+
+    "custom": {
+      "name": "Custom",
+      "description": "User-defined configuration. Copy this preset and modify every section to match your requirements.",
+      "estimated_time_minutes": null,
+      "config": {
+        "_comment": "Replace values below with your own settings.",
+        "installation": {
+          "name": "HELIOS Custom",
+          "auto_reboot": false,
+          "logging_level": "INFO"
+        },
+        "phases": { "enabled": [1, 2, 3, 4, 5, 6, 7] },
+        "partitions": {},
+        "security": {},
+        "users": [],
+        "layers": {},
+        "optimization": { "level": "standard" },
+        "features": {}
+      }
+    }
+  }
+}

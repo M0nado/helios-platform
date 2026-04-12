@@ -1,0 +1,149 @@
+{
+  "_preset": "enterprise",
+  "_description": "Enterprise / compliance setup – full security stack, verbose auditing, encrypted drives, multiple admin accounts.",
+
+  "installation": {
+    "name": "HELIOS Enterprise",
+    "version": "1.0",
+    "auto_reboot": false,
+    "logging_level": "INFO",
+    "dry_run": false
+  },
+
+  "phases": {
+    "enabled": [1, 2, 3, 4, 5, 6, 7],
+    "rollback_on_error": true,
+    "continue_on_warning": false
+  },
+
+  "partitions": {
+    "C": { "enabled": true, "size_gb": 250, "label": "System",   "purpose": "os",     "encrypt": true, "encrypt_algorithm": "AES-256" },
+    "D": { "enabled": true, "size_gb": 500, "label": "UserData", "purpose": "data",   "encrypt": true, "encrypt_algorithm": "AES-256" },
+    "E": { "enabled": true, "size_gb": 300, "label": "Backup",   "purpose": "backup", "encrypt": true, "encrypt_algorithm": "AES-256" },
+    "F": { "enabled": false }
+  },
+
+  "security": {
+    "defender": {
+      "enabled": true,
+      "realtime_protection": true,
+      "cloud_protection": true,
+      "automatic_sample_submission": false
+    },
+    "bitlocker": {
+      "enabled": true,
+      "drives": ["C", "D", "E"],
+      "algorithm": "AES-256",
+      "require_tpm": true,
+      "recovery_key_path": "E:\\Recovery"
+    },
+    "firewall": {
+      "enabled": true,
+      "inbound_policy": "block",
+      "outbound_policy": "allow",
+      "custom_rules": [
+        { "name": "Allow RDP from Corp", "direction": "inbound", "port": 3389, "protocol": "TCP", "action": "allow", "source_ip": "10.0.0.0/8" },
+        { "name": "Allow HTTPS",         "direction": "inbound", "port": 443,  "protocol": "TCP", "action": "allow" }
+      ]
+    },
+    "applocker": {
+      "enabled": true,
+      "mode": "enforce",
+      "extra_allowed_publishers": [
+        "O=MICROSOFT CORPORATION, L=REDMOND, S=WASHINGTON, C=US"
+      ],
+      "extra_allowed_paths": [
+        "%PROGRAMFILES%\\Company\\*"
+      ]
+    },
+    "audit_logging": {
+      "enabled": true,
+      "level": "verbose",
+      "log_path": "E:\\Logs\\Audit",
+      "max_log_size_mb": 1000,
+      "retention_days": 365
+    },
+    "usb": {
+      "restrict": true,
+      "allow_hid": true,
+      "allow_storage": false,
+      "whitelist_vendor_ids": []
+    }
+  },
+
+  "users": [
+    {
+      "name": "EnterpriseAdmin",
+      "display_name": "Enterprise Administrator",
+      "type": "administrator",
+      "enabled": true,
+      "password_policy": "strong",
+      "groups": ["Administrators", "Domain Admins"]
+    },
+    {
+      "name": "ITSupport",
+      "display_name": "IT Support Account",
+      "type": "administrator",
+      "enabled": true,
+      "password_policy": "strong",
+      "groups": ["Administrators"]
+    },
+    {
+      "name": "EndUser",
+      "display_name": "Standard End User",
+      "type": "standard",
+      "enabled": true,
+      "password_policy": "strong",
+      "groups": ["Users"]
+    },
+    {
+      "name": "ServiceAccount",
+      "display_name": "Service Account",
+      "type": "service",
+      "enabled": true,
+      "password_policy": "strong",
+      "groups": ["Service Accounts"]
+    }
+  ],
+
+  "layers": {
+    "layer1_gui":          true,
+    "layer2_apps":         true,
+    "layer3_optimization": true,
+    "layer4_security":     true,
+    "layer5_data":         true,
+    "layer6_cloud":        true,
+    "layer7_hardware":     true
+  },
+
+  "optimization": {
+    "level": "standard",
+    "power": { "plan": "balanced" }
+  },
+
+  "features": {
+    "defender": true,
+    "bitlocker": true,
+    "firewall": true,
+    "applocker": true,
+    "audit_logging": true,
+    "usb_restrictions": true,
+    "seven_layer_setup": true,
+    "optimization": true
+  },
+
+  "hooks": {
+    "pre_install":  "hooks/enterprise_pre_check.ps1",
+    "post_install": "hooks/enterprise_compliance_verify.ps1",
+    "pre_phase": {
+      "3": "hooks/before_security.ps1",
+      "6": "hooks/before_cloud.ps1"
+    },
+    "post_phase": {
+      "3": "hooks/after_security.ps1",
+      "4": "hooks/after_security_policy.ps1",
+      "7": "hooks/final_compliance_report.ps1"
+    },
+    "on_error": "hooks/enterprise_rollback.ps1"
+  }
+}

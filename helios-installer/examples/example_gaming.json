@@ -1,0 +1,107 @@
+{
+  "_preset": "gaming",
+  "_description": "Gaming-optimized setup – maximum performance, dedicated games drive, aggressive service trimming.",
+
+  "installation": {
+    "name": "HELIOS Gaming",
+    "version": "1.0",
+    "auto_reboot": false,
+    "logging_level": "WARNING",
+    "dry_run": false
+  },
+
+  "phases": {
+    "enabled": [1, 2, 3, 4, 5, 7],
+    "rollback_on_error": true,
+    "continue_on_warning": true
+  },
+
+  "partitions": {
+    "C": { "enabled": true, "size_gb": 150,  "label": "System", "purpose": "os",    "encrypt": false },
+    "D": { "enabled": true, "size_gb": 300,  "label": "Data",   "purpose": "data",  "encrypt": false },
+    "E": { "enabled": false },
+    "F": { "enabled": true, "size_gb": 1000, "label": "Games",  "purpose": "games", "encrypt": false }
+  },
+
+  "security": {
+    "defender": {
+      "enabled": true,
+      "realtime_protection": true,
+      "cloud_protection": false,
+      "automatic_sample_submission": false
+    },
+    "bitlocker":     { "enabled": false },
+    "firewall": {
+      "enabled": true,
+      "inbound_policy": "allow",
+      "outbound_policy": "allow"
+    },
+    "applocker":     { "enabled": false },
+    "audit_logging": { "enabled": false },
+    "usb":           { "restrict": false, "allow_hid": true, "allow_storage": true }
+  },
+
+  "users": [
+    {
+      "name": "Gamer",
+      "display_name": "Gaming Account",
+      "type": "administrator",
+      "enabled": true,
+      "password_policy": "standard",
+      "groups": ["Administrators"]
+    }
+  ],
+
+  "layers": {
+    "layer1_gui":          true,
+    "layer2_apps":         true,
+    "layer3_optimization": true,
+    "layer4_security":     true,
+    "layer5_data":         false,
+    "layer6_cloud":        false,
+    "layer7_hardware":     true
+  },
+
+  "optimization": {
+    "level": "aggressive",
+    "startup": {
+      "disable_apps": ["OneDrive", "Teams", "Spotify", "Discord", "XboxApp"],
+      "aggressive": true
+    },
+    "services": {
+      "disable_count": 20,
+      "keep_essential": true,
+      "custom_disable": ["DiagTrack", "SysMain", "WSearch"],
+      "custom_enable":  []
+    },
+    "power": {
+      "plan": "ultimate",
+      "custom_settings": {
+        "sleep_timeout_minutes": 0,
+        "hibernate": false
+      }
+    },
+    "visual_effects": "performance",
+    "memory_management": "gaming",
+    "network": "gaming"
+  },
+
+  "features": {
+    "defender": true,
+    "bitlocker": false,
+    "firewall": true,
+    "applocker": false,
+    "audit_logging": false,
+    "usb_restrictions": false,
+    "seven_layer_setup": true,
+    "optimization": true
+  },
+
+  "hooks": {
+    "pre_install":  "",
+    "post_install": "hooks/gaming_tweaks.ps1",
+    "pre_phase":  {},
+    "post_phase": { "3": "hooks/gaming_optimize.ps1" },
+    "on_error":   ""
+  }
+}

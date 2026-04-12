@@ -1,0 +1,108 @@
+{
+  "_preset": "developer",
+  "_description": "Developer-focused setup with extra tools, relaxed security, and a dedicated development drive.",
+
+  "installation": {
+    "name": "HELIOS Developer",
+    "version": "1.0",
+    "auto_reboot": false,
+    "logging_level": "INFO",
+    "dry_run": false
+  },
+
+  "phases": {
+    "enabled": [1, 2, 3, 4, 5, 6, 7],
+    "rollback_on_error": true,
+    "continue_on_warning": true
+  },
+
+  "partitions": {
+    "C": { "enabled": true, "size_gb": 150, "label": "System",   "purpose": "os",   "encrypt": false },
+    "D": { "enabled": true, "size_gb": 500, "label": "Dev",      "purpose": "dev",  "encrypt": false },
+    "E": { "enabled": true, "size_gb": 200, "label": "Projects", "purpose": "data", "encrypt": false },
+    "F": { "enabled": false }
+  },
+
+  "security": {
+    "defender": {
+      "enabled": true,
+      "realtime_protection": true,
+      "cloud_protection": false,
+      "automatic_sample_submission": false
+    },
+    "bitlocker":     { "enabled": false },
+    "firewall": {
+      "enabled": true,
+      "inbound_policy": "allow",
+      "outbound_policy": "allow",
+      "custom_rules": [
+        { "name": "Allow SSH",        "direction": "inbound", "port": 22,   "protocol": "TCP", "action": "allow" },
+        { "name": "Allow HTTP Dev",   "direction": "inbound", "port": 3000, "protocol": "TCP", "action": "allow" },
+        { "name": "Allow HTTPS Dev",  "direction": "inbound", "port": 4000, "protocol": "TCP", "action": "allow" },
+        { "name": "Allow Docker API", "direction": "inbound", "port": 2375, "protocol": "TCP", "action": "allow" }
+      ]
+    },
+    "applocker":     { "enabled": false },
+    "audit_logging": { "enabled": true, "level": "standard", "retention_days": 14 },
+    "usb":           { "restrict": false, "allow_storage": true }
+  },
+
+  "users": [
+    {
+      "name": "Developer",
+      "display_name": "Developer Account",
+      "type": "administrator",
+      "enabled": true,
+      "password_policy": "standard",
+      "groups": ["Administrators", "docker-users"]
+    }
+  ],
+
+  "layers": {
+    "layer1_gui":          true,
+    "layer2_apps":         true,
+    "layer3_optimization": true,
+    "layer4_security":     true,
+    "layer5_data":         true,
+    "layer6_cloud":        true,
+    "layer7_hardware":     true
+  },
+
+  "optimization": {
+    "level": "standard",
+    "startup": {
+      "disable_apps": ["OneDrive", "Teams", "Skype"],
+      "aggressive": false
+    },
+    "services": {
+      "disable_count": 10,
+      "keep_essential": true,
+      "custom_disable": ["DiagTrack"],
+      "custom_enable":  []
+    },
+    "power": {
+      "plan": "high_performance"
+    },
+    "visual_effects": "system_default",
+    "network": "standard"
+  },
+
+  "features": {
+    "defender": true,
+    "bitlocker": false,
+    "firewall": true,
+    "applocker": false,
+    "audit_logging": true,
+    "usb_restrictions": false,
+    "seven_layer_setup": true,
+    "optimization": true
+  },
+
+  "hooks": {
+    "pre_install":  "",
+    "post_install": "hooks/install_dev_tools.ps1",
+    "pre_phase":  {},
+    "post_phase": {},
+    "on_error":   ""
+  }
+}

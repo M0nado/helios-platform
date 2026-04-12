@@ -1,0 +1,184 @@
+{
+  "_comment": "HELIOS Installer – Default Configuration Template (v1.0)",
+
+  "installation": {
+    "name": "HELIOS Setup",
+    "version": "1.0",
+    "auto_reboot": false,
+    "logging_level": "INFO",
+    "log_path": "C:\\HELIOS\\Logs",
+    "temp_path": "C:\\HELIOS\\Temp",
+    "dry_run": false
+  },
+
+  "phases": {
+    "enabled": [1, 2, 3, 4, 5, 6, 7],
+    "skip": [],
+    "order": [1, 2, 3, 4, 5, 6, 7],
+    "parallel": false,
+    "rollback_on_error": true,
+    "continue_on_warning": true,
+    "custom": []
+  },
+
+  "partitions": {
+    "C": {
+      "enabled": true,
+      "size_gb": 200,
+      "label": "System",
+      "purpose": "os",
+      "type": "basic",
+      "encrypt": false
+    },
+    "D": {
+      "enabled": true,
+      "size_gb": 500,
+      "label": "Data",
+      "purpose": "data",
+      "type": "basic",
+      "encrypt": false
+    },
+    "E": {
+      "enabled": true,
+      "size_gb": 300,
+      "label": "Backup",
+      "purpose": "backup",
+      "type": "basic",
+      "encrypt": false
+    },
+    "F": {
+      "enabled": false,
+      "size_gb": 200,
+      "label": "Games",
+      "purpose": "games",
+      "type": "basic",
+      "encrypt": false
+    },
+    "V": {
+      "enabled": false,
+      "size_gb": 100,
+      "label": "VirtualDisk",
+      "purpose": "vhdx",
+      "type": "vhdx",
+      "vhdx_path": "C:\\VHDs\\storage.vhdx",
+      "dynamic": true,
+      "encrypt": false,
+      "encrypt_algorithm": "AES-128"
+    }
+  },
+
+  "security": {
+    "defender": {
+      "enabled": true,
+      "realtime_protection": true,
+      "cloud_protection": true,
+      "automatic_sample_submission": false
+    },
+    "bitlocker": {
+      "enabled": false,
+      "drives": ["C"],
+      "algorithm": "AES-128",
+      "require_tpm": true,
+      "recovery_key_path": "D:\\Recovery"
+    },
+    "firewall": {
+      "enabled": true,
+      "inbound_policy": "allow",
+      "outbound_policy": "allow",
+      "custom_rules": []
+    },
+    "applocker": {
+      "enabled": false,
+      "mode": "audit",
+      "extra_allowed_publishers": [],
+      "extra_allowed_paths": []
+    },
+    "audit_logging": {
+      "enabled": true,
+      "level": "standard",
+      "log_path": "D:\\Logs\\Audit",
+      "max_log_size_mb": 50,
+      "retention_days": 30
+    },
+    "usb": {
+      "restrict": false,
+      "allow_hid": true,
+      "allow_storage": true,
+      "whitelist_vendor_ids": []
+    }
+  },
+
+  "users": [
+    {
+      "name": "HeliosAdmin",
+      "display_name": "HELIOS Administrator",
+      "type": "administrator",
+      "enabled": true,
+      "password_policy": "strong",
+      "groups": ["Administrators"],
+      "profile_path": ""
+    },
+    {
+      "name": "HeliosUser",
+      "display_name": "HELIOS User",
+      "type": "standard",
+      "enabled": true,
+      "password_policy": "standard",
+      "groups": ["Users"],
+      "profile_path": ""
+    }
+  ],
+
+  "layers": {
+    "layer1_gui": true,
+    "layer2_apps": true,
+    "layer3_optimization": true,
+    "layer4_security": true,
+    "layer5_data": true,
+    "layer6_cloud": true,
+    "layer7_hardware": true
+  },
+
+  "optimization": {
+    "level": "standard",
+    "startup": {
+      "disable_apps": [],
+      "aggressive": false
+    },
+    "services": {
+      "disable_count": 10,
+      "keep_essential": true,
+      "custom_disable": [],
+      "custom_enable": []
+    },
+    "power": {
+      "plan": "balanced",
+      "custom_settings": {
+        "sleep_timeout_minutes": 30,
+        "hibernate": false
+      }
+    },
+    "visual_effects": "system_default",
+    "memory_management": "standard",
+    "network": "standard"
+  },
+
+  "features": {
+    "defender": true,
+    "bitlocker": false,
+    "firewall": true,
+    "applocker": false,
+    "audit_logging": true,
+    "usb_restrictions": false,
+    "seven_layer_setup": true,
+    "optimization": true
+  },
+
+  "hooks": {
+    "pre_install": "",
+    "post_install": "",
+    "pre_phase": {},
+    "post_phase": {},
+    "on_error": ""
+  }
+}

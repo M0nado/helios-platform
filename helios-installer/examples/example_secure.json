@@ -1,0 +1,121 @@
+{
+  "_preset": "secure",
+  "_description": "Maximum security configuration – all drives encrypted, firewall locked down, AppLocker enforced, verbose auditing.",
+
+  "installation": {
+    "name": "HELIOS Secure",
+    "version": "1.0",
+    "auto_reboot": false,
+    "logging_level": "INFO",
+    "dry_run": false
+  },
+
+  "phases": {
+    "enabled": [1, 2, 3, 4, 5, 6, 7],
+    "rollback_on_error": true,
+    "continue_on_warning": false
+  },
+
+  "partitions": {
+    "C": { "enabled": true, "size_gb": 200, "label": "System", "purpose": "os",     "encrypt": true, "encrypt_algorithm": "AES-256" },
+    "D": { "enabled": true, "size_gb": 500, "label": "Data",   "purpose": "data",   "encrypt": true, "encrypt_algorithm": "AES-256" },
+    "E": { "enabled": true, "size_gb": 300, "label": "Backup", "purpose": "backup", "encrypt": true, "encrypt_algorithm": "AES-256" },
+    "F": { "enabled": false }
+  },
+
+  "security": {
+    "defender": {
+      "enabled": true,
+      "realtime_protection": true,
+      "cloud_protection": true,
+      "automatic_sample_submission": true
+    },
+    "bitlocker": {
+      "enabled": true,
+      "drives": ["C", "D", "E"],
+      "algorithm": "AES-256",
+      "require_tpm": true,
+      "recovery_key_path": "E:\\Recovery"
+    },
+    "firewall": {
+      "enabled": true,
+      "inbound_policy": "block",
+      "outbound_policy": "allow",
+      "custom_rules": [
+        { "name": "Allow RDP Admin Only", "direction": "inbound", "port": 3389, "protocol": "TCP", "action": "allow", "source_ip": "192.168.1.0/24" }
+      ]
+    },
+    "applocker": {
+      "enabled": true,
+      "mode": "enforce",
+      "extra_allowed_publishers": [],
+      "extra_allowed_paths": []
+    },
+    "audit_logging": {
+      "enabled": true,
+      "level": "verbose",
+      "log_path": "E:\\Logs\\Audit",
+      "max_log_size_mb": 500,
+      "retention_days": 365
+    },
+    "usb": {
+      "restrict": true,
+      "allow_hid": true,
+      "allow_storage": false,
+      "whitelist_vendor_ids": []
+    }
+  },
+
+  "users": [
+    {
+      "name": "SecureAdmin",
+      "display_name": "Secure Administrator",
+      "type": "administrator",
+      "enabled": true,
+      "password_policy": "strong",
+      "groups": ["Administrators"]
+    },
+    {
+      "name": "SecureUser",
+      "display_name": "Secure Standard User",
+      "type": "standard",
+      "enabled": true,
+      "password_policy": "strong",
+      "groups": ["Users"]
+    }
+  ],
+
+  "layers": {
+    "layer1_gui":          true,
+    "layer2_apps":         true,
+    "layer3_optimization": true,
+    "layer4_security":     true,
+    "layer5_data":         true,
+    "layer6_cloud":        false,
+    "layer7_hardware":     true
+  },
+
+  "optimization": {
+    "level": "standard",
+    "power": { "plan": "balanced" }
+  },
+
+  "features": {
+    "defender": true,
+    "bitlocker": true,
+    "firewall": true,
+    "applocker": true,
+    "audit_logging": true,
+    "usb_restrictions": true,
+    "seven_layer_setup": true,
+    "optimization": true
+  },
+
+  "hooks": {
+    "pre_install":  "hooks/security_pre_check.ps1",
+    "post_install": "hooks/security_hardening_verify.ps1",
+    "pre_phase":  {},
+    "post_phase": { "3": "hooks/verify_security_phase.ps1" },
+    "on_error":   "hooks/security_rollback.ps1"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "_preset": "minimal",
+  "_description": "30-minute setup – only the bare essentials. No security hardening, no optimization, no cloud layer.",
+
+  "installation": {
+    "name": "HELIOS Minimal",
+    "version": "1.0",
+    "auto_reboot": false,
+    "logging_level": "WARNING",
+    "dry_run": false
+  },
+
+  "phases": {
+    "enabled": [1, 2, 7],
+    "rollback_on_error": false,
+    "continue_on_warning": true
+  },
+
+  "partitions": {
+    "C": { "enabled": true, "size_gb": 100, "label": "System", "purpose": "os",   "encrypt": false },
+    "D": { "enabled": true, "size_gb": 200, "label": "Data",   "purpose": "data", "encrypt": false },
+    "E": { "enabled": false },
+    "F": { "enabled": false }
+  },
+
+  "security": {
+    "defender":      { "enabled": true,  "realtime_protection": true, "cloud_protection": false },
+    "bitlocker":     { "enabled": false },
+    "firewall":      { "enabled": true,  "inbound_policy": "allow", "outbound_policy": "allow" },
+    "applocker":     { "enabled": false },
+    "audit_logging": { "enabled": false },
+    "usb":           { "restrict": false }
+  },
+
+  "users": [
+    {
+      "name": "HeliosAdmin",
+      "display_name": "HELIOS Administrator",
+      "type": "administrator",
+      "enabled": true,
+      "password_policy": "standard",
+      "groups": ["Administrators"]
+    }
+  ],
+
+  "layers": {
+    "layer1_gui":          true,
+    "layer2_apps":         true,
+    "layer3_optimization": false,
+    "layer4_security":     false,
+    "layer5_data":         false,
+    "layer6_cloud":        false,
+    "layer7_hardware":     true
+  },
+
+  "optimization": {
+    "level": "minimal"
+  },
+
+  "features": {
+    "defender": true,
+    "bitlocker": false,
+    "firewall": true,
+    "applocker": false,
+    "audit_logging": false,
+    "usb_restrictions": false,
+    "seven_layer_setup": false,
+    "optimization": false
+  },
+
+  "hooks": {
+    "pre_install": "",
+    "post_install": "",
+    "pre_phase": {},
+    "post_phase": {},
+    "on_error": ""
+  }
+}
