@@ -1,0 +1,74 @@
+name: Code Quality & Linting
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  powershell-lint:
+    name: PowerShell Linting & Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up PowerShell
+        uses: actions/setup-powershell@v4
+        with:
+          pwsh-version: latest
+      
+      - name: Install PSScriptAnalyzer
+        run: |
+          pwsh -Command "Install-Module -Name PSScriptAnalyzer -Force"
+      
+      - name: Run PSScriptAnalyzer
+        run: |
+          pwsh -Command "
+          Invoke-ScriptAnalyzer -Path './src', './scripts' -Recurse -Severity Error, Warning | 
+          Tee-Object -FilePath ps-analysis.txt
+          "
+      
+      - name: Upload Analysis
+        uses: actions/upload-artifact@v3
+        with:
+          name: powershell-analysis
+          path: ps-analysis.txt
+
+  markdown-lint:
+    name: Markdown Linting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Markdown Linter
+        uses: nosborn/github-action-markdown-cli@v3.3.0
+        with:
+          files: .
+          config_file: .markdownlint.json
+
+  json-validate:
+    name: JSON Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate JSON files
+        run: |
+          for file in $(find . -name "*.json" -not -path "./node_modules/*"); do
+            echo "Validating $file"
+            python -m json.tool "$file" > /dev/null 2>&1 || exit 1
+          done
+          echo "✅ All JSON files valid"
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run security scan
+        uses: github/super-linter/slim@v4
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
