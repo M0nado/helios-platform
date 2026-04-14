@@ -1,0 +1,118 @@
+name: Phase Build & Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Phase to build'
+        required: true
+        default: '0'
+        type: choice
+        options:
+          - '0'
+          - '1'
+          - '2'
+          - '3'
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - 'test'
+          - 'staging'
+          - 'production'
+
+jobs:
+  validate-phase:
+    runs-on: ubuntu-latest
+    name: Validate Phase ${{ inputs.phase }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Phase Directory
+        run: |
+          PHASE_DIR="phases/${{ inputs.phase }}-*"
+          if [ ! -d "$PHASE_DIR" ]; then
+            echo "❌ Phase ${{ inputs.phase }} directory not found"
+            ls -la phases/
+            exit 1
+          fi
+          echo "✅ Phase directory found"
+          ls -la "$PHASE_DIR"
+
+  build-phase:
+    runs-on: windows-latest
+    needs: validate-phase
+    name: Build Phase ${{ inputs.phase }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v2
+      
+      - name: Build Phase
+        run: |
+          $phase = "${{ inputs.phase }}"
+          $phaseDir = Get-ChildItem -Path "phases" -Directory | Where-Object { $_.Name -match "^$phase-" } | Select-Object -First 1
+          
+          if (-not $phaseDir) {
+            throw "Phase $phase not found"
+          }
+          
+          Write-Host "Building Phase: $($phaseDir.Name)" -ForegroundColor Cyan
+          
+          # Check for build script
+          $buildScript = Join-Path $phaseDir.FullName "build.ps1"
+          if (Test-Path $buildScript) {
+            Write-Host "Running build script..." -ForegroundColor Yellow
+            & $buildScript
+          } else {
+            Write-Host "No build.ps1 found for phase $phase" -ForegroundColor Yellow
+          }
+        shell: pwsh
+
+  test-phase:
+    runs-on: windows-latest
+    needs: build-phase
+    name: Test Phase ${{ inputs.phase }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v2
+      
+      - name: Run Phase Tests
+        run: |
+          $phase = "${{ inputs.phase }}"
+          $testFile = "tests/phase-$phase.tests.ps1"
+          
+          if (Test-Path $testFile) {
+            Write-Host "Running tests: $testFile" -ForegroundColor Cyan
+            & $testFile
+          } else {
+            Write-Host "No tests found for phase $phase" -ForegroundColor Yellow
+          }
+        shell: pwsh
+
+  report-status:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [validate-phase, build-phase, test-phase]
+    name: Report Build Status
+    
+    steps:
+      - name: Report Success
+        if: success()
+        run: |
+          echo "✅ Phase ${{ inputs.phase }} build successful!"
+          echo "Environment: ${{ inputs.environment }}"
+      
+      - name: Report Failure
+        if: failure()
+        run: |
+          echo "❌ Phase ${{ inputs.phase }} build failed!"
+          exit 1

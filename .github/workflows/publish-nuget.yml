@@ -1,0 +1,133 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version to publish'
+        required: true
+        default: '1.0.0'
+      dry_run:
+        description: 'Perform a dry run without publishing'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set version from tag
+      id: version
+      shell: powershell
+      run: |
+        if ('${{ github.ref }}' -match 'refs/tags/v(.+)$') {
+          $version = $matches[1]
+        } else {
+          $version = '${{ github.event.inputs.version }}'
+        }
+        Write-Output "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        Write-Output "Publishing HELIOS.Platform v$version"
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          6.0.x
+          7.0.x
+          8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build projects
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build --logger trx
+
+    - name: Prepare distribution
+      shell: powershell
+      run: |
+        .\scripts\deployment\prepare-distribution.ps1 `
+          -Version '${{ steps.version.outputs.VERSION }}' `
+          -OutputPath 'dist' `
+          -BuildConfiguration 'Release'
+
+    - name: Verify distribution
+      shell: powershell
+      run: |
+        .\scripts\deployment\verify-distribution.ps1 `
+          -DistributionPath 'dist' `
+          -Version '${{ steps.version.outputs.VERSION }}'
+
+    - name: Create NuGet package
+      shell: powershell
+      run: |
+        $nuspecPath = "dist\v${{ steps.version.outputs.VERSION }}\nuget\HELIOS.Platform.nuspec"
+        $dryRunFlag = if ('${{ github.event.inputs.dry_run }}' -eq 'true') { '-DryRun' } else { '' }
+        
+        .\scripts\deployment\publish-nuget.ps1 `
+          -NuSpecPath $nuspecPath `
+          -Version '${{ steps.version.outputs.VERSION }}' `
+          -NuGetApiKey '${{ secrets.NUGET_API_KEY }}' `
+          $dryRunFlag
+
+    - name: Upload distribution artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: distribution-${{ steps.version.outputs.VERSION }}
+        path: dist/v${{ steps.version.outputs.VERSION }}/
+        retention-days: 30
+
+    - name: Upload to package managers
+      if: github.event_name == 'push' && !github.event.inputs.dry_run
+      shell: powershell
+      run: |
+        Write-Host "Preparing package manager uploads..."
+        $distPath = "dist\v${{ steps.version.outputs.VERSION }}"
+        
+        # Create directory structure for various package managers
+        New-Item -ItemType Directory -Force -Path "package-manager-uploads" | Out-Null
+        
+        # Chocolatey
+        Copy-Item "$distPath\executables\*.exe" "package-manager-uploads\" -Force
+        
+        # Winget
+        Copy-Item "$distPath\nuget\*.nupkg" "package-manager-uploads\" -Force
+        
+        Write-Host "Package manager uploads prepared"
+
+    - name: Publish results
+      if: always()
+      shell: powershell
+      run: |
+        $version = '${{ steps.version.outputs.VERSION }}'
+        Write-Host "==============================================="
+        Write-Host "NuGet Publishing Summary"
+        Write-Host "==============================================="
+        Write-Host "Version: v$version"
+        Write-Host "Status: ${{ job.status }}"
+        Write-Host "Package: HELIOS.Platform"
+        Write-Host "Target: NuGet.org"
+        Write-Host "Dry Run: ${{ github.event.inputs.dry_run }}"
+        Write-Host "==============================================="
+        
+        if ('${{ job.status }}' -eq 'success') {
+          Write-Host "✓ Publishing completed successfully"
+          Write-Host "Package available at: https://www.nuget.org/packages/HELIOS.Platform/$version"
+        } else {
+          Write-Host "✗ Publishing encountered issues"
+        }

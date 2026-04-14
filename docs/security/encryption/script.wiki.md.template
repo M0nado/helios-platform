@@ -1,0 +1,88 @@
+# {{SCRIPT_NAME}} - Extended Documentation
+
+**Template Version:** 1.0  
+**Last Updated:** {{LAST_UPDATED}}
+
+---
+
+## 📖 Detailed Explanation
+
+### Purpose
+
+{{SCRIPT_PURPOSE}}
+
+### When to Use
+
+Use this script when:
+- {{SCENARIO_1}}
+- {{SCENARIO_2}}
+- {{SCENARIO_3}}
+
+### How It Works
+
+The script performs the following steps:
+
+1. **{{STEP_1}}**: {{STEP_1_DESC}}
+2. **{{STEP_2}}**: {{STEP_2_DESC}}
+3. **{{STEP_3}}**: {{STEP_3_DESC}}
+4. **{{STEP_4}}**: {{STEP_4_DESC}}
+
+### Key Concepts
+
+- **{{CONCEPT_1}}**: {{CONCEPT_1_EXPLANATION}}
+- **{{CONCEPT_2}}**: {{CONCEPT_2_EXPLANATION}}
+
+---
+
+## 🔧 Technical Details
+
+### Algorithm
+
+{{ALGORITHM_DESCRIPTION}}
+
+### Performance
+
+- Typical execution time: {{EXEC_TIME}}
+- Memory overhead: {{MEMORY_OVERHEAD}}
+- Scalability: {{SCALABILITY_INFO}}
+
+### Error Handling
+
+The script handles the following error conditions:
+- {{ERROR_CONDITION_1}}: {{HANDLING_1}}
+- {{ERROR_CONDITION_2}}: {{HANDLING_2}}
+
+---
+
+## 🔗 Dependencies
+
+### Internal Dependencies
+
+- {{INTERNAL_DEP_1}}: {{DEP_1_REASON}}
+- {{INTERNAL_DEP_2}}: {{DEP_2_REASON}}
+
+### External Dependencies
+
+- {{EXTERNAL_DEP_1}}: {{VERSION_1}}
+- {{EXTERNAL_DEP_2}}: {{VERSION_2}}
+
+---
+
+## 🔄 Workflow Integration
+
+This script is typically used in:
+
+**Workflow 1: {{WORKFLOW_1}}**
+```
+Input → {{THIS_SCRIPT}} → {{NEXT_STEP}}
+```
+
+**Workflow 2: {{WORKFLOW_2}}**
+```
+{{TRIGGER}} → {{THIS_SCRIPT}} → {{NEXT_STEP}}
+```
+
+---
+
+**See Also:** [Examples](./{{SCRIPT_NAME}}.examples.md) | [Build Usage](./{{SCRIPT_NAME}}.build-usage.md) | [API](./API.md)  
+**Generated from template version 1.0**

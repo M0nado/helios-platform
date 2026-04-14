@@ -1,0 +1,124 @@
+{
+  "service": "openai",
+  "displayName": "OpenAI API",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 2,
+  "endpoints": {
+    "chat": "https://api.openai.com/v1/chat/completions",
+    "embeddings": "https://api.openai.com/v1/embeddings",
+    "images": "https://api.openai.com/v1/images/generations",
+    "models": "https://api.openai.com/v1/models",
+    "files": "https://api.openai.com/v1/files",
+    "assistants": "https://api.openai.com/v1/assistants"
+  },
+  "authentication": {
+    "type": "api_key",
+    "apiKey": "${OPENAI_API_KEY}",
+    "organizationId": "${OPENAI_ORG_ID}",
+    "headers": {
+      "Authorization": "Bearer ${OPENAI_API_KEY}",
+      "Content-Type": "application/json"
+    }
+  },
+  "models": [
+    {
+      "name": "gpt-4",
+      "version": "latest",
+      "enabled": true,
+      "maxTokens": 8192,
+      "temperature": 0.7,
+      "costPer1kTokens": {
+        "input": 0.03,
+        "output": 0.06
+      }
+    },
+    {
+      "name": "gpt-3.5-turbo",
+      "version": "latest",
+      "enabled": true,
+      "maxTokens": 4096,
+      "temperature": 0.7,
+      "costPer1kTokens": {
+        "input": 0.0005,
+        "output": 0.0015
+      }
+    },
+    {
+      "name": "text-embedding-3-small",
+      "version": "latest",
+      "enabled": true,
+      "costPer1kTokens": 0.00002
+    },
+    {
+      "name": "text-embedding-3-large",
+      "version": "latest",
+      "enabled": true,
+      "costPer1kTokens": 0.00013
+    }
+  ],
+  "features": {
+    "chat": {
+      "enabled": true,
+      "maxContextLength": 8192,
+      "systemPromptTemplate": "You are a helpful AI assistant integrated with the HELIOS Platform."
+    },
+    "embeddings": {
+      "enabled": true,
+      "dimension": 1536,
+      "normalization": true
+    },
+    "imageGeneration": {
+      "enabled": true,
+      "models": ["dall-e-3"],
+      "sizes": ["1024x1024"],
+      "quality": "hd"
+    },
+    "fileUpload": {
+      "enabled": true,
+      "maxFileSize": 100000000,
+      "supportedFormats": ["json", "txt", "csv", "pdf", "docx"]
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "monthlyLimit": 100000,
+    "dailyLimit": 10000,
+    "perRequestLimit": 100
+  },
+  "costs": {
+    "budgetLimit": 1000,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "ai-operations"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 2,
+    "nextService": "azure-openai"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 30,
+    "timeout_seconds": 5,
+    "endpoint": "https://api.openai.com/v1/models"
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 3500,
+    "tokensPerMinute": 90000,
+    "requestsPerDay": 200000
+  },
+  "retry": {
+    "maxAttempts": 3,
+    "initialBackoffMs": 1000,
+    "maxBackoffMs": 60000,
+    "exponentialBase": 2
+  },
+  "proxy": {
+    "enabled": false,
+    "url": "${PROXY_URL}",
+    "username": "${PROXY_USER}",
+    "password": "${PROXY_PASSWORD}"
+  }
+}

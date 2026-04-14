@@ -1,0 +1,52 @@
+# {{SCRIPT_NAME}} - Examples & Usage
+
+**Template Version:** 1.0  
+**Last Updated:** {{LAST_UPDATED}}
+
+---
+
+## 💡 Example 1: {{EXAMPLE_1_TITLE}}
+
+**Scenario:** {{EXAMPLE_1_SCENARIO}}
+
+```powershell
+# {{EXAMPLE_1_DESC}}
+{{EXAMPLE_1_CODE}}
+```
+
+**Expected Output:**
+```
+{{EXAMPLE_1_OUTPUT}}
+```
+
+**Notes:**
+- {{EXAMPLE_1_NOTE_1}}
+- {{EXAMPLE_1_NOTE_2}}
+
+---
+
+## 💡 Example 2: {{EXAMPLE_2_TITLE}}
+
+**Scenario:** {{EXAMPLE_2_SCENARIO}}
+
+```powershell
+{{EXAMPLE_2_CODE}}
+```
+
+**Output:**
+```
+{{EXAMPLE_2_OUTPUT}}
+```
+
+---
+
+## 💡 Example 3: {{EXAMPLE_3_TITLE}}
+
+```powershell
+{{EXAMPLE_3_CODE}}
+```
+
+---
+
+**See:** [Extended Documentation](./{{SCRIPT_NAME}}.wiki.md) | [Metadata](./{{SCRIPT_NAME}}.meta.json)  
+**Generated from template version 1.0**

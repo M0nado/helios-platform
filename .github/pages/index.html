@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HELIOS Metrics Dashboard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0d1117; color: #e6edf3; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 20px; }
+        .card-title { font-weight: 600; margin-bottom: 10px; font-size: 14px; }
+        .card-value { font-size: 32px; font-weight: 700; margin: 10px 0; }
+        .card-status { font-size: 12px; color: #8b949e; }
+        .status-good { color: #3fb950; }
+        .status-warning { color: #d29922; }
+        .status-critical { color: #f85149; }
+    </style>
+</head>
+<body>
+    <h1>HELIOS Platform - Real-Time Metrics</h1>
+    <p>Last updated: 2026-04-13T04:57:19.2504097-07:00</p>
+    
+    <div class="dashboard">
+        <div class="card">
+            <div class="card-title">Active Agents</div>
+            <div class="card-value">22</div>
+            <div class="card-status status-good">✓ All operational</div>
+        </div>
+        <div class="card">
+            <div class="card-title">System Uptime</div>
+            <div class="card-value">99.8%</div>
+            <div class="card-status">Last 30 days</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Build Time</div>
+            <div class="card-value">4.2m</div>
+            <div class="card-status status-good">↓ -15% vs week ago</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Test Coverage</div>
+            <div class="card-value">89%</div>
+            <div class="card-status status-warning">Target: 95%</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Deploy Success</div>
+            <div class="card-value">98.5%</div>
+            <div class="card-status status-good">✓ No rollbacks</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Daily Cost</div>
+            <div class="card-value">\.50</div>
+            <div class="card-status status-good">↓ -23% optimized</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Security Issues</div>
+            <div class="card-value">0</div>
+            <div class="card-status status-good">Critical: 0 | High: 0</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Data Freshness</div>
+            <div class="card-value">5m 12s</div>
+            <div class="card-status">Last sync</div>
+        </div>
+    </div>
+</body>
+</html>

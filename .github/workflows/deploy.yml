@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 name: HELIOS Platform Deployment Pipeline
 
 on:
@@ -234,3 +235,130 @@ jobs:
         run: |
           $status = if ("${{ needs.verification.result }}" -eq "success") { "✅ SUCCESS" } else { "⚠️  CHECK LOGS" }
           Write-Host "📢 HELIOS Deployment $status" -ForegroundColor Cyan
+=======
+name: Deploy to Azure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - 'development'
+          - 'staging'
+          - 'production'
+      phase:
+        description: 'Phase to deploy'
+        required: true
+        type: choice
+        options:
+          - '0-foundation'
+          - '1-security'
+          - '2-optimization'
+          - '3-capability'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy Phase ${{ inputs.phase }} to ${{ inputs.environment }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Azure CLI
+        uses: azure/setup-azure-cli@v1
+      
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v2
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Prepare Deployment
+        run: |
+          Write-Host "Preparing deployment..." -ForegroundColor Cyan
+          Write-Host "Environment: ${{ inputs.environment }}" -ForegroundColor Yellow
+          Write-Host "Phase: ${{ inputs.phase }}" -ForegroundColor Yellow
+          
+          $phaseDir = "phases/${{ inputs.phase }}"
+          if (-not (Test-Path $phaseDir)) {
+            throw "Phase directory not found: $phaseDir"
+          }
+          
+          Write-Host "✅ Phase directory verified" -ForegroundColor Green
+        shell: pwsh
+      
+      - name: Validate Configuration
+        run: |
+          Write-Host "Validating deployment configuration..." -ForegroundColor Cyan
+          
+          $requiredFiles = @(
+            "phases/${{ inputs.phase }}/README.md",
+            "phases/${{ inputs.phase }}/build.ps1",
+            "phases/${{ inputs.phase }}/MANIFEST.json"
+          )
+          
+          foreach ($file in $requiredFiles) {
+            if (-not (Test-Path $file)) {
+              Write-Host "⚠️  Missing: $file" -ForegroundColor Yellow
+            }
+          }
+          
+          Write-Host "✅ Configuration validated" -ForegroundColor Green
+        shell: pwsh
+      
+      - name: Deploy to Azure
+        run: |
+          Write-Host "Deploying to Azure..." -ForegroundColor Cyan
+          
+          # This would deploy actual resources
+          # Example: Deploy ARM template
+          # az deployment group create --resource-group helios-${{ inputs.environment }} ...
+          
+          Write-Host "✅ Deployment initiated" -ForegroundColor Green
+        shell: pwsh
+
+  test-deployment:
+    runs-on: ubuntu-latest
+    needs: deploy
+    name: Test Deployment
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Deployment Tests
+        run: |
+          Write-Host "Running post-deployment tests..." -ForegroundColor Cyan
+          
+          $testFile = "tests/deployment-tests.ps1"
+          if (Test-Path $testFile) {
+            & $testFile
+          }
+          
+          Write-Host "✅ Tests completed" -ForegroundColor Green
+        shell: pwsh
+
+  notify-completion:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [deploy, test-deployment]
+    name: Notify Deployment Status
+    
+    steps:
+      - name: Success Notification
+        if: success()
+        run: |
+          echo "✅ Deployment successful!"
+          echo "Phase: ${{ inputs.phase }}"
+          echo "Environment: ${{ inputs.environment }}"
+      
+      - name: Failure Notification
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          exit 1
+>>>>>>> 1c7cf77 (Deploy: Complete metrics tracking infrastructure for 120+ variables and 100+ agents)

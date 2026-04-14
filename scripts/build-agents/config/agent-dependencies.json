@@ -1,0 +1,242 @@
+{
+  "dependencies": [
+    {
+      "agent": "agent-1",
+      "dependsOn": "",
+      "description": "First agent - no dependencies"
+    },
+    {
+      "agent": "agent-2",
+      "dependsOn": "agent-1",
+      "description": "Security setup requires storage to be ready"
+    },
+    {
+      "agent": "agent-3",
+      "dependsOn": "agent-2",
+      "description": "Software installation requires security baseline"
+    },
+    {
+      "agent": "agent-4",
+      "dependsOn": "agent-2,agent-3",
+      "description": "User accounts depend on security and software"
+    },
+    {
+      "agent": "agent-5",
+      "dependsOn": "agent-1,agent-2",
+      "description": "Drivers depend on storage and security"
+    },
+    {
+      "agent": "agent-6",
+      "dependsOn": "agent-3,agent-4",
+      "description": "GUI requires software and users"
+    },
+    {
+      "agent": "agent-7",
+      "dependsOn": "agent-1,agent-5",
+      "description": "Optimization requires storage and drivers"
+    },
+    {
+      "agent": "agent-8",
+      "dependsOn": "agent-2,agent-4",
+      "description": "Configuration requires security and users"
+    },
+    {
+      "agent": "agent-9",
+      "dependsOn": "agent-6,agent-7,agent-8",
+      "description": "Testing requires GUI, optimization, and configuration"
+    },
+    {
+      "agent": "agent-10",
+      "dependsOn": "agent-3,agent-4,agent-6",
+      "description": "Monitoring requires software, users, and GUI"
+    },
+    {
+      "agent": "agent-11",
+      "dependsOn": "agent-9,agent-10",
+      "description": "Reporting requires testing and monitoring"
+    }
+  ],
+  "parallelizationGroups": [
+    {
+      "batch": 1,
+      "agents": ["agent-1"],
+      "description": "Foundation - storage setup"
+    },
+    {
+      "batch": 2,
+      "agents": ["agent-2"],
+      "description": "Security baseline"
+    },
+    {
+      "batch": 3,
+      "agents": ["agent-3"],
+      "description": "Software installation"
+    },
+    {
+      "batch": 4,
+      "agents": ["agent-4", "agent-5"],
+      "description": "Parallel: Users and Drivers"
+    },
+    {
+      "batch": 5,
+      "agents": ["agent-6", "agent-7"],
+      "description": "Parallel: GUI and Optimization"
+    },
+    {
+      "batch": 6,
+      "agents": ["agent-8"],
+      "description": "Configuration management"
+    },
+    {
+      "batch": 7,
+      "agents": ["agent-9", "agent-10"],
+      "description": "Parallel: Testing and Monitoring"
+    },
+    {
+      "batch": 8,
+      "agents": ["agent-11"],
+      "description": "Final: Reporting and Documentation"
+    }
+  ],
+  "rollbackProcedures": [
+    {
+      "agent": "agent-1",
+      "priority": "high",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Restore original partition configuration",
+          "command": "# Restore partition table from backup"
+        }
+      ]
+    },
+    {
+      "agent": "agent-2",
+      "priority": "critical",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Disable Windows Defender",
+          "command": "Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue"
+        },
+        {
+          "step": 2,
+          "description": "Disable Windows Firewall",
+          "command": "Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False -ErrorAction SilentlyContinue"
+        }
+      ]
+    },
+    {
+      "agent": "agent-3",
+      "priority": "high",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Uninstall installed software",
+          "command": "# Execute software uninstall procedures"
+        }
+      ]
+    },
+    {
+      "agent": "agent-4",
+      "priority": "high",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Delete created user accounts",
+          "command": "# Remove service accounts and user groups"
+        }
+      ]
+    },
+    {
+      "agent": "agent-5",
+      "priority": "medium",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Rollback driver updates",
+          "command": "# Restore previous driver versions"
+        }
+      ]
+    },
+    {
+      "agent": "agent-6",
+      "priority": "medium",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Uninstall dashboard",
+          "command": "# Stop and remove dashboard services"
+        }
+      ]
+    },
+    {
+      "agent": "agent-7",
+      "priority": "low",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Restore original service configuration",
+          "command": "# Re-enable disabled services"
+        }
+      ]
+    },
+    {
+      "agent": "agent-8",
+      "priority": "high",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Restore registry settings",
+          "command": "# Restore from registry backup"
+        }
+      ]
+    },
+    {
+      "agent": "agent-9",
+      "priority": "low",
+      "steps": [
+        {
+          "step": 1,
+          "description": "No rollback needed - testing only",
+          "command": "Write-Log 'Testing rollback not required'"
+        }
+      ]
+    },
+    {
+      "agent": "agent-10",
+      "priority": "low",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Disable monitoring agents",
+          "command": "# Stop monitoring services"
+        }
+      ]
+    },
+    {
+      "agent": "agent-11",
+      "priority": "low",
+      "steps": [
+        {
+          "step": 1,
+          "description": "No rollback needed - reporting only",
+          "command": "Write-Log 'Reporting rollback not required'"
+        }
+      ]
+    }
+  ],
+  "failureStrategies": {
+    "criticalAgentFailure": "STOP",
+    "nonCriticalAgentFailure": "CONTINUE",
+    "maxRetries": 3,
+    "retryDelay": 300,
+    "rollbackOnCriticalFailure": true,
+    "notifyOnFailure": true
+  },
+  "metadata": {
+    "version": "1.0",
+    "created": "2024-01-01T00:00:00Z",
+    "description": "Agent dependency definitions and rollback procedures"
+  }
+}

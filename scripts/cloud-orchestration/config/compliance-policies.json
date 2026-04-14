@@ -1,0 +1,125 @@
+{
+  "CompliancePolicies": {
+    "GlobalSettings": {
+      "Framework": "SOC2",
+      "AuditEnabled": true,
+      "AlertingEnabled": true,
+      "RemediationEnabled": true
+    },
+    "DataClassification": {
+      "Enabled": true,
+      "AutoClassify": true,
+      "Classifications": [
+        {
+          "Name": "Public",
+          "Protection": "None",
+          "Retention": "30days",
+          "Encryption": false
+        },
+        {
+          "Name": "Internal",
+          "Protection": "Low",
+          "Retention": "1year",
+          "Encryption": true
+        },
+        {
+          "Name": "Confidential",
+          "Protection": "Medium",
+          "Retention": "3years",
+          "Encryption": true
+        },
+        {
+          "Name": "Highly Confidential",
+          "Protection": "High",
+          "Retention": "7years",
+          "Encryption": true
+        },
+        {
+          "Name": "Personal Data",
+          "Protection": "High",
+          "Retention": "ComplianceDependent",
+          "Encryption": true
+        },
+        {
+          "Name": "Trade Secrets",
+          "Protection": "Maximum",
+          "Retention": "99years",
+          "Encryption": true
+        }
+      ]
+    },
+    "DLPPolicies": {
+      "Enabled": true,
+      "Enforcement": "Block",
+      "AlertAdmins": true,
+      "Policies": [
+        {
+          "Name": "Credit Card Protection",
+          "Pattern": "CreditCardNumber",
+          "Action": "Block",
+          "Exceptions": []
+        },
+        {
+          "Name": "SSN Protection",
+          "Pattern": "SocialSecurityNumber",
+          "Action": "Block",
+          "Exceptions": []
+        },
+        {
+          "Name": "Password Protection",
+          "Pattern": "PasswordLiteral",
+          "Action": "Warn",
+          "Exceptions": []
+        }
+      ]
+    },
+    "Retention": {
+      "Enabled": true,
+      "DefaultPolicy": "3years",
+      "DeletedItemRetention": "93days",
+      "ArchiveOlderThan": "2years",
+      "PoliciesPerLabel": true
+    },
+    "Auditing": {
+      "Enabled": true,
+      "LogAllActivities": true,
+      "MinLogLevel": "Information",
+      "RetentionDays": 2555,
+      "ExportFrequency": "Weekly",
+      "AlertOnAnomalies": true
+    },
+    "IncidentManagement": {
+      "Enabled": true,
+      "AutoInvestigate": true,
+      "AutoRemediate": false,
+      "NotifySOC": true,
+      "EscalationPath": "Admin -> Security -> CTO"
+    }
+  },
+  "GdprCompliance": {
+    "Enabled": true,
+    "DataSubjectRequests": {
+      "ExportCapability": true,
+      "DeleteCapability": true,
+      "RectificationCapability": true,
+      "TimelineForResponse": 30
+    },
+    "DataProcessing": {
+      "ProcessorAgreements": true,
+      "SubprocessorManagement": true,
+      "DPA": "Signed"
+    }
+  },
+  "HIPAACompliance": {
+    "Enabled": false,
+    "PHIEncryption": true,
+    "MinimumNecessary": true,
+    "AccessLogs": true
+  },
+  "PCICompliance": {
+    "Enabled": false,
+    "CardDataProtection": true,
+    "PenetrationTesting": true,
+    "VulnerabilityScan": true
+  }
+}

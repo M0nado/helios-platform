@@ -1,0 +1,175 @@
+{
+  "alerts": {
+    "severity_levels": {
+      "critical": {
+        "value": 5,
+        "color": "#FF0000",
+        "escalationTime": 15,
+        "requiresAck": true
+      },
+      "high": {
+        "value": 4,
+        "color": "#FF6600",
+        "escalationTime": 30,
+        "requiresAck": true
+      },
+      "medium": {
+        "value": 3,
+        "color": "#FFFF00",
+        "escalationTime": 60,
+        "requiresAck": false
+      },
+      "low": {
+        "value": 2,
+        "color": "#00FF00",
+        "escalationTime": 240,
+        "requiresAck": false
+      },
+      "info": {
+        "value": 1,
+        "color": "#0099FF",
+        "escalationTime": null,
+        "requiresAck": false
+      }
+    },
+    "policies": [
+      {
+        "id": "cpu-threshold",
+        "name": "High CPU Usage",
+        "type": "threshold",
+        "metric": "cpu",
+        "condition": "greater_than",
+        "threshold": 85,
+        "severity": "high",
+        "enabled": true,
+        "duration": 300
+      },
+      {
+        "id": "memory-threshold",
+        "name": "High Memory Usage",
+        "type": "threshold",
+        "metric": "memory",
+        "condition": "greater_than",
+        "threshold": 90,
+        "severity": "high",
+        "enabled": true,
+        "duration": 300
+      },
+      {
+        "id": "disk-critical",
+        "name": "Critical Disk Space",
+        "type": "threshold",
+        "metric": "disk",
+        "condition": "greater_than",
+        "threshold": 95,
+        "severity": "critical",
+        "enabled": true,
+        "duration": 60
+      },
+      {
+        "id": "service-down",
+        "name": "Service Unavailable",
+        "type": "availability",
+        "metric": "service_status",
+        "condition": "equals",
+        "threshold": "down",
+        "severity": "critical",
+        "enabled": true,
+        "duration": 60
+      },
+      {
+        "id": "azure-quota",
+        "name": "Azure Quota Exceeded",
+        "type": "threshold",
+        "metric": "azure_quota",
+        "condition": "greater_than",
+        "threshold": 90,
+        "severity": "high",
+        "enabled": true,
+        "duration": 600
+      },
+      {
+        "id": "dlp-violation",
+        "name": "DLP Policy Violation",
+        "type": "compliance",
+        "metric": "dlp_violations",
+        "condition": "greater_than",
+        "threshold": 0,
+        "severity": "critical",
+        "enabled": true,
+        "duration": 60
+      },
+      {
+        "id": "failed-login",
+        "name": "Suspicious Failed Logins",
+        "type": "security",
+        "metric": "failed_logins",
+        "condition": "greater_than",
+        "threshold": 10,
+        "severity": "high",
+        "enabled": true,
+        "duration": 300
+      },
+      {
+        "id": "anomaly-detected",
+        "name": "Anomaly Detected",
+        "type": "anomaly",
+        "metric": "anomaly_score",
+        "condition": "greater_than",
+        "threshold": 3.0,
+        "severity": "medium",
+        "enabled": true,
+        "duration": 60
+      }
+    ],
+    "escalation": [
+      {
+        "level": 1,
+        "delay": 900,
+        "action": "notify_team"
+      },
+      {
+        "level": 2,
+        "delay": 1800,
+        "action": "page_on_call"
+      },
+      {
+        "level": 3,
+        "delay": 3600,
+        "action": "escalate_to_manager"
+      }
+    ],
+    "suppression": {
+      "enableMaintenanceWindows": true,
+      "enableAlertGrouping": true,
+      "groupingWindow": 300,
+      "deduplicationWindow": 60
+    }
+  },
+  "notification": {
+    "channels": {
+      "email": {
+        "enabled": true,
+        "delaySeconds": 60
+      },
+      "slack": {
+        "enabled": false,
+        "delaySeconds": 30
+      },
+      "teams": {
+        "enabled": false,
+        "delaySeconds": 30
+      },
+      "pagerduty": {
+        "enabled": false,
+        "delaySeconds": 0
+      }
+    },
+    "quietHours": {
+      "enabled": false,
+      "startTime": "18:00",
+      "endTime": "08:00",
+      "timezone": "UTC"
+    }
+  }
+}

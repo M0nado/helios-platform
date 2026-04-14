@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI Integration Configuration Schema",
+  "description": "Configuration schema for AI integration scripts",
+  "type": "object",
+  "properties": {
+    "chatgpt": {
+      "type": "object",
+      "description": "ChatGPT Pro configuration",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "apiKey": { "type": "string", "description": "OpenAI API key" },
+        "apiUrl": { "type": "string", "default": "https://api.openai.com/v1" },
+        "model": { "type": "string", "default": "gpt-4" },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2, "default": 0.7 },
+        "maxTokens": { "type": "integer", "default": 2000 }
+      }
+    },
+    "codex": {
+      "type": "object",
+      "description": "Codex AI configuration",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "apiKey": { "type": "string", "description": "OpenAI API key" },
+        "apiUrl": { "type": "string", "default": "https://api.openai.com/v1" },
+        "model": { "type": "string", "default": "code-davinci-002" },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2, "default": 0.5 },
+        "maxTokens": { "type": "integer", "default": 2000 }
+      }
+    },
+    "rateLimiting": {
+      "type": "object",
+      "properties": {
+        "delayBetweenRequestsMs": { "type": "integer", "default": 1000 },
+        "maxConcurrentRequests": { "type": "integer", "default": 3 },
+        "requestsPerMinute": { "type": "integer", "default": 60 },
+        "requestsPerDay": { "type": "integer", "default": 10000 }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "requireApprovalFor": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["SecurityChanges", "BreakingChanges", "DeleteOperations"]
+        },
+        "dryRunByDefault": { "type": "boolean", "default": false },
+        "previewChanges": { "type": "boolean", "default": true },
+        "enableRollback": { "type": "boolean", "default": true },
+        "backupBeforeApply": { "type": "boolean", "default": true }
+      }
+    },
+    "auditTrail": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "logLocation": { "type": "string", "default": "./ai-audit-trail" },
+        "trackAllOperations": { "type": "boolean", "default": true },
+        "includeTokenUsage": { "type": "boolean", "default": true },
+        "storeDiffs": { "type": "boolean", "default": true },
+        "retentionDays": { "type": "integer", "default": 90 }
+      }
+    },
+    "approvalWorkflow": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "autoApproveThreshold": { "type": "string", "enum": ["low-risk", "medium-risk", "high-risk"] },
+        "requiresHumanApprovalFor": { "type": "string", "enum": ["all", "high-risk", "critical"] },
+        "approvalTimeout": { "type": "integer", "default": 3600 },
+        "approvers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,149 @@
+name: CI - Code Validation & Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    name: PowerShell Syntax Validation
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v2
+        with:
+          powershell-version: '7.3'
+      
+      - name: Check PowerShell Syntax
+        run: |
+          $failures = 0
+          Get-ChildItem -Path '.' -Filter '*.ps1' -Recurse | ForEach-Object {
+            $file = $_.FullName
+            Write-Host "Checking: $file"
+            try {
+              $content = Get-Content -Path $file
+              [scriptblock]::Create($content) | Out-Null
+              Write-Host "✅ OK" -ForegroundColor Green
+            } catch {
+              Write-Host "❌ FAILED: $_" -ForegroundColor Red
+              $failures++
+            }
+          }
+          if ($failures -gt 0) {
+            throw "Syntax check failed for $failures files"
+          }
+
+  markdown-check:
+    runs-on: ubuntu-latest
+    name: Markdown Validation
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run markdownlint
+        uses: nosborn/github-action-markdown-cli@v3.3.0
+        with:
+          files: .
+          config_file: .markdownlint.json
+
+  documentation-check:
+    runs-on: ubuntu-latest
+    name: Documentation Completeness
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check Required Documentation
+        run: |
+          required_docs=(
+            "README.md"
+            "00-KICKOFF-START-HERE.md"
+            "GETTING_STARTED.md"
+            "MODULAR_ARCHITECTURE.md"
+            "phases/0-foundation/README.md"
+          )
+          
+          for doc in "${required_docs[@]}"; do
+            if [ ! -f "$doc" ]; then
+              echo "❌ Missing required documentation: $doc"
+              exit 1
+            fi
+            echo "✅ Found: $doc"
+          done
+          echo "All required documentation present!"
+
+  test-scripts:
+    runs-on: windows-latest
+    name: Test PowerShell Scripts
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PowerShell 7
+        uses: actions/setup-powershell@v2
+      
+      - name: Run Unit Tests
+        run: |
+          if (Test-Path -Path "tests") {
+            Get-ChildItem -Path "tests" -Filter "*.tests.ps1" -Recurse | ForEach-Object {
+              Write-Host "Running: $($_.FullName)" -ForegroundColor Cyan
+              & $_.FullName
+            }
+          } else {
+            Write-Host "No tests directory found" -ForegroundColor Yellow
+          }
+        shell: pwsh
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy Results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  file-integrity:
+    runs-on: ubuntu-latest
+    name: File Structure Validation
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate Directory Structure
+        run: |
+          required_dirs=(
+            "phases"
+            "components"
+            "scripts"
+            "docs"
+            "tests"
+            "configs"
+          )
+          
+          for dir in "${required_dirs[@]}"; do
+            if [ ! -d "$dir" ]; then
+              echo "❌ Missing required directory: $dir"
+              exit 1
+            fi
+            echo "✅ Found: $dir"
+          done
+          
+          echo ""
+          echo "Directory structure is valid!"

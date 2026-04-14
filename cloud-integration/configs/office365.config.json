@@ -1,0 +1,124 @@
+{
+  "service": "office365",
+  "displayName": "Microsoft Office 365",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 2,
+  "endpoints": {
+    "graph": "https://graph.microsoft.com/v1.0",
+    "teams": "https://graph.microsoft.com/v1.0/teams",
+    "mail": "https://graph.microsoft.com/v1.0/me/mailFolders",
+    "onedrive": "https://graph.microsoft.com/v1.0/me/drive",
+    "calendar": "https://graph.microsoft.com/v1.0/me/calendar",
+    "sharepoint": "https://{tenant}.sharepoint.com/sites/{site}"
+  },
+  "authentication": {
+    "type": "oauth",
+    "clientId": "${OFFICE365_CLIENT_ID}",
+    "clientSecret": "${OFFICE365_CLIENT_SECRET}",
+    "tenantId": "${AZURE_TENANT_ID}",
+    "scopes": [
+      "Team.ReadBasic.All",
+      "Mail.Read",
+      "Mail.Send",
+      "Files.ReadWrite.All",
+      "Calendars.ReadWrite",
+      "User.Read.All"
+    ]
+  },
+  "features": {
+    "teams": {
+      "enabled": true,
+      "channels": {
+        "monitoring": "monitoring-channel",
+        "alerts": "alerts-channel",
+        "deployments": "deployments-channel"
+      },
+      "messaging": true,
+      "bots": true,
+      "webhooks": true,
+      "files": {
+        "enabled": true,
+        "maxSize": 2147483648
+      }
+    },
+    "onedrive": {
+      "enabled": true,
+      "quota": 1099511627776,
+      "features": ["versioning", "sharing", "sync"],
+      "folders": [
+        "Documents",
+        "BackupData",
+        "Logs",
+        "Reports"
+      ]
+    },
+    "outlook": {
+      "enabled": true,
+      "mail": {
+        "read": true,
+        "send": true,
+        "attachments": true
+      },
+      "calendar": {
+        "read": true,
+        "write": true
+      },
+      "contacts": true
+    },
+    "sharepoint": {
+      "enabled": true,
+      "sites": [
+        {
+          "name": "helios-documents",
+          "lists": ["Projects", "Documents", "Knowledge"],
+          "features": ["versioning", "approval"]
+        }
+      ]
+    }
+  },
+  "integration": {
+    "notifications": {
+      "enabled": true,
+      "teamsChannel": "monitoring-channel",
+      "emailAlerts": true
+    },
+    "fileSync": {
+      "enabled": true,
+      "frequency": "hourly",
+      "bidirectional": false
+    },
+    "meetingRecordings": {
+      "enabled": true,
+      "storage": "onedrive",
+      "retention_days": 90
+    },
+    "reportDistribution": {
+      "enabled": true,
+      "method": "email",
+      "recipients": ["team@company.com"]
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "storageQuota": 1099511627776,
+    "emailQuota": 50000
+  },
+  "costs": {
+    "budgetLimit": 500,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "operations"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 2,
+    "nextService": "google-workspace"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 120,
+    "timeout_seconds": 10,
+    "endpoint": "https://graph.microsoft.com/v1.0/me"
+  }
+}

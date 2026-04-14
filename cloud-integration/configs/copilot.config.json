@@ -1,0 +1,124 @@
+{
+  "service": "copilot",
+  "displayName": "Microsoft Copilot",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 1,
+  "endpoints": {
+    "api": "https://api.copilot.microsoft.com/v1",
+    "codeGeneration": "https://api.copilot.microsoft.com/v1/code",
+    "documentation": "https://api.copilot.microsoft.com/v1/documentation",
+    "analysis": "https://api.copilot.microsoft.com/v1/analysis"
+  },
+  "authentication": {
+    "type": "oauth",
+    "clientId": "${COPILOT_CLIENT_ID}",
+    "clientSecret": "${COPILOT_CLIENT_SECRET}",
+    "tenantId": "${AZURE_TENANT_ID}",
+    "scopes": [
+      "https://api.copilot.microsoft.com/.default"
+    ]
+  },
+  "features": {
+    "codeGeneration": {
+      "enabled": true,
+      "languages": [
+        "csharp",
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "rust"
+      ],
+      "models": ["copilot-pro", "copilot-enterprise"],
+      "maxOutputLength": 8000,
+      "temperature": 0.7
+    },
+    "documentation": {
+      "enabled": true,
+      "formats": ["markdown", "html", "pdf"],
+      "languages": [
+        "english",
+        "spanish",
+        "french",
+        "german",
+        "chinese"
+      ],
+      "autoUpdate": true
+    },
+    "codeAnalysis": {
+      "enabled": true,
+      "features": [
+        "complexity-analysis",
+        "security-review",
+        "performance-optimization",
+        "best-practices"
+      ]
+    },
+    "bugDetection": {
+      "enabled": true,
+      "severityLevels": ["critical", "high", "medium", "low"]
+    },
+    "testing": {
+      "enabled": true,
+      "frameworks": ["xunit", "nunit", "jest", "pytest", "junit"],
+      "coverage": {
+        "minimum": 80,
+        "target": 90
+      }
+    }
+  },
+  "codeGenerationSettings": {
+    "style": {
+      "namingConvention": "camelCase",
+      "bracingStyle": "Allman",
+      "indentation": "spaces",
+      "indentSize": 4
+    },
+    "patterns": {
+      "useAsync": true,
+      "useDependencyInjection": true,
+      "useLogging": true,
+      "useErrorHandling": true
+    },
+    "security": {
+      "includeValidation": true,
+      "includeSanitization": true,
+      "includeAuthentication": true
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "requestsPerDay": 1000,
+    "tokensPerMonth": 500000
+  },
+  "costs": {
+    "budgetLimit": 800,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "development"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 1,
+    "nextService": "openai"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 30,
+    "timeout_seconds": 5,
+    "endpoint": "https://api.copilot.microsoft.com/v1/health"
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 100,
+    "tokensPerMinute": 100000
+  },
+  "advanced": {
+    "enableExperimental": false,
+    "customPrompts": true,
+    "contextRetention": 5,
+    "caching": true
+  }
+}

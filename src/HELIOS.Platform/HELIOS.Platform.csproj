@@ -1,33 +1,64 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Framework Configuration -->
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <OutputType>Library</OutputType>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageId>HELIOS.Platform</PackageId>
-    <Version>1.0.0</Version>
-    <Authors>M0nado</Authors>
-    <Company>M0nado</Company>
-    <Description>HELIOS Platform - Complete Windows Optimization Ecosystem with 7 phases, 6 agents, 8 security layers, 12+ AI services, and 42 validation tests</Description>
-    <PackageTags>helios;platform;automation;optimization;security;ai;windows;deployment</PackageTags>
-    <RepositoryUrl>https://github.com/M0nado/helios-platform</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <License>MIT</License>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <ReadmeFile>README.md</ReadmeFile>
-    <Nullable>enable</Nullable>
+    <RootNamespace>HELIOS.Platform</RootNamespace>
+    <AssemblyName>HELIOS.Platform</AssemblyName>
     <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
+  <!-- Package Information -->
+  <PropertyGroup>
+    <PackageId>HELIOS.Platform</PackageId>
+    <Version>1.0.0</Version>
+    <Title>HELIOS Platform - Complete Windows Ecosystem</Title>
+    <Authors>HELIOS Team</Authors>
+    <Company>M0nado</Company>
+    <Description>Complete Windows optimization ecosystem with 7 integrated components providing enterprise-grade deployment, automation, and management capabilities. Includes MonadoEngine, SecuritySystem, AIOrchestrator, GUIDashboard, BuildAgents, DevAIHub, and SoftwareStack.</Description>
+    <PackageProjectUrl>https://github.com/M0nado/helios-platform</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/M0nado/helios-platform</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryBranch>main</RepositoryBranch>
+    <PackageTags>windows;optimization;automation;deployment;cloud;security;ecosystem</PackageTags>
+  </PropertyGroup>
+
+  <!-- Release Configuration -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>true</Optimize>
+    <WarningLevel>4</WarningLevel>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- Debug Configuration -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Package Resources -->
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="\" />
     <None Include="../../LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <!-- NuGet Dependencies -->
   <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.10.0" />
+    <PackageReference Include="Azure.ResourceManager.Storage" Version="1.6.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="4.7.0" />
   </ItemGroup>
 
 </Project>

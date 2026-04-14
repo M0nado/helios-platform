@@ -1,0 +1,170 @@
+{
+  "report_templates": {
+    "executive_summary": {
+      "name": "Executive Summary Report",
+      "sections": [
+        {
+          "id": "kpi_overview",
+          "title": "Key Performance Indicators",
+          "charts": ["uptime", "availability", "performance_score"]
+        },
+        {
+          "id": "incidents",
+          "title": "Incidents & Alerts",
+          "content": "incident_summary"
+        },
+        {
+          "id": "compliance",
+          "title": "Compliance Status",
+          "charts": ["compliance_score", "policy_violations"]
+        },
+        {
+          "id": "costs",
+          "title": "Cost Summary",
+          "charts": ["cost_trend", "cost_by_service"]
+        }
+      ],
+      "frequency": "weekly",
+      "recipients": [],
+      "format": "pdf"
+    },
+    "technical_report": {
+      "name": "Technical Performance Report",
+      "sections": [
+        {
+          "id": "infrastructure",
+          "title": "Infrastructure Performance",
+          "charts": ["cpu_utilization", "memory_utilization", "disk_usage"]
+        },
+        {
+          "id": "application",
+          "title": "Application Metrics",
+          "content": "app_performance_details"
+        },
+        {
+          "id": "azure_metrics",
+          "title": "Azure Resource Performance",
+          "charts": ["vm_performance", "app_service_metrics"]
+        },
+        {
+          "id": "logs_errors",
+          "title": "Errors & Warnings",
+          "content": "error_analysis"
+        }
+      ],
+      "frequency": "daily",
+      "recipients": [],
+      "format": "html"
+    },
+    "compliance_report": {
+      "name": "Compliance & Governance Report",
+      "sections": [
+        {
+          "id": "compliance_status",
+          "title": "Compliance Framework Status",
+          "frameworks": ["GDPR", "HIPAA", "SOC2", "ISO27001"]
+        },
+        {
+          "id": "dlp_summary",
+          "title": "Data Loss Prevention",
+          "charts": ["dlp_violations_trend", "violation_by_type"]
+        },
+        {
+          "id": "audit_trail",
+          "title": "Audit Trail Summary",
+          "events": "security_events_summary"
+        },
+        {
+          "id": "risk_assessment",
+          "title": "Risk Assessment",
+          "content": "current_risks"
+        }
+      ],
+      "frequency": "monthly",
+      "recipients": [],
+      "format": "pdf"
+    },
+    "capacity_planning": {
+      "name": "Capacity Planning Report",
+      "sections": [
+        {
+          "id": "current_utilization",
+          "title": "Current Utilization",
+          "charts": ["cpu_trend", "memory_trend", "disk_trend"]
+        },
+        {
+          "id": "growth_projection",
+          "title": "Growth Projections (12 months)",
+          "charts": ["cpu_forecast", "memory_forecast", "storage_forecast"]
+        },
+        {
+          "id": "azure_quotas",
+          "title": "Azure Quota Analysis",
+          "content": "quota_utilization_analysis"
+        },
+        {
+          "id": "recommendations",
+          "title": "Capacity Recommendations",
+          "content": "capacity_recommendations"
+        }
+      ],
+      "frequency": "monthly",
+      "recipients": [],
+      "format": "excel"
+    }
+  },
+  "chart_configs": {
+    "uptime": {
+      "type": "gauge",
+      "title": "System Uptime %",
+      "min": 0,
+      "max": 100,
+      "thresholds": [90, 99, 99.9]
+    },
+    "cpu_utilization": {
+      "type": "line",
+      "title": "CPU Utilization (%)",
+      "unit": "%",
+      "timeRange": "24h",
+      "aggregation": "average"
+    },
+    "memory_utilization": {
+      "type": "line",
+      "title": "Memory Utilization (%)",
+      "unit": "%",
+      "timeRange": "24h",
+      "aggregation": "average"
+    },
+    "disk_usage": {
+      "type": "stacked_bar",
+      "title": "Disk Usage by Volume",
+      "unit": "GB",
+      "timeRange": "7d"
+    },
+    "cost_trend": {
+      "type": "area",
+      "title": "Cost Trend",
+      "unit": "$",
+      "timeRange": "30d",
+      "aggregation": "daily"
+    },
+    "dlp_violations_trend": {
+      "type": "bar",
+      "title": "DLP Violations Trend",
+      "unit": "count",
+      "timeRange": "30d"
+    }
+  },
+  "export_options": {
+    "formats": ["PDF", "HTML", "Excel", "JSON"],
+    "compression": true,
+    "includeCharts": true,
+    "pageOrientation": "portrait",
+    "paperSize": "A4"
+  },
+  "distribution": {
+    "methods": ["email", "teams", "slack", "sharepoint"],
+    "retentionDays": 365,
+    "encryptionEnabled": true
+  }
+}

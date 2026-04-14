@@ -1,0 +1,301 @@
+# Build Manager - Quick Reference Guide
+
+## 🚀 Quick Start Commands
+
+### Interactive Build Selection
+```powershell
+cd C:\Users\ADMIN\helios-platform\scripts\build-manager
+.\select-build.ps1
+```
+**Choose from 7 variants:** Minimal, Standard, Developer, Enterprise, GPU-Optimized, Edge, All-Features
+
+### Enable GPU Acceleration
+```powershell
+.\toggle-feature.ps1 -Component gpu-acceleration -Enable -Verbose
+```
+
+### Disable Development Tools
+```powershell
+.\toggle-feature.ps1 -Component development-tools -Disable
+```
+
+### Preview Changes (No Apply)
+```powershell
+.\toggle-feature.ps1 -Component gpu-acceleration -Enable -WhatIf
+```
+
+### Compare Two Builds
+```powershell
+.\compare-builds.ps1 -Variant1 standard -Variant2 enterprise
+```
+
+### Compare with Report
+```powershell
+.\compare-builds.ps1 -Variant1 minimal -Variant2 all-features -ExportHtml -ExportMarkdown
+```
+
+### Show Current Build
+```powershell
+.\show-build-composition.ps1
+```
+
+### Show with Disabled Components
+```powershell
+.\show-build-composition.ps1 -ShowDisabled
+```
+
+### Create Snapshot
+```powershell
+.\create-snapshot.ps1 -Name "stable-v1" -Description "Working build"
+```
+
+### List Snapshots
+```powershell
+.\list-snapshots.ps1
+```
+
+### List with Details
+```powershell
+.\list-snapshots.ps1 -ShowDetails -Limit 5
+```
+
+### Restore Snapshot
+```powershell
+.\restore-snapshot.ps1 -SnapshotId "stable-v1"
+```
+
+### Create Custom Build
+```powershell
+.\create-custom-build.ps1
+```
+
+### Create Custom from JSON
+```powershell
+.\create-custom-build.ps1 -ConfigFile custom.json -VariantName "my-custom" -SaveVariant
+```
+
+## 📊 Build Variant Overview
+
+| Variant | Size | Time | Use Case |
+|---------|------|------|----------|
+| **Minimal** | 256 MB | 2 min | Embedded, IoT, constrained devices |
+| **Standard** | 1.2 GB | 8 min | ⭐ Most users, production default |
+| **Developer** | 2.4 GB | 12 min | Development, testing, debugging |
+| **Enterprise** | 3.8 GB | 18 min | High-availability, production clusters |
+| **GPU-Optimized** | 2.8 GB | 14 min | ML, compute, graphics workloads |
+| **Edge-Deployment** | 512 MB | 4 min | Edge devices, minimal resources |
+| **All-Features** | 5.2 GB | 25 min | Development, evaluation, labs |
+
+## 🔧 Common Workflows
+
+### Setup for Development
+```powershell
+# 1. Select developer build
+.\select-build.ps1 -Variant developer
+
+# 2. Enable GPU if needed
+.\toggle-feature.ps1 -Component gpu-acceleration -Enable
+
+# 3. Save snapshot
+.\create-snapshot.ps1 -Name "dev-setup"
+
+# 4. View composition
+.\show-build-composition.ps1 -ExportHtml
+```
+
+### Production Deployment
+```powershell
+# 1. Compare options
+.\compare-builds.ps1 -Variant1 standard -Variant2 enterprise -ExportHtml
+
+# 2. Create snapshot before change
+.\create-snapshot.ps1 -Name "pre-deployment"
+
+# 3. Select enterprise build
+.\select-build.ps1 -Variant enterprise
+
+# 4. Verify
+.\show-build-composition.ps1
+
+# 5. Rollback if needed
+.\restore-snapshot.ps1 -SnapshotId "pre-deployment"
+```
+
+### Custom Build for ML
+```powershell
+# 1. Interactive selection
+.\create-custom-build.ps1
+
+# 2. Add components:
+#    - core (auto-included)
+#    - network-stack (auto-included)
+#    - advanced-ui
+#    - gpu-acceleration
+#    - ml-toolkit
+#    - compute-libraries
+
+# 3. Save as variant
+# 4. View results
+.\show-build-composition.ps1 -ExportMarkdown
+```
+
+### Testing Workflow
+```powershell
+# 1. Create baseline
+.\create-snapshot.ps1 -Name "test-baseline"
+
+# 2. Test changes
+.\toggle-feature.ps1 -Component profiling-tools -Enable
+.\toggle-feature.ps1 -Component testing-framework -Enable
+
+# 3. Compare
+.\show-build-composition.ps1
+
+# 4. Revert if needed
+.\restore-snapshot.ps1 -SnapshotId "test-baseline"
+```
+
+## 📁 Output Locations
+
+| Item | Location |
+|------|----------|
+| Logs | `logs/` (6 log files) |
+| Snapshots | `snapshots/` |
+| Backups | `backups/` |
+| Reports | `reports/` (HTML/Markdown) |
+| Custom Variants | `custom-variants/` |
+
+## 🎯 Common Parameters
+
+| Parameter | Usage | Scripts |
+|-----------|-------|---------|
+| `-Verbose` | Detailed logging | All |
+| `-WhatIf` | Preview without changes | toggle-feature, restore-snapshot |
+| `-ShowDetails` | Full information | list-snapshots, show-composition |
+| `-ExportHtml` | Generate HTML report | compare-builds, show-composition |
+| `-ExportMarkdown` | Generate Markdown report | compare-builds, show-composition |
+| `-Limit N` | Show N recent items | list-snapshots |
+| `-SortBy` | Sort by date/name/components | list-snapshots |
+
+## 🚨 Troubleshooting
+
+### Build Won't Change
+```powershell
+# Check current state
+.\show-build-composition.ps1
+
+# Check logs
+Get-Content logs/build-selection.log | Select-String -Pattern "Error" -Last 5
+```
+
+### Component Conflict
+```powershell
+# Preview first
+.\toggle-feature.ps1 -Component gpu-acceleration -Enable -WhatIf
+
+# Check dependencies
+.\show-build-composition.ps1 -ShowDisabled
+```
+
+### Restore Failed
+```powershell
+# List available snapshots
+.\list-snapshots.ps1 -ShowDetails
+
+# Try different snapshot
+.\restore-snapshot.ps1 -SnapshotId "snapshot-name"
+```
+
+### Check Backup
+```powershell
+Get-ChildItem .\backups\ | Sort-Object LastWriteTime -Descending | Head -5
+```
+
+## 📝 JSON Configuration Examples
+
+### Batch Toggle Components
+File: `toggle-components.json`
+```json
+[
+  {"component": "gpu-acceleration", "action": "enable"},
+  {"component": "ml-toolkit", "action": "enable"},
+  {"component": "development-tools", "action": "disable"}
+]
+```
+Usage:
+```powershell
+.\toggle-feature.ps1 -BatchFile toggle-components.json
+```
+
+### Custom Build Config
+File: `custom-ml-build.json`
+```json
+{
+  "components": [
+    "core",
+    "network-stack",
+    "advanced-ui",
+    "gpu-acceleration",
+    "ml-toolkit",
+    "compute-libraries",
+    "monitoring",
+    "database-client"
+  ]
+}
+```
+Usage:
+```powershell
+.\create-custom-build.ps1 -ConfigFile custom-ml-build.json -VariantName "ml-build" -SaveVariant
+```
+
+## ⚡ Performance Tips
+
+1. **Use -WhatIf first** - Preview before applying
+2. **Check logs regularly** - Find issues early
+3. **Create snapshots often** - Easy rollback
+4. **Compare before major changes** - Understand impact
+5. **Use batch mode** - Apply multiple changes at once
+
+## 🔐 Safety Checklist
+
+- [ ] Always create snapshot before major changes
+- [ ] Use -WhatIf to preview component toggles
+- [ ] Review logs after operations
+- [ ] Verify composition after changes
+- [ ] Test in non-production first
+- [ ] Keep important snapshots
+- [ ] Document custom variants
+
+## 📞 Getting Help
+
+```powershell
+# Help for any script
+Get-Help .\select-build.ps1 -Full
+
+# See examples
+Get-Help .\toggle-feature.ps1 -Examples
+
+# Check logs for errors
+Get-Content logs/*.log | Where-Object {$_ -match "Error"}
+```
+
+## 🎓 Script Reference
+
+| Script | Purpose | Key Features |
+|--------|---------|--------------|
+| **select-build.ps1** | Choose variant | 7 presets, interactive menu |
+| **toggle-feature.ps1** | Enable/disable component | Dependencies, batch mode |
+| **compare-builds.ps1** | Compare variants | HTML/MD export, analytics |
+| **show-build-composition.ps1** | View current build | Metrics, export options |
+| **create-snapshot.ps1** | Save build state | Timestamped, metadata |
+| **list-snapshots.ps1** | View snapshots | Filter, sort, details |
+| **restore-snapshot.ps1** | Load build state | Validation, rollback |
+| **create-custom-build.ps1** | Custom build | Interactive, save variant |
+
+---
+
+**For detailed documentation, see README.md**
+
+*All scripts support -Verbose for detailed logging*
+*All scripts support -WhatIf where applicable*
+*Use Get-Help for full parameter documentation*

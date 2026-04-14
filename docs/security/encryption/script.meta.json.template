@@ -1,0 +1,74 @@
+{
+  "name": "{{SCRIPT_NAME}}",
+  "displayName": "{{SCRIPT_DISPLAY_NAME}}",
+  "version": "{{SCRIPT_VERSION}}",
+  "description": "{{SCRIPT_DESCRIPTION}}",
+  "category": "{{CATEGORY}}",
+  "module": "{{MODULE}}",
+  "author": {
+    "name": "{{AUTHOR_NAME}}",
+    "email": "{{AUTHOR_EMAIL}}",
+    "company": "{{AUTHOR_COMPANY}}"
+  },
+  "purpose": "{{PURPOSE}}",
+  "synopsis": "{{SYNOPSIS}}",
+  "parameters": {
+    "{{PARAM_1}}": {
+      "type": "{{PARAM_1_TYPE}}",
+      "required": {{PARAM_1_REQUIRED}},
+      "default": "{{PARAM_1_DEFAULT}}",
+      "description": "{{PARAM_1_DESC}}",
+      "values": ["{{VALUE_1}}", "{{VALUE_2}}"]
+    },
+    "{{PARAM_2}}": {
+      "type": "{{PARAM_2_TYPE}}",
+      "required": {{PARAM_2_REQUIRED}},
+      "description": "{{PARAM_2_DESC}}"
+    }
+  },
+  "returns": {
+    "type": "{{RETURN_TYPE}}",
+    "description": "{{RETURN_DESC}}"
+  },
+  "dependencies": [
+    "{{DEPENDENCY_1}}",
+    "{{DEPENDENCY_2}}",
+    "{{DEPENDENCY_3}}"
+  ],
+  "requirements": {
+    "powershellVersion": "{{PS_VERSION}}",
+    "osVersion": "{{OS_VERSION}}",
+    "modules": ["{{MODULE_REQ_1}}", "{{MODULE_REQ_2}}"]
+  },
+  "tags": ["{{TAG_1}}", "{{TAG_2}}", "{{TAG_3}}"],
+  "status": "{{STATUS}}",
+  "stability": "{{STABILITY}}",
+  "deprecated": {{IS_DEPRECATED}},
+  "depreciationMessage": "{{DEPRECATION_MESSAGE}}",
+  "performance": {
+    "executionTime": "{{EXECUTION_TIME}}",
+    "memoryUsage": "{{MEMORY_USAGE}}",
+    "complexity": "{{COMPLEXITY}}"
+  },
+  "relatedScripts": [
+    "{{RELATED_SCRIPT_1}}",
+    "{{RELATED_SCRIPT_2}}"
+  ],
+  "documentation": {
+    "wiki": "./{{SCRIPT_NAME}}.wiki.md",
+    "examples": "./{{SCRIPT_NAME}}.examples.md",
+    "buildUsage": "./{{SCRIPT_NAME}}.build-usage.md"
+  },
+  "testing": {
+    "tested": {{IS_TESTED}},
+    "testCases": {{TEST_COUNT}},
+    "coverage": "{{TEST_COVERAGE}}%"
+  },
+  "changelog": [
+    {
+      "version": "{{VERSION_1}}",
+      "date": "{{DATE_1}}",
+      "changes": ["{{CHANGE_1}}", "{{CHANGE_2}}"]
+    }
+  ]
+}

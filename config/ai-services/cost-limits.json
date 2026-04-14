@@ -1,0 +1,38 @@
+{
+  "budgets": {
+    "daily": 50.0,
+    "monthly": 500.0,
+    "perService": {
+      "chatgpt-pro": {
+        "daily": 20.0,
+        "monthly": 200.0
+      },
+      "codex": {
+        "daily": 15.0,
+        "monthly": 150.0
+      },
+      "gpt-4-5": {
+        "daily": 15.0,
+        "monthly": 150.0
+      }
+    }
+  },
+  "thresholds": {
+    "warnAtPercent": 80,
+    "alertAtPercent": 90,
+    "blockedAtPercent": 100
+  },
+  "tracking": {
+    "trackByService": true,
+    "trackByTaskType": true,
+    "trackByUser": true,
+    "trackByTimeOfDay": true,
+    "granularityMinutes": 15
+  },
+  "billing": {
+    "currency": "USD",
+    "billingCycle": "monthly",
+    "invoiceStorage": "C:\\Users\\ADMIN\\helios-platform\\data\\ai-services\\invoices",
+    "exportFormats": ["json", "csv", "html"]
+  }
+}

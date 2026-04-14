@@ -1,0 +1,220 @@
+HELIOS PLATFORM LICENSE AGREEMENT
+
+Version 1.0.0.0
+Last Updated: 2024
+
+═══════════════════════════════════════════════════════════════════════════
+
+1. GRANT OF LICENSE
+
+This License Agreement ("Agreement") is entered into between HELIOS Solutions
+("Licensor") and the individual or entity installing this software ("Licensee").
+
+Licensor grants Licensee a personal, non-exclusive, non-transferable license to:
+  • Install and use HELIOS Platform on licensed systems
+  • Create derivative works for internal business purposes
+  • Use associated documentation
+  • Access support services (if applicable)
+
+This is not a sale of the software. Title and ownership remain with Licensor.
+
+═══════════════════════════════════════════════════════════════════════════
+
+2. RESTRICTIONS
+
+Licensee may NOT:
+  • Copy, rent, lease, or lend the software
+  • Reverse engineer, decompile, or disassemble the software
+  • Remove or modify copyright notices or proprietary marks
+  • Use the software for any illegal purpose
+  • Sell, sublicense, or distribute the software
+  • Modify the software or create patches without written permission
+  • Use the software on more systems than licensed
+
+═══════════════════════════════════════════════════════════════════════════
+
+3. INSTALLATION
+
+Installation of HELIOS Platform constitutes acceptance of this License Agreement.
+If you do not agree with the terms, do not install the software.
+
+Installation requires:
+  • Windows 11 Pro or Enterprise
+  • Administrator privileges
+  • .NET 8 SDK or later
+  • PowerShell 7.0 or later
+  • 2 GB minimum free disk space
+
+═══════════════════════════════════════════════════════════════════════════
+
+4. INTELLECTUAL PROPERTY
+
+All intellectual property rights, including copyright, trade secrets, patents,
+and trademarks related to HELIOS Platform remain the exclusive property of
+Licensor. Licensee acknowledges these rights and agrees not to contest them.
+
+© 2024 HELIOS Solutions. All rights reserved.
+
+═══════════════════════════════════════════════════════════════════════════
+
+5. SUPPORT AND UPDATES
+
+Licensor provides support according to the deployment tier selected:
+
+Professional Tier:
+  • Email support: Business hours
+  • Updates: Security patches only
+  • Response time: 48 hours
+
+Enterprise Tier:
+  • Email support: 24/5 (Monday-Friday)
+  • Updates: All updates included
+  • Response time: 24 hours
+
+Ultimate Tier:
+  • Email support: 24/7
+  • Phone support: 24/7
+  • Updates: Priority access
+  • Response time: 4 hours
+
+Support does not cover:
+  • Misuse or abuse of the software
+  • Improper installation or configuration
+  • Issues caused by third-party software
+  • Issues caused by system misconfiguration
+
+═══════════════════════════════════════════════════════════════════════════
+
+6. WARRANTY DISCLAIMER
+
+THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+LICENSOR DOES NOT WARRANT:
+  • That the software will meet your requirements
+  • That the software will be uninterrupted or error-free
+  • That defects will be corrected
+  • That the software is suitable for any particular purpose
+
+═══════════════════════════════════════════════════════════════════════════
+
+7. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL LICENSOR BE LIABLE FOR:
+  • Direct, indirect, incidental, or consequential damages
+  • Lost profits, revenue, data, or use
+  • Business interruption or loss of business opportunity
+  • ANY DAMAGES, EVEN IF LICENSOR HAS BEEN ADVISED OF POSSIBILITY
+
+Total liability of Licensor under this Agreement shall not exceed the amount
+paid by Licensee for the software.
+
+═══════════════════════════════════════════════════════════════════════════
+
+8. TERMINATION
+
+This Agreement is effective until terminated. Licensor may terminate this
+Agreement immediately if Licensee:
+  • Violates any provision of this Agreement
+  • Engages in illegal activity using the software
+  • Attempts to circumvent license restrictions
+
+Upon termination:
+  • All rights granted herein cease
+  • Licensee must cease all use of the software
+  • Licensee must uninstall the software within 7 days
+  • Licensor may pursue legal remedies
+
+═══════════════════════════════════════════════════════════════════════════
+
+9. PRIVACY AND DATA COLLECTION
+
+HELIOS Platform may collect:
+  • System information (hardware, OS version, .NET version)
+  • Usage statistics (features used, frequency)
+  • Error reports (crash dumps, error logs)
+  • Update checks (current version, available updates)
+
+This data is:
+  • Used solely for improving HELIOS Platform
+  • Never sold to third parties
+  • Encrypted during transmission
+  • Retained for 90 days maximum
+  • Anonymized to protect privacy
+
+Licensee may disable telemetry by:
+  1. Running: Configuration UI → Telemetry → Disable
+  2. Or editing: config\helios.config → EnableTelemetry=0
+
+═══════════════════════════════════════════════════════════════════════════
+
+10. THIRD-PARTY COMPONENTS
+
+HELIOS Platform includes software from third parties, each governed by their
+respective licenses. These components include:
+
+  • .NET Runtime (.NET Foundation)
+  • PowerShell (Microsoft)
+  • Open source libraries (see LICENSE_THIRD_PARTY.txt)
+
+Licensee agrees to abide by the terms of all third-party licenses.
+
+═══════════════════════════════════════════════════════════════════════════
+
+11. UPDATES AND MODIFICATIONS
+
+Licensor reserves the right to:
+  • Update this License Agreement at any time
+  • Modify the software at any time
+  • Discontinue the software with 30 days notice
+  • Change support terms with 30 days notice
+
+Continued use after updates constitutes acceptance of new terms.
+
+═══════════════════════════════════════════════════════════════════════════
+
+12. COMPLIANCE
+
+Licensee agrees to comply with all applicable laws and regulations,
+including but not limited to:
+  • Export control regulations
+  • Data protection regulations (GDPR, CCPA, etc.)
+  • Corporate governance requirements
+
+═══════════════════════════════════════════════════════════════════════════
+
+13. ENTIRE AGREEMENT
+
+This License Agreement constitutes the entire agreement between the parties
+regarding the software and supersedes all prior agreements, whether written
+or oral.
+
+No modification of this Agreement shall be valid unless in writing and signed
+by an authorized representative of Licensor.
+
+═══════════════════════════════════════════════════════════════════════════
+
+14. GOVERNING LAW
+
+This Agreement shall be governed by and construed in accordance with the laws
+of [Jurisdiction], without regard to its conflict of laws principles.
+
+═══════════════════════════════════════════════════════════════════════════
+
+15. CONTACT INFORMATION
+
+For questions regarding this License Agreement:
+  Email: legal@helios.solutions
+  Website: https://helios.solutions
+  Support: https://support.helios.solutions
+
+═══════════════════════════════════════════════════════════════════════════
+
+By installing HELIOS Platform, you acknowledge that you have read this
+License Agreement, understand its terms, and agree to be bound by them.
+
+Date of Agreement: 2024
+License Version: 1.0.0.0
+Product: HELIOS Platform
+Publisher: HELIOS Solutions

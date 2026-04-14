@@ -1,0 +1,45 @@
+{
+  "power": {
+    "powerBi": {
+      "tenantSettings": {
+        "allowPublishing": false,
+        "allowSharingWith": "Organization",
+        "allowExport": true
+      },
+      "dataflows": {
+        "enabled": true,
+        "refreshSchedule": "Daily"
+      }
+    },
+    "powerAutomate": {
+      "cloudFlows": {
+        "maxCount": 100,
+        "enableApprovalFlows": true
+      },
+      "desktopFlows": {
+        "enabled": true,
+        "maxCount": 50
+      },
+      "connectors": [
+        "Salesforce",
+        "Dynamics365",
+        "MicrosoftSQL",
+        "SharePoint",
+        "Teams",
+        "Exchange"
+      ]
+    },
+    "powerApps": {
+      "enableAppSharing": true,
+      "enableComponentSharing": true,
+      "enableThemingOptions": true,
+      "canvasApps": {
+        "maxCount": 50
+      }
+    },
+    "licensing": {
+      "defaultSKU": "PowerAppsPerApp",
+      "includesFlows": true
+    }
+  }
+}

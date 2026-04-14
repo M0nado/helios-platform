@@ -1,0 +1,100 @@
+{
+  "m365": {
+    "tenantId": "${M365_TENANT_ID}",
+    "tenantName": "helios.onmicrosoft.com",
+    "exchange": {
+      "organizationName": "HELIOS Organization",
+      "enableModernAuth": true,
+      "enableAuditLog": true,
+      "retentionPolicy": {
+        "enabled": true,
+        "days": 2555
+      },
+      "dlpPolicies": {
+        "enabled": true,
+        "scanDocuments": true
+      }
+    },
+    "sharepoint": {
+      "sites": {
+        "communal": "helios-communal",
+        "intranet": "helios-intranet",
+        "collaboration": "helios-collab"
+      },
+      "settings": {
+        "enableVersioning": true,
+        "versionLimit": 500,
+        "enableRecycleBin": true,
+        "recycleBinRetentionDays": 30
+      },
+      "sharing": {
+        "externalSharing": "ExistingExternalUserSharingOnly",
+        "requireSignInBeforeAccess": true
+      }
+    },
+    "teams": {
+      "settings": {
+        "enableGuestAccess": true,
+        "enableExternalAccess": false,
+        "enableAnonymousMeeting": false,
+        "allowMeetingScheduling": true,
+        "allowChannelMeeting": true
+      },
+      "teams": [
+        {
+          "name": "Platform Operations",
+          "visibility": "private",
+          "channels": ["General", "Incidents", "Planning"]
+        },
+        {
+          "name": "Engineering",
+          "visibility": "private",
+          "channels": ["General", "Development", "Deployment"]
+        }
+      ]
+    },
+    "onedrive": {
+      "defaultQuotaGB": 1000,
+      "enableB2BSync": true,
+      "notificationSettings": {
+        "enableNotifications": true,
+        "notifyOnExternalSharing": true
+      },
+      "coauthoring": {
+        "enabled": true,
+        "realTimeCollaboration": true
+      }
+    },
+    "licensing": {
+      "skus": [
+        "M365Business",
+        "E5",
+        "E3"
+      ],
+      "managedGroups": [
+        "Office365E5Users",
+        "Office365E3Users",
+        "MicrosoftTeamsUsers"
+      ]
+    },
+    "compliance": {
+      "dlp": {
+        "enabled": true,
+        "policies": []
+      },
+      "retention": {
+        "enabled": true,
+        "defaultPeriod": 2555
+      },
+      "audit": {
+        "enabled": true,
+        "recordType": "All"
+      }
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "logPath": "C:\\Logs\\HELIOS\\M365",
+    "logLevel": "Info"
+  }
+}

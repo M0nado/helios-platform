@@ -1,0 +1,187 @@
+{
+  "project": {
+    "name": "HELIOS Platform Development",
+    "description": "Comprehensive project workspace for HELIOS Platform multi-component ecosystem",
+    "owner": "HELIOS",
+    "version": "1.0",
+    "metadata": {
+      "created": "2024",
+      "status": "active",
+      "visibility": "private",
+      "template_version": "github-projects-v2"
+    },
+    "columns": [
+      {
+        "id": "col-backlog",
+        "name": "Backlog",
+        "description": "New items and feature requests awaiting prioritization",
+        "position": 1,
+        "settings": {
+          "auto_close": false,
+          "auto_archive": false,
+          "card_limit": null
+        }
+      },
+      {
+        "id": "col-structure",
+        "name": "Structure",
+        "description": "Items in design phase and architectural planning",
+        "position": 2,
+        "settings": {
+          "auto_close": false,
+          "auto_archive": false,
+          "card_limit": null
+        }
+      },
+      {
+        "id": "col-in-progress",
+        "name": "In Progress",
+        "description": "Actively being worked on by development team",
+        "position": 3,
+        "settings": {
+          "auto_close": false,
+          "auto_archive": false,
+          "card_limit": 15
+        }
+      },
+      {
+        "id": "col-documentation",
+        "name": "Documentation",
+        "description": "Documentation tasks and knowledge base updates",
+        "position": 4,
+        "settings": {
+          "auto_close": false,
+          "auto_archive": false,
+          "card_limit": null
+        }
+      },
+      {
+        "id": "col-done",
+        "name": "Done",
+        "description": "Completed items and verified deliverables",
+        "position": 5,
+        "settings": {
+          "auto_close": true,
+          "auto_archive": true,
+          "archive_delay_days": 7,
+          "card_limit": null
+        }
+      }
+    ],
+    "milestones": [
+      {
+        "id": "m1-foundation",
+        "name": "Phase 1: Foundation",
+        "description": "Core infrastructure setup, base modules, and testing framework",
+        "position": 1,
+        "target_date": null,
+        "status": "in_progress",
+        "objectives": [
+          "Establish repository structure and CI/CD pipeline",
+          "Create base component architecture",
+          "Implement testing framework",
+          "Set up documentation infrastructure"
+        ]
+      },
+      {
+        "id": "m2-workspace",
+        "name": "Phase 2: Workspace",
+        "description": "Multi-component integration, workspace orchestration, and submodule management",
+        "position": 2,
+        "target_date": null,
+        "status": "planned",
+        "objectives": [
+          "Integrate multiple components",
+          "Implement workspace synchronization",
+          "Create component versioning system",
+          "Build component registry"
+        ]
+      },
+      {
+        "id": "m3-connections",
+        "name": "Phase 3: Connections",
+        "description": "Inter-component communication, API layer, and data flow orchestration",
+        "position": 3,
+        "target_date": null,
+        "status": "planned",
+        "objectives": [
+          "Design API contracts between components",
+          "Implement message queue infrastructure",
+          "Create event system",
+          "Build health monitoring"
+        ]
+      },
+      {
+        "id": "m4-documentation",
+        "name": "Phase 4: Documentation",
+        "description": "Comprehensive documentation, guides, and knowledge base",
+        "position": 4,
+        "target_date": null,
+        "status": "planned",
+        "objectives": [
+          "Complete API documentation",
+          "Create deployment guides",
+          "Build troubleshooting knowledge base",
+          "Generate architecture documentation"
+        ]
+      }
+    ],
+    "issue_labels": [
+      {
+        "name": "bug",
+        "color": "d73a49",
+        "description": "Something isn't working as expected"
+      },
+      {
+        "name": "enhancement",
+        "color": "a2eeef",
+        "description": "New feature or request"
+      },
+      {
+        "name": "documentation",
+        "color": "0075ca",
+        "description": "Documentation improvements"
+      },
+      {
+        "name": "component-core",
+        "color": "fbca04",
+        "description": "Core platform component work"
+      },
+      {
+        "name": "component-module",
+        "color": "ffd700",
+        "description": "Module component work"
+      },
+      {
+        "name": "component-registry",
+        "color": "fff44f",
+        "description": "Component registry and versioning"
+      },
+      {
+        "name": "build-ci",
+        "color": "7d64ff",
+        "description": "CI/CD pipeline and build automation"
+      },
+      {
+        "name": "critical",
+        "color": "ff6b6b",
+        "description": "Critical blocking issue"
+      },
+      {
+        "name": "good-first-issue",
+        "color": "7057ff",
+        "description": "Good for newcomers"
+      },
+      {
+        "name": "in-review",
+        "color": "cccccc",
+        "description": "Under review or awaiting feedback"
+      }
+    ],
+    "automation": {
+      "auto_add_to_project": true,
+      "workflows_enabled": true,
+      "status_checks_required": true
+    }
+  }
+}

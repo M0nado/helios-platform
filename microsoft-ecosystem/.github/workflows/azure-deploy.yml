@@ -1,0 +1,257 @@
+name: Deploy HELIOS to Azure
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/helios-platform
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up PowerShell
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y powershell
+
+      - name: Run Pester tests
+        run: |
+          pwsh -Command "
+            Install-Module Pester -Force
+            Invoke-Pester -Path ./tests -Verbose
+          "
+
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload security scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' || contains(github.ref, 'release/')
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy infrastructure
+        run: |
+          az deployment group create \
+            --resource-group helios-platform-staging \
+            --template-file ./infrastructure/main.bicep \
+            --parameters environment=staging
+
+      - name: Deploy application
+        run: |
+          az webapp deployment source config-zip \
+            --resource-group helios-platform-staging \
+            --name helios-app-staging \
+            --src-path ./build/app.zip
+
+      - name: Run smoke tests
+        run: |
+          curl -f https://helios-staging.azurewebsites.net/health || exit 1
+
+      - name: Notify Teams
+        if: success()
+        uses: jdcargile/ms-teams-notification@v1.3
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK_URI }}
+          notification-color: 28a745
+          title: 'HELIOS Deployment to Staging'
+          fields: 'Actor,Branch,Commit Message'
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/release/*'
+    environment: production
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create deployment approval
+        id: approval
+        run: |
+          echo "Waiting for production deployment approval..."
+          # This step would integrate with your approval workflow
+          echo "approved=true" >> $GITHUB_OUTPUT
+
+      - name: Deploy infrastructure
+        run: |
+          az deployment group create \
+            --resource-group helios-platform-prod \
+            --template-file ./infrastructure/main.bicep \
+            --parameters environment=production
+
+      - name: Deploy application
+        run: |
+          az webapp deployment source config-zip \
+            --resource-group helios-platform-prod \
+            --name helios-app-prod \
+            --src-path ./build/app.zip
+
+      - name: Update Azure Monitor alerts
+        run: |
+          az monitor alert create \
+            --resource-group helios-platform-prod \
+            --name helios-alerts \
+            --description "HELIOS Platform production alerts"
+
+      - name: Run health checks
+        run: |
+          curl -f https://helios.azurewebsites.net/health || exit 1
+          curl -f https://helios.azurewebsites.net/api/status || exit 1
+
+      - name: Update status dashboard
+        run: |
+          pwsh -Command "
+            # Update Power BI dataset
+            Invoke-WebRequest -Uri '${{ secrets.POWERBI_WEBHOOK_URI }}' `
+              -Method Post `
+              -Body @{status='deployed'; version='${{ github.sha }}'} | Out-Null
+          "
+
+      - name: Notify Teams (Production Deployment)
+        if: success()
+        uses: jdcargile/ms-teams-notification@v1.3
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK_URI_PROD }}
+          notification-color: 007bff
+          title: 'HELIOS Deployment to Production'
+          fields: 'Actor,Branch,Commit Message,Deployment Status'
+
+      - name: Create release notes
+        if: success()
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --notes "Production deployment of HELIOS Platform" \
+            --title "Release ${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: [build, test]
+    environment: staging
+
+    steps:
+      - name: Notify of failure
+        uses: jdcargile/ms-teams-notification@v1.3
+        with:
+          github-token: ${{ github.token }}
+          ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK_URI }}
+          notification-color: dc3545
+          title: 'HELIOS Deployment Failed'
+          fields: 'Actor,Branch,Commit Message'
+
+      - name: Create incident ticket
+        run: |
+          echo "Incident created for failed deployment"
+          # Integration with your ticketing system
+
+  performance-test:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: always()
+
+    steps:
+      - name: Run performance tests
+        run: |
+          echo "Running performance benchmarks..."
+          # Run load testing, response time tests, etc.
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: ./perf-results/

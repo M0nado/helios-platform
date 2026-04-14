@@ -1,0 +1,90 @@
+{
+  "AuthenticationMethods": {
+    "PasswordHashSync": {
+      "Enabled": true,
+      "SyncCycleMinutes": 2,
+      "BackupMethod": true,
+      "Priority": 1
+    },
+    "PassThroughAuth": {
+      "Enabled": true,
+      "Agents": [],
+      "Priority": 2
+    },
+    "Federation": {
+      "Enabled": false,
+      "ADFSServer": "",
+      "Priority": 3
+    }
+  },
+  "MFA": {
+    "Enabled": true,
+    "EnforceForAdmins": true,
+    "Methods": [
+      "MicrosoftAuthenticator",
+      "PhoneCall",
+      "SMS",
+      "OATHTokens",
+      "FIDO2"
+    ],
+    "RegistrationCampaignDays": 30
+  },
+  "ConditionalAccess": {
+    "Enabled": true,
+    "Policies": [
+      {
+        "Name": "MFA for Admin Portal",
+        "Target": "AdminPortal",
+        "Requirement": "MFA",
+        "Status": "Active"
+      },
+      {
+        "Name": "Compliant Device for Email",
+        "Target": "Exchange",
+        "Requirement": "CompliantDevice",
+        "Status": "Active"
+      },
+      {
+        "Name": "Block Legacy Auth",
+        "Target": "All",
+        "Requirement": "BlockLegacyAuth",
+        "Status": "Active"
+      },
+      {
+        "Name": "MFA for External",
+        "Target": "ExternalAccess",
+        "Requirement": "MFA",
+        "Status": "Active"
+      }
+    ]
+  },
+  "PasswordPolicy": {
+    "MinimumLength": 14,
+    "RequireComplexity": true,
+    "PasswordHistoryCount": 24,
+    "ExpirationDays": 90,
+    "ExpirationWarningDays": 14,
+    "AccountLockoutThreshold": 5,
+    "AccountLockoutDurationMinutes": 30
+  },
+  "DeviceCompliance": {
+    "EnforceCompliance": true,
+    "RequiredOS": [
+      "Windows10",
+      "Windows11",
+      "WindowsServer2019",
+      "WindowsServer2022",
+      "macOS",
+      "iOS",
+      "Android"
+    ],
+    "RequireEncryption": true,
+    "RequireAntimalware": true
+  },
+  "SessionManagement": {
+    "IdleTimeoutMinutes": 15,
+    "MaxSessionDurationHours": 8,
+    "OngoingAccessCheckInterval": 5,
+    "PersistentBrowserSession": false
+  }
+}

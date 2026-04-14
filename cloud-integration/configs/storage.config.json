@@ -1,0 +1,194 @@
+{
+  "service": "storage",
+  "displayName": "Multi-Cloud Storage Backends",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 1,
+  "backends": [
+    {
+      "name": "azure-blob",
+      "provider": "Microsoft Azure",
+      "enabled": true,
+      "priority": 1,
+      "endpoints": {
+        "api": "https://${STORAGE_ACCOUNT}.blob.core.windows.net"
+      },
+      "authentication": {
+        "type": "connection_string",
+        "connectionString": "${AZURE_STORAGE_CONNECTION_STRING}",
+        "accountName": "${AZURE_STORAGE_ACCOUNT}",
+        "accountKey": "${AZURE_STORAGE_KEY}"
+      },
+      "containers": [
+        {
+          "name": "data",
+          "public": false,
+          "tier": "Hot"
+        },
+        {
+          "name": "backups",
+          "public": false,
+          "tier": "Cool"
+        },
+        {
+          "name": "archives",
+          "public": false,
+          "tier": "Archive"
+        }
+      ],
+      "features": {
+        "encryption": true,
+        "versioning": true,
+        "redundancy": "GRS",
+        "cdn": true
+      },
+      "costs": {
+        "storagePerGB": 0.0184,
+        "transactionsPer10k": 0.10
+      }
+    },
+    {
+      "name": "aws-s3",
+      "provider": "Amazon AWS",
+      "enabled": true,
+      "priority": 2,
+      "endpoints": {
+        "api": "https://s3.${AWS_REGION}.amazonaws.com"
+      },
+      "authentication": {
+        "type": "iam",
+        "accessKeyId": "${AWS_ACCESS_KEY_ID}",
+        "secretAccessKey": "${AWS_SECRET_ACCESS_KEY}",
+        "region": "${AWS_REGION}"
+      },
+      "buckets": [
+        {
+          "name": "helios-data",
+          "storageClass": "STANDARD",
+          "versioning": true
+        },
+        {
+          "name": "helios-backups",
+          "storageClass": "STANDARD_IA",
+          "versioning": true
+        }
+      ],
+      "features": {
+        "encryption": "AES256",
+        "versioning": true,
+        "replication": "cross-region",
+        "cloudfront": true
+      },
+      "costs": {
+        "storagePerGB": 0.023,
+        "transactionsPer1k": 0.0004
+      }
+    },
+    {
+      "name": "gcs",
+      "provider": "Google Cloud Storage",
+      "enabled": true,
+      "priority": 3,
+      "endpoints": {
+        "api": "https://storage.googleapis.com"
+      },
+      "authentication": {
+        "type": "service_account",
+        "serviceAccountFile": "${GCS_SERVICE_ACCOUNT_FILE}",
+        "projectId": "${GCS_PROJECT_ID}"
+      },
+      "buckets": [
+        {
+          "name": "helios-gcs-data",
+          "storageClass": "STANDARD",
+          "location": "us-central1"
+        }
+      ],
+      "features": {
+        "encryption": true,
+        "versioning": true,
+        "replication": "multi-region",
+        "cdn": true
+      },
+      "costs": {
+        "storagePerGB": 0.020,
+        "transactionsPer10k": 0.10
+      }
+    }
+  ],
+  "tiering": {
+    "enabled": true,
+    "rules": [
+      {
+        "name": "hot-active",
+        "days": 0,
+        "destination": "azure-blob",
+        "tier": "Hot"
+      },
+      {
+        "name": "warm-archive",
+        "days": 30,
+        "destination": "azure-blob",
+        "tier": "Cool"
+      },
+      {
+        "name": "cold-offsite",
+        "days": 90,
+        "destination": "aws-s3",
+        "tier": "Glacier"
+      }
+    ]
+  },
+  "replication": {
+    "enabled": true,
+    "strategy": "multi-region",
+    "sources": ["azure-blob"],
+    "targets": ["aws-s3", "gcs"],
+    "syncFrequency": "hourly",
+    "conflictResolution": "source-wins"
+  },
+  "dataSync": {
+    "enabled": true,
+    "bidirectional": false,
+    "compression": "gzip",
+    "deduplication": true,
+    "scheduling": {
+      "frequency": "hourly",
+      "retention": 90
+    }
+  },
+  "features": {
+    "encryption": {
+      "enabled": true,
+      "algorithm": "AES-256",
+      "keyManagement": "azure-keyvault"
+    },
+    "versioning": true,
+    "backup": {
+      "enabled": true,
+      "frequency": "daily",
+      "retention_days": 30
+    },
+    "monitoring": {
+      "enabled": true,
+      "metrics": ["storage-used", "request-count", "error-rate"]
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "storageQuota": 10995116277760,
+    "bandwidthQuota": 1099511627776
+  },
+  "costs": {
+    "budgetLimit": 1000,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "infrastructure"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 120,
+    "timeout_seconds": 10,
+    "testUploadSize": 1048576
+  }
+}

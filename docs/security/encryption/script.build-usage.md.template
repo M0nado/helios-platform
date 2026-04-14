@@ -1,0 +1,48 @@
+# {{SCRIPT_NAME}} - Build Integration
+
+**Template Version:** 1.0  
+**Last Updated:** {{LAST_UPDATED}}
+
+---
+
+## 🏗️ Used In Builds
+
+| Build | Version | Purpose | Required |
+|-------|---------|---------|----------|
+| {{BUILD_1}} | {{BUILD_1_VER}} | {{BUILD_1_PURPOSE}} | {{BUILD_1_REQ}} |
+| {{BUILD_2}} | {{BUILD_2_VER}} | {{BUILD_2_PURPOSE}} | {{BUILD_2_REQ}} |
+
+---
+
+## 📦 Build Integration Details
+
+### Integration in {{BUILD_1}}
+
+The script is included as:
+```
+Build/{{MODULE}}/{{SCRIPT_NAME}}.ps1
+```
+
+Used by: {{USAGE_IN_BUILD_1}}
+
+---
+
+### Integration in {{BUILD_2}}
+
+The script is included as:
+```
+Build/{{MODULE}}/{{SCRIPT_NAME}}.ps1
+```
+
+---
+
+## 🔄 Build Dependencies
+
+This script requires:
+- {{BUILD_DEP_1}}: {{BUILD_DEP_1_DESC}}
+- {{BUILD_DEP_2}}: {{BUILD_DEP_2_DESC}}
+
+---
+
+**See:** [Build Documentation](../../builds/) | [Compressed Snippets](./{{SCRIPT_NAME}}.snippet-ref.md)  
+**Generated from template version 1.0**

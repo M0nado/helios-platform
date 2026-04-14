@@ -1,0 +1,120 @@
+# Quick Reference - HELIOS Components
+
+## 6 Components at a Glance
+
+ai-dashboard (Phase 3): Monitoring dashboard | Standalone | 245 MB | 5-10 min
+vault-dynamics (Phase 1): Encryption system | Standalone | 89 MB | 2-3 min  
+security-engine (Phase 0): Auth & RBAC | Standalone | 156 MB | 3-5 min
+performance-ai (Phase 2): AI optimization | Needs Phase 0 | 412 MB | 8-12 min
+analytics-core (Phase 1): Data analysis | Standalone | 178 MB | 4-6 min
+cloud-bridge (Phase 3): Cloud integration | Needs Phase 0+1 | 267 MB | 6-8 min
+
+---
+
+## Quick Install Commands
+
+Install single component:
+  cd C:\Users\ADMIN\helios-platform\components\<component-name>
+  .\install.ps1
+
+Install all:
+  cd C:\Users\ADMIN\helios-platform\components
+  .\install-all.ps1
+
+Borrow component from another phase:
+  .\borrow-component.ps1 -ComponentName "ai-dashboard" -FromPhase 3 -ToPhase 0
+
+Check if can install:
+  .\check-borrowing-prerequisites.ps1 -ComponentName "ai-dashboard" -ToPhase 0
+
+---
+
+## Dependency Map
+
+Phase 0: security-engine (foundation - needed by Phase 2 and cloud-bridge)
+Phase 1: vault-dynamics + analytics-core (both independent)
+Phase 2: performance-ai (requires Phase 0)
+Phase 3: ai-dashboard (independent), cloud-bridge (needs Phase 0 + 1)
+
+---
+
+## Common Scenarios
+
+Just Dashboard: ..\ai-dashboard\install.ps1 (245 MB, 5 min)
+Security + Encryption: ..\security-engine\install.ps1 + ..\vault-dynamics\install.ps1 (245 MB, 5 min)
+Full Platform: .\install-all.ps1 (1.5 GB, 30 min)
+Dashboard + Optimization: Install Phase 0, Phase 2, then borrow dashboard
+
+---
+
+## Uninstall
+
+Remove component (keep others):
+  cd C:\Users\ADMIN\helios-platform\components\<component-name>
+  .\uninstall.ps1
+
+Uninstall options:
+  .\uninstall.ps1 -PreserveConfig     (keep settings)
+  .\uninstall.ps1 -PreserveAll        (keep everything)
+  .\uninstall.ps1 -CompleteCleanup    (remove all)
+  .\uninstall.ps1 -CreateBackup -BackupPath "C:\Backup\comp-date"
+
+---
+
+## Check Status
+
+List installed:
+  Get-HeliosComponents
+
+Test component:
+  C:\Program Files\HELIOS\<component>\test-component.ps1
+
+Check service running:
+  Get-Service HELIOS-* | Select-Object Name, Status
+
+---
+
+## File Locations
+
+Base: C:\Program Files\HELIOS\
+
+Each component has:
+  bin\ (executables)
+  config.json (configuration)
+  data\ (databases)
+  logs\ (log files)
+
+---
+
+## Common Troubleshooting
+
+Can't access (port already used):
+  netstat -ano | findstr :8080
+  Edit config.json to change port, restart service
+
+Missing dependency:
+  Get-DependencyTree -ComponentName "performance-ai" -Recursive
+  Install missing component first
+
+Component won't start:
+  Get-Service HELIOS-* (check if running)
+  Get-Content C:\Program Files\HELIOS\<comp>\logs\*.log (check errors)
+  Restart-Service -Name HELIOS-<component>
+
+---
+
+See full documentation in individual README.md files:
+- README.md (main overview)
+- BORROWING_GUIDE.md (how to borrow)
+- COMPONENT_DEPENDENCIES.md (what depends on what)
+- INDEPENDENT_INSTALLATION.md (standalone setup)
+- UNINSTALL_GUIDE.md (removal procedures)
+- ADVANCED_BORROWING_SCENARIOS.md (10 real-world examples)
+
+And component-specific guides:
+- ai-dashboard/README.md
+- vault-dynamics/README.md
+- security-engine/README.md
+- performance-ai/README.md
+- analytics-core/README.md
+- cloud-bridge/README.md

@@ -1,0 +1,108 @@
+{
+  "monitoring": {
+    "environment": "production",
+    "version": "1.0.0",
+    "logLevel": "info",
+    "logRetention": 30,
+    "dashboard": {
+      "refreshInterval": 5000,
+      "maxMetricsHistory": 1000,
+      "theme": "dark",
+      "enableNotifications": true
+    },
+    "onPrem": {
+      "enabled": true,
+      "monitoringInterval": 60,
+      "metricsRetention": 7,
+      "enablePerformanceTracing": true,
+      "cpuThreshold": 80,
+      "memoryThreshold": 85,
+      "diskThreshold": 90
+    },
+    "azure": {
+      "enabled": true,
+      "subscriptionIds": [],
+      "resourceGroups": [],
+      "monitoringInterval": 300,
+      "metricsRetention": 30,
+      "enableCostAnalysis": true,
+      "alertSeverity": ["Critical", "High", "Medium"]
+    },
+    "m365": {
+      "enabled": true,
+      "tenantId": "",
+      "monitoringInterval": 600,
+      "enableMailFlowAnalysis": true,
+      "enableTeamsAnalysis": true,
+      "enableSharePointAnalysis": true,
+      "healthCheckInterval": 300
+    },
+    "compliance": {
+      "enabled": true,
+      "enableDLP": true,
+      "enableAudit": true,
+      "enableRiskScoring": true,
+      "riskThreshold": 70,
+      "complianceFrameworks": ["GDPR", "HIPAA", "SOC2", "ISO27001"]
+    },
+    "analytics": {
+      "enabled": true,
+      "enableAnomalyDetection": true,
+      "enablePredictiveAlerts": true,
+      "anomalyThreshold": 2.0,
+      "historyWindow": 90,
+      "mlModel": "isolation-forest"
+    },
+    "reporting": {
+      "enabled": true,
+      "schedules": {
+        "daily": "02:00",
+        "weekly": "Sunday:03:00",
+        "monthly": "1:04:00"
+      },
+      "recipients": [],
+      "formats": ["PDF", "HTML", "Excel"],
+      "archiveRetention": 365
+    }
+  },
+  "integrations": {
+    "slack": {
+      "enabled": false,
+      "webhookUrl": "",
+      "channel": "#alerts"
+    },
+    "teams": {
+      "enabled": false,
+      "webhookUrl": ""
+    },
+    "email": {
+      "enabled": true,
+      "smtpServer": "smtp.office365.com",
+      "smtpPort": 587,
+      "fromAddress": "",
+      "useSSL": true
+    },
+    "pagerduty": {
+      "enabled": false,
+      "apiKey": ""
+    },
+    "datadog": {
+      "enabled": false,
+      "apiKey": ""
+    }
+  },
+  "security": {
+    "enableEncryption": true,
+    "credentialVault": "AzureKeyVault",
+    "mfaRequired": true,
+    "auditAllActions": true,
+    "dataRetention": 90
+  },
+  "performance": {
+    "enableCaching": true,
+    "cacheDuration": 300,
+    "batchSize": 100,
+    "maxParallelTasks": 5,
+    "timeout": 300
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "service": "fabric",
+  "displayName": "Microsoft Fabric",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 2,
+  "endpoints": {
+    "api": "https://api.powerbi.com/v1.0/myorg",
+    "datasets": "https://api.powerbi.com/v1.0/myorg/datasets",
+    "reports": "https://api.powerbi.com/v1.0/myorg/reports",
+    "dashboards": "https://api.powerbi.com/v1.0/myorg/dashboards",
+    "capacities": "https://api.powerbi.com/v1.0/myorg/capacities"
+  },
+  "authentication": {
+    "type": "oauth",
+    "clientId": "${FABRIC_CLIENT_ID}",
+    "clientSecret": "${FABRIC_CLIENT_SECRET}",
+    "tenantId": "${AZURE_TENANT_ID}",
+    "scopes": [
+      "https://analysis.windows.net/powerbi/api/.default"
+    ]
+  },
+  "workspace": {
+    "name": "${FABRIC_WORKSPACE}",
+    "id": "${FABRIC_WORKSPACE_ID}",
+    "capacityId": "${FABRIC_CAPACITY_ID}"
+  },
+  "features": {
+    "dataWarehouse": {
+      "enabled": true,
+      "name": "helios-warehouse",
+      "location": "eastus",
+      "features": ["columnar-storage", "auto-scaling"]
+    },
+    "analytics": {
+      "enabled": true,
+      "realTimeAnalytics": true,
+      "aggregations": true
+    },
+    "dataEngineering": {
+      "enabled": true,
+      "lakehouses": ["raw", "processed", "analytics"],
+      "notebooks": true,
+      "sparkClusters": true
+    },
+    "powerBI": {
+      "enabled": true,
+      "datasets": ["sales", "operations", "financial"],
+      "reports": true,
+      "dashboards": true,
+      "embeddings": true
+    },
+    "dataFactory": {
+      "enabled": true,
+      "pipelines": true,
+      "dataFlows": true,
+      "triggers": "scheduled"
+    }
+  },
+  "dataSync": {
+    "frequency": "hourly",
+    "sources": [
+      {
+        "name": "azure-sql",
+        "type": "database",
+        "schedule": "*/15 * * * *"
+      },
+      {
+        "name": "azure-storage",
+        "type": "blob",
+        "schedule": "0 * * * *"
+      }
+    ],
+    "transformation": {
+      "format": "parquet",
+      "compression": "snappy",
+      "partitioning": "date"
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "storageQuota": 1000000,
+    "computeQuota": 500
+  },
+  "costs": {
+    "budgetLimit": 2000,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "analytics"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 2,
+    "nextService": "bigquery"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 60,
+    "timeout_seconds": 10,
+    "endpoint": "https://api.powerbi.com/v1.0/myorg/datasets"
+  }
+}

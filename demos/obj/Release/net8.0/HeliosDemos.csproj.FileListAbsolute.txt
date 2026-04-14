@@ -1,0 +1,13 @@
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\HeliosDemos.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\HeliosDemos.AssemblyInfoInputs.cache
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\HeliosDemos.AssemblyInfo.cs
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\HeliosDemos.csproj.CoreCompileInputs.cache
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\HeliosDemos.sourcelink.json
+C:\Users\ADMIN\helios-platform\demos\bin\Release\net8.0\HeliosDemos.exe
+C:\Users\ADMIN\helios-platform\demos\bin\Release\net8.0\HeliosDemos.deps.json
+C:\Users\ADMIN\helios-platform\demos\bin\Release\net8.0\HeliosDemos.runtimeconfig.json
+C:\Users\ADMIN\helios-platform\demos\bin\Release\net8.0\HeliosDemos.dll
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\HeliosDemos.dll
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\refint\HeliosDemos.dll
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\HeliosDemos.genruntimeconfig.cache
+C:\Users\ADMIN\helios-platform\demos\obj\Release\net8.0\ref\HeliosDemos.dll

@@ -1,0 +1,127 @@
+{
+  "service": "azure",
+  "displayName": "Microsoft Azure",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 1,
+  "endpoints": {
+    "management": "https://management.azure.com",
+    "storage": "https://{account}.blob.core.windows.net",
+    "keyvault": "https://{vault}.vault.azure.net",
+    "appservice": "https://{app}.azurewebsites.net",
+    "functions": "https://{app}.azurewebsites.net/api",
+    "sqldb": "Server=tcp:{server}.database.windows.net,1433",
+    "cosmosdb": "https://{account}.documents.azure.com:443"
+  },
+  "authentication": {
+    "type": "service_principal",
+    "tenantId": "${AZURE_TENANT_ID}",
+    "clientId": "${AZURE_CLIENT_ID}",
+    "clientSecret": "${AZURE_CLIENT_SECRET}",
+    "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
+    "scopes": [
+      "https://management.azure.com/.default",
+      "https://vault.azure.net/.default"
+    ]
+  },
+  "services": {
+    "compute": {
+      "enabled": true,
+      "vms": {
+        "resourceGroup": "${AZURE_RESOURCE_GROUP}",
+        "location": "eastus",
+        "vmSize": "Standard_D2s_v3",
+        "imagePublisher": "MicrosoftWindowsServer",
+        "imageOffer": "WindowsServer",
+        "imageSku": "2022-datacenter"
+      },
+      "appServices": {
+        "resourceGroup": "${AZURE_RESOURCE_GROUP}",
+        "appServicePlan": "${AZURE_APP_SERVICE_PLAN}",
+        "sku": "P1V2"
+      },
+      "functions": {
+        "storageAccount": "${AZURE_STORAGE_ACCOUNT}",
+        "runtime": "dotnet-isolated",
+        "version": "4.x"
+      }
+    },
+    "database": {
+      "enabled": true,
+      "sqlDatabase": {
+        "server": "${AZURE_SQL_SERVER}",
+        "database": "${AZURE_SQL_DATABASE}",
+        "username": "${AZURE_SQL_USERNAME}",
+        "password": "${AZURE_SQL_PASSWORD}",
+        "firewall": {
+          "allowAzureServices": true,
+          "allowLocalIP": true
+        }
+      },
+      "cosmosdb": {
+        "endpoint": "${AZURE_COSMOS_ENDPOINT}",
+        "database": "helios",
+        "consistency": "Strong"
+      }
+    },
+    "storage": {
+      "enabled": true,
+      "accounts": [
+        {
+          "name": "${AZURE_STORAGE_ACCOUNT}",
+          "containers": ["data", "backups", "logs"],
+          "tier": "Hot",
+          "redundancy": "GRS"
+        }
+      ]
+    },
+    "security": {
+      "enabled": true,
+      "keyvault": {
+        "name": "${AZURE_KEYVAULT_NAME}",
+        "enableSoftDelete": true,
+        "enablePurgeProtection": true
+      }
+    }
+  },
+  "features": {
+    "autoScaling": {
+      "enabled": true,
+      "minInstances": 2,
+      "maxInstances": 10,
+      "targetCpuPercentage": 70
+    },
+    "backup": {
+      "enabled": true,
+      "frequency": "daily",
+      "retention_days": 30
+    },
+    "monitoring": {
+      "enabled": true,
+      "logAnalytics": "${AZURE_LOG_ANALYTICS_WORKSPACE}",
+      "applicationInsights": "${AZURE_APP_INSIGHTS_KEY}"
+    }
+  },
+  "costs": {
+    "budgetLimit": 5000,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "engineering"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 1,
+    "nextService": "openai"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 60,
+    "timeout_seconds": 10,
+    "endpoint": "https://management.azure.com/health"
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerSecond": 100,
+    "burstSize": 200
+  }
+}

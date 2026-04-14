@@ -1,0 +1,97 @@
+{
+  "notification_channels": [
+    {
+      "id": "email",
+      "type": "SMTP",
+      "name": "Email Distribution",
+      "server": "smtp.office365.com",
+      "port": 587,
+      "from": "monitoring@helios.local",
+      "recipients": [
+        "ops-team@helios.local",
+        "sre@helios.local",
+        "incident-commander@helios.local"
+      ],
+      "use_ssl": true,
+      "enabled": true,
+      "retry_count": 3,
+      "retry_interval_seconds": 60
+    },
+    {
+      "id": "teams",
+      "type": "Webhook",
+      "name": "Microsoft Teams",
+      "url": "https://outlook.webhook.office.com/webhookb2/your-teams-webhook-url",
+      "method": "POST",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "enabled": true,
+      "retry_count": 3,
+      "retry_interval_seconds": 30,
+      "timeout_seconds": 10
+    },
+    {
+      "id": "slack",
+      "type": "Webhook",
+      "name": "Slack Integration",
+      "url": "https://hooks.slack.com/services/YOUR-WEBHOOK-URL",
+      "method": "POST",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "enabled": false,
+      "retry_count": 3,
+      "retry_interval_seconds": 30
+    },
+    {
+      "id": "webhook",
+      "type": "Webhook",
+      "name": "Custom Incident API",
+      "url": "https://incident-api.helios.local/api/alerts",
+      "method": "POST",
+      "headers": {
+        "Authorization": "Bearer ${INCIDENT_API_TOKEN}",
+        "Content-Type": "application/json"
+      },
+      "enabled": true,
+      "retry_count": 5,
+      "retry_interval_seconds": 60,
+      "timeout_seconds": 15
+    },
+    {
+      "id": "pagerduty",
+      "type": "PagerDuty",
+      "name": "PagerDuty Integration",
+      "integration_key": "${PAGERDUTY_INTEGRATION_KEY}",
+      "enabled": false,
+      "retry_count": 3
+    },
+    {
+      "id": "sms",
+      "type": "SMS",
+      "name": "SMS Alerts",
+      "provider": "twilio",
+      "account_sid": "${TWILIO_ACCOUNT_SID}",
+      "auth_token": "${TWILIO_AUTH_TOKEN}",
+      "from_number": "+1234567890",
+      "to_numbers": [
+        "+1111111111",
+        "+2222222222"
+      ],
+      "enabled": false
+    }
+  ],
+  "alert_routing": {
+    "CRITICAL": ["email", "teams", "webhook", "pagerduty"],
+    "WARNING": ["email", "teams"],
+    "INFO": ["email"]
+  },
+  "do_not_disturb": {
+    "enabled": false,
+    "start_time": "22:00",
+    "end_time": "06:00",
+    "silence_critical": false,
+    "silence_warning": true
+  }
+}

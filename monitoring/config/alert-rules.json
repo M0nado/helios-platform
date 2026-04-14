@@ -1,0 +1,95 @@
+{
+  "alerts": [
+    {
+      "id": "alert_001",
+      "name": "High Error Rate 5xx",
+      "description": "Alert when 5xx errors exceed 1%",
+      "metric": "error_rate_5xx",
+      "operator": "GreaterThan",
+      "threshold": 1.0,
+      "duration_seconds": 300,
+      "severity": "CRITICAL",
+      "notification_channels": ["email", "teams"],
+      "escalation_policy": "immediate",
+      "aggregation_window_seconds": 300,
+      "enabled": true
+    },
+    {
+      "id": "alert_002",
+      "name": "High Latency P99",
+      "description": "Alert when P99 latency exceeds 1000ms",
+      "metric": "latency_p99",
+      "operator": "GreaterThan",
+      "threshold": 1000,
+      "duration_seconds": 600,
+      "severity": "WARNING",
+      "notification_channels": ["email"],
+      "escalation_policy": "escalate_after_1h",
+      "aggregation_window_seconds": 300,
+      "enabled": true
+    },
+    {
+      "id": "alert_003",
+      "name": "High CPU Usage",
+      "description": "Alert when CPU usage exceeds 85%",
+      "metric": "cpu_percent",
+      "operator": "GreaterThan",
+      "threshold": 85,
+      "duration_seconds": 300,
+      "severity": "WARNING",
+      "notification_channels": ["email"],
+      "escalation_policy": "normal",
+      "aggregation_window_seconds": 300,
+      "enabled": true
+    },
+    {
+      "id": "alert_004",
+      "name": "High Memory Usage",
+      "description": "Alert when memory usage exceeds 90%",
+      "metric": "memory_percent",
+      "operator": "GreaterThan",
+      "threshold": 90,
+      "duration_seconds": 300,
+      "severity": "CRITICAL",
+      "notification_channels": ["email", "teams"],
+      "escalation_policy": "immediate",
+      "aggregation_window_seconds": 300,
+      "enabled": true
+    },
+    {
+      "id": "alert_005",
+      "name": "Service Unavailable",
+      "description": "Alert when component health check fails",
+      "metric": "health_check_failed",
+      "operator": "Equals",
+      "threshold": 1,
+      "duration_seconds": 60,
+      "severity": "CRITICAL",
+      "notification_channels": ["email", "teams", "webhook"],
+      "escalation_policy": "immediate",
+      "aggregation_window_seconds": 60,
+      "enabled": true
+    }
+  ],
+  "silence_periods": [
+    {
+      "name": "Maintenance Window - Sunday",
+      "day_of_week": "Sunday",
+      "start_time": "02:00",
+      "end_time": "04:00",
+      "alert_types": ["WARNING", "INFO"]
+    }
+  ],
+  "escalation_policies": {
+    "immediate": {
+      "level_1": { "delay_minutes": 0, "channels": ["email", "teams"] },
+      "level_2": { "delay_minutes": 5, "channels": ["phone", "sms"] },
+      "level_3": { "delay_minutes": 15, "channels": ["page"] }
+    },
+    "normal": {
+      "level_1": { "delay_minutes": 0, "channels": ["email"] },
+      "level_2": { "delay_minutes": 30, "channels": ["email", "teams"] },
+      "level_3": { "delay_minutes": 60, "channels": ["phone"] }
+    }
+  }
+}
