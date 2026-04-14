@@ -1,14 +1,11 @@
 /**
- * HELIOS Modules - Consolidated Repository
- * 6 Core Components unified in single system
+ * HELIOS Modules - Final Consolidated Architecture
+ * 3 Core Components unified in single system
  * v7.0 - Production Ready
  */
 
-const { MonadoEngine } = require('./monado-engine');
-const { SecuritySystem } = require('./security-system');
 const { GUIDashboard } = require('./gui-dashboard');
-const { SystemSetup } = require('./system-setup');
-const { USBInstaller, TOOLS } = require('./usb-installer');
+const { SystemCore, TOOLS } = require('./system-core');
 const { InfrastructureHub } = require('./infrastructure-hub');
 
 class HELIOS {
@@ -16,27 +13,21 @@ class HELIOS {
     this.version = '7.0';
     this.config = config;
     
-    // Initialize 6 core modules
-    this.monado = new MonadoEngine(config.monado);
-    this.security = new SecuritySystem(config.security);
+    // Initialize 3 core modules
     this.gui = new GUIDashboard(config.gui);
-    this.setup = new SystemSetup(config.setup);
-    this.usb = new USBInstaller(config.usb);
+    this.system = new SystemCore(config.system);
     this.infrastructure = new InfrastructureHub(config.infrastructure);
   }
 
   /**
-   * Get comprehensive system status (6 modules)
+   * Get comprehensive system status (3 modules)
    */
   getSystemStatus() {
     return {
       version: this.version,
       modules: {
-        monado: this.monado.getMetrics(),
-        security: this.security.getMetrics(),
         gui: this.gui.getMetrics(),
-        setup: this.setup.getMetrics(),
-        usb: this.usb.getMetrics(),
+        system: this.system.getMetrics(),
         infrastructure: this.infrastructure.getMetrics(),
       },
       timestamp: Date.now(),
@@ -50,13 +41,10 @@ class HELIOS {
     return {
       status: 'initialized',
       version: this.version,
-      modules: 6,
+      modules: 3,
       core_modules: [
-        'monado-engine',
-        'security-system',
         'gui-dashboard',
-        'system-setup',
-        'usb-installer',
+        'system-core',
         'infrastructure-hub',
       ],
       timestamp: Date.now(),
@@ -69,16 +57,13 @@ class HELIOS {
   async deploy() {
     const deployments = [];
     
-    deployments.push({ component: 'monado', deployed: true });
-    deployments.push({ component: 'security', deployed: true });
     deployments.push({ component: 'gui', deployed: true });
-    deployments.push({ component: 'setup', deployed: true });
-    deployments.push({ component: 'usb', deployed: true });
+    deployments.push({ component: 'system', deployed: true });
     deployments.push({ component: 'infrastructure', deployed: true });
 
     return {
       status: 'deployment_complete',
-      total_modules: 6,
+      total_modules: 3,
       deployments,
       timestamp: Date.now(),
     };
@@ -98,11 +83,8 @@ class HELIOS {
 
 module.exports = {
   HELIOS,
-  MonadoEngine,
-  SecuritySystem,
   GUIDashboard,
-  SystemSetup,
-  USBInstaller,
+  SystemCore,
   InfrastructureHub,
   TOOLS,
 };
