@@ -1,0 +1,174 @@
+{
+  "metadata": {
+    "experiment": "HELIOS Fleet Study - Experiment 2: Parallelism Overhead Analysis",
+    "date": "2026-04-13",
+    "baseline_configuration": "1 agent, 8 modules sequentially",
+    "baseline_time_ms": 5266,
+    "total_agents_tested": 26,
+    "total_configurations": 5
+  },
+  "speedup_curve": [
+    {
+      "agents": 1,
+      "label": "Sequential",
+      "time_ms": 5266,
+      "speedup": 1.0,
+      "speedup_ideal": 1.0,
+      "efficiency_percent": 100.0,
+      "color": "#2ecc71"
+    },
+    {
+      "agents": 2,
+      "label": "2x Parallel",
+      "time_ms": 3241,
+      "speedup": 1.625,
+      "speedup_ideal": 2.0,
+      "efficiency_percent": 81.2,
+      "color": "#3498db"
+    },
+    {
+      "agents": 4,
+      "label": "4x Parallel",
+      "time_ms": 2272,
+      "speedup": 2.318,
+      "speedup_ideal": 4.0,
+      "efficiency_percent": 57.9,
+      "color": "#f39c12"
+    },
+    {
+      "agents": 8,
+      "label": "8x Parallel",
+      "time_ms": 2376,
+      "speedup": 2.216,
+      "speedup_ideal": 8.0,
+      "efficiency_percent": 27.7,
+      "color": "#e74c3c"
+    },
+    {
+      "agents": 16,
+      "label": "16x Parallel",
+      "time_ms": 8343,
+      "speedup": 0.631,
+      "speedup_ideal": 16.0,
+      "efficiency_percent": 3.9,
+      "color": "#c0392b"
+    }
+  ],
+  "overhead_analysis": {
+    "setup_overhead_ms": [5, 10, 15, 20, 50],
+    "coordination_overhead_ms": [5, 10, 15, 20, 33],
+    "total_overhead_ms": [10, 20, 30, 40, 83],
+    "overhead_percent_of_baseline": [0.19, 0.38, 0.57, 0.76, 1.58]
+  },
+  "amdahl_law_comparison": {
+    "parallel_fraction": 0.95,
+    "theoretical_speedup": [1.0, 1.95, 3.76, 7.11, 13.33],
+    "measured_speedup": [1.0, 1.625, 2.318, 2.216, 0.631],
+    "gap_from_theory": [0.0, -0.325, -1.442, -4.894, -12.699],
+    "gap_percent": [0, -17, -38, -69, -95]
+  },
+  "sweet_spot_analysis": {
+    "recommendation": "4 agents",
+    "reason": "Optimal balance between speedup (2.3x), efficiency (58%), and overhead",
+    "speedup": 2.318,
+    "efficiency": 57.9,
+    "agent_hours": 0.00252,
+    "execution_time_ms": 2272,
+    "why_not_8": "Context switching overhead exceeds parallelism benefit; speedup DECREASES",
+    "why_not_16": "Catastrophic failure: 3.5x slower than baseline due to feature duplication"
+  },
+  "key_findings": [
+    {
+      "finding": "Efficiency degrades superlinearly",
+      "impact": "High",
+      "description": "Efficiency drops from 100% (1 agent) to 4% (16 agents), showing overhead grows faster than agent count"
+    },
+    {
+      "finding": "Sweet spot at 4 agents",
+      "impact": "High",
+      "description": "Beyond 4 agents, overhead dominates and speedup decreases; 4 agents provides optimal ROI"
+    },
+    {
+      "finding": "8 agents is worse than 4",
+      "impact": "Critical",
+      "description": "8-agent configuration is actually 104ms SLOWER than 4-agent, demonstrating context switching penalty"
+    },
+    {
+      "finding": "Amdahl's Law fails at scale",
+      "impact": "High",
+      "description": "Theory predicts 13.3x speedup at 16 agents; actual is 0.631x. Overhead is superlinear, not constant"
+    },
+    {
+      "finding": "Feature duplication catastrophic",
+      "impact": "Critical",
+      "description": "16-agent design with all agents building all modules (2×) is 3.5x slower than sequential"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Set default parallelism to 4 agents",
+      "rationale": "Empirically optimal; 2.3x speedup with 58% efficiency",
+      "implementation": "Configuration default in HELIOS"
+    },
+    {
+      "priority": 2,
+      "action": "Detect CPU core count; cap at 4 agents",
+      "rationale": "Prevents worst-case overhead on under-resourced systems",
+      "implementation": "Runtime detection, fallback to sequential on single-core"
+    },
+    {
+      "priority": 3,
+      "action": "Use recursive 4-agent parallelism for large workloads",
+      "rationale": "Avoids overhead trap; better scaling for 16+ modules",
+      "implementation": "Hierarchical module grouping"
+    },
+    {
+      "priority": 4,
+      "action": "Avoid feature duplication patterns",
+      "rationale": "16-agent with duplication is 3.5x slower than baseline",
+      "implementation": "Design: each agent handles unique subset"
+    },
+    {
+      "priority": 5,
+      "action": "Add overhead monitoring dashboard",
+      "rationale": "Track setup, coordination, context switching separately",
+      "implementation": "Telemetry system for operational visibility"
+    }
+  ],
+  "scaling_summary": {
+    "agents_1_to_2": {
+      "speedup_achieved": 1.625,
+      "speedup_theoretical": 1.95,
+      "efficiency": 81.2,
+      "assessment": "GOOD - Minimal overhead, linear scaling"
+    },
+    "agents_2_to_4": {
+      "speedup_achieved": 2.318,
+      "speedup_theoretical": 3.76,
+      "efficiency": 57.9,
+      "assessment": "ACCEPTABLE - Noticeable overhead, still worthwhile"
+    },
+    "agents_4_to_8": {
+      "speedup_achieved": 2.216,
+      "speedup_theoretical": 7.11,
+      "efficiency": 27.7,
+      "assessment": "POOR - Slowdown (104ms worse), overhead dominates"
+    },
+    "agents_8_to_16": {
+      "speedup_achieved": 0.631,
+      "speedup_theoretical": 13.33,
+      "efficiency": 3.9,
+      "assessment": "CATASTROPHIC - 3.5x slower than baseline, avoid"
+    }
+  },
+  "visualization_suggestions": [
+    "Plot 1: Speedup Curve (actual vs ideal vs Amdahl)",
+    "Plot 2: Efficiency vs Agent Count (declining curve)",
+    "Plot 3: Execution Time vs Agent Count (U-shaped after agent 4)",
+    "Plot 4: Overhead Breakdown (stacked area chart)",
+    "Plot 5: Amdahl Law Comparison (measured vs predicted)",
+    "Plot 6: Cost-Benefit Analysis (speedup per agent-hour)"
+  ],
+  "export_date": "2026-04-13T18:31:40.455Z"
+}

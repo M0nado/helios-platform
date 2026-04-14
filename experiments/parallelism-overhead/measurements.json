@@ -1,0 +1,61 @@
+{
+  "baseline_ms": 5266,
+  "levels": [
+    {
+      "speedup": 1.0,
+      "agent_hours": 0.0015,
+      "agents": 1,
+      "efficiency_percent": 100.0,
+      "setup_ms": 5,
+      "coordination_ms": 5266,
+      "teardown_ms": 5,
+      "level": "Sequential (1 agent)",
+      "time_ms": 5266
+    },
+    {
+      "speedup": 1.625,
+      "agent_hours": 0.0018,
+      "agents": 2,
+      "efficiency_percent": 81.2,
+      "setup_ms": 10,
+      "coordination_ms": 3238,
+      "teardown_ms": 10,
+      "level": "2x Parallel (2 agents)",
+      "time_ms": 3241
+    },
+    {
+      "speedup": 2.318,
+      "agent_hours": 0.0025,
+      "agents": 4,
+      "efficiency_percent": 58.0,
+      "setup_ms": 15,
+      "coordination_ms": 2266,
+      "teardown_ms": 15,
+      "level": "4x Parallel (4 agents)",
+      "time_ms": 2272
+    },
+    {
+      "speedup": 2.216,
+      "agent_hours": 0.0053,
+      "agents": 8,
+      "efficiency_percent": 27.7,
+      "setup_ms": 20,
+      "coordination_ms": 2372,
+      "teardown_ms": 20,
+      "level": "8x Parallel (8 agents)",
+      "time_ms": 2376
+    },
+    {
+      "speedup": 0.631,
+      "agent_hours": 0.0371,
+      "agents": 16,
+      "efficiency_percent": 3.9,
+      "setup_ms": 50,
+      "coordination_ms": 8336,
+      "teardown_ms": 50,
+      "level": "16x Parallel (16 agents)",
+      "time_ms": 8343
+    }
+  ],
+  "timestamp": "2026-04-13T18:31:40.4555865-07:00"
+}

@@ -1,0 +1,34 @@
+{
+  "model": "Model B: Moderate Duplication",
+  "architecture": "8 independent modules with duplicated utilities",
+  "duplicationType": "15.33% duplication (utilities in each module)",
+  "metrics": {
+    "totalLines": 522,
+    "duplicateLines": 80,
+    "duplicationPercent": 15.33,
+    "moduleCount": 8,
+    "sharedUtilityModules": 1,
+    "cyclomaticComplexity": 18,
+    "maintainabilityIndex": 72,
+    "couplingScore": 4.2,
+    "integrationPoints": 12,
+    "testCoverage": 92
+  },
+  "duplicatedFunctions": {
+    "validateEmail": {"occurrences": 8, "lines": 8},
+    "generateId": {"occurrences": 8, "lines": 8},
+    "getCurrentTimestamp": {"occurrences": 8, "lines": 8},
+    "deepClone": {"occurrences": 8, "lines": 8},
+    "validateRequired": {"occurrences": 8, "lines": 8},
+    "sanitizeString": {"occurrences": 8, "lines": 8},
+    "hashPassword": {"occurrences": 8, "lines": 8}
+  },
+  "maintenance_issues": [
+    "UtilityFunctions must be kept in sync across 8 modules",
+    "Bug fix in validateEmail requires updating 8 locations",
+    "Risk of inconsistency: 15% (likely to miss one module)",
+    "Testing burden: 8× module test coverage needed"
+  ],
+  "verdict": "SECOND CHOICE",
+  "reason": "Better modularity but duplication creates maintenance burden"
+}

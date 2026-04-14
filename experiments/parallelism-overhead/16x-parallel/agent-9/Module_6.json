@@ -1,0 +1,34 @@
+{
+  "total_time_ms": 631,
+  "module_name": "Module_6",
+  "start_timestamp": "2026-04-13T18:31:37.1574099-07:00",
+  "end_timestamp": "2026-04-13T18:31:37.7879649-07:00",
+  "module_id": 6,
+  "phases": [
+    {
+      "module": "Module_6",
+      "phase": "analysis",
+      "duration_ms": 106
+    },
+    {
+      "module": "Module_6",
+      "phase": "dependency_resolution",
+      "duration_ms": 82
+    },
+    {
+      "module": "Module_6",
+      "phase": "processing",
+      "duration_ms": 200
+    },
+    {
+      "module": "Module_6",
+      "phase": "codegen",
+      "duration_ms": 158
+    },
+    {
+      "module": "Module_6",
+      "phase": "optimization",
+      "duration_ms": 82
+    }
+  ]
+}

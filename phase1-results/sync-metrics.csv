@@ -1,0 +1,4 @@
+SyncChannel,Latency_P50,Latency_P95,Latency_P99,CausalViolations,ConflictResolutions,Status
+us-east_to_eu-west,28,58,45,0,0,operational
+us-east_to_apac,65,108,120,0,0,operational
+eu-west_to_apac,72,84,85,0,0,operational

@@ -1,0 +1,4 @@
+Fleet,Region,Nodes,Capacity,Status,AvgLatency,P99Latency,CPUUtil,MemUtil,NetworkUtil
+fleet-us-east-prod,Virginia,8,100000,operational,22.3,87,65,48,72
+fleet-eu-west-replica,Ireland,8,100000,operational,24.1,92,63,46,68
+fleet-apac-backup,Singapore,6,80000,operational,28.7,98,61,45,71

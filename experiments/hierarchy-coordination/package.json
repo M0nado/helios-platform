@@ -1,0 +1,16 @@
+{
+  "name": "hierarchy-coordination-experiment",
+  "version": "1.0.0",
+  "description": "Multi-Level Hierarchy Coordination Study - Experiment 4",
+  "main": "test-runner.js",
+  "scripts": {
+    "test": "node test-runner.js",
+    "analyze": "node analysis.js"
+  },
+  "keywords": ["hierarchy", "coordination", "distributed-systems"],
+  "author": "Helios Research",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

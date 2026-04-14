@@ -1,0 +1,6 @@
+Metric,Baseline,Optimized,Savings,SavingsPercent,Status
+Monthly_Cost,1600,970,630,39.4,achieved
+Annual_Cost,19200,11640,7560,39.4,achieved
+PaybackPeriod_Months,N/A,N/A,2.4,N/A,excellent
+ROI_Year1,N/A,N/A,3.25x,N/A,strong
+CombinedSavings_Phase12,26000,31760,31760,N/A,cumulative

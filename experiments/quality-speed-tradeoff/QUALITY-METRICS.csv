@@ -1,0 +1,5 @@
+Profile,Agents,Tests_Per_Agent,Total_Tests,Expected_Coverage_%,Execution_Hours,Wall_Clock_Minutes,Agent_Hours,Tests_Per_100LOC,Bug_Detection_%,Code_Quality_Index,Coverage_Per_Hour,Tests_Per_Hour
+Profile A: Max Speed,16,20,320,70,2,120,32,320,65,2.1,35.0,160.0
+Profile B: Balanced,8,40,320,90,4,240,32,320,85,4.2,22.5,80.0
+Profile C: High Quality,4,60,240,95,6,360,24,240,92,4.8,15.8,40.0
+Profile D: Ultra Quality,2,100,200,97,8,480,16,200,98,4.9,12.1,25.0

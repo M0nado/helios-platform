@@ -1,0 +1,7 @@
+Fleet_Size,Agent_Count,Parallel_Time_Hours,Sequential_Hours,Agent_Hours,Code_Size_KB,Coverage_Percent,Test_Count,Cost_Score,Cost_Per_KB,Cost_Per_Coverage,KB_Per_Hour,Tests_Per_Hour,Quality_Score,ROI_Score,Diminishing_Return_Factor
+Size 1: Minimal,2,0.75,1.5,3,200,80,15,1.0,0.005,0.0125,266.7,20.0,0.80,1.0,1.0
+Size 2: Small,4,1.25,2.5,10,400,88,35,3.3,0.008,0.0375,160.0,14.0,0.88,2.07,2.06
+Size 3: Medium,3.5,3.5,28,800,95,68,9.3,0.0116,0.0979,228.6,19.4,0.95,4.95,3.10
+Size 4: Large,16,2.5,5,80,1200,96,95,26.7,0.0222,0.278,480.0,38.0,0.96,3.37,2.87
+Size 5: Very Large,32,3,6,192,1500,97,110,64.0,0.0427,0.660,500.0,36.7,0.97,1.51,1.62
+Size 6: Maximum,48,3.5,7,336,1800,97.5,120,112.0,0.0622,1.150,514.3,34.3,0.975,0.84,0.89

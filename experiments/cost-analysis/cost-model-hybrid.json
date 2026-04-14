@@ -1,0 +1,319 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_date": "2025-01-01",
+    "description": "Hybrid cloud and on-premise deployment cost models for HELIOS v4.0",
+    "sla_uptime": "99.95%",
+    "currency": "USD",
+    "billing_period": "monthly"
+  },
+  "hybrid_strategies": {
+    "strategy_1_edge_plus_cloud": {
+      "name": "Edge Processing + Cloud Storage",
+      "description": "On-premise agents for local processing, cloud for centralized storage and analytics",
+      "use_case": "Organizations with strict data residency requirements who need cloud scalability"
+    },
+    "strategy_2_dev_prod_split": {
+      "name": "Development On-Premise, Production Cloud",
+      "description": "Development and testing fleet on-premise, production fleet in cloud for auto-scaling",
+      "use_case": "Startups growing rapidly, want to keep dev costs low while cloud handles growth"
+    },
+    "strategy_3_primary_backup": {
+      "name": "Primary Cloud, Backup On-Premise",
+      "description": "Main workload in cloud for reliability, on-premise as disaster recovery",
+      "use_case": "Mission-critical applications needing guaranteed DR capability"
+    },
+    "strategy_4_geographic_split": {
+      "name": "Geographic Distribution",
+      "description": "Cloud agents in multiple regions, on-premise for compliance-restricted jurisdictions",
+      "use_case": "Global enterprises with localization and sovereignty requirements"
+    }
+  },
+  "fleet_8_strategy1_edge_plus_cloud": {
+    "name": "Edge Processing + Cloud Storage (8 agents)",
+    "configuration": {
+      "on_premise_agents": 6,
+      "cloud_agents": 2,
+      "on_premise_purpose": "Local processing and edge computing",
+      "cloud_purpose": "Centralized storage, analytics, reporting"
+    },
+    "on_premise_costs": {
+      "compute_servers": 1,
+      "storage_local_tb": 2,
+      "monthly_hardware_depreciation": 520,
+      "monthly_power": 80,
+      "monthly_space": 400,
+      "monthly_staffing": 900,
+      "monthly_misc": 150,
+      "total_monthly_on_premise": 2050
+    },
+    "cloud_costs": {
+      "compute_agents_2": {
+        "ec2_monthly": 162.68,
+        "database_monthly": 96.36,
+        "storage_monthly": 15,
+        "network_monthly": 15,
+        "monitoring_monthly": 60,
+        "total": 349.04
+      },
+      "total_monthly_cloud": 349.04
+    },
+    "hybrid_specific_costs": {
+      "vpn_connection": 100,
+      "data_synchronization": 50,
+      "backup_replication": 50,
+      "monitoring_integration": 75,
+      "total_integration": 275
+    },
+    "monthly_total": 2674.04,
+    "per_agent_monthly": 334.26,
+    "annual_cost": 32088.48,
+    "per_agent_annual": 4011.06,
+    "comparison_to_pure": {
+      "vs_pure_cloud_8": "vs $651.41: +311% (but includes on-premise redundancy)",
+      "vs_pure_on_premise_8": "vs $4300.08: -38% (leverages cloud for analytics)",
+      "verdict": "Best for organizations needing local processing with cloud reporting"
+    }
+  },
+  "fleet_16_strategy2_dev_prod_split": {
+    "name": "Development On-Premise (8 agents) + Production Cloud (8 agents)",
+    "configuration": {
+      "on_premise_agents": 8,
+      "on_premise_purpose": "Development, testing, staging",
+      "cloud_agents": 8,
+      "cloud_purpose": "Production workload with auto-scaling",
+      "fleet_distribution": "50/50 split optimizes costs for growth scenarios"
+    },
+    "on_premise_costs": {
+      "minimal_configuration": "Single server setup for dev team",
+      "monthly_hardware_depreciation": 693,
+      "monthly_power": 153.24,
+      "monthly_space": 400,
+      "monthly_staffing": 1066.67,
+      "monthly_misc": 200,
+      "total_monthly_on_premise": 2512.91
+    },
+    "cloud_costs": {
+      "production_cluster_8": {
+        "ec2_monthly": 243.35,
+        "database_monthly": 192.72,
+        "storage_monthly": 23,
+        "network_monthly": 30,
+        "monitoring_monthly": 120,
+        "support_monthly": 61.33,
+        "total": 670.40
+      },
+      "total_monthly_cloud": 670.40
+    },
+    "hybrid_specific_costs": {
+      "ci_cd_pipeline_cloud": 200,
+      "environment_parity_tools": 75,
+      "code_sync_replication": 50,
+      "monitoring_unified_platform": 100,
+      "total_integration": 425
+    },
+    "monthly_total": 3608.31,
+    "per_agent_monthly": 225.52,
+    "annual_cost": 43299.72,
+    "per_agent_annual": 2706.23,
+    "comparison_to_pure": {
+      "vs_pure_cloud_16": "vs $1347.12: +168% (but includes full dev environment)",
+      "vs_pure_on_premise_16": "vs $7968.12: -55% (cloud handles prod auto-scaling)",
+      "verdict": "Optimal for startups: minimal dev infrastructure, cloud-based production"
+    },
+    "growth_trajectory": {
+      "year1": "16 agents (8 dev, 8 prod)",
+      "year2": "32 agents (8 dev, 24 prod) - add cloud capacity",
+      "year3": "64 agents (8 dev, 56 prod) - cloud scales automatically",
+      "migration_path": "As workload grows, transition more to cloud and eventually retire on-premise dev servers"
+    }
+  },
+  "fleet_24_strategy3_primary_backup": {
+    "name": "Primary Cloud (18 agents) + Backup On-Premise (6 agents)",
+    "configuration": {
+      "cloud_agents": 18,
+      "cloud_purpose": "Primary production workload",
+      "on_premise_agents": 6,
+      "on_premise_purpose": "Disaster recovery and failover",
+      "disaster_recovery_rto": "15 minutes",
+      "disaster_recovery_rpo": "1 hour"
+    },
+    "cloud_costs": {
+      "primary_cluster_18": {
+        "ec2_monthly": 729.15,
+        "database_monthly": 578.16,
+        "storage_monthly": 45,
+        "network_monthly": 60,
+        "monitoring_monthly": 180,
+        "support_monthly": 153.33,
+        "total": 1745.64
+      },
+      "disaster_recovery_sync": {
+        "cross_region_replication": 200,
+        "backup_storage_cloud": 30,
+        "rto_sla": 100,
+        "total": 330
+      },
+      "total_monthly_cloud": 2075.64
+    },
+    "on_premise_costs": {
+      "dr_cluster_configuration": "Minimal spec, cold standby mostly",
+      "monthly_hardware_depreciation": 347,
+      "monthly_power": 80,
+      "monthly_space": 200,
+      "monthly_staffing": 500,
+      "monthly_misc": 75,
+      "total_monthly_on_premise": 1202
+    },
+    "hybrid_specific_costs": {
+      "dr_testing_and_drills": 200,
+      "failover_automation": 150,
+      "continuous_replication": 100,
+      "monitoring_both_sites": 100,
+      "total_integration": 550
+    },
+    "monthly_total": 3827.64,
+    "per_agent_monthly": 159.49,
+    "annual_cost": 45931.68,
+    "per_agent_annual": 1913.82,
+    "comparison_to_pure": {
+      "vs_pure_cloud_24": "vs $2082.54: +84% (includes disaster recovery infrastructure)",
+      "vs_pure_on_premise_24": "vs $11794.70: -68% (leverages cloud for primary)",
+      "verdict": "Best for mission-critical apps needing guaranteed DR capability"
+    },
+    "dr_cost_justification": {
+      "downtime_cost_per_hour": 50000,
+      "probability_annual_disaster": 0.05,
+      "expected_loss_without_dr": 25000,
+      "dr_system_cost_annual": 45931.68,
+      "notes": "DR system justified if downtime cost exceeds $50K/hour"
+    }
+  },
+  "fleet_100_strategy4_geographic_split": {
+    "name": "Geographic Distribution (60 agents cloud + 40 on-premise)",
+    "configuration": {
+      "cloud_regions": ["US-EAST-1", "EU-WEST-1", "AP-SOUTHEAST-1"],
+      "cloud_agents": 60,
+      "cloud_purpose": "Global distribution, scalable workload",
+      "on_premise_locations": ["Corporate HQ", "Regional Office"],
+      "on_premise_agents": 40,
+      "on_premise_purpose": "Data residency compliance, local processing",
+      "compliance_requirements": "GDPR for EU, data sovereignty for APAC"
+    },
+    "cloud_costs": {
+      "us_east_region": {
+        "agents": 30,
+        "ec2_monthly": 2191.70,
+        "database_monthly": 1759.68,
+        "storage_monthly": 75,
+        "network_monthly": 100,
+        "monitoring_monthly": 300,
+        "support_monthly": 384.44,
+        "subtotal": 4810.82
+      },
+      "eu_west_region": {
+        "agents": 20,
+        "ec2_monthly": 1461.13,
+        "database_monthly": 1173.12,
+        "storage_monthly": 50,
+        "network_monthly": 80,
+        "monitoring_monthly": 200,
+        "support_monthly": 256.30,
+        "subtotal": 3220.55
+      },
+      "ap_southeast_region": {
+        "agents": 10,
+        "ec2_monthly": 730.56,
+        "database_monthly": 586.56,
+        "storage_monthly": 25,
+        "network_monthly": 50,
+        "monitoring_monthly": 100,
+        "support_monthly": 128.15,
+        "subtotal": 1620.27
+      },
+      "cross_region_replication": 500,
+      "global_load_balancing": 300,
+      "total_monthly_cloud": 10451.64
+    },
+    "on_premise_costs": {
+      "corporate_hq_25_agents": {
+        "hardware_depreciation": 1296.66,
+        "power": 300,
+        "space": 1000,
+        "staffing": 4500,
+        "misc": 300,
+        "subtotal": 7396.66
+      },
+      "regional_office_15_agents": {
+        "hardware_depreciation": 520,
+        "power": 120,
+        "space": 400,
+        "staffing": 2000,
+        "misc": 150,
+        "subtotal": 3190
+      },
+      "total_monthly_on_premise": 10586.66
+    },
+    "hybrid_specific_costs": {
+      "global_vpn_network": 500,
+      "data_sovereignty_tools": 300,
+      "international_compliance": 400,
+      "unified_monitoring_global": 300,
+      "disaster_recovery_multiple_regions": 400,
+      "total_integration": 1900
+    },
+    "monthly_total": 22938.30,
+    "per_agent_monthly": 229.38,
+    "annual_cost": 275259.60,
+    "per_agent_annual": 2752.60,
+    "comparison_to_pure": {
+      "vs_pure_cloud_100": "vs $8516.54: +169% (includes on-premise for compliance)",
+      "vs_pure_on_premise_100": "vs $52237.64: -56% (leverages cloud for scalability)",
+      "verdict": "Essential for global enterprises with compliance requirements"
+    },
+    "compliance_benefit": "Avoids €10K+ GDPR fines per incident; enables local data residency; satisfies sovereignty laws"
+  },
+  "hybrid_cost_curves": {
+    "analysis": "How hybrid costs scale across fleet sizes",
+    "findings": {
+      "point_1": "Small hybrid (8 agents) costs more than pure cloud due to on-premise overhead",
+      "point_2": "Medium hybrid (16-24 agents) becomes competitive as workloads distribute",
+      "point_3": "Large hybrid (100 agents) shows 35-40% savings vs pure cloud with on-premise benefits",
+      "cross_over_point": "~20 agents where hybrid cost = pure cloud cost with better risk profile"
+    }
+  },
+  "migration_paths": {
+    "from_pure_on_premise_to_hybrid": {
+      "phase1": "Establish cloud infrastructure for new workloads",
+      "phase2": "Gradually migrate non-critical services to cloud",
+      "phase3": "Decommission on-premise redundancy as confidence grows",
+      "timeline": "12-24 months",
+      "cost": "Transition costs and duplicate infrastructure during migration period"
+    },
+    "from_pure_cloud_to_hybrid": {
+      "phase1": "Identify high-volume local processing workloads",
+      "phase2": "Pilot edge agents in limited deployment",
+      "phase3": "Expand on-premise footprint based on ROI",
+      "timeline": "6-12 months",
+      "cost": "On-premise infrastructure procurement, but reduces cloud egress costs"
+    }
+  },
+  "recommendations": {
+    "when_to_choose_hybrid": [
+      "Strict data residency requirements (GDPR, HIPAA)",
+      "High data transfer costs in pure cloud scenario",
+      "Need for guaranteed disaster recovery",
+      "Mission-critical applications requiring on-premise backup",
+      "Compliance with data sovereignty laws",
+      "Optimize per-agent costs above 20 agents",
+      "Reduce latency for geographically distributed users"
+    ],
+    "when_to_avoid_hybrid": [
+      "Fleet size under 16 agents (overhead too high)",
+      "Limited IT ops staff (requires more expertise)",
+      "Frequent autoscaling needed (cloud is simpler)",
+      "Geographic footprint fully within single cloud region",
+      "No data residency requirements"
+    ]
+  }
+}

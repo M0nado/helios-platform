@@ -1,0 +1,63 @@
+{
+  "level": "1-sequential",
+  "total_time_ms": 5266,
+  "modules_per_agent": 8,
+  "agents": 1,
+  "coordination": {
+    "total_ms": 5266,
+    "execution_ms": 5256,
+    "teardown_ms": 5,
+    "setup_ms": 5
+  },
+  "module_results": [
+    {
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\1-sequential\\Module_1.json",
+      "module": "Module_1",
+      "success": true,
+      "time_ms": 661
+    },
+    {
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\1-sequential\\Module_2.json",
+      "module": "Module_2",
+      "success": true,
+      "time_ms": 650
+    },
+    {
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\1-sequential\\Module_3.json",
+      "module": "Module_3",
+      "success": true,
+      "time_ms": 641
+    },
+    {
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\1-sequential\\Module_4.json",
+      "module": "Module_4",
+      "success": true,
+      "time_ms": 653
+    },
+    {
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\1-sequential\\Module_5.json",
+      "module": "Module_5",
+      "success": true,
+      "time_ms": 652
+    },
+    {
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\1-sequential\\Module_6.json",
+      "module": "Module_6",
+      "success": true,
+      "time_ms": 635
+    },
+    {
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\1-sequential\\Module_7.json",
+      "module": "Module_7",
+      "success": true,
+      "time_ms": 634
+    },
+    {
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\1-sequential\\Module_8.json",
+      "module": "Module_8",
+      "success": true,
+      "time_ms": 654
+    }
+  ],
+  "timestamp": "2026-04-13T18:31:18.7532473-07:00"
+}

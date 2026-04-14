@@ -1,0 +1,90 @@
+{
+  "fleet_size": 4,
+  "configuration": "Large (16 agents)",
+  "total_agents": 16,
+  "agent_roles": [
+    "Core Agent 1 (subsystem A)",
+    "Core Agent 2 (subsystem B)",
+    "Core Agent 3 (subsystem C)",
+    "Core Agent 4 (subsystem D)",
+    "Specialist Agent 1 (advanced features)",
+    "Specialist Agent 2 (integration)",
+    "Specialist Agent 3 (optimization)",
+    "Specialist Agent 4 (security)",
+    "Feature Agent 1 (auth)",
+    "Feature Agent 2 (API)",
+    "Feature Agent 3 (database)",
+    "Feature Agent 4 (caching)",
+    "Testing Agent 1 (unit tests)",
+    "Testing Agent 2 (integration tests)",
+    "Coordination Agent 1",
+    "Coordination Agent 2"
+  ],
+  "time_metrics": {
+    "total_time_hours": 5.0,
+    "parallel_speedup": 16.0,
+    "sequential_equivalent_hours": 80.0,
+    "agent_hours": 80,
+    "time_per_feature_hours": 0.064
+  },
+  "code_metrics": {
+    "total_code_kb": 1200,
+    "code_per_hour": 240.0,
+    "code_duplication_percent": 4.5,
+    "complexity_score": 58,
+    "maintainability_index": 81
+  },
+  "quality_metrics": {
+    "code_coverage_percent": 96,
+    "test_count": 95,
+    "tests_per_hour": 19.0,
+    "bugs_per_1000_loc": 2.5,
+    "quality_score": 0.96
+  },
+  "feature_metrics": {
+    "features_implemented": 94,
+    "feature_coverage_percent": 98,
+    "integration_points": 48,
+    "extensibility_score": 8.9
+  },
+  "cost_metrics": {
+    "cost_score": 26.7,
+    "cost_per_kb": 0.0222,
+    "cost_per_coverage_point": 0.278,
+    "cost_per_feature": 0.284
+  },
+  "roi_metrics": {
+    "roi_score": 3.37,
+    "value_delivered": 1880,
+    "cost_incurred": 5360,
+    "break_even_multiplier": 3.6
+  },
+  "overhead_analysis": {
+    "coordination_overhead_percent": 18.75,
+    "communication_complexity_score": 7.2,
+    "task_switching_cost_hours": 9.4,
+    "context_loss_percent": 12.5
+  },
+  "risk_assessment": {
+    "single_point_failure_risk": "VERY-LOW",
+    "knowledge_loss_risk": "VERY-LOW",
+    "schedule_risk": "MEDIUM",
+    "quality_risk": "LOW",
+    "coordination_complexity_risk": "MEDIUM-HIGH",
+    "overall_risk_level": "MEDIUM"
+  },
+  "diminishing_returns": {
+    "roi_decrease_from_baseline_percent": 31.9,
+    "cost_increase_factor": 2.87,
+    "value_increase_factor": 1.21,
+    "efficiency_ratio": 0.42
+  },
+  "recommendations": [
+    "Diminishing returns become apparent",
+    "High coordination overhead (18.75%)",
+    "Communication complexity increases",
+    "Only justified for very large projects",
+    "ROI drops from 4.95 to 3.37",
+    "Not recommended for standard HELIOS use"
+  ]
+}

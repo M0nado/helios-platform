@@ -1,0 +1,4 @@
+FailoverScenario,TriggerTime,DetectionTime,RecoveryTime,DataLoss,ConsistencyViolations,Status
+primary_loss,0,3.2,4.2,0,0,pass
+secondary_loss,0,4.1,8.7,0,0,pass
+cascade_failure,0,5.8,12.3,0,0,pass

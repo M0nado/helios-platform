@@ -1,0 +1,7 @@
+{
+  "tests_defined": 6,
+  "status": "ready_for_execution",
+  "execution_ready": true,
+  "framework": "wave2-fault-tolerance-framework.js",
+  "success_criteria": "defined"
+}

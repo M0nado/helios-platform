@@ -1,0 +1,34 @@
+{
+  "phases": [
+    {
+      "phase": "analysis",
+      "module": "Module_3",
+      "duration_ms": 103
+    },
+    {
+      "phase": "dependency_resolution",
+      "module": "Module_3",
+      "duration_ms": 82
+    },
+    {
+      "phase": "processing",
+      "module": "Module_3",
+      "duration_ms": 200
+    },
+    {
+      "phase": "codegen",
+      "module": "Module_3",
+      "duration_ms": 154
+    },
+    {
+      "phase": "optimization",
+      "module": "Module_3",
+      "duration_ms": 88
+    }
+  ],
+  "end_timestamp": "2026-04-13T18:31:36.4085719-07:00",
+  "start_timestamp": "2026-04-13T18:31:35.7793818-07:00",
+  "module_name": "Module_3",
+  "total_time_ms": 629,
+  "module_id": 3
+}

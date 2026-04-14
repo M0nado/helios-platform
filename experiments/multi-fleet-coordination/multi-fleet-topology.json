@@ -1,0 +1,576 @@
+{
+  "experiment": "HELIOS v4.0 Experiment 8: Multi-Fleet Coordination at Scale",
+  "timestamp": "2026-04-14T01:30:00Z",
+  "status": "RUNNING",
+  "objective": "Prove that multiple 8-agent fleets can coordinate efficiently at scale",
+  
+  "fleet_configurations": {
+    "fleet_1_baseline": {
+      "id": "F1",
+      "name": "Single Fleet (Baseline)",
+      "fleet_count": 1,
+      "agents_per_fleet": 8,
+      "total_agents": 8,
+      "topology": "standalone",
+      "description": "Single 8-agent fleet from Exp 6 (optimal configuration)",
+      "roles": [
+        "core-coordinator",
+        "code-analyzer",
+        "optimizer",
+        "test-synthesizer",
+        "documentation-specialist",
+        "refactoring-engine",
+        "dependency-resolver",
+        "quality-auditor"
+      ],
+      "subsystems": 4,
+      "agents_per_subsystem": 2,
+      "coordination_overhead_expected_percent": 0.0,
+      "roi_expected": 4.95,
+      "start_timestamp": "2026-04-14T01:30:00Z",
+      "status": "queued"
+    },
+    
+    "fleet_2_dual_independent": {
+      "id": "F2",
+      "name": "Dual Fleet (Independent)",
+      "fleet_count": 2,
+      "agents_per_fleet": 8,
+      "total_agents": 16,
+      "topology": "independent",
+      "description": "2x independent 8-agent fleets working in parallel on separate workloads",
+      "fleet_details": [
+        {
+          "fleet_id": "F2A",
+          "name": "Fleet A (Even Load)",
+          "agents": 8,
+          "coordination_mode": "none",
+          "work_allocation": "50% of tasks"
+        },
+        {
+          "fleet_id": "F2B",
+          "name": "Fleet B (Even Load)",
+          "agents": 8,
+          "coordination_mode": "none",
+          "work_allocation": "50% of tasks"
+        }
+      ],
+      "coordination_overhead_expected_percent": 0.0,
+      "synchronization_required": false,
+      "shared_resources": [],
+      "inter_fleet_communication": "none",
+      "scaling_efficiency_expected_percent": 95.0,
+      "start_timestamp": null,
+      "status": "queued"
+    },
+    
+    "fleet_3_tri_coordinated": {
+      "id": "F3",
+      "name": "Tri-Fleet (Coordinated)",
+      "fleet_count": 3,
+      "agents_per_fleet": 8,
+      "total_agents": 24,
+      "topology": "coordinated",
+      "description": "3x coordinated 8-agent fleets with shared work queue and gossip protocol",
+      "fleet_details": [
+        {
+          "fleet_id": "F3A",
+          "name": "Fleet A (Work Stealer)",
+          "agents": 8,
+          "special_role": "primary-consumer",
+          "work_allocation": "dynamic"
+        },
+        {
+          "fleet_id": "F3B",
+          "name": "Fleet B (Load Balancer)",
+          "agents": 8,
+          "special_role": "secondary-consumer",
+          "work_allocation": "dynamic"
+        },
+        {
+          "fleet_id": "F3C",
+          "name": "Fleet C (Synchronizer)",
+          "agents": 8,
+          "special_role": "tertiary-consumer",
+          "work_allocation": "dynamic"
+        }
+      ],
+      "coordination_patterns": [
+        {
+          "pattern": "shared-queue",
+          "latency_expected_ms": 15,
+          "queue_depth": 1000,
+          "max_batch_size": 50,
+          "priority_levels": 5
+        },
+        {
+          "pattern": "gossip-protocol",
+          "round_trip_latency_ms": 45,
+          "fanout": 2,
+          "gossip_period_ms": 500,
+          "convergence_time_ms": 2000
+        }
+      ],
+      "global_state": {
+        "consistency_target_percent": 99.99,
+        "eventual_consistency_window_ms": 1000,
+        "state_sync_frequency_ms": 100,
+        "state_vector_size_bytes": 256
+      },
+      "coordination_overhead_expected_percent": 3.5,
+      "synchronization_overhead_expected_percent": 1.2,
+      "scaling_efficiency_expected_percent": 92.0,
+      "start_timestamp": null,
+      "status": "queued"
+    },
+    
+    "fleet_4_quad_independent": {
+      "id": "F4",
+      "name": "Quad-Fleet (Independent)",
+      "fleet_count": 4,
+      "agents_per_fleet": 8,
+      "total_agents": 32,
+      "topology": "independent",
+      "description": "4x independent 8-agent fleets with minimal cross-fleet interaction",
+      "fleet_details": [
+        {
+          "fleet_id": "F4A",
+          "name": "Fleet A (Workload 1)",
+          "agents": 8,
+          "work_allocation": "25% of tasks"
+        },
+        {
+          "fleet_id": "F4B",
+          "name": "Fleet B (Workload 2)",
+          "agents": 8,
+          "work_allocation": "25% of tasks"
+        },
+        {
+          "fleet_id": "F4C",
+          "name": "Fleet C (Workload 3)",
+          "agents": 8,
+          "work_allocation": "25% of tasks"
+        },
+        {
+          "fleet_id": "F4D",
+          "name": "Fleet D (Workload 4)",
+          "agents": 8,
+          "work_allocation": "25% of tasks"
+        }
+      ],
+      "inter_fleet_sync": "snapshot-only",
+      "snapshot_frequency_ms": 5000,
+      "coordination_overhead_expected_percent": 1.0,
+      "scaling_efficiency_expected_percent": 90.0,
+      "start_timestamp": null,
+      "status": "queued"
+    }
+  },
+  
+  "coordination_patterns": {
+    "independent": {
+      "id": "CP1",
+      "name": "Independent Fleets",
+      "description": "Each fleet operates autonomously with no cross-fleet communication",
+      "use_cases": ["separate projects", "different clients", "isolated workloads"],
+      "synchronization_mechanism": "none",
+      "message_passing": "none",
+      "state_consistency": "local-only",
+      "latency_overhead_ms": 0,
+      "expected_efficiency_percent": 95.0,
+      "complexity": "O(n) - linear per fleet"
+    },
+    
+    "shared_queue": {
+      "id": "CP2",
+      "name": "Shared Work Queue",
+      "description": "Central work distribution with dynamic load balancing across fleets",
+      "mechanism": "work-stealing algorithm with queue depth monitoring",
+      "features": [
+        "task-priority-levels",
+        "queue-depth-monitoring",
+        "batch-processing",
+        "backpressure-handling",
+        "fair-allocation"
+      ],
+      "queue_implementation": "thread-safe distributed queue",
+      "max_latency_ms": 50,
+      "expected_efficiency_percent": 88.0,
+      "communication_complexity": "O(log n)"
+    },
+    
+    "gossip_protocol": {
+      "id": "CP3",
+      "name": "Fleet-to-Fleet Gossip",
+      "description": "Epidemic/gossip-based state propagation between fleets",
+      "mechanism": "randomized peer-to-peer updates",
+      "properties": [
+        "eventual-consistency",
+        "fault-tolerant",
+        "self-healing",
+        "low-latency"
+      ],
+      "round_trip_latency_ms": 50,
+      "convergence_time_ms": 3000,
+      "expected_efficiency_percent": 85.0,
+      "communication_complexity": "O(n log n)"
+    },
+    
+    "master_slave": {
+      "id": "CP4",
+      "name": "Master-Slave Hierarchy",
+      "description": "One primary fleet (master) coordinates work distribution to subordinate fleets",
+      "mechanism": "hierarchical control with master election",
+      "master_responsibilities": [
+        "task-distribution",
+        "conflict-resolution",
+        "global-state-management",
+        "health-monitoring",
+        "failover-orchestration"
+      ],
+      "slave_responsibilities": [
+        "execute-assigned-work",
+        "report-status",
+        "health-heartbeat",
+        "local-optimization"
+      ],
+      "heartbeat_interval_ms": 500,
+      "failover_detection_ms": 2000,
+      "expected_efficiency_percent": 82.0,
+      "bottleneck_risk": "HIGH - master is single point of failure"
+    }
+  },
+  
+  "metrics_collection": {
+    "cross_fleet_communication": {
+      "metric_id": "CFM1",
+      "name": "Cross-Fleet Communication Latency",
+      "unit": "milliseconds",
+      "target_max_ms": 50,
+      "measurement_method": "round-trip message timing with histogram",
+      "samples_per_test": 10000,
+      "percentiles": [50, 95, 99, 99.9],
+      "expected_p50_ms": 12,
+      "expected_p99_ms": 45,
+      "status": "not-started"
+    },
+    
+    "work_distribution_efficiency": {
+      "metric_id": "WDE1",
+      "name": "Work Distribution Efficiency",
+      "unit": "percent of optimal",
+      "target_min_percent": 85.0,
+      "measurement_method": "task completion time vs theoretical minimum",
+      "calculation": "(optimal_time / actual_time) * 100",
+      "expected_percent": 88.0,
+      "status": "not-started"
+    },
+    
+    "synchronization_overhead": {
+      "metric_id": "SYN1",
+      "name": "Synchronization Overhead",
+      "unit": "percent of total time",
+      "target_max_percent": 5.0,
+      "measurement_method": "time spent in sync vs work",
+      "includes": ["queue-synchronization", "state-propagation", "heartbeats"],
+      "expected_percent": 2.5,
+      "status": "not-started"
+    },
+    
+    "global_state_consistency": {
+      "metric_id": "GSC1",
+      "name": "Global State Consistency",
+      "unit": "percent",
+      "target_min_percent": 99.9,
+      "measurement_method": "state vector comparison across fleets",
+      "consistency_check_interval_ms": 100,
+      "expected_percent": 99.95,
+      "status": "not-started"
+    },
+    
+    "message_ordering": {
+      "metric_id": "MSG1",
+      "name": "Message Ordering Guarantees",
+      "unit": "ordered/unordered",
+      "target": "ordered",
+      "measurement_method": "sequence number verification",
+      "reordering_allowed": false,
+      "out_of_order_rate_expected_percent": 0.0,
+      "status": "not-started"
+    },
+    
+    "duplicate_detection": {
+      "metric_id": "DUP1",
+      "name": "Duplicate Work Detection Rate",
+      "unit": "percent detected",
+      "target_min_percent": 99.5,
+      "measurement_method": "task hash comparison",
+      "false_negative_rate_expected_percent": 0.1,
+      "status": "not-started"
+    },
+    
+    "failover_recovery": {
+      "metric_id": "FAIL1",
+      "name": "Failover Recovery Time",
+      "unit": "milliseconds",
+      "target_max_ms": 2000,
+      "measurement_method": "time from fleet death to recovery completion",
+      "includes": ["detection", "election", "state-transfer", "resumption"],
+      "expected_ms": 1200,
+      "status": "not-started"
+    },
+    
+    "scaling_efficiency": {
+      "metric_id": "SCALE1",
+      "name": "Scaling Efficiency (Amdahl's Law)",
+      "unit": "percent",
+      "target_min_percent": 85.0,
+      "measurement_method": "throughput scaling vs agent count",
+      "formula": "(n / (s + (1-s)/n)) * 100 where s=sequential fraction",
+      "expected_percent": 88.0,
+      "status": "not-started"
+    }
+  },
+  
+  "test_scenarios": [
+    {
+      "scenario_id": "TS1",
+      "name": "Even Load Distribution",
+      "description": "All fleets receive equal amount of work per unit time",
+      "setup": {
+        "work_distribution": "uniform",
+        "tasks_per_fleet": 1000,
+        "task_size_distribution": "normal-100kb-mean-20kb-stddev",
+        "priority_distribution": "uniform-random"
+      },
+      "duration_seconds": 300,
+      "metrics_to_collect": ["WDE1", "SYN1", "GSC1", "SCALE1"],
+      "success_criteria": [
+        "WDE1 >= 85%",
+        "SYN1 <= 5%",
+        "GSC1 >= 99.9%"
+      ],
+      "status": "queued"
+    },
+    
+    {
+      "scenario_id": "TS2",
+      "name": "Skewed Load (One Fleet 10x Busier)",
+      "description": "One fleet receives significantly more work than others",
+      "setup": {
+        "work_distribution": "skewed",
+        "fleet_workload_ratios": [10, 1, 1, 1],
+        "total_tasks": 3000,
+        "task_size_range_kb": [10, 200]
+      },
+      "duration_seconds": 300,
+      "metrics_to_collect": ["WDE1", "CFM1", "SYN1", "GSC1"],
+      "success_criteria": [
+        "WDE1 >= 80%",
+        "CFM1_p99 <= 50ms",
+        "No deadlocks in 5 minutes"
+      ],
+      "status": "queued"
+    },
+    
+    {
+      "scenario_id": "TS3",
+      "name": "Dynamic Load Shifting",
+      "description": "Load gradually shifts between fleets during execution",
+      "setup": {
+        "load_shift_interval_seconds": 60,
+        "shift_pattern": "round-robin",
+        "total_tasks": 2500,
+        "shift_magnitude_percent": 30
+      },
+      "duration_seconds": 360,
+      "metrics_to_collect": ["WDE1", "SYN1", "SCALE1"],
+      "success_criteria": [
+        "WDE1 >= 82%",
+        "No dropped tasks",
+        "No message loss"
+      ],
+      "status": "queued"
+    },
+    
+    {
+      "scenario_id": "TS4",
+      "name": "Fleet Failure & Failover",
+      "description": "Kill one fleet mid-execution, measure impact and recovery",
+      "setup": {
+        "initial_fleets": 3,
+        "fail_fleet_at_percent_complete": 40,
+        "total_tasks": 2000,
+        "failover_strategy": "work-redistribution"
+      },
+      "duration_seconds": 300,
+      "metrics_to_collect": ["FAIL1", "WDE1", "DUP1", "GSC1"],
+      "success_criteria": [
+        "FAIL1 <= 2000ms",
+        "WDE1 >= 75% post-failover",
+        "DUP1 >= 99%",
+        "No data loss"
+      ],
+      "status": "queued"
+    },
+    
+    {
+      "scenario_id": "TS5",
+      "name": "Network Partition (100ms Latency)",
+      "description": "Simulate 100ms+ latency between fleets for 60 seconds",
+      "setup": {
+        "partition_start_at_seconds": 60,
+        "partition_duration_seconds": 60,
+        "artificial_latency_ms": 100,
+        "packet_loss_percent": 0,
+        "total_tasks": 1500
+      },
+      "duration_seconds": 300,
+      "metrics_to_collect": ["CFM1", "GSC1", "SYN1"],
+      "success_criteria": [
+        "GSC1 >= 98% during partition",
+        "Full consistency restored within 2 seconds of partition end",
+        "No deadlocks"
+      ],
+      "status": "queued"
+    }
+  ],
+  
+  "hypothesis": {
+    "h1_coordination_overhead": {
+      "claim": "3-fleet coordination adds <5% overhead",
+      "baseline_throughput_tasks_per_sec": 33.33,
+      "tri_fleet_expected_throughput": 31.67,
+      "expected_overhead_percent": 5.0,
+      "status": "not-tested"
+    },
+    "h2_cross_fleet_latency": {
+      "claim": "Cross-fleet communication <50ms latency (p99)",
+      "expected_p99_ms": 45,
+      "measurement_method": "message round-trip timing",
+      "status": "not-tested"
+    },
+    "h3_failover_recovery": {
+      "claim": "Failover recovery <2 seconds",
+      "expected_recovery_ms": 1200,
+      "maximum_acceptable_ms": 2000,
+      "status": "not-tested"
+    },
+    "h4_global_consistency": {
+      "claim": "Global consistency maintained 99.99%",
+      "target_consistency_percent": 99.99,
+      "measurement_window_ms": 100,
+      "status": "not-tested"
+    },
+    "h5_scaling_efficiency": {
+      "claim": "Scaling efficiency follows O(log n) or better",
+      "amdahl_sequential_fraction_percent": 5.0,
+      "expected_efficiency_2_fleets_percent": 95.0,
+      "expected_efficiency_3_fleets_percent": 92.0,
+      "expected_efficiency_4_fleets_percent": 88.0,
+      "status": "not-tested"
+    }
+  },
+  
+  "experiment_timeline": {
+    "phase_1_baseline": {
+      "name": "Baseline Testing (Single Fleet)",
+      "duration_minutes": 30,
+      "tasks": [
+        "Run single 8-agent fleet with standard load",
+        "Establish performance baseline",
+        "Verify Exp 6 results replicate"
+      ],
+      "start_time": null,
+      "end_time": null,
+      "status": "pending"
+    },
+    "phase_2_dual_fleet": {
+      "name": "Dual Fleet Testing (Independent)",
+      "duration_minutes": 45,
+      "tasks": [
+        "Launch 2 independent fleets",
+        "Test even and skewed load distribution",
+        "Measure efficiency scaling from 1→2 fleets",
+        "Test dynamic load shifting"
+      ],
+      "start_time": null,
+      "end_time": null,
+      "status": "pending"
+    },
+    "phase_3_tri_fleet": {
+      "name": "Tri-Fleet Testing (Coordinated)",
+      "duration_minutes": 60,
+      "tasks": [
+        "Launch 3 fleets with coordination patterns",
+        "Test shared queue implementation",
+        "Test gossip protocol",
+        "Measure coordination overhead",
+        "Test network partition scenarios"
+      ],
+      "start_time": null,
+      "end_time": null,
+      "status": "pending"
+    },
+    "phase_4_quad_fleet": {
+      "name": "Quad-Fleet Testing (Independent)",
+      "duration_minutes": 45,
+      "tasks": [
+        "Launch 4 independent fleets",
+        "Test scaling to 32 agents",
+        "Measure Amdahl's Law predictions",
+        "Test failover scenarios"
+      ],
+      "start_time": null,
+      "end_time": null,
+      "status": "pending"
+    },
+    "phase_5_analysis": {
+      "name": "Results Analysis & Report Generation",
+      "duration_minutes": 30,
+      "tasks": [
+        "Aggregate all metrics",
+        "Validate hypotheses",
+        "Generate recommendations",
+        "Create deliverables"
+      ],
+      "start_time": null,
+      "end_time": null,
+      "status": "pending"
+    }
+  },
+  
+  "results": {
+    "fleet_1_baseline": {
+      "configuration": "F1 - Single Fleet",
+      "total_agents": 8,
+      "test_results": {}
+    },
+    "fleet_2_dual": {
+      "configuration": "F2 - Dual Fleet",
+      "total_agents": 16,
+      "test_results": {}
+    },
+    "fleet_3_tri": {
+      "configuration": "F3 - Tri-Fleet",
+      "total_agents": 24,
+      "test_results": {}
+    },
+    "fleet_4_quad": {
+      "configuration": "F4 - Quad-Fleet",
+      "total_agents": 32,
+      "test_results": {}
+    }
+  },
+  
+  "next_steps": [
+    "✓ Configure fleet topologies",
+    "⏳ Run baseline test (F1)",
+    "⏳ Run dual fleet tests (F2)",
+    "⏳ Run tri-fleet tests (F3)",
+    "⏳ Run quad-fleet tests (F4)",
+    "⏳ Run all 5 test scenarios",
+    "⏳ Analyze results against hypotheses",
+    "⏳ Generate final reports and recommendations"
+  ]
+}

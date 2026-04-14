@@ -1,0 +1,62 @@
+{
+  "fleet_size": 2,
+  "configuration": "Small (4 agents)",
+  "total_agents": 4,
+  "agent_roles": [
+    "Core Agent 1 (core systems)",
+    "Core Agent 2 (core systems)",
+    "Specialist Agent (advanced features)",
+    "Testing Agent (QA)"
+  ],
+  "time_metrics": {
+    "total_time_hours": 2.5,
+    "parallel_speedup": 1.6,
+    "agent_hours": 10,
+    "time_per_feature_hours": 0.30
+  },
+  "code_metrics": {
+    "total_code_kb": 400,
+    "code_per_hour": 160.0,
+    "code_duplication_percent": 3.8,
+    "complexity_score": 48,
+    "maintainability_index": 82
+  },
+  "quality_metrics": {
+    "code_coverage_percent": 88,
+    "test_count": 35,
+    "tests_per_hour": 14.0,
+    "bugs_per_1000_loc": 5.2,
+    "quality_score": 0.88
+  },
+  "feature_metrics": {
+    "features_implemented": 51,
+    "feature_coverage_percent": 79,
+    "integration_points": 16,
+    "extensibility_score": 7.4
+  },
+  "cost_metrics": {
+    "cost_score": 3.3,
+    "cost_per_kb": 0.008,
+    "cost_per_coverage_point": 0.0375,
+    "cost_per_feature": 0.065
+  },
+  "roi_metrics": {
+    "roi_score": 2.07,
+    "value_delivered": 510,
+    "cost_incurred": 600,
+    "break_even_multiplier": 1.2
+  },
+  "risk_assessment": {
+    "single_point_failure_risk": "MEDIUM-HIGH",
+    "knowledge_loss_risk": "MEDIUM",
+    "schedule_risk": "LOW-MEDIUM",
+    "quality_risk": "LOW-MEDIUM",
+    "overall_risk_level": "MEDIUM"
+  },
+  "recommendations": [
+    "Viable for small production teams",
+    "Good balance of cost and quality",
+    "Some specialization possible",
+    "Manageable knowledge distribution"
+  ]
+}

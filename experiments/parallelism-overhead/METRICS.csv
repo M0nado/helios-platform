@@ -1,0 +1,6 @@
+"agents","level","time_ms","speedup","efficiency_percent","agent_hours","setup_ms","coordination_ms","teardown_ms"
+"1","Sequential (1 agent)","5266","1","100","0.0015","5","5266","5"
+"2","2x Parallel (2 agents)","3241","1.625","81.2","0.0018","10","3238","10"
+"4","4x Parallel (4 agents)","2272","2.318","58","0.0025","15","2266","15"
+"8","8x Parallel (8 agents)","2376","2.216","27.7","0.0053","20","2372","20"
+"16","16x Parallel (16 agents)","8343","0.631","3.9","0.0371","50","8336","50"

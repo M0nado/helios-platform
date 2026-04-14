@@ -1,0 +1,93 @@
+{
+  "level": "8x-parallel",
+  "total_time_ms": 2376,
+  "modules_per_agent": 1,
+  "agents": 8,
+  "coordination": {
+    "total_ms": 2372,
+    "execution_ms": 2332,
+    "teardown_ms": 20,
+    "setup_ms": 20
+  },
+  "module_results": [
+    {
+      "time_ms": 657,
+      "success": true,
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\8x-parallel\\Module_1.json",
+      "module": "Module_1",
+      "PSComputerName": "localhost",
+      "RunspaceId": "ac00e582-0c7d-4ec2-8cb0-95c88db6c45c",
+      "PSShowComputerName": false
+    },
+    {
+      "module": "Module_2",
+      "success": true,
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\8x-parallel\\Module_2.json",
+      "time_ms": 671,
+      "PSComputerName": "localhost",
+      "RunspaceId": "ef6ff95f-2db8-4c26-a639-8f9be540e3a8",
+      "PSShowComputerName": false
+    },
+    {
+      "time_ms": 660,
+      "success": true,
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\8x-parallel\\Module_3.json",
+      "module": "Module_3",
+      "PSComputerName": "localhost",
+      "RunspaceId": "32824db6-211e-49e3-8085-48c5610857b1",
+      "PSShowComputerName": false,
+      "PSSourceJobInstanceId": "990e7c09-af51-48b8-820c-46caf8b5298a"
+    },
+    {
+      "module": "Module_4",
+      "success": true,
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\8x-parallel\\Module_4.json",
+      "time_ms": 654,
+      "PSComputerName": "localhost",
+      "RunspaceId": "ad2d9deb-c8de-4625-8871-37a1de6b7383",
+      "PSShowComputerName": false,
+      "PSSourceJobInstanceId": "314fdfbe-01b9-4103-8bd4-52a4fef065df"
+    },
+    {
+      "module": "Module_5",
+      "success": true,
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\8x-parallel\\Module_5.json",
+      "time_ms": 648,
+      "PSComputerName": "localhost",
+      "RunspaceId": "cbdace73-5d3c-4030-9b7b-732d28d7a825",
+      "PSShowComputerName": false,
+      "PSSourceJobInstanceId": "d2e6e3ff-066b-4956-b1f9-dc2a7e745a03"
+    },
+    {
+      "module": "Module_6",
+      "success": true,
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\8x-parallel\\Module_6.json",
+      "time_ms": 657,
+      "PSComputerName": "localhost",
+      "RunspaceId": "4f060c3c-0710-487a-99bb-bbf5fd49786a",
+      "PSShowComputerName": false,
+      "PSSourceJobInstanceId": "db4110c0-ecb3-405b-baac-f9ff531de1ad"
+    },
+    {
+      "module": "Module_7",
+      "success": true,
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\8x-parallel\\Module_7.json",
+      "time_ms": 657,
+      "PSComputerName": "localhost",
+      "RunspaceId": "5a23856c-4189-4d35-9372-554d3ed02045",
+      "PSShowComputerName": false,
+      "PSSourceJobInstanceId": "4e970ba6-43b1-4e06-b943-97da45e70ea9"
+    },
+    {
+      "time_ms": 666,
+      "success": true,
+      "output": "C:\\helios-v4\\experiments\\parallelism-overhead\\8x-parallel\\Module_8.json",
+      "module": "Module_8",
+      "PSComputerName": "localhost",
+      "RunspaceId": "529cd1e2-09f1-43f7-830a-5d1c6b14fc59",
+      "PSShowComputerName": false,
+      "PSSourceJobInstanceId": "1a1e959e-03f9-43a1-94ff-8c26fc4053d3"
+    }
+  ],
+  "timestamp": "2026-04-13T18:31:29.6342140-07:00"
+}

@@ -1,0 +1,7 @@
+Resource,BaselineMonthly,OptimizedMonthly,SavingsMonthly,SavingsPercent,ImplementationStatus
+Compute_22Nodes,720,540,180,25,implemented
+Memory_16GB,220,165,55,25,implemented
+Network_InterRegion,400,280,120,30,implemented
+Storage_Distributed,160,96,64,40,implemented
+Logging_Retention,100,50,50,50,implemented
+AutoScaling_Overhead,0,-60,-60,N/A,implemented

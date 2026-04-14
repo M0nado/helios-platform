@@ -1,0 +1,5 @@
+Load Level (req/sec),Total Requests,Successful Requests,Failed Requests,Error Rate (%),Actual Throughput (req/sec),Min Latency (ms),Avg Latency (ms),p50 Latency (ms),p95 Latency (ms),p99 Latency (ms),Memory (MB)
+100,1739,1724,15,0.86,29,4,98,83,233,292,137
+500,1836,1811,25,1.36,31,4,97,79,225,296,142
+1000,7142,7077,65,0.91,119,3,99,80,233,296,145
+5000,660,654,6,0.91,11,5,98,83,233,284,143

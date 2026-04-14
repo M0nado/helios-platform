@@ -1,0 +1,577 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_date": "2025-01-01",
+    "provider_models": ["AWS", "Azure", "GCP"],
+    "description": "Comprehensive cloud deployment cost models for HELIOS v4.0 agent fleets",
+    "sla_uptime": "99.9%",
+    "currency": "USD",
+    "billing_period": "monthly",
+    "research_date": "2025-01-01"
+  },
+  "assumptions": {
+    "compute": {
+      "vcpu_per_agent": 2,
+      "memory_per_agent_gb": 4,
+      "storage_per_agent_gb": 50,
+      "annual_storage_growth_gb": 100
+    },
+    "workload": {
+      "requests_per_agent_per_month": 1000,
+      "data_transfer_per_agent_gb_per_day": 1,
+      "metrics_per_agent": 1000
+    },
+    "sla": {
+      "uptime_percentage": 99.9,
+      "backup_frequency": "daily",
+      "disaster_recovery_rpo_hours": 1
+    },
+    "support": {
+      "aws_tier": "business",
+      "azure_tier": "professional_direct",
+      "gcp_tier": "standard"
+    }
+  },
+  "fleet_configurations": {
+    "small_8_agents": {
+      "agent_count": 8,
+      "total_vcpu": 16,
+      "total_memory_gb": 32,
+      "total_storage_gb": 400
+    },
+    "medium_16_agents": {
+      "agent_count": 16,
+      "total_vcpu": 32,
+      "total_memory_gb": 64,
+      "total_storage_gb": 800
+    },
+    "large_24_agents": {
+      "agent_count": 24,
+      "total_vcpu": 48,
+      "total_memory_gb": 96,
+      "total_storage_gb": 1200
+    },
+    "enterprise_100_agents": {
+      "agent_count": 100,
+      "total_vcpu": 200,
+      "total_memory_gb": 400,
+      "total_storage_gb": 5000
+    }
+  },
+  "aws": {
+    "description": "Amazon Web Services deployment model (2025 pricing)",
+    "region": "us-east-1",
+    "pricing_date": "2025-01-01",
+    "fleet_8": {
+      "compute": {
+        "ec2_instances": 4,
+        "instance_type": "t3.large",
+        "instance_hourly_rate": 0.0832,
+        "instances_hours_per_month": 730,
+        "monthly_compute_cost": 243.35,
+        "notes": "t3.large provides 2 vCPU, 8GB RAM per instance; 2 instances per agent for 99.9% SLA"
+      },
+      "database": {
+        "engine": "RDS-PostgreSQL",
+        "instance_class": "db.t3.large",
+        "hourly_rate": 0.264,
+        "monthly_database_cost": 192.72,
+        "storage_gb": 400,
+        "storage_monthly_cost": 40.00,
+        "notes": "Multi-AZ for 99.9% SLA, 1 database per fleet"
+      },
+      "storage": {
+        "s3_standard_gb": 400,
+        "s3_monthly_cost": 9.20,
+        "s3_glacier_backup_gb": 400,
+        "glacier_monthly_cost": 4.08,
+        "notes": "S3 Standard for active data, Glacier for backup"
+      },
+      "network": {
+        "data_transfer_in_gb": 8,
+        "data_transfer_out_gb": 240,
+        "monthly_transfer_cost": 21.60,
+        "nat_gateway_hours": 730,
+        "nat_gateway_hourly_rate": 0.045,
+        "nat_gateway_monthly_cost": 32.85,
+        "notes": "1GB inbound per agent per day (free), 30GB outbound per agent per day ($0.09/GB)"
+      },
+      "monitoring": {
+        "cloudwatch_metrics": 8000,
+        "custom_metrics_monthly_cost": 240.00,
+        "cloudwatch_logs_gb": 5,
+        "logs_monthly_cost": 25.00,
+        "notes": "1000 metrics per agent, ~5GB logs per month for 8-agent fleet"
+      },
+      "support": {
+        "support_tier": "business",
+        "percentage_of_bill": 0.07,
+        "calculated_monthly_cost": 61.33,
+        "notes": "7% of infrastructure costs up to $25k/month"
+      },
+      "backup_and_dr": {
+        "backup_storage_gb": 400,
+        "backup_monthly_cost": 4.08,
+        "snapshots_monthly_cost": 20.00,
+        "notes": "Daily snapshots and 7-day retention"
+      },
+      "licensing": {
+        "monthly_cost": 0,
+        "notes": "No additional licensing costs"
+      },
+      "monthly_total": 651.41,
+      "per_agent_monthly": 81.43,
+      "per_request_processed": 0.00814,
+      "notes": "Based on 1000 requests/month per agent (8000 total)"
+    },
+    "fleet_16": {
+      "compute": {
+        "ec2_instances": 8,
+        "instance_type": "t3.large",
+        "monthly_compute_cost": 486.70,
+        "notes": "Double 8-agent fleet"
+      },
+      "database": {
+        "instance_class": "db.t3.xlarge",
+        "monthly_database_cost": 528.96,
+        "storage_monthly_cost": 80.00,
+        "notes": "Larger RDS instance for 16 agents"
+      },
+      "storage": {
+        "s3_monthly_cost": 18.40,
+        "glacier_monthly_cost": 8.16
+      },
+      "network": {
+        "monthly_transfer_cost": 43.20,
+        "nat_gateway_monthly_cost": 65.70
+      },
+      "monitoring": {
+        "custom_metrics_monthly_cost": 480.00,
+        "logs_monthly_cost": 50.00
+      },
+      "support": {
+        "calculated_monthly_cost": 127.44
+      },
+      "backup_and_dr": {
+        "backup_monthly_cost": 8.16,
+        "snapshots_monthly_cost": 40.00
+      },
+      "monthly_total": 1347.12,
+      "per_agent_monthly": 84.20,
+      "per_request_processed": 0.00842
+    },
+    "fleet_24": {
+      "compute": {
+        "ec2_instances": 12,
+        "instance_type": "t3.large",
+        "monthly_compute_cost": 730.05
+      },
+      "database": {
+        "instance_class": "db.t3.2xlarge",
+        "monthly_database_cost": 1057.92,
+        "storage_monthly_cost": 120.00
+      },
+      "storage": {
+        "s3_monthly_cost": 27.60,
+        "glacier_monthly_cost": 12.24
+      },
+      "network": {
+        "monthly_transfer_cost": 64.80,
+        "nat_gateway_monthly_cost": 98.55
+      },
+      "monitoring": {
+        "custom_metrics_monthly_cost": 720.00,
+        "logs_monthly_cost": 75.00
+      },
+      "support": {
+        "calculated_monthly_cost": 194.14
+      },
+      "backup_and_dr": {
+        "backup_monthly_cost": 12.24,
+        "snapshots_monthly_cost": 60.00
+      },
+      "monthly_total": 2082.54,
+      "per_agent_monthly": 86.78,
+      "per_request_processed": 0.00868
+    },
+    "fleet_100": {
+      "compute": {
+        "ec2_instances": 50,
+        "instance_type": "m5.large",
+        "instance_hourly_rate": 0.114,
+        "monthly_compute_cost": 4161.00,
+        "notes": "m5.large for larger fleet, 2 vCPU, 8GB RAM"
+      },
+      "database": {
+        "instance_class": "db.r5.2xlarge",
+        "monthly_database_cost": 3519.36,
+        "storage_monthly_cost": 500.00,
+        "notes": "Memory-optimized for 100-agent enterprise fleet"
+      },
+      "storage": {
+        "s3_monthly_cost": 115.00,
+        "glacier_monthly_cost": 51.00
+      },
+      "network": {
+        "monthly_transfer_cost": 270.00,
+        "nat_gateway_monthly_cost": 410.25
+      },
+      "monitoring": {
+        "custom_metrics_monthly_cost": 3000.00,
+        "logs_monthly_cost": 312.50
+      },
+      "support": {
+        "calculated_monthly_cost": 1196.78
+      },
+      "backup_and_dr": {
+        "backup_monthly_cost": 51.00,
+        "snapshots_monthly_cost": 250.00
+      },
+      "monthly_total": 13836.89,
+      "per_agent_monthly": 138.37,
+      "per_request_processed": 0.01384
+    }
+  },
+  "azure": {
+    "description": "Microsoft Azure deployment model (2025 pricing)",
+    "region": "East US",
+    "pricing_date": "2025-01-01",
+    "fleet_8": {
+      "compute": {
+        "vm_count": 4,
+        "vm_size": "Standard_B2s",
+        "hourly_rate": 0.0456,
+        "hours_per_month": 730,
+        "monthly_compute_cost": 133.34,
+        "notes": "Standard_B2s provides 2 vCPU, 4GB RAM; 2 VMs per agent"
+      },
+      "database": {
+        "engine": "Azure Database for PostgreSQL",
+        "sku": "Standard_D4s_v3",
+        "hourly_rate": 0.528,
+        "monthly_database_cost": 385.44,
+        "storage_gb": 400,
+        "storage_monthly_cost": 120.00,
+        "notes": "Zone-redundant for 99.9% SLA"
+      },
+      "storage": {
+        "blob_storage_gb": 400,
+        "storage_monthly_cost": 9.20,
+        "archive_storage_gb": 400,
+        "archive_monthly_cost": 2.00,
+        "notes": "Hot tier for active data, Archive tier for backup"
+      },
+      "network": {
+        "data_transfer_out_gb": 240,
+        "transfer_monthly_cost": 21.60,
+        "bandwidth_reservation": 0,
+        "notes": "First 100GB/month egress is lower cost tier"
+      },
+      "monitoring": {
+        "monitor_alerts": 50,
+        "monthly_cost": 100.00,
+        "log_analytics_gb": 5,
+        "log_analytics_monthly_cost": 50.00,
+        "notes": "Azure Monitor + Log Analytics"
+      },
+      "backup": {
+        "backup_instances": 4,
+        "monthly_cost": 80.00
+      },
+      "support": {
+        "support_tier": "professional_direct",
+        "percentage_of_bill": 0.10,
+        "calculated_monthly_cost": 90.16,
+        "notes": "10% of infrastructure costs"
+      },
+      "monthly_total": 871.74,
+      "per_agent_monthly": 108.97,
+      "per_request_processed": 0.01090
+    },
+    "fleet_16": {
+      "compute": {
+        "vm_count": 8,
+        "monthly_compute_cost": 266.68
+      },
+      "database": {
+        "sku": "Standard_D8s_v3",
+        "monthly_database_cost": 770.88,
+        "storage_monthly_cost": 240.00
+      },
+      "storage": {
+        "storage_monthly_cost": 18.40,
+        "archive_monthly_cost": 4.00
+      },
+      "network": {
+        "transfer_monthly_cost": 43.20
+      },
+      "monitoring": {
+        "monthly_cost": 200.00,
+        "log_analytics_monthly_cost": 100.00
+      },
+      "backup": {
+        "monthly_cost": 160.00
+      },
+      "support": {
+        "calculated_monthly_cost": 181.31
+      },
+      "monthly_total": 1784.47,
+      "per_agent_monthly": 111.53,
+      "per_request_processed": 0.01115
+    },
+    "fleet_24": {
+      "compute": {
+        "vm_count": 12,
+        "monthly_compute_cost": 400.02
+      },
+      "database": {
+        "sku": "Standard_D16s_v3",
+        "monthly_database_cost": 1541.76,
+        "storage_monthly_cost": 360.00
+      },
+      "storage": {
+        "storage_monthly_cost": 27.60,
+        "archive_monthly_cost": 6.00
+      },
+      "network": {
+        "transfer_monthly_cost": 64.80
+      },
+      "monitoring": {
+        "monthly_cost": 300.00,
+        "log_analytics_monthly_cost": 150.00
+      },
+      "backup": {
+        "monthly_cost": 240.00
+      },
+      "support": {
+        "calculated_monthly_cost": 272.02
+      },
+      "monthly_total": 2762.20,
+      "per_agent_monthly": 115.09,
+      "per_request_processed": 0.01151
+    },
+    "fleet_100": {
+      "compute": {
+        "vm_count": 50,
+        "vm_size": "Standard_D2s_v3",
+        "hourly_rate": 0.114,
+        "monthly_compute_cost": 4161.00
+      },
+      "database": {
+        "sku": "Standard_D64s_v3",
+        "monthly_database_cost": 6167.04,
+        "storage_monthly_cost": 1500.00
+      },
+      "storage": {
+        "storage_monthly_cost": 115.00,
+        "archive_monthly_cost": 25.00
+      },
+      "network": {
+        "transfer_monthly_cost": 270.00
+      },
+      "monitoring": {
+        "monthly_cost": 1000.00,
+        "log_analytics_monthly_cost": 625.00
+      },
+      "backup": {
+        "monthly_cost": 1000.00
+      },
+      "support": {
+        "calculated_monthly_cost": 1451.99
+      },
+      "monthly_total": 16315.03,
+      "per_agent_monthly": 163.15,
+      "per_request_processed": 0.01632
+    }
+  },
+  "gcp": {
+    "description": "Google Cloud Platform deployment model (2025 pricing)",
+    "region": "us-east1",
+    "pricing_date": "2025-01-01",
+    "fleet_8": {
+      "compute": {
+        "instance_count": 4,
+        "machine_type": "e2-medium",
+        "hourly_rate": 0.0336,
+        "hours_per_month": 730,
+        "monthly_compute_cost": 98.21,
+        "notes": "e2-medium provides 2 vCPU, 4GB RAM; 2 instances per agent"
+      },
+      "database": {
+        "engine": "Cloud SQL PostgreSQL",
+        "tier": "db-highmem-4",
+        "hourly_rate": 0.308,
+        "monthly_database_cost": 224.84,
+        "storage_gb": 400,
+        "storage_monthly_cost": 20.00,
+        "notes": "High-memory instance for caching"
+      },
+      "storage": {
+        "cloud_storage_gb": 400,
+        "storage_monthly_cost": 8.00,
+        "cold_storage_gb": 400,
+        "cold_storage_monthly_cost": 2.00,
+        "notes": "Multi-region for redundancy"
+      },
+      "network": {
+        "data_transfer_out_gb": 240,
+        "transfer_monthly_cost": 21.60,
+        "vpc_peering": 0
+      },
+      "monitoring": {
+        "cloud_monitoring_metrics": 8000,
+        "monthly_cost": 40.00,
+        "cloud_logging_gb": 5,
+        "logging_monthly_cost": 25.00,
+        "notes": "Cloud Monitoring + Cloud Logging"
+      },
+      "backup": {
+        "backup_storage_gb": 400,
+        "monthly_cost": 8.00
+      },
+      "support": {
+        "support_tier": "standard",
+        "calculated_monthly_cost": 0,
+        "notes": "Standard support included"
+      },
+      "monthly_total": 427.65,
+      "per_agent_monthly": 53.46,
+      "per_request_processed": 0.00535
+    },
+    "fleet_16": {
+      "compute": {
+        "instance_count": 8,
+        "monthly_compute_cost": 196.42
+      },
+      "database": {
+        "tier": "db-highmem-8",
+        "monthly_database_cost": 449.68,
+        "storage_monthly_cost": 40.00
+      },
+      "storage": {
+        "storage_monthly_cost": 16.00,
+        "cold_storage_monthly_cost": 4.00
+      },
+      "network": {
+        "transfer_monthly_cost": 43.20
+      },
+      "monitoring": {
+        "monthly_cost": 80.00,
+        "logging_monthly_cost": 50.00
+      },
+      "backup": {
+        "monthly_cost": 16.00
+      },
+      "support": {
+        "calculated_monthly_cost": 0
+      },
+      "monthly_total": 895.30,
+      "per_agent_monthly": 55.96,
+      "per_request_processed": 0.00560
+    },
+    "fleet_24": {
+      "compute": {
+        "instance_count": 12,
+        "monthly_compute_cost": 294.63
+      },
+      "database": {
+        "tier": "db-highmem-16",
+        "monthly_database_cost": 899.36,
+        "storage_monthly_cost": 60.00
+      },
+      "storage": {
+        "storage_monthly_cost": 24.00,
+        "cold_storage_monthly_cost": 6.00
+      },
+      "network": {
+        "transfer_monthly_cost": 64.80
+      },
+      "monitoring": {
+        "monthly_cost": 120.00,
+        "logging_monthly_cost": 75.00
+      },
+      "backup": {
+        "monthly_cost": 24.00
+      },
+      "support": {
+        "calculated_monthly_cost": 0
+      },
+      "monthly_total": 1467.79,
+      "per_agent_monthly": 61.16,
+      "per_request_processed": 0.00612
+    },
+    "fleet_100": {
+      "compute": {
+        "instance_count": 50,
+        "machine_type": "n2-standard-2",
+        "hourly_rate": 0.0947,
+        "monthly_compute_cost": 3461.60,
+        "notes": "Better performance for enterprise workloads"
+      },
+      "database": {
+        "tier": "db-highmem-64",
+        "monthly_database_cost": 3597.44,
+        "storage_monthly_cost": 250.00
+      },
+      "storage": {
+        "storage_monthly_cost": 100.00,
+        "cold_storage_monthly_cost": 25.00
+      },
+      "network": {
+        "transfer_monthly_cost": 270.00
+      },
+      "monitoring": {
+        "monthly_cost": 400.00,
+        "logging_monthly_cost": 312.50
+      },
+      "backup": {
+        "monthly_cost": 100.00
+      },
+      "support": {
+        "calculated_monthly_cost": 0
+      },
+      "monthly_total": 8516.54,
+      "per_agent_monthly": 85.17,
+      "per_request_processed": 0.00852
+    }
+  },
+  "cost_summary": {
+    "fleet_8_monthly": {
+      "aws": 651.41,
+      "azure": 871.74,
+      "gcp": 427.65
+    },
+    "fleet_16_monthly": {
+      "aws": 1347.12,
+      "azure": 1784.47,
+      "gcp": 895.30
+    },
+    "fleet_24_monthly": {
+      "aws": 2082.54,
+      "azure": 2762.20,
+      "gcp": 1467.79
+    },
+    "fleet_100_monthly": {
+      "aws": 13836.89,
+      "azure": 16315.03,
+      "gcp": 8516.54
+    },
+    "winner_by_fleet": {
+      "fleet_8": "GCP ($427.65/month)",
+      "fleet_16": "GCP ($895.30/month)",
+      "fleet_24": "GCP ($1467.79/month)",
+      "fleet_100": "GCP ($8516.54/month)"
+    }
+  },
+  "pricing_notes": {
+    "aws": "Prices based on 2025 AWS pricing in us-east-1. Excludes reserved instance discounts (typically 30-40% savings available).",
+    "azure": "Prices based on 2025 Azure pricing in East US. Includes zone-redundancy for 99.9% SLA compliance.",
+    "gcp": "Prices based on 2025 GCP pricing in us-east1. GCP consistently cheaper due to aggressive per-minute billing and strong data transfer rates.",
+    "discount_opportunities": {
+      "aws_reserved_instances": "30-40% discount for 1-year commitment, 50-60% for 3-year",
+      "azure_reserved_instances": "25-35% discount for 1-year, 45-55% for 3-year",
+      "gcp_committed_use_discounts": "25-30% discount for 1-year, 40-50% for 3-year",
+      "enterprise_discounts": "Negotiate 10-20% volume discounts above 100 agents"
+    }
+  }
+}

@@ -1,0 +1,461 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_date": "2025-01-01",
+    "description": "On-premise and self-hosted deployment cost models for HELIOS v4.0",
+    "sla_uptime": "99.9%",
+    "currency": "USD",
+    "billing_period": "monthly",
+    "research_date": "2025-01-01"
+  },
+  "assumptions": {
+    "hardware": {
+      "server_vcpu": 2,
+      "server_memory_gb": 4,
+      "server_storage_gb": 500,
+      "server_lifespan_years": 4,
+      "replacement_cost_per_server": 4500
+    },
+    "infrastructure": {
+      "power_cost_per_kwh": 0.15,
+      "power_usage_per_server_kw": 0.5,
+      "cooling_percentage": 0.4,
+      "datacenter_space_per_server_sq_ft": 4,
+      "space_cost_per_sq_ft_per_month": 25
+    },
+    "staffing": {
+      "ops_engineer_annual_salary": 80000,
+      "ops_engineer_overhead_percent": 0.30,
+      "agents_per_ops_engineer": 50,
+      "dba_annual_salary": 95000,
+      "dba_overhead_percent": 0.30,
+      "agents_per_dba": 200
+    },
+    "software": {
+      "os_license_cost": "free",
+      "database_license_cost": "free",
+      "monitoring_tool": "prometheus_free",
+      "security_scanning": "free_tier"
+    }
+  },
+  "hardware_costs": {
+    "compute_server_1u": {
+      "name": "Intel Xeon D-2183IT (1U, 16 cores, 256GB RAM)",
+      "purchase_price": 4500,
+      "yearly_depreciation": 1125,
+      "storage_tb": 2,
+      "power_consumption_kw": 0.5,
+      "lifespan_years": 4
+    },
+    "storage_array_4u": {
+      "name": "NAS with 24-bay SSD configuration",
+      "purchase_price": 12000,
+      "yearly_depreciation": 3000,
+      "capacity_tb": 100,
+      "power_consumption_kw": 2.0,
+      "lifespan_years": 4,
+      "supports_agents": 50
+    },
+    "database_server_2u": {
+      "name": "Dell PowerEdge R750 (2U, 32 cores, 512GB RAM)",
+      "purchase_price": 8000,
+      "yearly_depreciation": 2000,
+      "storage_tb": 5,
+      "power_consumption_kw": 1.0,
+      "lifespan_years": 4
+    },
+    "backup_appliance": {
+      "name": "Quantum Scalar i6 Tape Lib (for disaster recovery)",
+      "purchase_price": 20000,
+      "yearly_depreciation": 5000,
+      "capacity_tb": 500,
+      "power_consumption_kw": 1.5,
+      "lifespan_years": 4
+    },
+    "networking_switch": {
+      "name": "Enterprise 10GbE Switch (48-port)",
+      "purchase_price": 6000,
+      "yearly_depreciation": 1500,
+      "power_consumption_kw": 1.2,
+      "lifespan_years": 4,
+      "supports_agents": 200
+    },
+    "firewall_appliance": {
+      "name": "Enterprise Firewall (FortiGate 500D)",
+      "purchase_price": 5000,
+      "yearly_depreciation": 1250,
+      "throughput_gbps": 2,
+      "power_consumption_kw": 0.3,
+      "lifespan_years": 4
+    }
+  },
+  "fleet_8": {
+    "infrastructure": {
+      "compute_servers": 2,
+      "db_server": 1,
+      "storage_array_fraction": 0.16,
+      "backup_appliance_fraction": 0.016,
+      "networking_switches": 1,
+      "firewall": 1,
+      "notes": "8 agents distributed across 2 compute servers (4 per server) with shared database"
+    },
+    "hardware_capex": {
+      "compute_servers_cost": 9000,
+      "db_server_cost": 8000,
+      "storage_array_cost": 1920,
+      "backup_appliance_cost": 320,
+      "networking_cost": 6000,
+      "firewall_cost": 5000,
+      "installation_and_setup": 3000,
+      "total_capex": 33240,
+      "annual_depreciation": 8310
+    },
+    "monthly_opex": {
+      "hardware_depreciation": 693,
+      "power_costs": {
+        "compute_servers_kw": 1.0,
+        "db_server_kw": 1.0,
+        "storage_array_kw": 0.32,
+        "backup_appliance_kw": 0.032,
+        "networking_kw": 1.2,
+        "firewall_kw": 0.3,
+        "total_kw": 4.852,
+        "cooling_multiplier": 1.4,
+        "effective_kw": 6.79,
+        "monthly_cost": 153.24,
+        "calculation": "6.79 kW * 730 hours * $0.15/kWh"
+      },
+      "datacenter_space": {
+        "space_sq_ft": 32,
+        "monthly_cost": 800,
+        "calculation": "8 sq ft per server * 4 servers + shared infrastructure"
+      },
+      "cooling": {
+        "included_in_datacenter": true,
+        "monthly_cost": 0
+      },
+      "staffing": {
+        "ops_engineers": 0.16,
+        "ops_monthly_cost": 1066.67,
+        "dba_allocation": 0.04,
+        "dba_monthly_cost": 316.67,
+        "total_staffing": 1383.34,
+        "notes": "0.16 FTE ops engineer (1/50 agents), 0.04 FTE DBA (1/200 agents)"
+      },
+      "software_licenses": {
+        "os_licensing": 0,
+        "database": 0,
+        "monitoring": 0,
+        "backup_software": 50,
+        "security": 25,
+        "total": 75
+      },
+      "connectivity": {
+        "internet_100mbps": 200,
+        "private_wan_link": 150,
+        "total": 350
+      },
+      "maintenance_and_support": {
+        "hardware_support": 150,
+        "oem_support": 100,
+        "third_party_maintenance": 100,
+        "total": 350
+      },
+      "compliance_and_security": {
+        "backup_verification": 50,
+        "security_scanning": 75,
+        "audit_logging": 50,
+        "total": 175
+      },
+      "contingency_reserve": {
+        "percentage": 0.10,
+        "base_amount": 4205,
+        "monthly_amount": 420.50
+      },
+      "total_monthly_opex": 4248.34
+    },
+    "annual_costs": {
+      "capex_amortized": 8310,
+      "total_annual_opex": 50980,
+      "total_annual_cost": 59290,
+      "per_agent_annual": 7411.25,
+      "per_agent_monthly": 617.60
+    },
+    "monthly_summary": {
+      "hardware_amortized": 693,
+      "power_and_cooling": 153.24,
+      "datacenter_space": 800,
+      "staffing": 1383.34,
+      "software_licenses": 75,
+      "connectivity": 350,
+      "maintenance": 350,
+      "compliance": 175,
+      "contingency": 420.50,
+      "total_monthly": 4300.08,
+      "per_agent_monthly": 537.51
+    }
+  },
+  "fleet_16": {
+    "infrastructure": {
+      "compute_servers": 4,
+      "db_server": 1,
+      "storage_array_fraction": 0.32,
+      "backup_appliance_fraction": 0.032,
+      "networking_switches": 1,
+      "firewall": 1,
+      "notes": "16 agents distributed across 4 compute servers (4 per server)"
+    },
+    "hardware_capex": {
+      "compute_servers_cost": 18000,
+      "db_server_cost": 8000,
+      "storage_array_cost": 3840,
+      "backup_appliance_cost": 640,
+      "networking_cost": 6000,
+      "firewall_cost": 5000,
+      "installation_and_setup": 5000,
+      "total_capex": 46480,
+      "annual_depreciation": 11620
+    },
+    "monthly_opex": {
+      "hardware_depreciation": 968.33,
+      "power_costs": {
+        "total_kw": 7.252,
+        "effective_kw": 10.15,
+        "monthly_cost": 229.73
+      },
+      "datacenter_space": {
+        "space_sq_ft": 48,
+        "monthly_cost": 1200
+      },
+      "staffing": {
+        "ops_engineers": 0.32,
+        "ops_monthly_cost": 2133.33,
+        "dba_allocation": 0.08,
+        "dba_monthly_cost": 633.33,
+        "total_staffing": 2766.66
+      },
+      "software_licenses": {
+        "total": 100
+      },
+      "connectivity": {
+        "total": 400
+      },
+      "maintenance_and_support": {
+        "total": 500
+      },
+      "compliance_and_security": {
+        "total": 250
+      },
+      "contingency_reserve": {
+        "monthly_amount": 734.72
+      },
+      "total_monthly_opex": 6984.44
+    },
+    "annual_costs": {
+      "capex_amortized": 11620,
+      "total_annual_opex": 83813.28,
+      "total_annual_cost": 95433.28,
+      "per_agent_annual": 5964.58,
+      "per_agent_monthly": 497.05
+    },
+    "monthly_summary": {
+      "total_monthly": 7968.12,
+      "per_agent_monthly": 498.01
+    }
+  },
+  "fleet_24": {
+    "infrastructure": {
+      "compute_servers": 6,
+      "db_server": 2,
+      "storage_array_fraction": 0.48,
+      "backup_appliance_fraction": 0.048,
+      "networking_switches": 2,
+      "firewall": 1,
+      "notes": "24 agents with redundant database servers for high availability"
+    },
+    "hardware_capex": {
+      "compute_servers_cost": 27000,
+      "db_servers_cost": 16000,
+      "storage_array_cost": 5760,
+      "backup_appliance_cost": 960,
+      "networking_cost": 12000,
+      "firewall_cost": 5000,
+      "installation_and_setup": 7000,
+      "total_capex": 73720,
+      "annual_depreciation": 18430
+    },
+    "monthly_opex": {
+      "hardware_depreciation": 1535.83,
+      "power_costs": {
+        "total_kw": 10.252,
+        "effective_kw": 14.35,
+        "monthly_cost": 323.88
+      },
+      "datacenter_space": {
+        "space_sq_ft": 72,
+        "monthly_cost": 1800
+      },
+      "staffing": {
+        "ops_engineers": 0.48,
+        "ops_monthly_cost": 3200,
+        "dba_allocation": 0.12,
+        "dba_monthly_cost": 950,
+        "total_staffing": 4150
+      },
+      "software_licenses": {
+        "total": 150
+      },
+      "connectivity": {
+        "total": 500
+      },
+      "maintenance_and_support": {
+        "total": 750
+      },
+      "compliance_and_security": {
+        "total": 350
+      },
+      "contingency_reserve": {
+        "monthly_amount": 1251.49
+      },
+      "total_monthly_opex": 10262.20
+    },
+    "annual_costs": {
+      "capex_amortized": 18430,
+      "total_annual_opex": 123146.40,
+      "total_annual_cost": 141576.40,
+      "per_agent_annual": 5899.02,
+      "per_agent_monthly": 491.58
+    },
+    "monthly_summary": {
+      "total_monthly": 11794.70,
+      "per_agent_monthly": 491.45
+    }
+  },
+  "fleet_100": {
+    "infrastructure": {
+      "compute_servers": 25,
+      "db_server": 4,
+      "storage_arrays": 2,
+      "backup_appliance": 2,
+      "networking_switches": 4,
+      "firewall": 2,
+      "notes": "Enterprise-scale deployment with redundancy and high availability"
+    },
+    "hardware_capex": {
+      "compute_servers_cost": 112500,
+      "db_servers_cost": 32000,
+      "storage_arrays_cost": 24000,
+      "backup_appliances_cost": 40000,
+      "networking_cost": 24000,
+      "firewall_cost": 10000,
+      "installation_and_setup": 25000,
+      "total_capex": 267500,
+      "annual_depreciation": 66875
+    },
+    "monthly_opex": {
+      "hardware_depreciation": 5572.92,
+      "power_costs": {
+        "total_kw": 40.0,
+        "effective_kw": 56.0,
+        "monthly_cost": 1260.00
+      },
+      "datacenter_space": {
+        "space_sq_ft": 400,
+        "monthly_cost": 10000
+      },
+      "staffing": {
+        "ops_engineers": 2,
+        "ops_monthly_cost": 13333.33,
+        "dba_allocation": 0.5,
+        "dba_monthly_cost": 3958.33,
+        "total_staffing": 17291.66
+      },
+      "software_licenses": {
+        "monitoring_tools": 500,
+        "backup_software": 200,
+        "security": 300,
+        "total": 1000
+      },
+      "connectivity": {
+        "internet_gigabit": 500,
+        "private_wan": 500,
+        "total": 1000
+      },
+      "maintenance_and_support": {
+        "hardware_support": 1500,
+        "software_support": 1000,
+        "oem_contracts": 2000,
+        "total": 4500
+      },
+      "compliance_and_security": {
+        "penetration_testing": 300,
+        "security_audits": 500,
+        "compliance_monitoring": 300,
+        "total": 1100
+      },
+      "contingency_reserve": {
+        "monthly_amount": 5472.39
+      },
+      "total_monthly_opex": 46697.97
+    },
+    "annual_costs": {
+      "capex_amortized": 66875,
+      "total_annual_opex": 560375.64,
+      "total_annual_cost": 627250.64,
+      "per_agent_annual": 6272.51,
+      "per_agent_monthly": 522.71
+    },
+    "monthly_summary": {
+      "total_monthly": 52237.64,
+      "per_agent_monthly": 522.38
+    }
+  },
+  "cost_scaling_analysis": {
+    "per_agent_monthly_trends": {
+      "fleet_8": 537.51,
+      "fleet_16": 498.01,
+      "fleet_24": 491.45,
+      "fleet_100": 522.38,
+      "sweet_spot": "fleet_24",
+      "analysis": "On-premise achieves best per-agent economics at 24-agent fleet due to optimized infrastructure utilization. Scaling to 100 agents requires more redundancy and staffing, increasing per-agent costs slightly."
+    }
+  },
+  "hidden_costs_and_considerations": {
+    "startup_costs": {
+      "planning_and_design": 10000,
+      "procurement": 5000,
+      "installation_labor": 8000,
+      "training": 3000,
+      "testing_and_validation": 4000,
+      "total_startup": 30000,
+      "amortization_months": 36
+    },
+    "unplanned_costs": {
+      "emergency_repairs": "5-10% of hardware budget annually",
+      "unexpected_labor": "Additional contractors during peaks",
+      "compliance_upgrades": "Security patches, OS updates",
+      "disaster_recovery_exercises": "Testing and recovery drills"
+    },
+    "risk_factors": {
+      "power_outage_impact": "UPS backup systems add 2-5% to operational costs",
+      "data_loss_scenario": "Insufficient backup could require recovery service ($50K+)",
+      "security_breach": "Incident response and remediation ($100K+ depending on severity)",
+      "staff_turnover": "Knowledge loss if dedicated engineers depart",
+      "technology_obsolescence": "Server hardware becomes outdated every 4 years"
+    }
+  },
+  "recommendations": {
+    "for_small_fleets_under_16": {
+      "recommendation": "Cloud is more economical",
+      "rationale": "On-premise has high fixed costs that don't amortize well over few agents"
+    },
+    "for_medium_fleets_16_to_50": {
+      "recommendation": "On-premise competitive, especially with volume discounts",
+      "rationale": "Shared infrastructure amortizes across more agents"
+    },
+    "for_large_fleets_above_50": {
+      "recommendation": "On-premise has cost advantage if space available",
+      "rationale": "Per-agent costs drop significantly with economies of scale"
+    }
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "model": "Model D: High Duplication",
+  "architecture": "16 independent micro-modules with NO shared utilities",
+  "duplicationType": "32.33% duplication (critical level)",
+  "metrics": {
+    "totalLines": 427,
+    "duplicateLines": 138,
+    "duplicationPercent": 32.33,
+    "moduleCount": 16,
+    "sharedUtilityModules": 0,
+    "cyclomaticComplexity": 11,
+    "maintainabilityIndex": 58,
+    "couplingScore": 12.4,
+    "integrationPoints": 25,
+    "testCoverage": 89,
+    "flakyTests": 7
+  },
+  "heavilyDuplicatedFunctions": [
+    {
+      "name": "generateId",
+      "occurrences": 9,
+      "totalLines": 27,
+      "criticality": "CRITICAL",
+      "modules": ["UserAuthModule", "UserProfileModule", "InventoryModule", "OrderCreationModule", "PaymentModule", "NotificationModule", "EventsModule", "AuditModule", "HealthModule"]
+    },
+    {
+      "name": "getCurrentTimestamp",
+      "occurrences": 8,
+      "totalLines": 24,
+      "criticality": "CRITICAL",
+      "modules": ["ProductCatalogModule", "InventoryModule", "OrderCreationModule", "PaymentModule", "NotificationModule", "EventsModule", "SalesReportModule", "AuditModule"]
+    },
+    {
+      "name": "sanitizeString",
+      "occurrences": 5,
+      "totalLines": 20,
+      "criticality": "HIGH"
+    },
+    {
+      "name": "deepClone",
+      "occurrences": 4,
+      "totalLines": 16,
+      "criticality": "HIGH"
+    }
+  ],
+  "maintenance_nightmare": {
+    "scenario": "Security bug in generateId() function",
+    "filesAffected": 9,
+    "locationsToChange": 9,
+    "riskOfMissingOne": "70%",
+    "timeEstimate": "12-24 hours",
+    "regressionRisk": "CRITICAL",
+    "issuesIfMissed": "Inconsistent ID generation across modules, hard-to-debug production issues"
+  },
+  "issues": [
+    "32.33% duplication is crisis-level (should be <10%)",
+    "generateId duplicated 9 times - 37% of module is duplication",
+    "getCurrentTimestamp duplicated 8 times",
+    "Cannot fix utility bug without updating 9+ files",
+    "High risk of introducing inconsistencies",
+    "Testing burden is extreme (16 modules × coverage)",
+    "7 flaky tests indicate consistency problems",
+    "Highest coupling score (12.4)",
+    "Most integration points (25) = hard to deploy"
+  ],
+  "cost_analysis": {
+    "initialDevelopmentCost": 1.5,
+    "maintenanceCost": 4.0,
+    "featureAdditionCost": 2.5,
+    "bugFixCost": 3.5,
+    "totalCost1Year": 3.2,
+    "monthlyMaintenance": 4000,
+    "comment": "This architecture would cost significantly more to maintain"
+  },
+  "remediation": {
+    "step1": "Extract 3 shared utility modules",
+    "step2": "Remove duplicate functions from micro-modules",
+    "step3": "Consolidate 16 modules to 8-10",
+    "step4": "Result would be Model C (recommended architecture)",
+    "estimatedEffort": "40 hours refactoring",
+    "expectedImprovement": "Duplication from 32% to 6%, Maintainability from 58 to 78"
+  },
+  "verdict": "URGENT REFACTORING NEEDED ❌❌❌",
+  "reason": "32.33% duplication is unmaintainable. High risk of bugs. Must refactor to shared utilities model.",
+  "recommendation": "Do NOT use this architecture. Refactor to Model C immediately if already deployed."
+}

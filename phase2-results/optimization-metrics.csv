@@ -1,0 +1,6 @@
+OptimizationArea,CurrentUtilization,OptimizedUtilization,Impact,SavingsMonthly,RiskLevel
+ComputeRightSizing,65%,55%,1.5vCPU_avg,270,low
+MemoryRightSizing,48%,38%,12GB_baseline,110,low
+NetworkCompression,72%,45%,gzip_enabled,120,very_low
+TieredStorage,54%,32%,hot_cold_split,80,low
+LoggingOptimization,85%,50%,14day_retention,50,very_low

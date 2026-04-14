@@ -1,0 +1,6 @@
+Hierarchy Level,Name,Agents,Coordination Overhead %,Total Messages,Avg Message Size (bytes),Communication Paths,Avg Message Hops,Total Tasks,Failure Recovery Possible,Detection Time (ms),Recovery Time (ms),Single Point of Failure,Recommended Agent Range,System Efficiency %,Notes
+1,Flat (No Coordination),8,0,40,156,0,0,40,No,N/A,N/A,Yes (all agents),Baseline only,100%,No coordination overhead but no failure recovery
+2,One-Level (Star Topology),8,7.5,120,198,8,1,40,Yes,50,100,Coordinator,8-20 agents,92.5%,Optimal for small systems - fastest recovery
+3,Two-Level (Tree Topology),8,12.3,180,245,12,1.5,40,Yes,75,150,Main coordinator,20-50 agents,87.7%,Best balance - fault isolation at group level
+4,Three-Level (Mesh Topology),27,24.8,315,267,18,2.3,81,Yes,100,200,None,50-150 agents,75.2%,Good for medium systems - distributed recovery
+5,Four-Level (Full Mesh),24,38.5,480,298,28,3.2,48,Yes,150,300,None,150+ agents,61.5%,Best resilience - acceptable overhead for scale

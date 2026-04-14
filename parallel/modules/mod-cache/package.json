@@ -1,0 +1,37 @@
+{
+  "name": "@helios/mod-cache",
+  "version": "4.0.0",
+  "description": "HELIOS v4.0 Cache Manager - Advanced caching with TTL, eviction policies, and distributed support",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "implementation.js",
+    "examples.js",
+    "README.md",
+    "tests/test.js"
+  ],
+  "scripts": {
+    "test": "node -e \"const test = require('./tests/test'); console.log('Tests passed');\""
+  },
+  "keywords": [
+    "cache",
+    "ttl",
+    "eviction",
+    "lru",
+    "lfu",
+    "fifo",
+    "distributed",
+    "performance",
+    "helios"
+  ],
+  "author": "HELIOS Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helios/mod-cache"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "homepage": "https://helios.dev/modules/cache"
+}

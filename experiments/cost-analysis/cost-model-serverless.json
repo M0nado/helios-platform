@@ -1,0 +1,518 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_date": "2025-01-01",
+    "description": "Serverless FaaS deployment cost models for HELIOS v4.0",
+    "sla_uptime": "99.99%",
+    "currency": "USD",
+    "billing_period": "monthly"
+  },
+  "serverless_overview": {
+    "definition": "Function-as-a-Service deployment where agents are deployed as ephemeral functions",
+    "platforms": ["AWS Lambda", "Azure Functions", "Google Cloud Functions"],
+    "advantages": [
+      "Pay per execution, not per instance",
+      "Automatic scaling",
+      "No infrastructure management",
+      "Cold start optimizations available"
+    ],
+    "disadvantages": [
+      "Not ideal for long-running processes",
+      "Execution time limits",
+      "Potential cold start latency",
+      "Pricing unpredictable at scale"
+    ],
+    "best_for": "Bursty workloads, variable traffic, event-driven architectures"
+  },
+  "assumptions": {
+    "agent_characteristics": {
+      "avg_execution_duration_seconds": 30,
+      "memory_allocation_mb": 1024,
+      "invocations_per_agent_per_month": 1000,
+      "invocation_distribution": "Poisson (bursty, not uniform)"
+    },
+    "workload_patterns": {
+      "peak_concurrent_requests": 100,
+      "average_concurrent_requests": 20,
+      "idle_percentage": 0.4,
+      "burst_percentage": 0.2
+    },
+    "storage": {
+      "function_code_per_agent_mb": 50,
+      "persistent_storage_per_agent_gb": 10,
+      "logs_per_month_per_agent_gb": 2
+    },
+    "networking": {
+      "data_transfer_in_gb_per_month": 1,
+      "data_transfer_out_gb_per_month": 30,
+      "api_calls_per_invocation": 5,
+      "database_connections": "Connection pooling via cache"
+    }
+  },
+  "aws_lambda": {
+    "description": "AWS Lambda serverless compute platform",
+    "region": "us-east-1",
+    "pricing_date": "2025-01-01",
+    "fleet_8": {
+      "agents": 8,
+      "monthly_invocations": 8000,
+      "compute": {
+        "memory_mb_per_invocation": 1024,
+        "duration_seconds_per_invocation": 30,
+        "gb_seconds_per_invocation": 0.03,
+        "gb_seconds_per_month": 240,
+        "price_per_gb_second": 0.0000166667,
+        "compute_monthly_cost": 4.00,
+        "free_tier_monthly": 400000,
+        "free_invocations": 1000000,
+        "overage_invocations": 0,
+        "invocation_cost": 0,
+        "calculation": "8000 invocations * 30 sec * 1GB = 240 GB-sec; 240 * $0.0000166667 = $4.00"
+      },
+      "storage": {
+        "code_storage_gb": 0.4,
+        "code_storage_monthly": 0.20,
+        "persistent_storage_gb": 80,
+        "ephemeral_storage_gb": 512,
+        "ephemeral_storage_monthly": 10.24,
+        "logs_storage_gb": 16,
+        "logs_storage_monthly": 0.50,
+        "total_storage_cost": 11.94
+      },
+      "database": {
+        "rds_aurora_serverless_capacity_units": 2,
+        "acus_hourly_rate": 2.415,
+        "monthly_acus_cost": 1762.95,
+        "notes": "Shared RDS Aurora Serverless v2 across fleet"
+      },
+      "networking": {
+        "nat_gateway_hours": 730,
+        "nat_gateway_hourly": 0.045,
+        "nat_gateway_monthly": 32.85,
+        "data_transfer_out_gb": 240,
+        "transfer_cost_per_gb": 0.09,
+        "transfer_monthly_cost": 21.60,
+        "api_gateway_requests": 40000,
+        "api_gateway_cost": 1.40,
+        "total_network_cost": 55.85
+      },
+      "monitoring": {
+        "cloudwatch_logs_gb": 16,
+        "logs_cost_per_gb": 0.50,
+        "logs_monthly_cost": 8.00,
+        "cloudwatch_metrics": 80,
+        "custom_metrics_cost": 1.00,
+        "x_ray_tracing_traces": 10000,
+        "x_ray_monthly_cost": 5.00,
+        "total_monitoring_cost": 14.00
+      },
+      "other": {
+        "secrets_manager_secrets": 2,
+        "secrets_monthly_cost": 0.40,
+        "eventbridge_rules": 8,
+        "eventbridge_monthly_cost": 0.80,
+        "total_other_cost": 1.20
+      },
+      "monthly_total": 1850.94,
+      "per_agent_monthly": 231.37,
+      "per_request_processed": 0.00231,
+      "cost_note": "Aurora Serverless v2 is the major cost component for persistent data"
+    },
+    "fleet_16": {
+      "agents": 16,
+      "monthly_invocations": 16000,
+      "compute": {
+        "gb_seconds_per_month": 480,
+        "compute_monthly_cost": 8.00
+      },
+      "storage": {
+        "total_storage_cost": 23.88
+      },
+      "database": {
+        "acus_hourly_rate": 4.83,
+        "monthly_acus_cost": 3525.90
+      },
+      "networking": {
+        "nat_gateway_monthly": 32.85,
+        "transfer_monthly_cost": 43.20,
+        "api_gateway_cost": 2.80,
+        "total_network_cost": 78.85
+      },
+      "monitoring": {
+        "total_monitoring_cost": 28.00
+      },
+      "other": {
+        "total_other_cost": 2.40
+      },
+      "monthly_total": 3668.03,
+      "per_agent_monthly": 229.25,
+      "per_request_processed": 0.00229
+    },
+    "fleet_24": {
+      "agents": 24,
+      "monthly_invocations": 24000,
+      "compute": {
+        "gb_seconds_per_month": 720,
+        "compute_monthly_cost": 12.00
+      },
+      "storage": {
+        "total_storage_cost": 35.82
+      },
+      "database": {
+        "acus_hourly_rate": 7.245,
+        "monthly_acus_cost": 5288.85
+      },
+      "networking": {
+        "nat_gateway_monthly": 32.85,
+        "transfer_monthly_cost": 64.80,
+        "api_gateway_cost": 4.20,
+        "total_network_cost": 101.85
+      },
+      "monitoring": {
+        "total_monitoring_cost": 42.00
+      },
+      "other": {
+        "total_other_cost": 3.60
+      },
+      "monthly_total": 5484.12,
+      "per_agent_monthly": 228.50,
+      "per_request_processed": 0.00228
+    },
+    "fleet_100": {
+      "agents": 100,
+      "monthly_invocations": 100000,
+      "compute": {
+        "gb_seconds_per_month": 3000,
+        "compute_monthly_cost": 50.00,
+        "calculation": "As invocations increase, Lambda's per-GB-second cost becomes significant"
+      },
+      "storage": {
+        "total_storage_cost": 149.50
+      },
+      "database": {
+        "acus_hourly_rate": 30.18,
+        "monthly_acus_cost": 22031.40,
+        "notes": "Aurora Serverless v2 ACUs scale with concurrent connections"
+      },
+      "networking": {
+        "nat_gateway_monthly": 32.85,
+        "transfer_monthly_cost": 270.00,
+        "api_gateway_cost": 17.50,
+        "total_network_cost": 320.35
+      },
+      "monitoring": {
+        "total_monitoring_cost": 175.00
+      },
+      "other": {
+        "total_other_cost": 15.00
+      },
+      "monthly_total": 22741.25,
+      "per_agent_monthly": 227.41,
+      "per_request_processed": 0.00227,
+      "cost_note": "AWS Lambda becomes cost-competitive at scale, but Aurora Serverless remains expensive"
+    }
+  },
+  "azure_functions": {
+    "description": "Azure Functions serverless platform",
+    "region": "East US",
+    "pricing_date": "2025-01-01",
+    "fleet_8": {
+      "agents": 8,
+      "monthly_invocations": 8000,
+      "compute": {
+        "gb_seconds_per_month": 240,
+        "gb_second_price": 0.000011,
+        "execution_cost": 2.64,
+        "invocation_count": 8000,
+        "invocation_price": 0.0000002,
+        "invocation_cost": 0.0016,
+        "free_tier_gb_seconds": 400000,
+        "free_tier_invocations": 1000000,
+        "total_compute_cost": 2.64,
+        "notes": "Azure pricing more favorable than AWS for serverless"
+      },
+      "storage": {
+        "function_code_gb": 0.4,
+        "code_storage_monthly": 0.10,
+        "blob_storage_gb": 80,
+        "blob_monthly": 1.92,
+        "logs_storage_gb": 16,
+        "logs_monthly": 0.80,
+        "total_storage_cost": 2.82
+      },
+      "database": {
+        "cosmos_db_provisioned_ru": 400,
+        "ru_hourly_cost": 0.00018,
+        "cosmos_monthly_cost": 131.4,
+        "notes": "Cosmos DB more economical than RDS for variable workloads"
+      },
+      "networking": {
+        "bandwidth_out_gb": 240,
+        "bandwidth_monthly_cost": 21.60,
+        "api_management_calls": 40000,
+        "api_management_monthly": 0.35
+      },
+      "monitoring": {
+        "application_insights_cost": 10.00,
+        "log_analytics_gb": 16,
+        "log_analytics_monthly": 8.00,
+        "total_monitoring_cost": 18.00
+      },
+      "monthly_total": 176.81,
+      "per_agent_monthly": 22.10,
+      "per_request_processed": 0.00221,
+      "cost_note": "Azure Functions significantly cheaper than AWS Lambda for compute"
+    },
+    "fleet_16": {
+      "agents": 16,
+      "monthly_invocations": 16000,
+      "compute": {
+        "total_compute_cost": 5.28
+      },
+      "storage": {
+        "total_storage_cost": 5.64
+      },
+      "database": {
+        "cosmos_db_provisioned_ru": 800,
+        "cosmos_monthly_cost": 262.80
+      },
+      "networking": {
+        "bandwidth_monthly_cost": 43.20,
+        "api_management_monthly": 0.70
+      },
+      "monitoring": {
+        "total_monitoring_cost": 36.00
+      },
+      "monthly_total": 353.62,
+      "per_agent_monthly": 22.10,
+      "per_request_processed": 0.00221
+    },
+    "fleet_24": {
+      "agents": 24,
+      "monthly_invocations": 24000,
+      "compute": {
+        "total_compute_cost": 7.92
+      },
+      "storage": {
+        "total_storage_cost": 8.46
+      },
+      "database": {
+        "cosmos_db_provisioned_ru": 1200,
+        "cosmos_monthly_cost": 394.20
+      },
+      "networking": {
+        "bandwidth_monthly_cost": 64.80,
+        "api_management_monthly": 1.05
+      },
+      "monitoring": {
+        "total_monitoring_cost": 54.00
+      },
+      "monthly_total": 530.43,
+      "per_agent_monthly": 22.10,
+      "per_request_processed": 0.00221
+    },
+    "fleet_100": {
+      "agents": 100,
+      "monthly_invocations": 100000,
+      "compute": {
+        "total_compute_cost": 33.00
+      },
+      "storage": {
+        "total_storage_cost": 35.25
+      },
+      "database": {
+        "cosmos_db_provisioned_ru": 5000,
+        "cosmos_monthly_cost": 1642.50,
+        "notes": "Cosmos DB scales more economically than RDS for high throughput"
+      },
+      "networking": {
+        "bandwidth_monthly_cost": 270.00,
+        "api_management_monthly": 4.38
+      },
+      "monitoring": {
+        "total_monitoring_cost": 225.00
+      },
+      "monthly_total": 2210.13,
+      "per_agent_monthly": 22.10,
+      "per_request_processed": 0.00221,
+      "cost_note": "Azure Functions maintains consistent per-agent cost across fleet sizes"
+    }
+  },
+  "google_cloud_functions": {
+    "description": "Google Cloud Functions serverless platform",
+    "region": "us-east1",
+    "pricing_date": "2025-01-01",
+    "fleet_8": {
+      "agents": 8,
+      "monthly_invocations": 8000,
+      "compute": {
+        "gb_seconds_per_month": 240,
+        "gb_second_price": 0.0000041,
+        "compute_cost": 0.98,
+        "invocation_cost": 0.0000004,
+        "invocation_monthly": 0.0032,
+        "free_tier_invocations": 2000000,
+        "free_tier_gb_seconds": 400000,
+        "total_compute_cost": 0.98
+      },
+      "storage": {
+        "cloud_storage_gb": 80,
+        "storage_monthly": 1.92,
+        "logs_gb": 16,
+        "logs_monthly": 0.40,
+        "total_storage_cost": 2.32
+      },
+      "database": {
+        "cloud_sql_postgres_f1_micro": 9.50,
+        "shared_instance_monthly": 9.50,
+        "notes": "Shared database instance for all agents"
+      },
+      "networking": {
+        "egress_gb": 240,
+        "egress_monthly": 21.60,
+        "cloud_tasks": 20000,
+        "tasks_monthly": 6.00
+      },
+      "monitoring": {
+        "cloud_monitoring_cost": 10.00,
+        "cloud_logging_gb": 16,
+        "logging_monthly": 2.00,
+        "total_monitoring": 12.00
+      },
+      "monthly_total": 51.40,
+      "per_agent_monthly": 6.43,
+      "per_request_processed": 0.00064,
+      "cost_note": "GCP Functions offers lowest serverless costs; shared database keeps costs minimal"
+    },
+    "fleet_16": {
+      "agents": 16,
+      "monthly_invocations": 16000,
+      "compute": {
+        "total_compute_cost": 1.96
+      },
+      "storage": {
+        "total_storage_cost": 4.64
+      },
+      "database": {
+        "cloud_sql_postgres_db_f1": 9.50
+      },
+      "networking": {
+        "egress_monthly": 43.20,
+        "cloud_tasks": 12.00
+      },
+      "monitoring": {
+        "total_monitoring": 24.00
+      },
+      "monthly_total": 95.30,
+      "per_agent_monthly": 5.96,
+      "per_request_processed": 0.00060
+    },
+    "fleet_24": {
+      "agents": 24,
+      "monthly_invocations": 24000,
+      "compute": {
+        "total_compute_cost": 2.94
+      },
+      "storage": {
+        "total_storage_cost": 6.96
+      },
+      "database": {
+        "cloud_sql_upgrade_db_custom": 49.00,
+        "notes": "Upgrade to larger instance as connection pool grows"
+      },
+      "networking": {
+        "egress_monthly": 64.80,
+        "cloud_tasks": 18.00
+      },
+      "monitoring": {
+        "total_monitoring": 36.00
+      },
+      "monthly_total": 177.70,
+      "per_agent_monthly": 7.40,
+      "per_request_processed": 0.00074
+    },
+    "fleet_100": {
+      "agents": 100,
+      "monthly_invocations": 100000,
+      "compute": {
+        "total_compute_cost": 12.25
+      },
+      "storage": {
+        "total_storage_cost": 29.00
+      },
+      "database": {
+        "cloud_sql_postgres_ha": 180.00,
+        "notes": "High-availability instance for enterprise reliability"
+      },
+      "networking": {
+        "egress_monthly": 270.00,
+        "cloud_tasks": 75.00
+      },
+      "monitoring": {
+        "total_monitoring": 150.00
+      },
+      "monthly_total": 716.25,
+      "per_agent_monthly": 7.16,
+      "per_request_processed": 0.00072
+    }
+  },
+  "serverless_cost_comparison": {
+    "fleet_8_monthly": {
+      "aws_lambda": 1850.94,
+      "azure_functions": 176.81,
+      "gcp_functions": 51.40,
+      "winner": "GCP Functions ($51.40)"
+    },
+    "fleet_16_monthly": {
+      "aws_lambda": 3668.03,
+      "azure_functions": 353.62,
+      "gcp_functions": 95.30,
+      "winner": "GCP Functions ($95.30)"
+    },
+    "fleet_24_monthly": {
+      "aws_lambda": 5484.12,
+      "azure_functions": 530.43,
+      "gcp_functions": 177.70,
+      "winner": "GCP Functions ($177.70)"
+    },
+    "fleet_100_monthly": {
+      "aws_lambda": 22741.25,
+      "azure_functions": 2210.13,
+      "gcp_functions": 716.25,
+      "winner": "GCP Functions ($716.25)"
+    },
+    "insight": "GCP Functions consistently 3-20x cheaper than AWS Lambda for similar workloads"
+  },
+  "serverless_vs_traditional_comparison": {
+    "recommendation": {
+      "when_serverless_wins": [
+        "Highly variable traffic (bursty workloads)",
+        "Short-running jobs (<5 minutes average)",
+        "Event-driven architectures",
+        "Dev/test environments",
+        "Cost <= $100/month for fleet"
+      ],
+      "when_traditional_wins": [
+        "Consistent baseline traffic",
+        "Long-running processes (>15 minutes average)",
+        "High request volume (>100K/month per agent)",
+        "Complex stateful applications",
+        "Cost >= $1000/month for fleet"
+      ]
+    },
+    "break_even_analysis": {
+      "fleet_8": "Traditional cloud cheaper at baseline traffic; serverless better for bursty patterns",
+      "fleet_24": "Traditional cloud wins at 50% of agents utilized; serverless good for 20% utilization",
+      "fleet_100": "Traditional cloud significantly cheaper (container/VM scale = $13.8K/mo vs serverless $22.7K/mo AWS, $716 GCP)"
+    }
+  },
+  "cold_start_optimization": {
+    "problem": "Function execution latency on first invocation after idle period",
+    "aws_solutions": [
+      "Lambda Provisioned Concurrency ($0.015/hour per provisioned unit)",
+      "EphemeralStorage optimization (128MB minimum to 10,240MB)",
+      "Container image optimization (smaller = faster cold start)"
+    ],
+    "cost_impact": "Add 10-30% to Lambda bill for provisioned concurrency on latency-sensitive workloads"
+  }
+}

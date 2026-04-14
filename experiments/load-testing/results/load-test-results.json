@@ -1,0 +1,62 @@
+[
+  {
+    "SuccessfulRequests": 1724,
+    "LatencyAvg": 98,
+    "LatencyP50": 83,
+    "Throughput": 29,
+    "ErrorRate": 0.86,
+    "LatencyMax": 312,
+    "LatencyMin": 4,
+    "MemoryMB": 137,
+    "FailedRequests": 15,
+    "LatencyP99": 292,
+    "LatencyP95": 233,
+    "TotalRequests": 1739,
+    "LoadLevel": 100
+  },
+  {
+    "SuccessfulRequests": 1811,
+    "LatencyAvg": 97,
+    "LatencyP50": 79,
+    "Throughput": 31,
+    "ErrorRate": 1.36,
+    "LatencyMax": 313,
+    "LatencyMin": 4,
+    "MemoryMB": 142,
+    "FailedRequests": 25,
+    "LatencyP99": 296,
+    "LatencyP95": 225,
+    "TotalRequests": 1836,
+    "LoadLevel": 500
+  },
+  {
+    "SuccessfulRequests": 7077,
+    "LatencyAvg": 99,
+    "LatencyP50": 80,
+    "Throughput": 119,
+    "ErrorRate": 0.91,
+    "LatencyMax": 4084,
+    "LatencyMin": 3,
+    "MemoryMB": 145,
+    "FailedRequests": 65,
+    "LatencyP99": 296,
+    "LatencyP95": 233,
+    "TotalRequests": 7142,
+    "LoadLevel": 1000
+  },
+  {
+    "SuccessfulRequests": 654,
+    "LatencyAvg": 98,
+    "LatencyP50": 83,
+    "Throughput": 11,
+    "ErrorRate": 0.91,
+    "LatencyMax": 297,
+    "LatencyMin": 5,
+    "MemoryMB": 143,
+    "FailedRequests": 6,
+    "LatencyP99": 284,
+    "LatencyP95": 233,
+    "TotalRequests": 660,
+    "LoadLevel": 5000
+  }
+]

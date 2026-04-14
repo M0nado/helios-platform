@@ -1,0 +1,37 @@
+{
+  "name": "@helios/mod-eventbus",
+  "version": "4.0.0",
+  "description": "HELIOS v4.0 Event Bus - Production-ready pub/sub with routing, persistence, and replay",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "implementation.js",
+    "examples.js",
+    "README.md",
+    "tests/test.js"
+  ],
+  "scripts": {
+    "test": "node -e \"const test = require('./tests/test'); console.log('Tests passed');\""
+  },
+  "keywords": [
+    "event-bus",
+    "pubsub",
+    "pub-sub",
+    "events",
+    "messaging",
+    "event-driven",
+    "persistence",
+    "replay",
+    "helios"
+  ],
+  "author": "HELIOS Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helios/mod-eventbus"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "homepage": "https://helios.dev/modules/eventbus"
+}

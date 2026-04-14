@@ -1,0 +1,88 @@
+{
+  "fleet_size": 5,
+  "configuration": "Very Large (32 agents)",
+  "total_agents": 32,
+  "agent_roles": [
+    "8 Core Agents (major subsystems)",
+    "8 Specialist Agents (advanced features)",
+    "8 Feature Agents (individual features)",
+    "4 Coordination Agents (synchronization)",
+    "4 Integration Agents (cross-system)"
+  ],
+  "time_metrics": {
+    "total_time_hours": 6.0,
+    "parallel_speedup": 32.0,
+    "sequential_equivalent_hours": 192.0,
+    "agent_hours": 192,
+    "time_per_feature_hours": 0.055
+  },
+  "code_metrics": {
+    "total_code_kb": 1500,
+    "code_per_hour": 250.0,
+    "code_duplication_percent": 8.2,
+    "complexity_score": 64,
+    "maintainability_index": 76
+  },
+  "quality_metrics": {
+    "code_coverage_percent": 97,
+    "test_count": 110,
+    "tests_per_hour": 18.3,
+    "bugs_per_1000_loc": 3.1,
+    "quality_score": 0.97
+  },
+  "feature_metrics": {
+    "features_implemented": 104,
+    "feature_coverage_percent": 99,
+    "integration_points": 64,
+    "extensibility_score": 8.8
+  },
+  "cost_metrics": {
+    "cost_score": 64.0,
+    "cost_per_kb": 0.0427,
+    "cost_per_coverage_point": 0.660,
+    "cost_per_feature": 0.615
+  },
+  "roi_metrics": {
+    "roi_score": 1.51,
+    "value_delivered": 2080,
+    "cost_incurred": 12800,
+    "break_even_multiplier": 6.4
+  },
+  "overhead_analysis": {
+    "coordination_overhead_percent": 31.25,
+    "communication_complexity_score": 9.8,
+    "task_switching_cost_hours": 37.6,
+    "context_loss_percent": 24.0,
+    "duplication_impact": "SEVERE"
+  },
+  "risk_assessment": {
+    "single_point_failure_risk": "MINIMAL",
+    "knowledge_loss_risk": "MINIMAL",
+    "schedule_risk": "HIGH",
+    "quality_risk": "MEDIUM",
+    "coordination_complexity_risk": "CRITICAL",
+    "context_switching_risk": "CRITICAL",
+    "overall_risk_level": "HIGH"
+  },
+  "diminishing_returns": {
+    "roi_decrease_from_baseline_percent": 69.5,
+    "cost_increase_factor": 6.88,
+    "value_increase_factor": 1.33,
+    "efficiency_ratio": 0.19
+  },
+  "analysis": {
+    "marginal_value_per_agent": 7.7,
+    "marginal_cost_per_agent": 51.9,
+    "marginal_roi": 0.15,
+    "break_point": "Beyond optimal fleet size"
+  },
+  "recommendations": [
+    "NOT RECOMMENDED for production use",
+    "Severe diminishing returns",
+    "Coordination overhead critical (31.25%)",
+    "ROI drops to 1.51 (69.5% decrease from baseline)",
+    "Code duplication rises to 8.2%",
+    "Marginal value per agent drops dramatically",
+    "Only viable for massive projects (1M+ LOC target)"
+  ]
+}

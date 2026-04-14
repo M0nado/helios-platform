@@ -1,0 +1,60 @@
+{
+  "fleet_size": 1,
+  "configuration": "Minimal (2 agents)",
+  "total_agents": 2,
+  "agent_roles": [
+    "Core Agent (all major features)",
+    "Support Agent (testing + docs)"
+  ],
+  "time_metrics": {
+    "total_time_hours": 1.5,
+    "parallel_speedup": 1.0,
+    "agent_hours": 3,
+    "time_per_feature_hours": 0.45
+  },
+  "code_metrics": {
+    "total_code_kb": 200,
+    "code_per_hour": 266.7,
+    "code_duplication_percent": 5.2,
+    "complexity_score": 42,
+    "maintainability_index": 78
+  },
+  "quality_metrics": {
+    "code_coverage_percent": 80,
+    "test_count": 15,
+    "tests_per_hour": 20.0,
+    "bugs_per_1000_loc": 8.5,
+    "quality_score": 0.80
+  },
+  "feature_metrics": {
+    "features_implemented": 33,
+    "feature_coverage_percent": 65,
+    "integration_points": 8,
+    "extensibility_score": 6.2
+  },
+  "cost_metrics": {
+    "cost_score": 1.0,
+    "cost_per_kb": 0.005,
+    "cost_per_coverage_point": 0.0125,
+    "cost_per_feature": 0.030
+  },
+  "roi_metrics": {
+    "roi_score": 1.0,
+    "value_delivered": 200,
+    "cost_incurred": 200,
+    "break_even_multiplier": 1.0
+  },
+  "risk_assessment": {
+    "single_point_failure_risk": "HIGH",
+    "knowledge_loss_risk": "CRITICAL",
+    "schedule_risk": "MEDIUM",
+    "quality_risk": "MEDIUM-HIGH",
+    "overall_risk_level": "HIGH"
+  },
+  "recommendations": [
+    "Not suitable for production use",
+    "Minimal team coverage with high risk",
+    "Good for POC/prototype only",
+    "Limited scalability and maintainability"
+  ]
+}
