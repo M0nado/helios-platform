@@ -1,6 +1,6 @@
 /**
  * HELIOS Modules - Consolidated Repository
- * All 7 components unified in single system
+ * All 9 components unified in single system
  * v7.0 - Production Ready
  */
 
@@ -11,6 +11,8 @@ const { GUIDashboard } = require('./gui-dashboard');
 const { BuildAgents, BuildAgent } = require('./build-agents');
 const { DevAIHub } = require('./dev-ai-hub');
 const { SoftwareStack, TOOLS } = require('./software-stack');
+const { USBBuilder } = require('./usb-builder');
+const { SystemSetup } = require('./system-setup');
 
 class HELIOS {
   constructor(config = {}) {
@@ -25,6 +27,8 @@ class HELIOS {
     this.build = new BuildAgents(config.build);
     this.dev = new DevAIHub(config.dev);
     this.software = new SoftwareStack(config.software);
+    this.usb = new USBBuilder(config.usb);
+    this.setup = new SystemSetup(config.setup);
   }
 
   /**
@@ -41,6 +45,8 @@ class HELIOS {
         build: this.build.getAllStatus(),
         dev: this.dev.getMetrics(),
         software: this.software.getMetrics(),
+        usb: this.usb.getMetrics(),
+        setup: this.setup.getMetrics(),
       },
       timestamp: Date.now(),
     };
@@ -53,7 +59,7 @@ class HELIOS {
     return {
       status: 'initialized',
       version: this.version,
-      modules: 7,
+      modules: 9,
       timestamp: Date.now(),
     };
   }
@@ -71,6 +77,8 @@ class HELIOS {
     deployments.push({ component: 'build', deployed: true });
     deployments.push({ component: 'dev', deployed: true });
     deployments.push({ component: 'software', deployed: true });
+    deployments.push({ component: 'usb', deployed: true });
+    deployments.push({ component: 'setup', deployed: true });
 
     return {
       status: 'deployment_complete',
@@ -102,4 +110,6 @@ module.exports = {
   DevAIHub,
   SoftwareStack,
   TOOLS,
+  USBBuilder,
+  SystemSetup,
 };
