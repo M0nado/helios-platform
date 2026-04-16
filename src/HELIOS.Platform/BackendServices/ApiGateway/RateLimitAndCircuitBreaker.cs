@@ -117,14 +117,11 @@ namespace HELIOS.Platform.BackendServices.ApiGateway
         {
             try
             {
-                lock (_limits)
+                if (_limits.TryGetValue(clientId, out var limiter))
                 {
-                    if (_limits.TryGetValue(clientId, out var limiter))
-                    {
-                        return await Task.FromResult(limiter);
-                    }
-                    return await Task.FromResult<RateLimitKey>(null);
+                    return await Task.FromResult(limiter);
                 }
+                return await Task.FromResult<RateLimitKey>(null);
             }
             catch (Exception ex)
             {

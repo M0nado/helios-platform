@@ -1,7 +1,6 @@
-<<<<<<< HEAD
-# 🚀 HELIOS PLATFORM - Enterprise Automation System
+# 🚀 HELIOS Platform - Enterprise Automation System
 
-Complete production-ready enterprise automation combining 6-phase deployment, 12+ AI services, military-grade security, and real-time observability. **Deploy in 30 minutes.**
+Complete production-ready enterprise automation platform combining 6-phase deployment, 12+ AI services, military-grade security, and real-time observability. **Deploy in 30 minutes.**
 
 [![Build](https://github.com/M0nado/helios-platform/workflows/deploy/badge.svg)](https://github.com/M0nado/helios-platform/actions)
 [![NuGet](https://img.shields.io/nuget/v/HELIOS.Platform.svg)](https://www.nuget.org/packages/HELIOS.Platform)
@@ -9,35 +8,9 @@ Complete production-ready enterprise automation combining 6-phase deployment, 12
 [![Codespace Ready](https://img.shields.io/badge/Codespace-Ready-success.svg)](https://github.com/codespaces/new?repo=M0nado/helios-platform)
 
 ## 🎯 What is HELIOS?
-=======
-﻿# HELIOS Platform
 
-Complete Windows optimization ecosystem with 7 integrated components providing enterprise-grade deployment, automation, and management capabilities.
+HELIOS is an enterprise-grade Windows automation platform that orchestrates:
 
-## 📦 NuGet Package
-
-**Available on NuGet.org:** https://www.nuget.org/packages/HELIOS.Platform/
-
-### Quick Install
-
-```powershell
-dotnet add package HELIOS.Platform
-```
-
-### Quick Start
-
-```csharp
-using HELIOS.Platform;
-
-var deployment = new HeliosDeployment();
-await deployment.ValidateAsync();
-var result = await deployment.DeployAsync(DeploymentTier.Enterprise);
-```
->>>>>>> 1c7cf77 (Deploy: Complete metrics tracking infrastructure for 120+ variables and 100+ agents)
-
-HELIOS is an enterprise-grade automation platform that orchestrates:
-
-<<<<<<< HEAD
 - ✅ **6-Phase Deployment** - Automated infrastructure to go-live in 30 minutes
 - ✅ **6 Coordinated Agents** - Storage, Security, Software, GUI, Optimization, Testing
 - ✅ **12+ AI Services** - Ollama, Azure OpenAI, Claude, Gemini, Copilot, Fabric + custom agents
@@ -45,22 +18,29 @@ HELIOS is an enterprise-grade automation platform that orchestrates:
 - ✅ **7 Real-time Dashboards** - Cost, Performance, Security, Compliance, AI, Agents, Health
 - ✅ **85% Cost Optimization** - Intelligent AI routing, caching, parallelization
 - ✅ **Production Ready** - 42-point verification, go-live authorization, compliance reporting
-=======
-**NuGet Setup & Configuration:**
-- **[NUGET_PACKAGE_COMPLETE_SETUP.md](NUGET_PACKAGE_COMPLETE_SETUP.md)** - Package overview and structure
+
+## 📦 Installation
+
+### Quick Install (NuGet)
+```powershell
+dotnet add package HELIOS.Platform
+```
+
+### Quick Start (Code)
+```csharp
+using HELIOS.Platform;
+
+var deployment = new HeliosDeployment();
+await deployment.ValidateAsync();
+var result = await deployment.DeployAsync(DeploymentTier.Enterprise);
+```
+
+### Full Documentation
+- **[START_HERE.md](START_HERE.md)** - Complete getting started guide (READ THIS FIRST)
+- **[NUGET_PACKAGE_COMPLETE_SETUP.md](NUGET_PACKAGE_COMPLETE_SETUP.md)** - Package setup details
 - **[NUGET_BUILD_PROCESS.md](NUGET_BUILD_PROCESS.md)** - Building and packaging locally
 - **[NUGET_INSTALLATION_GUIDES.md](NUGET_INSTALLATION_GUIDES.md)** - Installation methods and usage
-- **[NUGET_CI_CD_AUTOMATION.md](NUGET_CI_CD_AUTOMATION.md)** - GitHub Actions workflow
-- **[NUGET_RELEASE_PROCESS.md](NUGET_RELEASE_PROCESS.md)** - Release management
-- **[NUGET_SETUP_COMMANDS.md](NUGET_SETUP_COMMANDS.md)** - Quick reference commands
-
-**Repository Documentation:**
-- **[WHAT_YOU_HAVE_NOW.md](docs/WHAT_YOU_HAVE_NOW.md)** - Current state inventory
-- **[QUICK_ANALYSIS.md](docs/QUICK_ANALYSIS.md)** - Recommendations
-- **[COMPONENT_CATALOG/](docs/COMPONENT_CATALOG/)** - All 7 components
-- **[PHASE_PLANNER/](docs/PHASE_PLANNER/)** - 8 progressive phases
-- **[GUIDES/](docs/GUIDES/)** - Installation and troubleshooting
->>>>>>> 1c7cf77 (Deploy: Complete metrics tracking infrastructure for 120+ variables and 100+ agents)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design and component interactions
 
 ## ⚡ Quick Start
 
