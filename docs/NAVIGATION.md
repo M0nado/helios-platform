@@ -6,10 +6,10 @@ This page helps you find what you need quickly.
 
 ### **I want to...use the platform**
 1. Start: [START_HERE.md](../START_HERE.md)
-2. Install: [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
-3. Deploy: [DEPLOYMENT_COMPLETE_GUIDE.md](DEPLOYMENT_COMPLETE_GUIDE.md)
-4. Use: [QUICK_START.md](QUICK_START.md)
-5. Monitor: [Dashboard Guide](deployment/DASHBOARDS.md)
+2. Install: [USER_INSTALLATION_GUIDE.md](USER_INSTALLATION_GUIDE.md) ⭐ NEW
+3. Deploy: [USER_DEPLOYMENT_GUIDE.md](USER_DEPLOYMENT_GUIDE.md) ⭐ NEW
+4. Operate: [USER_OPERATIONS_GUIDE.md](USER_OPERATIONS_GUIDE.md) ⭐ NEW
+5. Troubleshoot: [USER_TROUBLESHOOTING.md](USER_TROUBLESHOOTING.md) ⭐ NEW
 
 ### **I want to...understand the architecture**
 1. Overview: [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -19,16 +19,16 @@ This page helps you find what you need quickly.
 5. API: [API.md](API.md) or [PHASE-4-API-REFERENCE.md](PHASE-4-API-REFERENCE.md)
 
 ### **I want to...contribute code**
-1. Setup: [Contributing](CONTRIBUTING.md)
-2. Development: [GETTING_STARTED](GETTING_STARTED/)
-3. Testing: [Testing Checklist](TESTING_CHECKLIST.md)
-4. Build: [Build Process](../README.md#building)
-5. Release: [Release Process](RELEASE_NOTES.md)
+1. Setup: [CONTRIBUTING.md](CONTRIBUTING.md)
+2. Development: [DEVELOPMENT.md](../docs/DEVELOPMENT.md)
+3. Architecture: [ARCHITECTURE_OVERVIEW.md](ARCHITECTURE_OVERVIEW.md)
+4. Testing: [Testing Checklist](TESTING_CHECKLIST.md)
+5. API Reference: [API_REFERENCE.md](API_REFERENCE.md)
 
 ### **I want to...fix a problem**
-1. Common Issues: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-2. Advanced: [TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md)
-3. Deployment Issues: [DEPLOYMENT_VERIFICATION_ROLLBACK.md](DEPLOYMENT_VERIFICATION_ROLLBACK.md)
+1. Troubleshooting: [USER_TROUBLESHOOTING.md](USER_TROUBLESHOOTING.md) ⭐ NEW
+2. Common Issues: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+3. Emergency Help: [USER_TROUBLESHOOTING.md#emergency](USER_TROUBLESHOOTING.md#emergency-procedures)
 4. GitHub Issues: [Report a Bug](https://github.com/M0nado/helios-platform/issues)
 
 ### **I want to...ask a question**
@@ -47,9 +47,14 @@ This page helps you find what you need quickly.
 - [GLOSSARY.md](GLOSSARY.md) - Term definitions
 
 ### Installation & Setup (15-30 min)
-- [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) - How to install
-- [GETTING_STARTED/](GETTING_STARTED/) - Folder with setup guides
+- [USER_INSTALLATION_GUIDE.md](USER_INSTALLATION_GUIDE.md) ⭐ NEW - Complete installation from USB
+- [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) - Setup instructions
 - [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Pre-deploy checklist
+
+### Operations & Usage (Daily/Weekly)
+- [USER_OPERATIONS_GUIDE.md](USER_OPERATIONS_GUIDE.md) ⭐ NEW - Daily monitoring & maintenance
+- [USER_DEPLOYMENT_GUIDE.md](USER_DEPLOYMENT_GUIDE.md) ⭐ NEW - First deployment & resource management
+- [QUICK_START.md](QUICK_START.md) - Quick reference
 
 ### Architecture & Design (30-60 min)
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System design
@@ -69,8 +74,9 @@ This page helps you find what you need quickly.
 - [INTEGRATIONS/](INTEGRATIONS/) - Folder with integration guides
 
 ### Troubleshooting & Operations (on-demand)
+- [USER_TROUBLESHOOTING.md](USER_TROUBLESHOOTING.md) ⭐ NEW - Comprehensive troubleshooting guide
+- [USER_ADVANCED_GUIDE.md](USER_ADVANCED_GUIDE.md) ⭐ NEW - Advanced features & optimization
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common problems
-- [TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md) - Advanced troubleshooting
 - [TESTING_CHECKLIST.md](TESTING_CHECKLIST.md) - Test procedures
 
 ### Contributing & Development (30-60 min)
@@ -108,11 +114,11 @@ docs/
 
 ### Path 1: User (Just want to run it)
 1. [START_HERE.md](../START_HERE.md) - 5 min
-2. [QUICK_START.md](QUICK_START.md) - 10 min
-3. [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) - 15 min
+2. [USER_INSTALLATION_GUIDE.md](USER_INSTALLATION_GUIDE.md) - 20 min
+3. [USER_DEPLOYMENT_GUIDE.md](USER_DEPLOYMENT_GUIDE.md) - 15 min
 4. Deploy!
 
-**Total Time**: ~30 minutes
+**Total Time**: ~40 minutes
 
 ### Path 2: Developer (Want to understand it)
 1. [ARCHITECTURE.md](ARCHITECTURE.md) - 20 min
@@ -134,11 +140,11 @@ docs/
 **Total Time**: ~2 hours setup + development time
 
 ### Path 4: Operator (Need to deploy/maintain)
-1. [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) - 15 min
-2. [DEPLOYMENT_PLAYBOOK.md](DEPLOYMENT_PLAYBOOK.md) - 30 min
-3. [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - 10 min
-4. Deploy!
-5. [TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md) - reference
+1. [USER_INSTALLATION_GUIDE.md](USER_INSTALLATION_GUIDE.md) - 20 min
+2. [USER_DEPLOYMENT_GUIDE.md](USER_DEPLOYMENT_GUIDE.md) - 20 min
+3. [USER_OPERATIONS_GUIDE.md](USER_OPERATIONS_GUIDE.md) - 20 min
+4. Deploy & monitor!
+5. [USER_TROUBLESHOOTING.md](USER_TROUBLESHOOTING.md) - reference
 
 **Total Time**: ~1 hour preparation + deployment
 
@@ -148,12 +154,15 @@ docs/
 
 | Document | Status | Last Updated | Purpose |
 |----------|--------|--------------|---------|
-| ARCHITECTURE.md | ✅ Current | Recent | System design overview |
-| INSTALLATION_GUIDE.md | ✅ Current | Recent | Setup instructions |
-| QUICK_START.md | ✅ Current | Recent | Quick reference |
-| API.md | ✅ Current | Recent | Public API docs |
-| TROUBLESHOOTING.md | ✅ Current | Recent | Problem solutions |
-| FAQ.md | ✅ Current | Recent | Common questions |
+| START_HERE.md | ✅ Current | Recent | Quick entry point for all users |
+| ARCHITECTURE_OVERVIEW.md | ✅ Current | Recent | System design overview |
+| USER_INSTALLATION_GUIDE.md | ✅ Current | Recent | Complete installation from USB |
+| USER_DEPLOYMENT_GUIDE.md | ✅ Current | Recent | Deployment and resource management |
+| USER_OPERATIONS_GUIDE.md | ✅ Current | Recent | Daily operations and maintenance |
+| USER_ADVANCED_GUIDE.md | ✅ Current | Recent | Advanced features and optimization |
+| USER_TROUBLESHOOTING.md | ✅ Current | Recent | Comprehensive troubleshooting |
+| DEVELOPMENT.md | ✅ Current | Recent | Developer guide and patterns |
+| API_REFERENCE.md | ✅ Current | Recent | Complete API documentation |
 
 ---
 
