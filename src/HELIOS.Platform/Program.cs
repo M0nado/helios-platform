@@ -18,6 +18,8 @@ using HELIOS.Platform.Core.GPU;
 using HELIOS.Platform.Core.Automation;
 using HELIOS.Platform.Core.AI;
 using HELIOS.Platform.Core.Performance;
+using HELIOS.Platform.Core.Backup;
+using HELIOS.Platform.Core.Cloud;
 using HELIOS.Platform.Data.Database;
 
 namespace HELIOS.Platform
@@ -54,6 +56,9 @@ namespace HELIOS.Platform
                 var aiCoordinator = new AILearningCoordinator(logger);
                 var vaultService = new SecurityVaultService(logger);
                 var performanceProfiler = new PerformanceProfiler(logger);
+                var backupService = new BackupService(logger);
+                var monitoringService = new ServerMonitoringService(logger);
+                var cloudService = new CloudIntegrationService(logger);
                 
                 // Initialize database context
                 var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
@@ -80,6 +85,9 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IAILearningCoordinator>(aiCoordinator);
                 ServiceContainer.Instance.RegisterSingleton<ISecurityVaultService>(vaultService);
                 ServiceContainer.Instance.RegisterSingleton<IPerformanceProfiler>(performanceProfiler);
+                ServiceContainer.Instance.RegisterSingleton<IBackupService>(backupService);
+                ServiceContainer.Instance.RegisterSingleton<IServerMonitoringService>(monitoringService);
+                ServiceContainer.Instance.RegisterSingleton<ICloudIntegrationService>(cloudService);
                 ServiceContainer.Instance.RegisterSingleton<HeliosDatabaseContext>(dbContext);
                 ServiceContainer.Instance.RegisterSingleton<IDataAccessService>(dataAccessService);
                 
