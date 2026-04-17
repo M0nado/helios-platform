@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using HELIOS.Platform.Core;
 using HELIOS.Platform.BackendServices.ServerManagement;
 using HELIOS.Platform.Core.Logging;
@@ -11,6 +12,7 @@ using HELIOS.Platform.Core.Security;
 using HELIOS.Platform.Core.Monitoring;
 using HELIOS.Platform.Core.Administration;
 using HELIOS.Platform.Core.CLI;
+using HELIOS.Platform.Data.Database;
 
 namespace HELIOS.Platform
 {
@@ -37,6 +39,12 @@ namespace HELIOS.Platform
                 var systemManagement = new SystemManagementService();
                 var cliExecutor = new CliCommandExecutor(orchestrator, systemManagement);
                 
+                // Initialize database context
+                var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
+                optionsBuilder.UseSqlite("Data Source=helios.db");
+                var dbContext = new HeliosDatabaseContext(optionsBuilder.Options);
+                var dataAccessService = new DataAccessService(dbContext);
+                
                 ServiceContainer.Instance.RegisterSingleton<Core.Logging.ILogger>(logger);
                 ServiceContainer.Instance.RegisterSingleton<IServiceOrchestrator>(orchestrator);
                 ServiceContainer.Instance.RegisterSingleton<SystemDiagnostics>(diagnostics);
@@ -46,8 +54,21 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IDashboardHistoryTracker>(dashboardTracker);
                 ServiceContainer.Instance.RegisterSingleton<ISystemManagementService>(systemManagement);
                 ServiceContainer.Instance.RegisterSingleton<ICommandExecutor>(cliExecutor);
+                ServiceContainer.Instance.RegisterSingleton<HeliosDatabaseContext>(dbContext);
+                ServiceContainer.Instance.RegisterSingleton<IDataAccessService>(dataAccessService);
                 
                 logger.Info("HELIOS Platform initialized successfully");
+                
+                // Apply database migrations
+                try
+                {
+                    await dbContext.Database.MigrateAsync();
+                    logger.Info("Database migrations applied successfully");
+                }
+                catch (Exception migrateEx)
+                {
+                    logger.Error($"Database migration failed: {migrateEx.Message}");
+                }
                 
                 // Show main menu
                 await ShowMainMenu(logger);
