@@ -17,6 +17,7 @@ using HELIOS.Platform.Core.RemoteAccess;
 using HELIOS.Platform.Core.GPU;
 using HELIOS.Platform.Core.Automation;
 using HELIOS.Platform.Core.AI;
+using HELIOS.Platform.Core.Performance;
 using HELIOS.Platform.Data.Database;
 
 namespace HELIOS.Platform
@@ -51,6 +52,8 @@ namespace HELIOS.Platform
                 var gpuService = new GPUOptimizationService(logger);
                 var automationServer = new AutomationServer(logger);
                 var aiCoordinator = new AILearningCoordinator(logger);
+                var vaultService = new SecurityVaultService(logger);
+                var performanceProfiler = new PerformanceProfiler(logger);
                 
                 // Initialize database context
                 var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
@@ -75,6 +78,8 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IGPUOptimizationService>(gpuService);
                 ServiceContainer.Instance.RegisterSingleton<IAutomationServer>(automationServer);
                 ServiceContainer.Instance.RegisterSingleton<IAILearningCoordinator>(aiCoordinator);
+                ServiceContainer.Instance.RegisterSingleton<ISecurityVaultService>(vaultService);
+                ServiceContainer.Instance.RegisterSingleton<IPerformanceProfiler>(performanceProfiler);
                 ServiceContainer.Instance.RegisterSingleton<HeliosDatabaseContext>(dbContext);
                 ServiceContainer.Instance.RegisterSingleton<IDataAccessService>(dataAccessService);
                 
