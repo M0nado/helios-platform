@@ -1,0 +1,149 @@
+<Window x:Class="HELIOS.WPF.SetupWizard"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="HELIOS Setup Wizard - Monado Installation Protocol"
+        Width="700"
+        Height="600"
+        WindowStartupLocation="CenterScreen"
+        Background="#0A0E27"
+        Foreground="#F5F5F5"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Theme/Colors.xaml"/>
+                <ResourceDictionary Source="Theme/Brushes.xaml"/>
+                <ResourceDictionary Source="Theme/Styles.xaml"/>
+                <ResourceDictionary Source="Theme/Animations.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="60"/>
+        </Grid.RowDefinitions>
+
+        <!-- Content Area -->
+        <Border Grid.Row="0" Background="{StaticResource DarkSlateBrush}" Padding="24">
+            <StackPanel VerticalAlignment="Center">
+                <!-- Page Title -->
+                <TextBlock x:Name="PageTitle"
+                          Text="Welcome to HELIOS"
+                          Foreground="{StaticResource MonadoCyanBrush}"
+                          FontSize="32"
+                          FontWeight="Bold"
+                          Margin="0,0,0,12"/>
+
+                <!-- Page Subtitle -->
+                <TextBlock x:Name="PageSubtitle"
+                          Text="Xenoblade System Monitoring Platform"
+                          Foreground="{StaticResource ElectricBlueBrush}"
+                          FontSize="18"
+                          Margin="0,0,0,24"/>
+
+                <!-- Page Description -->
+                <TextBlock x:Name="PageDescription"
+                          Text="This wizard will guide you through the installation and configuration of HELIOS with Monado visual effects and comprehensive system monitoring capabilities."
+                          Foreground="{StaticResource TextSecondaryBrush}"
+                          FontSize="14"
+                          TextWrapping="Wrap"
+                          Margin="0,0,0,24"/>
+
+                <!-- Page Content -->
+                <Border x:Name="PageContent"
+                       Background="{StaticResource BackgroundSecondaryBrush}"
+                       BorderBrush="{StaticResource MonadoCyanBrush}"
+                       BorderThickness="2"
+                       CornerRadius="8"
+                       Padding="16"
+                       MinHeight="250">
+                    <StackPanel>
+                        <TextBlock Text="System Information" 
+                                  Foreground="{StaticResource MonadoCyanBrush}"
+                                  FontSize="14"
+                                  FontWeight="SemiBold"
+                                  Margin="0,0,0,12"/>
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="OS Version:" Foreground="{StaticResource TextTertiaryBrush}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="OSVersion" Text="Windows 10 Pro (Build 19045)" Foreground="{StaticResource TextSecondaryBrush}"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Processor:" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ProcessorInfo" Text="Intel Core i7-9700K @ 3.60 GHz" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Memory:" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="MemoryInfo" Text="32 GB DDR4" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Storage:" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,8,0,0"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="StorageInfo" Text="1 TB SSD Available" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,8,0,0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- Button Bar -->
+        <Border Grid.Row="1" Background="{StaticResource BackgroundSecondaryBrush}" BorderBrush="{StaticResource Divider}" BorderThickness="0,1,0,0" Padding="24">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Progress Indicator -->
+                <TextBlock Grid.Column="0"
+                          x:Name="ProgressText"
+                          Text="Step 1 of 9"
+                          Foreground="{StaticResource TextTertiaryBrush}"
+                          FontSize="12"
+                          VerticalAlignment="Center"/>
+
+                <!-- Back Button -->
+                <Button Grid.Column="1"
+                       x:Name="BackButton"
+                       Content="← BACK"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Background="{StaticResource BackgroundTertiaryBrush}"
+                       Margin="0,0,12,0"
+                       Padding="16,8"
+                       MinWidth="100"
+                       IsEnabled="False"/>
+
+                <!-- Next Button -->
+                <Button Grid.Column="2"
+                       x:Name="NextButton"
+                       Content="NEXT →"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Background="{StaticResource ElectricBlueBrush}"
+                       Margin="0,0,8,0"
+                       Padding="16,8"
+                       MinWidth="100"/>
+
+                <!-- Cancel Button -->
+                <Button Grid.Column="3"
+                       Content="CANCEL"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Background="{StaticResource StatusErrorBrush}"
+                       Padding="16,8"
+                       MinWidth="100"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

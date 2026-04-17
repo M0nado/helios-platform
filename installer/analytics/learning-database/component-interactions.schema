@@ -1,0 +1,37 @@
+-- HELIOS Component Interactions Database
+-- Created: 04/13/2026 06:23:40
+
+-- Interactions log
+CREATE TABLE IF NOT EXISTS interactions (
+    id INTEGER PRIMARY KEY,
+    source_component TEXT NOT NULL,
+    target_component TEXT NOT NULL,
+    interaction_type TEXT,
+    frequency INTEGER,
+    latency_ms REAL,
+    success_rate REAL,
+    timestamp DATETIME,
+    UNIQUE(source_component, target_component, interaction_type)
+);
+
+-- Interaction metrics
+CREATE TABLE IF NOT EXISTS interaction_metrics (
+    id INTEGER PRIMARY KEY,
+    interaction_id INTEGER,
+    metric_name TEXT,
+    metric_value REAL,
+    timestamp DATETIME,
+    FOREIGN KEY(interaction_id) REFERENCES interactions(id)
+);
+
+-- Syner
+gies
+CREATE TABLE IF NOT EXISTS detected_synergies (
+    id INTEGER PRIMARY KEY,
+    component1 TEXT,
+    component2 TEXT,
+    synergy_type TEXT,
+    score REAL,
+    impact_description TEXT,
+    detected_date DATETIME
+);

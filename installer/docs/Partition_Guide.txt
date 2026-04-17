@@ -1,0 +1,17 @@
+﻿HELIOS V12 PARTITION GUIDE
+
+Drive 0
+- C: 600 GB  CORE
+- V: 300 GB  FABRIC + TUNE + PLAYGROUND + CREATIVE + DUMP + SERVER_SHARED
+- leave the rest free for SSD health and future expansion
+
+Drive 1
+- G: 1000 GB GAMING
+- D: 600 GB  DEVCORE
+- U: 300 GB  STUDIO
+- leave the rest free
+
+VHDX
+- Vault: C:\Helios\Vault\Helios_Vault.vhdx   25-50 GB dynamic
+- DevHD: D:\DevCore\DevCoreHD.vhdx           100 GB dynamic
+- SandboxHD: D:\DevCore\SandboxHD.vhdx       100 GB dynamic

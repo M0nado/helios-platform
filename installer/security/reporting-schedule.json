@@ -1,0 +1,27 @@
+{
+  "Monthly": [
+    "Compliance Status",
+    "Audit Findings",
+    "Policy Review"
+  ],
+  "Daily": [
+    "Security Events",
+    "Threat Detection",
+    "Incident Response"
+  ],
+  "Weekly": [
+    "User Access Review",
+    "Configuration Changes",
+    "Vulnerability Scan Results"
+  ],
+  "Quarterly": [
+    "HIPAA Audit",
+    "Risk Assessment",
+    "Penetration Test Results"
+  ],
+  "Annual": [
+    "SOC2 Audit",
+    "ISO27001 Assessment",
+    "Overall Compliance Status"
+  ]
+}

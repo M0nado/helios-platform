@@ -1,0 +1,43 @@
+-- HELIOS Learned Patterns Database
+-- Created: 04/13/2026 06:23:40
+
+-- Sequences table
+CREATE TABLE IF NOT EXISTS sequences (
+    id INTEGER PRIMARY KEY,
+    pattern TEXT NOT NULL,
+    frequency INTEGER,
+    avgDuration REAL,
+    lastObserved DATETIME,
+    confidence REAL
+);
+
+-- Concurrency patterns table
+CREATE TABLE IF NOT EXISTS concurrency_patterns (
+    id INTEGER PRIMARY KEY,
+    pattern TEXT NOT NULL,
+    components TEXT,
+    frequency INTEGER,
+    impact TEXT,
+    lastObserved DATETIME
+);
+
+-- Performance patterns table
+CREATE TABLE IF NOT EXISTS performance_patterns (
+    id INTEGER PRIMARY KEY,
+    pattern_name TEXT,
+    latency_range TEXT,
+    component_count INTEGER,
+    avg_latency REAL,
+    components TEXT,
+    timestamp DATETIME
+);
+
+-- Dependency chains table
+CREATE TABLE IF NOT EXISTS dependency_chains (
+    id INTEGER PRIMARY KEY,
+    source_component TEXT,
+    target_component TEXT,
+    chain_depth INTEGER,
+    frequency INTEGER,
+    avg_cost REAL
+);

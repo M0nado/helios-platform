@@ -1,0 +1,10 @@
+{
+  "UserRiskPolicy": "enabled",
+  "PhoneSignInEnabled": "enabled",
+  "WindowsHelloForBusiness": "enabled",
+  "RememberMFAOnTrustedDevices": false,
+  "FIDOKeySupport": "enabled",
+  "SignInRiskPolicy": "enabled",
+  "PasswordlessSignIn": "enabled",
+  "PasswordHashSync": "enabled"
+}

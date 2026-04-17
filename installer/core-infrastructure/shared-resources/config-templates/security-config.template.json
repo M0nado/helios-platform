@@ -1,0 +1,109 @@
+{
+  "version": "1.0.0",
+  "appLocker": {
+    "enabled": true,
+    "mode": "Enforce",
+    "policies": {
+      "executable": {
+        "allowed": [
+          "C:\\Windows\\*",
+          "C:\\Program Files\\*",
+          "C:\\HELIOS\\*"
+        ],
+        "blocklist": [
+          "C:\\Temp\\*",
+          "C:\\Users\\*\\Downloads\\*"
+        ]
+      },
+      "script": {
+        "enabled": true,
+        "allowedPaths": [
+          "C:\\HELIOS\\*",
+          "C:\\Scripts\\*"
+        ]
+      },
+      "dll": {
+        "enabled": false,
+        "strictMode": false
+      }
+    }
+  },
+  "windowsDefender": {
+    "enabled": true,
+    "realTimeProtection": true,
+    "cloudProtection": true,
+    "pup": "block",
+    "maxCpuUsage": 50,
+    "scanSchedule": {
+      "day": 0,
+      "time": "02:00",
+      "type": "Full"
+    },
+    "excludedPaths": [
+      "C:\\HELIOS\\cache\\*",
+      "C:\\HELIOS\\temp\\*"
+    ],
+    "excludedExtensions": [
+      ".tmp",
+      ".log"
+    ]
+  },
+  "bitdefender": {
+    "enabled": false,
+    "advancedThreatDefense": false,
+    "ransomwareProtection": true,
+    "exploitPrevention": true,
+    "sandboxMode": "automatic",
+    "quarantinePath": "C:\\HELIOS\\security\\quarantine"
+  },
+  "firewall": {
+    "enabled": true,
+    "inboundDefault": "Block",
+    "outboundDefault": "Allow",
+    "rules": [
+      {
+        "name": "HELIOS-API-In",
+        "direction": "Inbound",
+        "action": "Allow",
+        "protocol": "TCP",
+        "localPort": "443",
+        "description": "Allow HTTPS for API"
+      },
+      {
+        "name": "HELIOS-Log-Out",
+        "direction": "Outbound",
+        "action": "Allow",
+        "protocol": "TCP",
+        "remotePort": "443",
+        "description": "Allow outbound HTTPS for logging"
+      }
+    ]
+  },
+  "userAccessControl": {
+    "enabled": true,
+    "level": "AlwaysNotify",
+    "secureDeskTop": true
+  },
+  "dataProtection": {
+    "encryptionAlgorithm": "AES-256",
+    "keyRotationDays": 90,
+    "tlsVersion": "1.3"
+  },
+  "auditLogging": {
+    "enabled": true,
+    "logPath": "C:\\HELIOS\\logs\\security",
+    "retentionDays": 90,
+    "events": [
+      "ProcessCreation",
+      "ImageLoading",
+      "CreateRemoteThread",
+      "ProcessAccess",
+      "RawAccessThread"
+    ]
+  },
+  "mfa": {
+    "enabled": true,
+    "method": "TOTP",
+    "backupCodes": true
+  }
+}

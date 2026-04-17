@@ -1,0 +1,40 @@
+{
+  "High": {
+    "AutoResponse": false,
+    "NotificationMethod": [
+      "Email",
+      "Slack"
+    ],
+    "Color": "#ff6600",
+    "EscalationTime": 15
+  },
+  "Critical": {
+    "AutoResponse": true,
+    "NotificationMethod": [
+      "Email",
+      "SMS",
+      "Slack",
+      "PagerDuty"
+    ],
+    "Color": "#ff0000",
+    "EscalationTime": 5
+  },
+  "Medium": {
+    "AutoResponse": false,
+    "NotificationMethod": [
+      "Email",
+      "Dashboard"
+    ],
+    "Color": "#ffff00",
+    "EscalationTime": 60
+  },
+  "Low": {
+    "AutoResponse": false,
+    "NotificationMethod": [
+      "Dashboard",
+      "Log"
+    ],
+    "Color": "#00ff00",
+    "EscalationTime": 480
+  }
+}

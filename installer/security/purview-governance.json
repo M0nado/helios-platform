@@ -1,0 +1,13 @@
+{
+  "Name": "HELIOS Data Governance",
+  "LineageTracking": true,
+  "Features": [
+    "Data Classification",
+    "Data Lineage",
+    "Data Quality",
+    "Metadata Management",
+    "Data Catalog"
+  ],
+  "GlossaryEnabled": true,
+  "QualityMonitoring": true
+}

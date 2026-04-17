@@ -1,0 +1,762 @@
+[
+    {
+        "TestName":  "CUDA Runtime Initialization",
+        "Passed":  true,
+        "Message":  "Runtime created successfully",
+        "ExecutedAt":  "\/Date(1776389844319)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "CUDA Device Detection",
+        "Passed":  true,
+        "Message":  "Detected 2 devices",
+        "ExecutedAt":  "\/Date(1776389844335)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Compute Capability Verification",
+        "Passed":  true,
+        "Message":  "Validated compute capabilities",
+        "ExecutedAt":  "\/Date(1776389844335)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "CUDA Memory Allocation",
+        "Passed":  true,
+        "Message":  "Allocated 1GB successfully",
+        "ExecutedAt":  "\/Date(1776389844335)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "CUDA Stream Creation",
+        "Passed":  true,
+        "Message":  "Created 5 streams",
+        "ExecutedAt":  "\/Date(1776389844335)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Multi-GPU Workload Distribution",
+        "Passed":  true,
+        "Message":  "Distributed 100 tasks across devices",
+        "ExecutedAt":  "\/Date(1776389844335)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Device Health Monitoring",
+        "Passed":  true,
+        "Message":  "Health stats: {\"Power\":150,\"Memory\":\"50%\",\"Temperature\":55}",
+        "ExecutedAt":  "\/Date(1776389844400)\/",
+        "Duration":  {
+                         "Ticks":  640286,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  64,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  7.4107175925925924E-07,
+                         "TotalHours":  1.7785722222222223E-05,
+                         "TotalMilliseconds":  64.0286,
+                         "TotalMinutes":  0.0010671433333333334,
+                         "TotalSeconds":  0.064028599999999991
+                     }
+    },
+    {
+        "TestName":  "Error Recovery",
+        "Passed":  true,
+        "Message":  "Simulated error recovery successful",
+        "ExecutedAt":  "\/Date(1776389844400)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "System Hardware Scan",
+        "Passed":  true,
+        "Message":  "Scanned 53 devices",
+        "ExecutedAt":  "\/Date(1776389847779)\/",
+        "Duration":  {
+                         "Ticks":  33663986,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  366,
+                         "Minutes":  0,
+                         "Seconds":  3,
+                         "TotalDays":  3.8962946759259258E-05,
+                         "TotalHours":  0.0009351107222222222,
+                         "TotalMilliseconds":  3366.3986,
+                         "TotalMinutes":  0.056106643333333338,
+                         "TotalSeconds":  3.3663985999999997
+                     }
+    },
+    {
+        "TestName":  "Device Categorization",
+        "Passed":  true,
+        "Message":  "Categorized into 5 types",
+        "ExecutedAt":  "\/Date(1776389847781)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Driver Version Checking",
+        "Passed":  true,
+        "Message":  "Queried latest driver versions",
+        "ExecutedAt":  "\/Date(1776389847781)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Update Availability Detection",
+        "Passed":  true,
+        "Message":  "Found 3 available updates",
+        "ExecutedAt":  "\/Date(1776389847782)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Driver Download",
+        "Passed":  true,
+        "Message":  "Downloaded driver packages successfully",
+        "ExecutedAt":  "\/Date(1776389847782)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Driver Installation",
+        "Passed":  true,
+        "Message":  "Installed driver silently",
+        "ExecutedAt":  "\/Date(1776389847783)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Installation Verification",
+        "Passed":  true,
+        "Message":  "Verified installation success",
+        "ExecutedAt":  "\/Date(1776389847783)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Automatic Rollback",
+        "Passed":  true,
+        "Message":  "Rollback mechanism ready",
+        "ExecutedAt":  "\/Date(1776389847784)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Installation History Tracking",
+        "Passed":  true,
+        "Message":  "Logged installation records",
+        "ExecutedAt":  "\/Date(1776389847785)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Batch Driver Installation",
+        "Passed":  true,
+        "Message":  "Batched 5 drivers for install",
+        "ExecutedAt":  "\/Date(1776389847785)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "WSL2 Detection",
+        "Passed":  true,
+        "Message":  "WSL2 is installed",
+        "ExecutedAt":  "\/Date(1776389847789)\/",
+        "Duration":  {
+                         "Ticks":  9981,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  1.1552083333333332E-08,
+                         "TotalHours":  2.7724999999999997E-07,
+                         "TotalMilliseconds":  0.9981000000000001,
+                         "TotalMinutes":  1.6635E-05,
+                         "TotalSeconds":  0.0009981
+                     }
+    },
+    {
+        "TestName":  "Distribution Discovery",
+        "Passed":  true,
+        "Message":  "Discovered WSL2 distributions",
+        "ExecutedAt":  "\/Date(1776389847790)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Distribution Provisioning",
+        "Passed":  true,
+        "Message":  "Provisioned Ubuntu environment",
+        "ExecutedAt":  "\/Date(1776389847790)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Linux Command Execution",
+        "Passed":  true,
+        "Message":  "Executed Linux commands successfully",
+        "ExecutedAt":  "\/Date(1776389847791)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Hermes Agent Creation",
+        "Passed":  true,
+        "Message":  "Created 4 agent types",
+        "ExecutedAt":  "\/Date(1776389847791)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Agent Lifecycle Management",
+        "Passed":  true,
+        "Message":  "Managed agent start/stop/restart",
+        "ExecutedAt":  "\/Date(1776389847792)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Cross-Platform Messaging",
+        "Passed":  true,
+        "Message":  "Sent 100 messages",
+        "ExecutedAt":  "\/Date(1776389847793)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Linux Task Execution",
+        "Passed":  true,
+        "Message":  "Executed distributed Linux tasks",
+        "ExecutedAt":  "\/Date(1776389847793)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Agent Health Monitoring",
+        "Passed":  true,
+        "Message":  "Monitored agent health metrics",
+        "ExecutedAt":  "\/Date(1776389847794)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Agent Auto-Recovery",
+        "Passed":  true,
+        "Message":  "Recovered failed agents",
+        "ExecutedAt":  "\/Date(1776389847794)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Razer Synapse Detection",
+        "Passed":  false,
+        "Message":  "Razer Synapse not found",
+        "ExecutedAt":  "\/Date(1776389847798)\/",
+        "Duration":  {
+                         "Ticks":  9992,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  1.1564814814814815E-08,
+                         "TotalHours":  2.7755555555555554E-07,
+                         "TotalMilliseconds":  0.99920000000000009,
+                         "TotalMinutes":  1.6653333333333332E-05,
+                         "TotalSeconds":  0.0009992
+                     }
+    },
+    {
+        "TestName":  "Device Scanning",
+        "Passed":  true,
+        "Message":  "Scanned for connected Razer devices",
+        "ExecutedAt":  "\/Date(1776389847800)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Device Identification",
+        "Passed":  true,
+        "Message":  "Identified 4 device types",
+        "ExecutedAt":  "\/Date(1776389847800)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Battery Monitoring",
+        "Passed":  true,
+        "Message":  "Monitored device battery levels",
+        "ExecutedAt":  "\/Date(1776389847801)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "DPI Profile Management",
+        "Passed":  true,
+        "Message":  "Managed 4 DPI profiles",
+        "ExecutedAt":  "\/Date(1776389847802)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Static Color Lighting",
+        "Passed":  true,
+        "Message":  "Set static RGB colors",
+        "ExecutedAt":  "\/Date(1776389847802)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Breathing Animation",
+        "Passed":  true,
+        "Message":  "Activated breathing lighting mode",
+        "ExecutedAt":  "\/Date(1776389847803)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Spectrum Cycling",
+        "Passed":  true,
+        "Message":  "Activated spectrum lighting mode",
+        "ExecutedAt":  "\/Date(1776389847803)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "System Status Sync",
+        "Passed":  true,
+        "Message":  "Synced 4 status indicators",
+        "ExecutedAt":  "\/Date(1776389847803)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Game Detection",
+        "Passed":  true,
+        "Message":  "Configured profiles for 4 games",
+        "ExecutedAt":  "\/Date(1776389847804)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Custom Profile Creation",
+        "Passed":  true,
+        "Message":  "Created custom lighting profile",
+        "ExecutedAt":  "\/Date(1776389847804)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    },
+    {
+        "TestName":  "Profile Application",
+        "Passed":  true,
+        "Message":  "Applied lighting profile to devices",
+        "ExecutedAt":  "\/Date(1776389847806)\/",
+        "Duration":  {
+                         "Ticks":  0,
+                         "Days":  0,
+                         "Hours":  0,
+                         "Milliseconds":  0,
+                         "Minutes":  0,
+                         "Seconds":  0,
+                         "TotalDays":  0,
+                         "TotalHours":  0,
+                         "TotalMilliseconds":  0,
+                         "TotalMinutes":  0,
+                         "TotalSeconds":  0
+                     }
+    }
+]

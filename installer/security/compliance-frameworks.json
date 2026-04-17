@@ -1,0 +1,52 @@
+{
+  "SOC2": {
+    "Name": "Service Organization Control 2",
+    "Principles": [
+      "CC - Common Criteria",
+      "A - Availability",
+      "C - Confidentiality",
+      "I - Integrity",
+      "P - Privacy"
+    ],
+    "AuditFrequency": "Annual",
+    "ControlsCount": 64
+  },
+  "GDPR": {
+    "Name": "General Data Protection Regulation",
+    "AuditFrequency": "Ongoing",
+    "Requirements": [
+      "Data Protection Impact Assessments",
+      "Right to Access",
+      "Right to be Forgotten",
+      "Data Portability",
+      "Breach Notification",
+      "Privacy by Design"
+    ],
+    "ControlsCount": 25
+  },
+  "ISO27001": {
+    "Name": "ISO/IEC 27001:2022 Information Security",
+    "AuditFrequency": "Annual",
+    "Domains": [
+      "Organizational Controls",
+      "People Controls",
+      "Physical Controls",
+      "Cyber Controls",
+      "Resilience Controls",
+      "Risk Controls"
+    ],
+    "ControlsCount": 93
+  },
+  "HIPAA": {
+    "Name": "Health Insurance Portability and Accountability Act",
+    "AuditFrequency": "Quarterly",
+    "Requirements": [
+      "Access Controls (164.312(a)(2))",
+      "Audit Controls (164.312(b))",
+      "Encryption and Decryption (164.312(a)(2)(ii))",
+      "Integrity Controls (164.312(c)(2))",
+      "Transmission Security (164.314(b))"
+    ],
+    "ControlsCount": 18
+  }
+}

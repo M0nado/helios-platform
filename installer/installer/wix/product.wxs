@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+WiX Toolset 4.0 - HELIOS Platform Installer
+Main Product Definition File
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <!-- Product Definition -->
+  <Product Id="*" 
+           Name="HELIOS Platform" 
+           Language="1033" 
+           Version="2.0.0.0" 
+           Manufacturer="HELIOS Corporation" 
+           UpgradeCode="7C5D8A2E-1F4B-4E9A-B3C6-2D7F1A8E4B6C">
+
+    <!-- Package Information -->
+    <Package InstallerVersion="200" 
+             Compressed="yes" 
+             InstallScope="perMachine" 
+             AdminImage="no"
+             Description="HELIOS Platform 2.0 Professional Installer"
+             Comments="Enterprise-grade installation with complete safety integration"
+             Manufacturer="HELIOS Corporation"
+             Keywords="HELIOS,Platform,Installer,Professional"
+             Platform="x64" />
+
+    <!-- Media - Single cabinet file for the installation package -->
+    <Media Id="1" Cabinet="HELIOS.cab" EmbedCab="yes" />
+
+    <!-- Directory Structure -->
+    <StandardDirectory Id="ProgramFilesFolder">
+      <Directory Id="INSTALLFOLDER" Name="HELIOS" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="HELIOS Platform" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="AppDataFolder" />
+
+    <!-- Feature Definition -->
+    <Feature Id="ProductFeature" 
+             Title="HELIOS Platform" 
+             Level="1"
+             Description="Enterprise platform for intelligent automation and orchestration">
+      
+      <!-- Core Feature (Always installed) -->
+      <Feature Id="CoreFeature"
+               Title="HELIOS Core"
+               Level="1"
+               Description="Core HELIOS Platform (Required)">
+        <ComponentRef Id="InstallFolderComponent" />
+        <ComponentRef Id="EnvironmentVariablesComponent" />
+        <ComponentRef Id="RegistryComponent" />
+        <ComponentRef Id="FirewallComponent" />
+        <ComponentRef Id="StartMenuShortcutsComponent" />
+        <ComponentRef Id="DesktopShortcutsComponent" />
+      </Feature>
+
+      <!-- Analytics Feature -->
+      <Feature Id="AnalyticsFeature"
+               Title="Analytics Engine"
+               Level="2"
+               Description="Advanced analytics and reporting capabilities">
+        <ComponentRef Id="AnalyticsComponent" />
+      </Feature>
+
+      <!-- Development Tools Feature -->
+      <Feature Id="DevToolsFeature"
+               Title="Development Tools"
+               Level="3"
+               Description="Development environment and debugging tools">
+        <ComponentRef Id="DevToolsComponent" />
+      </Feature>
+
+      <!-- Windows Service -->
+      <Feature Id="ServiceFeature"
+               Title="Windows Service"
+               Level="2"
+               Description="Install as Windows Service (auto-start)">
+        <ComponentRef Id="ServiceComponent" />
+      </Feature>
+
+    </Feature>
+
+    <!-- Components -->
+    <Component Id="InstallFolderComponent" 
+               Guid="A8C5D3E2-4F1B-4A6C-B9E2-3F8A1D7C4E6A"
+               Location="local"
+               KeyPath="yes">
+      <!-- Files would be populated via heat.exe in production -->
+      <CreateFolder />
+    </Component>
+
+    <!-- Environment Variables -->
+    <Component Id="EnvironmentVariablesComponent"
+               Guid="B9D6E4F3-5G2C-5B7D-C0F3-4G9B2E8D5F7B"
+               Location="local"
+               KeyPath="yes">
+      <Environment Id="HELIOS_HOME"
+                   Name="HELIOS_HOME"
+                   Value="[INSTALLFOLDER]"
+                   Permanent="no"
+                   Part="all"
+                   Action="set"
+                   System="yes" />
+      <Environment Id="HELIOS_INSTALL"
+                   Name="HELIOS_INSTALL"
+                   Value="[INSTALLFOLDER]"
+                   Permanent="no"
+                   Part="all"
+                   Action="set"
+                   System="yes" />
+      <Environment Id="HELIOS_VERSION"
+                   Name="HELIOS_VERSION"
+                   Value="2.0"
+                   Permanent="no"
+                   Part="all"
+                   Action="set"
+                   System="yes" />
+      <RegistryValue Root="HKLM"
+                     Key="SOFTWARE\HELIOS"
+                     Name="EnvironmentVarsInstalled"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- Registry Entries -->
+    <Component Id="RegistryComponent"
+               Guid="C0E7F5G4-6H3D-6C8E-D1G4-5H0C3F9E6G8C"
+               Location="local"
+               KeyPath="yes">
+      <RegistryKey Root="HKLM" Key="SOFTWARE\HELIOS">
+        <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
+        <RegistryValue Name="Version" Type="string" Value="2.0" />
+        <RegistryValue Name="BuildDate" Type="string" Value="2024-04-15" />
+        <RegistryValue Name="Manufacturer" Type="string" Value="HELIOS Corporation" />
+        <RegistryValue Name="DisplayName" Type="string" Value="HELIOS Platform 2.0" />
+        <RegistryValue Name="DisplayVersion" Type="string" Value="2.0.0.0" />
+        <RegistryValue Name="DisplayIcon" Type="string" Value="[INSTALLFOLDER]logo.ico" />
+        <RegistryValue Name="UninstallString" Type="string" Value="&quot;[SystemFolder]msiexec.exe&quot; /x{[ProductCode]}" />
+      </RegistryKey>
+
+      <!-- Features Registry -->
+      <RegistryKey Root="HKLM" Key="SOFTWARE\HELIOS\Features">
+        <RegistryValue Name="Core" Type="integer" Value="1" />
+        <RegistryValue Name="Analytics" Type="integer" Value="0" />
+        <RegistryValue Name="DevTools" Type="integer" Value="0" />
+      </RegistryKey>
+
+      <!-- Configuration Registry -->
+      <RegistryKey Root="HKLM" Key="SOFTWARE\HELIOS\Configuration">
+        <RegistryValue Name="HttpPort" Type="integer" Value="5000" />
+        <RegistryValue Name="AutoUpdate" Type="integer" Value="1" />
+        <RegistryValue Name="DiagnosticPort" Type="integer" Value="6000" />
+        <RegistryValue Name="InstallationDate" Type="string" Value="2024-04-15" />
+      </RegistryKey>
+    </Component>
+
+    <!-- Windows Firewall Rules -->
+    <Component Id="FirewallComponent"
+               Guid="D1F8G6H5-7I4E-7D9F-E2H5-6I1D4G0F7H9D"
+               Location="local"
+               KeyPath="yes">
+      <!-- HTTP Rule -->
+      <FirewallException Id="FirewallExceptionHTTP"
+                         Name="HELIOS Platform HTTP"
+                         Port="5000"
+                         Protocol="tcp"
+                         Scope="localSubnet"
+                         IgnoreFailure="no" />
+      <!-- HTTPS Rule -->
+      <FirewallException Id="FirewallExceptionHTTPS"
+                         Name="HELIOS Platform HTTPS"
+                         Port="5001"
+                         Protocol="tcp"
+                         Scope="localSubnet"
+                         IgnoreFailure="no" />
+      <!-- Diagnostic Port Rule -->
+      <FirewallException Id="FirewallExceptionDiagnostic"
+                         Name="HELIOS Platform Diagnostics"
+                         Port="6000"
+                         Protocol="tcp"
+                         Scope="localSubnet"
+                         IgnoreFailure="no" />
+    </Component>
+
+    <!-- Start Menu Shortcuts -->
+    <Component Id="StartMenuShortcutsComponent"
+               Guid="E2G9H7I6-8J5F-8E0G-F3I6-7J2E5H1G8I0E"
+               Location="local"
+               KeyPath="yes">
+      <Shortcut Id="UninstallProduct"
+                Name="Uninstall HELIOS Platform"
+                Target="[SystemFolder]msiexec.exe"
+                Arguments="/x [ProductCode]" />
+      <Shortcut Id="LaunchApplication"
+                Name="HELIOS Platform"
+                Target="http://localhost:5000"
+                Description="Launch HELIOS Platform" />
+      <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                     Name="HELIOS"
+                     Type="string"
+                     Value="[INSTALLFOLDER]HELIOSPlatform.exe"
+                     KeyPath="yes" />
+    </Component>
+
+    <!-- Desktop Shortcuts -->
+    <Component Id="DesktopShortcutsComponent"
+               Guid="F3H0I8J7-9K6G-9F1H-G4J7-8K3F6I2H9J1F"
+               Location="local"
+               KeyPath="yes">
+      <Shortcut Id="DesktopShortcut"
+                Name="HELIOS Platform"
+                Target="http://localhost:5000"
+                Description="Launch HELIOS Platform"
+                Show="normal"
+                WorkingDirectory="INSTALLFOLDER" />
+    </Component>
+
+    <!-- Analytics Component (Optional) -->
+    <Component Id="AnalyticsComponent"
+               Guid="G4I1J9K8-0L7H-0G2I-H5K8-9L4G7J3I0K2G"
+               Location="local"
+               KeyPath="yes"
+               Condition="ADDLOCAL ~= AnalyticsFeature">
+      <CreateFolder />
+    </Component>
+
+    <!-- Development Tools Component (Optional) -->
+    <Component Id="DevToolsComponent"
+               Guid="H5J2K0L9-1M8I-1H3J-I6L9-0M5H8K4J1L3H"
+               Location="local"
+               KeyPath="yes"
+               Condition="ADDLOCAL ~= DevToolsFeature">
+      <CreateFolder />
+    </Component>
+
+    <!-- Windows Service Component -->
+    <Component Id="ServiceComponent"
+               Guid="I6K3L1M0-2N9J-2I4K-J7M0-1N6I9L5K2M4I"
+               Location="local"
+               KeyPath="yes">
+      <ServiceInstall Id="HELIOSService"
+                      Name="HELIOSService"
+                      DisplayName="HELIOS Platform Service"
+                      Description="Enterprise platform for intelligent automation"
+                      Type="ownProcess"
+                      Vital="yes"
+                      Start="auto"
+                      ErrorControl="normal"
+                      Account="LocalSystem" />
+      <ServiceControl Id="HELIOSServiceControl"
+                      Name="HELIOSService"
+                      Start="install"
+                      Stop="both"
+                      Remove="uninstall"
+                      Wait="yes" />
+    </Component>
+
+    <!-- Installation UI -->
+    <UIRef Id="WixUI_InstallScope" />
+
+    <!-- Custom Dialogs (will be integrated) -->
+    <!-- These reference external dialog definitions -->
+    <Dialog Id="WelcomeDialog" Width="370" Height="270" Title="Welcome" />
+    <Dialog Id="LicenseDialog" Width="370" Height="270" Title="License Agreement" />
+    <Dialog Id="CustomizeDialog" Width="370" Height="270" Title="Installation Type" />
+    <Dialog Id="PortConfigDialog" Width="370" Height="270" Title="Configure Ports" />
+
+    <!-- Installation Actions -->
+    <InstallExecuteSequence>
+      <!-- Pre-installation checks -->
+      <Custom Action="CheckSystemRequirements" Before="InstallInitialize">NOT Installed</Custom>
+      <Custom Action="DetectConflicts" Before="InstallInitialize">NOT Installed</Custom>
+      <Custom Action="VerifyDiskSpace" Before="InstallInitialize">NOT Installed</Custom>
+      <Custom Action="CreatePreInstallSnapshot" Before="InstallInitialize">NOT Installed</Custom>
+      
+      <!-- Installation -->
+      <InstallFiles Sequence="4000" />
+      
+      <!-- Post-installation -->
+      <Custom Action="VerifyInstallation" After="InstallFinalize">NOT Installed</Custom>
+      <Custom Action="GenerateDiagnostics" After="VerifyInstallation">NOT Installed</Custom>
+      <Custom Action="CreateSystemRestorePoint" After="GenerateDiagnostics">NOT Installed</Custom>
+    </InstallExecuteSequence>
+
+    <!-- Custom Actions -->
+    <!-- These would be implemented in C# or PowerShell -->
+    <CustomAction Id="CheckSystemRequirements"
+                  BinaryRef="InstallerCA"
+                  DllEntry="CheckSystemRequirements"
+                  Execute="immediate"
+                  Return="check"
+                  Impersonate="no" />
+
+    <CustomAction Id="DetectConflicts"
+                  BinaryRef="InstallerCA"
+                  DllEntry="DetectConflicts"
+                  Execute="immediate"
+                  Return="check"
+                  Impersonate="no" />
+
+    <CustomAction Id="VerifyDiskSpace"
+                  BinaryRef="InstallerCA"
+                  DllEntry="VerifyDiskSpace"
+                  Execute="immediate"
+                  Return="check"
+                  Impersonate="no" />
+
+    <CustomAction Id="CreatePreInstallSnapshot"
+                  BinaryRef="InstallerCA"
+                  DllEntry="CreatePreInstallSnapshot"
+                  Execute="immediate"
+                  Return="check"
+                  Impersonate="no" />
+
+    <CustomAction Id="VerifyInstallation"
+                  BinaryRef="InstallerCA"
+                  DllEntry="VerifyInstallation"
+                  Execute="immediate"
+                  Return="check"
+                  Impersonate="no" />
+
+    <CustomAction Id="GenerateDiagnostics"
+                  BinaryRef="InstallerCA"
+                  DllEntry="GenerateDiagnostics"
+                  Execute="immediate"
+                  Return="check"
+                  Impersonate="no" />
+
+    <CustomAction Id="CreateSystemRestorePoint"
+                  BinaryRef="InstallerCA"
+                  DllEntry="CreateSystemRestorePoint"
+                  Execute="immediate"
+                  Return="check"
+                  Impersonate="no" />
+
+    <!-- Binary Reference for Custom Actions -->
+    <Binary Id="InstallerCA" SourcePath="bin\InstallerCA.dll" />
+
+  </Product>
+
+</Wix>

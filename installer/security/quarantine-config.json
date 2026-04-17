@@ -1,0 +1,9 @@
+{
+  "IsolationMethod": "Network Isolation",
+  "AutomaticTermination": true,
+  "EvidencePreservation": true,
+  "ContainmentLevel": "Maximum",
+  "ForensicCapture": true,
+  "QuarantineLocation": "C:\\HELIOS\\quarantine",
+  "NotificationDelay": "Immediate"
+}

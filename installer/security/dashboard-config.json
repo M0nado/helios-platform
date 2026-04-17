@@ -1,0 +1,82 @@
+{
+  "TimeWindow": 24,
+  "Widgets": [
+    {
+      "Name": "Security Posture Score",
+      "AlertIfBelow": 80,
+      "Metrics": [
+        "Overall",
+        "Authentication",
+        "Threat",
+        "Compliance"
+      ],
+      "Threshold": 90
+    },
+    {
+      "Name": "Active Threats",
+      "AutoRefresh": true,
+      "Metrics": [
+        "Critical",
+        "High",
+        "Medium",
+        "Low"
+      ]
+    },
+    {
+      "Name": "Incident Response Status",
+      "Metrics": [
+        "Active Incidents",
+        "Resolved",
+        "Pending",
+        "Escalated"
+      ]
+    },
+    {
+      "Name": "Compliance Status",
+      "Metrics": [
+        "HIPAA",
+        "SOC2",
+        "ISO27001",
+        "GDPR"
+      ]
+    },
+    {
+      "Name": "User Access",
+      "Metrics": [
+        "Active Sessions",
+        "Failed Logins",
+        "MFA Success",
+        "Anomalies"
+      ]
+    },
+    {
+      "Name": "Data Protection",
+      "Metrics": [
+        "Encrypted Files",
+        "DLP Events",
+        "Classification",
+        "Access Controls"
+      ]
+    },
+    {
+      "Name": "System Health",
+      "Metrics": [
+        "CPU",
+        "Memory",
+        "Disk",
+        "Network"
+      ]
+    },
+    {
+      "Name": "Threat Intelligence",
+      "Metrics": [
+        "IOCs",
+        "Alerts",
+        "Detections",
+        "Blocked"
+      ]
+    }
+  ],
+  "Title": "HELIOS Security Operations Dashboard",
+  "RefreshInterval": 30
+}

@@ -1,0 +1,45 @@
+{
+  "AuditCategories": {
+    "PrivilegeEscalation": {
+      "EventId": 4672,
+      "Description": "Special privileges assigned to new logon"
+    },
+    "ProcessCreation": {
+      "EventId": 4688,
+      "Description": "A new process has been created"
+    },
+    "FileModification": {
+      "EventId": 4663,
+      "Description": "An attempt was made to access an object"
+    },
+    "Authentication": {
+      "EventId": 4624,
+      "Description": "An account was successfully logged on"
+    },
+    "RegistryModification": {
+      "EventId": 4657,
+      "Description": "A registry value was modified"
+    },
+    "FailedLogon": {
+      "EventId": 4625,
+      "Description": "An account failed to log on"
+    }
+  },
+  "EventSources": [
+    "HELIOS-Security",
+    "HELIOS-Audit",
+    "HELIOS-Threat",
+    "HELIOS-Compliance"
+  ],
+  "Retention": {
+    "MinimumFreeSpacePercent": 10,
+    "RetentionDays": 365,
+    "MaximumLogSize": 1073741824
+  },
+  "Features": {
+    "ImmutableLogs": true,
+    "CentralCollection": true,
+    "EventForwarding": true,
+    "RealTimeMonitoring": true
+  }
+}

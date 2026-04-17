@@ -1,0 +1,30 @@
+{
+  "Name": "HELIOS Compliance Monitoring",
+  "MonitoredCompliance": [
+    "HIPAA",
+    "GDPR",
+    "CCPA",
+    "SOC2",
+    "ISO27001",
+    "PCI-DSS"
+  ],
+  "EscalationRules": [
+    {
+      "Severity": "Critical",
+      "Response": "Immediate"
+    },
+    {
+      "Severity": "High",
+      "Response": "1 Hour"
+    },
+    {
+      "Severity": "Medium",
+      "Response": "4 Hours"
+    },
+    {
+      "Severity": "Low",
+      "Response": "24 Hours"
+    }
+  ],
+  "AlertingEnabled": true
+}

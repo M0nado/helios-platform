@@ -1,0 +1,22 @@
+{
+  "Name": "HELIOS Data Map",
+  "ScanSchedule": "Daily",
+  "ClassificationRules": [
+    "Credit Card Numbers",
+    "Social Security Numbers",
+    "Bank Account Numbers",
+    "Email Addresses",
+    "Phone Numbers",
+    "Health Information",
+    "Financial Data"
+  ],
+  "Sources": [
+    "Azure SQL Database",
+    "Azure Blob Storage",
+    "SharePoint Online",
+    "OneDrive for Business",
+    "Azure Data Lake",
+    "Dynamics 365",
+    "Salesforce"
+  ]
+}

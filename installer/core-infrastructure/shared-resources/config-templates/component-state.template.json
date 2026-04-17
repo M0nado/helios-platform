@@ -1,0 +1,228 @@
+{
+  "version": "1.0.0",
+  "timestamp": "${TIMESTAMP}",
+  "components": {
+    "authentication": {
+      "name": "Authentication Component",
+      "status": "initializing",
+      "version": "1.0.0",
+      "health": {
+        "status": "unknown",
+        "lastCheck": null,
+        "uptime": 0
+      },
+      "endpoints": {
+        "healthy": 0,
+        "degraded": 0,
+        "offline": 0
+      },
+      "statistics": {
+        "requestsProcessed": 0,
+        "errorsEncountered": 0,
+        "averageResponseTime": 0
+      }
+    },
+    "code-analysis": {
+      "name": "Code Analysis Component",
+      "status": "initializing",
+      "version": "1.0.0",
+      "health": {
+        "status": "unknown",
+        "lastCheck": null,
+        "uptime": 0
+      },
+      "endpoints": {
+        "healthy": 0,
+        "degraded": 0,
+        "offline": 0
+      },
+      "statistics": {
+        "requestsProcessed": 0,
+        "errorsEncountered": 0,
+        "averageResponseTime": 0
+      }
+    },
+    "security": {
+      "name": "Security Component",
+      "status": "initializing",
+      "version": "1.0.0",
+      "health": {
+        "status": "unknown",
+        "lastCheck": null,
+        "uptime": 0
+      },
+      "endpoints": {
+        "healthy": 0,
+        "degraded": 0,
+        "offline": 0
+      },
+      "statistics": {
+        "requestsProcessed": 0,
+        "errorsEncountered": 0,
+        "averageResponseTime": 0
+      }
+    },
+    "devops-orchestration": {
+      "name": "DevOps Orchestration Component",
+      "status": "initializing",
+      "version": "1.0.0",
+      "health": {
+        "status": "unknown",
+        "lastCheck": null,
+        "uptime": 0
+      },
+      "endpoints": {
+        "healthy": 0,
+        "degraded": 0,
+        "offline": 0
+      },
+      "statistics": {
+        "requestsProcessed": 0,
+        "errorsEncountered": 0,
+        "averageResponseTime": 0
+      }
+    },
+    "test-automation": {
+      "name": "Test Automation Component",
+      "status": "initializing",
+      "version": "1.0.0",
+      "health": {
+        "status": "unknown",
+        "lastCheck": null,
+        "uptime": 0
+      },
+      "endpoints": {
+        "healthy": 0,
+        "degraded": 0,
+        "offline": 0
+      },
+      "statistics": {
+        "requestsProcessed": 0,
+        "errorsEncountered": 0,
+        "averageResponseTime": 0
+      }
+    },
+    "monitoring": {
+      "name": "Monitoring Component",
+      "status": "initializing",
+      "version": "1.0.0",
+      "health": {
+        "status": "unknown",
+        "lastCheck": null,
+        "uptime": 0
+      },
+      "endpoints": {
+        "healthy": 0,
+        "degraded": 0,
+        "offline": 0
+      },
+      "statistics": {
+        "requestsProcessed": 0,
+        "errorsEncountered": 0,
+        "averageResponseTime": 0
+      }
+    },
+    "knowledge-base": {
+      "name": "Knowledge Base Component",
+      "status": "initializing",
+      "version": "1.0.0",
+      "health": {
+        "status": "unknown",
+        "lastCheck": null,
+        "uptime": 0
+      },
+      "endpoints": {
+        "healthy": 0,
+        "degraded": 0,
+        "offline": 0
+      },
+      "statistics": {
+        "requestsProcessed": 0,
+        "errorsEncountered": 0,
+        "averageResponseTime": 0
+      }
+    }
+  },
+  "systemHealth": {
+    "overallStatus": "initializing",
+    "healthScore": 0,
+    "components": {
+      "operational": 0,
+      "degraded": 0,
+      "offline": 0
+    }
+  },
+  "infrastructure": {
+    "resources": {
+      "cpu": {
+        "reserved": 0,
+        "used": 0,
+        "available": 0,
+        "unit": "cores"
+      },
+      "memory": {
+        "reserved": 0,
+        "used": 0,
+        "available": 0,
+        "unit": "GB"
+      },
+      "disk": {
+        "total": 0,
+        "used": 0,
+        "available": 0,
+        "unit": "GB"
+      }
+    },
+    "activeConnections": 0,
+    "activeSessions": 0,
+    "processingRate": 0
+  },
+  "performance": {
+    "averageLatency": 0,
+    "peakLatency": 0,
+    "throughput": 0,
+    "errorRate": 0,
+    "successRate": 0
+  },
+  "dependencies": {
+    "azure": {
+      "connected": false,
+      "lastConnected": null,
+      "errors": 0
+    },
+    "copilot": {
+      "connected": false,
+      "lastConnected": null,
+      "errors": 0
+    },
+    "devops": {
+      "connected": false,
+      "lastConnected": null,
+      "errors": 0
+    },
+    "database": {
+      "connected": false,
+      "lastConnected": null,
+      "errors": 0
+    }
+  },
+  "events": {
+    "emitted": 0,
+    "processed": 0,
+    "failed": 0,
+    "recentEvents": []
+  },
+  "activities": {
+    "recent": [],
+    "totalProcessed": 0,
+    "totalFailed": 0,
+    "startTime": null,
+    "lastActivityTime": null
+  },
+  "alerts": {
+    "active": [],
+    "total": 0,
+    "criticalCount": 0,
+    "warningCount": 0
+  }
+}

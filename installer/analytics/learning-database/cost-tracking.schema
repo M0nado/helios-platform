@@ -1,0 +1,48 @@
+-- HELIOS Cost Tracking Database
+-- Created: 04/13/2026 06:23:40
+
+-- Cost entries
+CREATE TABLE IF NOT EXISTS costs (
+    id INTEGER PRIMARY KEY,
+    cost_category TEXT NOT NULL,
+    cost_type TEXT,
+    amount REAL,
+    currency TEXT DEFAULT 'USD',
+    date DATETIME,
+    component TEXT,
+    metric_unit TEXT,
+    UNIQUE(cost_category, cost_type, date)
+);
+
+-- Model costs
+CREATE TABLE IF NOT EXISTS model_costs (
+    id INTEGER PRIMARY KEY,
+    model_name TEXT,
+    input_tokens_used INTEGER,
+    output_tokens_used INTEGER,
+    price_per_1k_input REAL,
+    price_per_1k_output REAL,
+    total_cost REAL,
+    usage_date DATE
+);
+
+-- Optimization savings
+CREATE TABLE IF NOT EXISTS optimization_savings (
+    id INTEGER PRIMARY KEY,
+    optimization_name TEXT,
+    monthly_savings REAL,
+    annual_savings REAL,
+    implemented_date DATETIME,
+    status TEXT
+);
+
+-- Cost projections
+CREATE TABLE IF NOT EXISTS cost_projections (
+    id INTEGER PRIMARY KEY,
+    projection_date DATE,
+    daily_average REAL,
+    monthly_projection REAL,
+    annual_projection REAL,
+    confidence_percent REAL,
+    notes TEXT
+);

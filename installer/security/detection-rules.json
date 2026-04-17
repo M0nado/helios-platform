@@ -1,0 +1,37 @@
+[
+  {
+    "RuleId": "1001",
+    "Severity": "High",
+    "Enabled": true,
+    "Description": "Detect suspicious process execution patterns",
+    "Name": "Suspicious Process Execution"
+  },
+  {
+    "RuleId": "1002",
+    "Severity": "Critical",
+    "Enabled": true,
+    "Description": "Detect lateral movement attempts",
+    "Name": "Lateral Movement Detection"
+  },
+  {
+    "RuleId": "1003",
+    "Severity": "Critical",
+    "Enabled": true,
+    "Description": "Detect potential data exfiltration",
+    "Name": "Data Exfiltration Patterns"
+  },
+  {
+    "RuleId": "1004",
+    "Severity": "Critical",
+    "Enabled": true,
+    "Description": "Detect command and control communications",
+    "Name": "C2 Communication Detection"
+  },
+  {
+    "RuleId": "1005",
+    "Severity": "High",
+    "Enabled": true,
+    "Description": "Detect privilege escalation techniques",
+    "Name": "Privilege Escalation Attempts"
+  }
+]

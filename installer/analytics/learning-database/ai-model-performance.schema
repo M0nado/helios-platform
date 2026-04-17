@@ -1,0 +1,47 @@
+-- HELIOS AI Model Performance Database
+-- Created: 04/13/2026 06:23:40
+
+-- Model tracking
+CREATE TABLE IF NOT EXISTS models (
+    id INTEGER PRIMARY KEY,
+    model_name TEXT UNIQUE NOT NULL,
+    model_type TEXT,
+    created_date DATETIME,
+    last_trained DATETIME,
+    version INTEGER DEFAULT 1
+);
+
+-- Model performance metrics
+CREATE TABLE IF NOT EXISTS model_performance (
+    id INTEGER PRIMARY KEY,
+    model_id INTEGER,
+    metric_name TEXT,
+    metric_value REAL,
+    measurement_date DATETIME,
+    FOREIGN KEY(model_id) REFERENCES models(id)
+);
+
+-- Predictions log
+CREATE TABLE IF NOT EXISTS predictions (
+    id INTEGER PRIMARY KEY,
+    model_id INTEGER,
+    prediction_type TEXT,
+    predicted_value REAL,
+    actual_value REAL,
+    confidence REAL,
+    correct BOOLEAN,
+    timestamp DATETIME,
+    FOREIGN KEY(model_id) REFERENCES models(id)
+);
+
+-- Model accuracy tracking
+CREATE TABLE IF NOT EXISTS model_accuracy (
+    id INTEGER PRIMARY KEY,
+    model_id INTEGER,
+    accuracy_percent REAL,
+    precision REAL,
+    recall REAL,
+    f1_score REAL,
+    measurement_date DATETIME,
+    FOREIGN KEY(model_id) REFERENCES models(id)
+);

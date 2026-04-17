@@ -1,0 +1,39 @@
+-- HELIOS Optimization History Database
+-- Created: 04/13/2026 06:23:40
+
+-- Optimizations log
+CREATE TABLE IF NOT EXISTS optimizations (
+    id INTEGER PRIMARY KEY,
+    optimization_name TEXT NOT NULL,
+    component TEXT,
+    applied_date DATETIME,
+    previous_value TEXT,
+    new_value TEXT,
+    improvement_percent REAL,
+    status TEXT,
+    effectiveness REAL
+);
+
+-- Results tracking
+CREATE TABLE IF NOT EXISTS optimization_results (
+    id INTEGER PRIMARY KEY,
+    optimization_id INTEGER,
+    metric_name TEXT,
+    before_value REAL,
+    after_value REAL,
+    improvement_percent REAL,
+    measurement_date DATETIME,
+    FOREIGN KEY(optimization_id) REFERENCES optimizations(id)
+);
+
+-- Recommendations log
+CREATE TABLE IF NOT EXISTS recommendations (
+    id INTEGER PRIMARY KEY,
+    recommendation_text TEXT,
+    priority TEXT,
+    effort_level TEXT,
+    estimated_roi REAL,
+    created_date DATETIME,
+    implemented BOOLEAN,
+    implementation_date DATETIME
+);

@@ -1,0 +1,26 @@
+{
+  "MTTR": {
+    "Name": "Mean Time To Respond",
+    "Target": "< 15 minutes",
+    "Current": "12.8 minutes",
+    "Status": "Healthy"
+  },
+  "IncidentVolume": {
+    "Name": "Incident Volume (24h)",
+    "Target": "< 10",
+    "Current": "7",
+    "Status": "Healthy"
+  },
+  "ComplianceScore": {
+    "Name": "Compliance Score",
+    "Target": "> 95%",
+    "Current": "97.3%",
+    "Status": "Healthy"
+  },
+  "MTTD": {
+    "Name": "Mean Time To Detect",
+    "Target": "< 5 minutes",
+    "Current": "4.2 minutes",
+    "Status": "Healthy"
+  }
+}

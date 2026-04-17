@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>HELIOS.WPF</AssemblyName>
+    <RootNamespace>HELIOS.WPF</RootNamespace>
+    <Title>HELIOS - Xenoblade System Monitor</Title>
+    <Version>1.0.0</Version>
+    <Authors>HELIOS Development Team</Authors>
+    <Description>Xenoblade Chronicles-themed WPF application with Monado visual effects</Description>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <StartupObject>HELIOS.WPF.App</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- No external dependencies - using native WPF only -->
+  </ItemGroup>
+
+  <!-- Copy assets to output -->
+  <ItemGroup>
+    <None Update="Assets/**/*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,49 @@
+{
+  "RiskBasedHigh": {
+    "RiskLevel": "high",
+    "State": "enabled",
+    "Action": "block",
+    "DisplayName": "HELIOS Risk-Based - Block High Risk",
+    "ConditionType": "SignInRisk"
+  },
+  "MFAEnforcement": {
+    "GrantControls": [
+      "mfa"
+    ],
+    "Conditions": {
+      "SignInRiskLevels": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "Users": [
+        "All"
+      ],
+      "Applications": [
+        "All"
+      ]
+    },
+    "State": "enabled",
+    "DisplayName": "HELIOS MFA Enforcement - All Users"
+  },
+  "ExternalAccessControl": {
+    "State": "enabled",
+    "RequireCompliantDevice": true,
+    "DisplayName": "HELIOS External Access Control",
+    "RequireMFA": true
+  },
+  "PrivilegedAccess": {
+    "MaximumActivationDuration": 8,
+    "State": "enabled",
+    "RequireMFAToActivate": true,
+    "DisplayName": "HELIOS Privileged Access MFA",
+    "RequireApprovalToActivate": true
+  },
+  "RiskBasedMedium": {
+    "RiskLevel": "medium",
+    "State": "enabled",
+    "Action": "requireMFA",
+    "DisplayName": "HELIOS Risk-Based - Medium Risk",
+    "ConditionType": "SignInRisk"
+  }
+}

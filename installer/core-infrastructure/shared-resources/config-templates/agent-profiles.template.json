@@ -1,0 +1,207 @@
+{
+  "version": "1.0.0",
+  "agents": [
+    {
+      "id": "copilot-core",
+      "name": "Copilot Core",
+      "description": "Primary code analysis and suggestion engine",
+      "capabilities": [
+        "code-analysis",
+        "inline-suggestions",
+        "documentation-generation",
+        "test-generation"
+      ],
+      "models": [
+        "gpt-4-turbo",
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 10,
+      "timeout": 30000
+    },
+    {
+      "id": "security-agent",
+      "name": "Security Agent",
+      "description": "Security scanning and vulnerability detection",
+      "capabilities": [
+        "vulnerability-scanning",
+        "code-review",
+        "compliance-checking",
+        "secrets-detection"
+      ],
+      "models": [
+        "gpt-4"
+      ],
+      "maxConcurrency": 5,
+      "timeout": 60000
+    },
+    {
+      "id": "devops-agent",
+      "name": "DevOps Agent",
+      "description": "Pipeline management and infrastructure orchestration",
+      "capabilities": [
+        "pipeline-creation",
+        "deployment-orchestration",
+        "infrastructure-as-code",
+        "monitoring-setup"
+      ],
+      "models": [
+        "gpt-4",
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 5,
+      "timeout": 120000
+    },
+    {
+      "id": "testing-agent",
+      "name": "Testing Agent",
+      "description": "Test generation and QA automation",
+      "capabilities": [
+        "unit-test-generation",
+        "integration-test-generation",
+        "performance-testing",
+        "test-coverage-analysis"
+      ],
+      "models": [
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 8,
+      "timeout": 45000
+    },
+    {
+      "id": "documentation-agent",
+      "name": "Documentation Agent",
+      "description": "Technical documentation generation and management",
+      "capabilities": [
+        "api-documentation",
+        "user-guides",
+        "architecture-diagrams",
+        "changelog-generation"
+      ],
+      "models": [
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 5,
+      "timeout": 30000
+    },
+    {
+      "id": "monitoring-agent",
+      "name": "Monitoring Agent",
+      "description": "System monitoring and health checks",
+      "capabilities": [
+        "health-checking",
+        "performance-monitoring",
+        "alerting",
+        "log-analysis"
+      ],
+      "models": [
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 8,
+      "timeout": 15000
+    },
+    {
+      "id": "optimization-agent",
+      "name": "Optimization Agent",
+      "description": "Performance optimization and cost analysis",
+      "capabilities": [
+        "code-optimization",
+        "cost-analysis",
+        "resource-optimization",
+        "performance-tuning"
+      ],
+      "models": [
+        "gpt-4"
+      ],
+      "maxConcurrency": 4,
+      "timeout": 90000
+    },
+    {
+      "id": "analytics-agent",
+      "name": "Analytics Agent",
+      "description": "Data analysis and reporting",
+      "capabilities": [
+        "data-analysis",
+        "report-generation",
+        "trend-analysis",
+        "anomaly-detection"
+      ],
+      "models": [
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 6,
+      "timeout": 60000
+    },
+    {
+      "id": "compliance-agent",
+      "name": "Compliance Agent",
+      "description": "Compliance checking and audit automation",
+      "capabilities": [
+        "compliance-checking",
+        "audit-logging",
+        "policy-enforcement",
+        "standard-validation"
+      ],
+      "models": [
+        "gpt-4"
+      ],
+      "maxConcurrency": 4,
+      "timeout": 45000
+    },
+    {
+      "id": "integration-agent",
+      "name": "Integration Agent",
+      "description": "Third-party integration and API management",
+      "capabilities": [
+        "api-integration",
+        "webhook-management",
+        "data-synchronization",
+        "error-handling"
+      ],
+      "models": [
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 8,
+      "timeout": 45000
+    },
+    {
+      "id": "maintenance-agent",
+      "name": "Maintenance Agent",
+      "description": "System maintenance and cleanup",
+      "capabilities": [
+        "log-rotation",
+        "cache-management",
+        "database-optimization",
+        "disk-cleanup"
+      ],
+      "models": [
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 3,
+      "timeout": 180000
+    },
+    {
+      "id": "user-support-agent",
+      "name": "User Support Agent",
+      "description": "User support and troubleshooting",
+      "capabilities": [
+        "troubleshooting",
+        "user-guidance",
+        "faq-generation",
+        "feedback-collection"
+      ],
+      "models": [
+        "gpt-3.5-turbo"
+      ],
+      "maxConcurrency": 10,
+      "timeout": 30000
+    }
+  ],
+  "globalSettings": {
+    "loggingLevel": "Info",
+    "enableTelemetry": true,
+    "maxParallelJobs": 32,
+    "requestTimeout": 30000,
+    "retryAttempts": 3,
+    "retryDelayMs": 1000
+  }
+}

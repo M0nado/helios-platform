@@ -1,0 +1,69 @@
+{
+  "version": "1.0.0",
+  "azure": {
+    "subscriptionId": "YOUR_SUBSCRIPTION_ID",
+    "resourceGroup": "HELIOS-RG",
+    "location": "East US",
+    "tenantId": "YOUR_TENANT_ID",
+    "environment": "AzureCloud"
+  },
+  "copilot": {
+    "enabled": true,
+    "apiVersion": "v1",
+    "baseUrl": "https://api.github.com/copilot",
+    "authToken": "${GITHUB_TOKEN}",
+    "models": [
+      {
+        "name": "gpt-4",
+        "version": "turbo",
+        "maxTokens": 8000,
+        "temperature": 0.7
+      },
+      {
+        "name": "gpt-3.5",
+        "version": "turbo",
+        "maxTokens": 4000,
+        "temperature": 0.5
+      }
+    ]
+  },
+  "devops": {
+    "organization": "YOUR_ORG",
+    "project": "HELIOS",
+    "patToken": "${AZURE_DEVOPS_PAT}",
+    "pipelines": {
+      "ci": "ci-pipeline",
+      "cd": "cd-pipeline",
+      "testing": "test-pipeline"
+    },
+    "repositories": {
+      "main": "https://dev.azure.com/YOUR_ORG/HELIOS/_git/HELIOS",
+      "infrastructure": "https://dev.azure.com/YOUR_ORG/HELIOS/_git/infrastructure"
+    }
+  },
+  "storage": {
+    "storageAccountName": "heliosstorage",
+    "containerName": "helios-data",
+    "connectionString": "${STORAGE_CONNECTION_STRING}"
+  },
+  "keyVault": {
+    "enabled": true,
+    "name": "helios-kv",
+    "vaultUrl": "https://helios-kv.vault.azure.net/",
+    "secretsRefreshIntervalMinutes": 60
+  },
+  "appInsights": {
+    "enabled": true,
+    "instrumentationKey": "${APP_INSIGHTS_KEY}",
+    "samplingPercentage": 100,
+    "excludedUrls": [
+      "/health",
+      "/ping"
+    ]
+  },
+  "monitoring": {
+    "logAnalyticsWorkspace": "helios-logs",
+    "metricsRetentionDays": 30,
+    "alertsEnabled": true
+  }
+}

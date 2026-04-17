@@ -1,0 +1,54 @@
+{
+  "DataExfiltration": {
+    "Name": "Data Exfiltration Detected",
+    "RecoveryTime": "60 minutes",
+    "Actions": [
+      "Block network connections",
+      "Capture network traffic",
+      "Identify target systems",
+      "Assess data exposure",
+      "Notify affected parties",
+      "Initiate forensic investigation"
+    ],
+    "AutomationLevel": "Medium"
+  },
+  "PrivilegeEscalation": {
+    "Name": "Privilege Escalation Attempted",
+    "RecoveryTime": "20 minutes",
+    "Actions": [
+      "Terminate escalation process",
+      "Revoke user session",
+      "Audit privilege logs",
+      "Force re-authentication",
+      "Review recent changes",
+      "Alert administrators"
+    ],
+    "AutomationLevel": "Medium"
+  },
+  "MalwareDetected": {
+    "Name": "Malware Detected Response",
+    "RecoveryTime": "30 minutes",
+    "Actions": [
+      "Isolate from network",
+      "Terminate suspicious processes",
+      "Quarantine affected files",
+      "Collect forensic data",
+      "Alert security team",
+      "Initiate investigation"
+    ],
+    "AutomationLevel": "High"
+  },
+  "ProcessInjection": {
+    "Name": "Process Injection Detected",
+    "RecoveryTime": "15 minutes",
+    "Actions": [
+      "Suspend injected process",
+      "Dump process memory",
+      "Block process network activity",
+      "Collect process artifacts",
+      "Analyze injection vector",
+      "Quarantine payload"
+    ],
+    "AutomationLevel": "High"
+  }
+}
