@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using HELIOS.Platform.BackendServices.ServerManagement;
-using HELIOS.Platform.Core.Performance;
 using HELIOS.Platform.Data.Database;
 
 namespace HELIOS.Platform.Core;
@@ -25,10 +23,7 @@ public class ServiceContainer
     /// <summary>Register default services.</summary>
     private void RegisterDefaults()
     {
-        RegisterSingleton<IServiceOrchestrator>(new ServiceOrchestrator());
-        RegisterSingleton<IPerformanceProfiler>(new PerformanceProfiler());
-        RegisterSingleton<CpuProfiler>(new CpuProfiler());
-        RegisterSingleton<MemoryProfiler>(new MemoryProfiler());
+        // Defaults disabled - services registered by Program.cs
     }
 
     /// <summary>Register a singleton service.</summary>

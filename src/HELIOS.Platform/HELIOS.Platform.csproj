@@ -79,6 +79,9 @@
     <!-- Container & Orchestration -->
     <PackageReference Include="Docker.DotNet" Version="3.125.15" />
     <PackageReference Include="KubernetesClient" Version="13.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     
     <!-- System & Windows Dependencies -->
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
