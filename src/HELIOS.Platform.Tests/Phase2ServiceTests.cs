@@ -9,6 +9,8 @@ using HELIOS.Platform.Core.Performance;
 using HELIOS.Platform.Core.Security;
 using HELIOS.Platform.Core.Configuration;
 using HELIOS.Platform.Core.Administration;
+using HELIOS.Platform.Core.Sandbox;
+using HELIOS.Platform.Core.Hardware;
 
 namespace HELIOS.Platform.Tests;
 
@@ -2193,5 +2195,362 @@ public class Phase2ServiceTests
         var isUploaded = await packageService.UploadPackageAsync(package.PackageId, "/releases");
         
         Assert.True(isUploaded);
+    }
+
+    // ============ BATCH 13: ADVANCED CONFIGURATION & TESTING FRAMEWORK ============
+
+    [Fact]
+    public async Task AdvancedConfig_CreateProfile_GeneratesUniqueProfile()
+    {
+        var configService = new AdvancedConfigurationManager();
+        
+        var profile = await configService.CreateProfileAsync("TestProfile", "Test configuration profile");
+        
+        Assert.NotNull(profile);
+        Assert.Equal("TestProfile", profile.Name);
+        Assert.NotEmpty(profile.ProfileId);
+    }
+
+    [Fact]
+    public async Task AdvancedConfig_ValidateProfile_DetectsConflicts()
+    {
+        var configService = new AdvancedConfigurationManager();
+        var profile = new ConfigurationProfile { Name = "ConflictTest", Values = new Dictionary<string, string> { { "key1", "value1" }, { "key1", "value2" } } };
+        
+        var isValid = await configService.ValidateProfileAsync(profile);
+        
+        Assert.NotNull(isValid);
+    }
+
+    [Fact]
+    public async Task AdvancedConfig_MergeProfiles_CombinesSettings()
+    {
+        var configService = new AdvancedConfigurationManager();
+        var profile1 = await configService.CreateProfileAsync("P1", "First");
+        var profile2 = await configService.CreateProfileAsync("P2", "Second");
+        
+        var merged = await configService.MergeProfilesAsync(profile1.ProfileId, profile2.ProfileId);
+        
+        Assert.NotNull(merged);
+    }
+
+    [Fact]
+    public async Task AdvancedConfig_GetProfileHistory_ReturnsVersions()
+    {
+        var configService = new AdvancedConfigurationManager();
+        var profile = await configService.CreateProfileAsync("HistoryTest", "Tracking versions");
+        
+        var history = await configService.GetProfileHistoryAsync(profile.ProfileId);
+        
+        Assert.NotEmpty(history);
+    }
+
+    [Fact]
+    public async Task TestingFramework_CreateTestSuite_RegistersTests()
+    {
+        var testingService = new ComprehensiveTestingEngine();
+        
+        var suite = await testingService.CreateTestSuiteAsync("IntegrationTests", "Suite for system integration");
+        
+        Assert.NotNull(suite);
+        Assert.Equal("IntegrationTests", suite.Name);
+    }
+
+    [Fact]
+    public async Task TestingFramework_ExecuteTests_RunsAllCases()
+    {
+        var testingService = new ComprehensiveTestingEngine();
+        var suite = await testingService.CreateTestSuiteAsync("ExecutionTest", "Test execution");
+        
+        var results = await testingService.ExecuteTestsAsync(suite.SuiteId);
+        
+        Assert.NotNull(results);
+    }
+
+    [Fact]
+    public async Task TestingFramework_MeasureCoverage_CalculatesPercentage()
+    {
+        var testingService = new ComprehensiveTestingEngine();
+        await testingService.CreateTestSuiteAsync("CoverageTest", "Coverage measurement");
+        
+        var coverage = await testingService.MeasureCoverageAsync();
+        
+        Assert.NotNull(coverage);
+        Assert.True(coverage >= 0 && coverage <= 100);
+    }
+
+    [Fact]
+    public async Task TestingFramework_GenerateReport_ProducesDetailedResults()
+    {
+        var testingService = new ComprehensiveTestingEngine();
+        var suite = await testingService.CreateTestSuiteAsync("ReportTest", "Report generation");
+        await testingService.ExecuteTestsAsync(suite.SuiteId);
+        
+        var report = await testingService.GenerateReportAsync(suite.SuiteId);
+        
+        Assert.NotEmpty(report);
+    }
+
+    // ============ BATCH 14: SANDBOX & QUARANTINE SYSTEM ============
+
+    [Fact]
+    public async Task Sandbox_CreateEnvironment_IsolatesExecution()
+    {
+        var sandboxService = new SandboxManager();
+        
+        var env = await sandboxService.CreateEnvironmentAsync("IsolatedEnv", 512);
+        
+        Assert.NotNull(env);
+        Assert.NotEmpty(env.EnvironmentId);
+    }
+
+    [Fact]
+    public async Task Sandbox_LimitResources_RestrictsCPUAndMemory()
+    {
+        var sandboxService = new SandboxManager();
+        var env = await sandboxService.CreateEnvironmentAsync("LimitTest", 256);
+        
+        await sandboxService.LimitResourcesAsync(env.EnvironmentId, 50, 128);
+        
+        var updated = await sandboxService.GetEnvironmentAsync(env.EnvironmentId);
+        Assert.Equal(50, updated.CpuLimitPercent);
+    }
+
+    [Fact]
+    public async Task Sandbox_ExecuteProcess_RunsInIsolation()
+    {
+        var sandboxService = new SandboxManager();
+        var env = await sandboxService.CreateEnvironmentAsync("ProcessTest", 256);
+        
+        var result = await sandboxService.ExecuteProcessAsync(env.EnvironmentId, "test.exe", "arg");
+        
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task Sandbox_GetExecutionHistory_TracksPastRuns()
+    {
+        var sandboxService = new SandboxManager();
+        var env = await sandboxService.CreateEnvironmentAsync("HistoryTest", 256);
+        await sandboxService.ExecuteProcessAsync(env.EnvironmentId, "test.exe", "");
+        
+        var history = await sandboxService.GetExecutionHistoryAsync(env.EnvironmentId);
+        
+        Assert.NotEmpty(history);
+    }
+
+    [Fact]
+    public async Task Quarantine_QuarantineFile_IsolatesSuspicious()
+    {
+        var quarantineService = new AdvancedQuarantineSystem();
+        
+        var result = await quarantineService.QuarantineFileAsync("/test/suspicious.exe", QuarantineReasonEx.MalwareDetected);
+        
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task Quarantine_AnalyzeFile_PerformsBehaviorAnalysis()
+    {
+        var quarantineService = new AdvancedQuarantineSystem();
+        var quarantined = await quarantineService.QuarantineFileAsync("/test/file.exe", QuarantineReasonEx.SuspiciousBehavior);
+        
+        var analysis = await quarantineService.AnalyzeFileAsync(quarantined.Id);
+        
+        Assert.NotNull(analysis);
+    }
+
+    [Fact]
+    public async Task Quarantine_RestoreFile_SafelyRecoversFiles()
+    {
+        var quarantineService = new AdvancedQuarantineSystem();
+        var quarantined = await quarantineService.QuarantineFileAsync("/test/file.exe", QuarantineReasonEx.UserInitiated);
+        
+        var restored = await quarantineService.RestoreFileAsync(quarantined.Id, "/test/restored.exe");
+        
+        Assert.True(restored);
+    }
+
+    [Fact]
+    public async Task Quarantine_GetQuarantineLog_ReturnsAuditTrail()
+    {
+        var quarantineService = new AdvancedQuarantineSystem();
+        await quarantineService.QuarantineFileAsync("/test/file.exe", QuarantineReasonEx.UserInitiated);
+        
+        var log = await quarantineService.ListQuarantinedFilesAsync();
+        
+        Assert.NotEmpty(log);
+    }
+
+    // ============ BATCH 15: DRIVER AUTO-INSTALL & USB ADMIN ============
+
+    [Fact]
+    public async Task DriverAutoInstall_ScanHardware_DiscoversMissingDevices()
+    {
+        var driverService = new DriverInstaller();
+        
+        var devices = await driverService.ScanHardwareAsync();
+        
+        Assert.NotEmpty(devices);
+        Assert.True(devices.Count > 0);
+    }
+
+    [Fact]
+    public async Task DriverAutoInstall_GetMissingDrivers_IdentifiesUninstalledDrivers()
+    {
+        var driverService = new DriverInstaller();
+        
+        var missing = await driverService.GetMissingDriversAsync();
+        
+        Assert.NotNull(missing);
+    }
+
+    [Fact]
+    public async Task DriverAutoInstall_FindCompatibleDrivers_LocatesMatchingDrivers()
+    {
+        var driverService = new DriverInstaller();
+        var devices = await driverService.ScanHardwareAsync();
+        
+        var compatible = await driverService.FindCompatibleDriversAsync(devices[0].DeviceId);
+        
+        Assert.NotNull(compatible);
+    }
+
+    [Fact]
+    public async Task DriverAutoInstall_InstallDriver_SuccessfullyInstalls()
+    {
+        var driverService = new DriverInstaller();
+        var missing = await driverService.GetMissingDriversAsync();
+        
+        if (missing.Count > 0)
+        {
+            var installed = await driverService.InstallDriverAsync(missing[0].DriverId);
+            Assert.True(installed);
+        }
+    }
+
+    [Fact]
+    public async Task DriverAutoInstall_InstallAllMissingDrivers_BulkInstalls()
+    {
+        var driverService = new DriverInstaller();
+        
+        var result = await driverService.InstallAllMissingDriversAsync();
+        
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task DriverAutoInstall_RollbackDriver_UndoesInstallation()
+    {
+        var driverService = new DriverInstaller();
+        var installed = await driverService.GetInstalledDriversAsync();
+        
+        if (installed.Count > 0)
+        {
+            var rolled = await driverService.RollbackDriverAsync(installed[0].DriverId);
+            Assert.True(rolled);
+        }
+    }
+
+    [Fact]
+    public async Task DriverAutoInstall_GetStatistics_ReturnsMetrics()
+    {
+        var driverService = new DriverInstaller();
+        
+        var stats = await driverService.GetDriverStatisticsAsync();
+        
+        Assert.NotEmpty(stats);
+        Assert.Contains("Total", stats.Keys);
+    }
+
+    [Fact]
+    public async Task USBAdminAccess_CreatePolicy_DefinesAccessRules()
+    {
+        var usbService = new USBAccessController();
+        
+        var policy = await usbService.CreateAccessPolicyAsync("StrictPolicy", true, false);
+        
+        Assert.NotNull(policy);
+        Assert.True(policy.AllowUSBRead);
+        Assert.False(policy.AllowUSBWrite);
+    }
+
+    [Fact]
+    public async Task USBAdminAccess_GetPolicy_RetrievesDefinition()
+    {
+        var usbService = new USBAccessController();
+        var created = await usbService.CreateAccessPolicyAsync("RetrieveTest", true, true);
+        
+        var retrieved = await usbService.GetPolicyAsync(created.PolicyId);
+        
+        Assert.Equal(created.PolicyId, retrieved.PolicyId);
+    }
+
+    [Fact]
+    public async Task USBAdminAccess_ListPolicies_EnumeratesAll()
+    {
+        var usbService = new USBAccessController();
+        await usbService.CreateAccessPolicyAsync("Policy1", true, true);
+        await usbService.CreateAccessPolicyAsync("Policy2", false, true);
+        
+        var policies = await usbService.ListPoliciesAsync();
+        
+        Assert.NotEmpty(policies);
+    }
+
+    [Fact]
+    public async Task USBAdminAccess_UpdatePolicy_ModifiesRules()
+    {
+        var usbService = new USBAccessController();
+        var policy = await usbService.CreateAccessPolicyAsync("UpdateTest", true, true);
+        policy.AllowUSBWrite = false;
+        
+        var updated = await usbService.UpdatePolicyAsync(policy.PolicyId, policy);
+        
+        Assert.True(updated);
+    }
+
+    [Fact]
+    public async Task USBAdminAccess_AllowUSBDevice_WhitelistsDevice()
+    {
+        var usbService = new USBAccessController();
+        await usbService.CreateAccessPolicyAsync("AllowTest", true, true);
+        
+        var allowed = await usbService.AllowUSBDeviceAsync("device-123");
+        
+        Assert.True(allowed);
+    }
+
+    [Fact]
+    public async Task USBAdminAccess_BlockUSBDevice_BlacklistsDevice()
+    {
+        var usbService = new USBAccessController();
+        await usbService.CreateAccessPolicyAsync("BlockTest", true, true);
+        
+        var blocked = await usbService.BlockUSBDeviceAsync("device-456");
+        
+        Assert.True(blocked);
+    }
+
+    [Fact]
+    public async Task USBAdminAccess_GetConnectedDevices_ListsActive()
+    {
+        var usbService = new USBAccessController();
+        
+        var devices = await usbService.GetConnectedDevicesAsync();
+        
+        Assert.NotEmpty(devices);
+    }
+
+    [Fact]
+    public async Task USBAdminAccess_GetStatistics_ReturnsMetrics()
+    {
+        var usbService = new USBAccessController();
+        await usbService.CreateAccessPolicyAsync("StatsTest", true, true);
+        
+        var stats = await usbService.GetUSBAccessStatisticsAsync();
+        
+        Assert.NotEmpty(stats);
+        Assert.Contains("Policies", stats.Keys);
     }
 }

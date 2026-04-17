@@ -62,7 +62,7 @@ namespace HELIOS.Platform
                 var monitoringService = new ServerMonitoringService(logger);
                 var cloudService = new CloudIntegrationService(logger);
                 var advancedConfigManager = new AdvancedConfigManager();
-                var sandboxEnvironment = new SandboxEnvironment();
+                var sandboxEnvironment = new Core.Sandbox.SandboxEnvironment();
                 var advancedQuarantineSystem = new AdvancedQuarantineSystem();
                 var driverAutoInstallService = new DriverAutoInstallService();
                 var usbAdminAccessService = new USBAdminAccessService();
