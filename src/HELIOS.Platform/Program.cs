@@ -86,6 +86,9 @@ namespace HELIOS.Platform
                 var dataShardingService = new DataShardingEngine();
                 var queryOptimizer = new QueryOptimizer();
                 var distributedCache = new DistributedCacheEngine();
+                var integrationTestService = new IntegrationTestEngine();
+                var performanceValidator = new PerformanceValidator();
+                var systemValidator = new SystemValidator();
                 
                 // Initialize database context
                 var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
@@ -140,6 +143,9 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IDataShardingService>(dataShardingService);
                 ServiceContainer.Instance.RegisterSingleton<IQueryOptimizationService>(queryOptimizer);
                 ServiceContainer.Instance.RegisterSingleton<IDistributedCachingService>(distributedCache);
+                ServiceContainer.Instance.RegisterSingleton<IIntegrationTestService>(integrationTestService);
+                ServiceContainer.Instance.RegisterSingleton<IPerformanceValidationService>(performanceValidator);
+                ServiceContainer.Instance.RegisterSingleton<ISystemValidationService>(systemValidator);
                 ServiceContainer.Instance.RegisterSingleton<HeliosDatabaseContext>(dbContext);
                 ServiceContainer.Instance.RegisterSingleton<IDataAccessService>(dataAccessService);
                 

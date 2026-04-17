@@ -1827,4 +1827,178 @@ public class Phase2ServiceTests
         var value = await cache.GetAsync("key1");
         Assert.Null(value);
     }
+
+    // ============ INTEGRATION TEST SERVICE TESTS ============
+
+    [Fact]
+    public async Task Integration_CreateTest_DefinesServiceIntegration()
+    {
+        var testService = new IntegrationTestEngine();
+        
+        var test = await testService.CreateIntegrationTestAsync("AuthToDatabase", "AuthService", "DatabaseService");
+        
+        Assert.NotNull(test);
+        Assert.Equal("AuthService", test.ServiceA);
+        Assert.Equal(IntegrationTestStatus.Pending, test.Status);
+    }
+
+    [Fact]
+    public async Task Integration_RunTest_ExecutesAndVerifies()
+    {
+        var testService = new IntegrationTestEngine();
+        var test = await testService.CreateIntegrationTestAsync("ServiceTest", "Service1", "Service2");
+        
+        var result = await testService.RunIntegrationTestAsync(test.TestId);
+        
+        Assert.NotNull(result);
+        Assert.NotEqual(IntegrationTestStatus.Pending, result.Status);
+    }
+
+    [Fact]
+    public async Task Integration_RunAllTests_ExecutesAllTests()
+    {
+        var testService = new IntegrationTestEngine();
+        await testService.CreateIntegrationTestAsync("Test1", "S1", "S2");
+        await testService.CreateIntegrationTestAsync("Test2", "S2", "S3");
+        
+        var results = await testService.RunAllTestsAsync();
+        
+        Assert.True(results.Count >= 2);
+    }
+
+    [Fact]
+    public async Task Integration_GetPassRate_CalculatesSuccessRate()
+    {
+        var testService = new IntegrationTestEngine();
+        var test1 = await testService.CreateIntegrationTestAsync("Test1", "S1", "S2");
+        await testService.RunIntegrationTestAsync(test1.TestId);
+        
+        var passRate = await testService.GetPassRateAsync();
+        
+        Assert.True(passRate >= 0 && passRate <= 100);
+    }
+
+    [Fact]
+    public async Task Integration_GetTestSummary_ReturnsTestStats()
+    {
+        var testService = new IntegrationTestEngine();
+        await testService.CreateIntegrationTestAsync("Test1", "S1", "S2");
+        
+        var summary = await testService.GetTestSummaryAsync();
+        
+        Assert.NotEmpty(summary);
+        Assert.Contains("Total", summary.Keys);
+    }
+
+    // ============ PERFORMANCE VALIDATION SERVICE TESTS ============
+
+    [Fact]
+    public async Task Performance_MeasureLatency_TracksResponseTime()
+    {
+        var validator = new PerformanceValidator();
+        
+        var metric = await validator.MeasureLatencyAsync("QueryExecution");
+        
+        Assert.NotNull(metric);
+        Assert.Equal("ms", metric.Unit);
+    }
+
+    [Fact]
+    public async Task Performance_MeasureThroughput_CalculatesOperationRate()
+    {
+        var validator = new PerformanceValidator();
+        
+        var metric = await validator.MeasureThroughputAsync("RequestProcessing");
+        
+        Assert.NotNull(metric);
+        Assert.Equal("ops/sec", metric.Unit);
+    }
+
+    [Fact]
+    public async Task Performance_MeasureResourceUsage_TracksResourceConsumption()
+    {
+        var validator = new PerformanceValidator();
+        
+        var metric = await validator.MeasureResourceUsageAsync("CPU");
+        
+        Assert.NotNull(metric);
+        Assert.True(metric.Value >= 0 && metric.Value <= 100);
+    }
+
+    [Fact]
+    public async Task Performance_ValidatePerformance_ChecksThreshold()
+    {
+        var validator = new PerformanceValidator();
+        await validator.MeasureLatencyAsync("Operation");
+        
+        var isValid = await validator.ValidatePerformanceAsync("Operation_latency", 300);
+        
+        Assert.NotNull(isValid);
+    }
+
+    [Fact]
+    public async Task Performance_GetPerformanceSummary_ReturnsAggregates()
+    {
+        var validator = new PerformanceValidator();
+        await validator.MeasureLatencyAsync("Op1");
+        
+        var summary = await validator.GetPerformanceSummaryAsync();
+        
+        Assert.NotEmpty(summary);
+        Assert.Contains("AvgLatency", summary.Keys);
+    }
+
+    // ============ SYSTEM VALIDATION SERVICE TESTS ============
+
+    [Fact]
+    public async Task SystemValidation_RunFullCheck_VerifiesAllComponents()
+    {
+        var validator = new SystemValidator();
+        
+        var result = await validator.RunFullSystemCheckAsync();
+        
+        Assert.NotNull(result);
+        Assert.True(result.ChecksPassed.Count > 0);
+    }
+
+    [Fact]
+    public async Task SystemValidation_ValidateComponent_ChecksSpecificComponent()
+    {
+        var validator = new SystemValidator();
+        
+        var isValid = await validator.ValidateComponentAsync("Database");
+        
+        Assert.True(isValid);
+    }
+
+    [Fact]
+    public async Task SystemValidation_GetComponentStatus_ReturnsAllStates()
+    {
+        var validator = new SystemValidator();
+        
+        var status = await validator.GetComponentStatusAsync();
+        
+        Assert.NotEmpty(status);
+        Assert.Contains("Database", status.Keys);
+    }
+
+    [Fact]
+    public async Task SystemValidation_ReportReadyForProduction_VerifiesReadiness()
+    {
+        var validator = new SystemValidator();
+        
+        var isReady = await validator.ReportReadyForProductionAsync();
+        
+        Assert.NotNull(isReady);
+    }
+
+    [Fact]
+    public async Task SystemValidation_GetFailedComponents_ListsIssues()
+    {
+        var validator = new SystemValidator();
+        
+        var failed = await validator.GetFailedComponentsAsync();
+        
+        Assert.NotNull(failed);
+    }
 }
