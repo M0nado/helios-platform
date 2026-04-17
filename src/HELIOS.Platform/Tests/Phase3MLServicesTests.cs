@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HELIOS.Platform.Tests.Phase3;
 
@@ -12,8 +13,8 @@ public class Phase3MLServicesTests
 
     public Phase3MLServicesTests()
     {
-        _dataCollectorLogger = new NullLogger<DataCollector>();
-        _timeSeriesLogger = new NullLogger<InMemoryTimeSeriesDB>();
+        _dataCollectorLogger = NullLogger<DataCollector>.Instance;
+        _timeSeriesLogger = NullLogger<InMemoryTimeSeriesDB>.Instance;
     }
 
     // Test: DataCollector_RegisterMetricProvider_SuccessfullyRegisters
@@ -187,12 +188,3 @@ public class Phase3MLServicesTests
     }
 }
 
-/// <summary>
-/// Null logger for testing.
-/// </summary>
-public class NullLogger<T> : ILogger<T>
-{
-    public IDisposable BeginScope<TState>(TState state) => null!;
-    public bool IsEnabled(LogLevel logLevel) => false;
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
-}

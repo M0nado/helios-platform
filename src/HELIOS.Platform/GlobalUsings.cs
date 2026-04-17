@@ -23,3 +23,7 @@ global using Microsoft.Extensions.Logging;
 // HELIOS Phase 3 ML Services
 global using HELIOS.Platform.Core.ML.Interfaces;
 global using HELIOS.Platform.Core.ML.Services;
+
+// HELIOS Phase 3 Observability Services
+global using HELIOS.Platform.Core.Observability.Interfaces;
+global using HELIOS.Platform.Core.Observability.Services;
