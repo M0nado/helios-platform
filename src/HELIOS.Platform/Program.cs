@@ -10,6 +10,7 @@ using HELIOS.Platform.Core.Configuration;
 using HELIOS.Platform.Core.Security;
 using HELIOS.Platform.Core.Monitoring;
 using HELIOS.Platform.Core.Administration;
+using HELIOS.Platform.Core.CLI;
 
 namespace HELIOS.Platform
 {
@@ -34,6 +35,7 @@ namespace HELIOS.Platform
                 var encryption = new EncryptionManager();
                 var dashboardTracker = new DashboardHistoryTracker();
                 var systemManagement = new SystemManagementService();
+                var cliExecutor = new CliCommandExecutor(orchestrator, systemManagement);
                 
                 ServiceContainer.Instance.RegisterSingleton<Core.Logging.ILogger>(logger);
                 ServiceContainer.Instance.RegisterSingleton<IServiceOrchestrator>(orchestrator);
@@ -43,6 +45,7 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<EncryptionManager>(encryption);
                 ServiceContainer.Instance.RegisterSingleton<IDashboardHistoryTracker>(dashboardTracker);
                 ServiceContainer.Instance.RegisterSingleton<ISystemManagementService>(systemManagement);
+                ServiceContainer.Instance.RegisterSingleton<ICommandExecutor>(cliExecutor);
                 
                 logger.Info("HELIOS Platform initialized successfully");
                 
@@ -541,37 +544,79 @@ namespace HELIOS.Platform
         {
             Console.Clear();
             Console.WriteLine("╔════════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║                       TERMINAL                                ║");
+            Console.WriteLine("║                   CLI TERMINAL INTERFACE                       ║");
+            Console.WriteLine("║                 Type 'help' for available commands              ║");
             Console.WriteLine("╚════════════════════════════════════════════════════════════════╝\n");
 
-            Console.WriteLine("CLI Commands Available:");
-            Console.WriteLine("  • system info");
-            Console.WriteLine("  • partition list");
-            Console.WriteLine("  • service status");
-            Console.WriteLine("  • help");
-
-            Console.WriteLine("\nType 'exit' to return to main menu...");
-            
-            while (true)
+            try
             {
-                Console.Write("> ");
-                string cmd = Console.ReadLine() ?? "";
-                
-                if (cmd == "exit")
-                    break;
-                    
-                if (cmd == "help")
+                var orchestrator = ServiceContainer.Instance.GetService<IServiceOrchestrator>();
+                var sysManagement = ServiceContainer.Instance.GetService<ISystemManagementService>();
+
+                if (orchestrator == null || sysManagement == null)
                 {
-                    Console.WriteLine("  Available commands: system info, partition list, service status, exit");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("[ERROR] Required services not initialized");
+                    Console.ResetColor();
+                    Console.ReadKey();
+                    return;
                 }
-                else if (cmd.StartsWith("system"))
+
+                var executor = new CliCommandExecutor(orchestrator, sysManagement);
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("Welcome to HELIOS CLI Terminal");
+                Console.WriteLine("Type 'help' to see available commands, 'exit' to quit\n");
+                Console.ResetColor();
+
+                while (true)
                 {
-                    Console.WriteLine("  System information retrieved");
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.Write("helios> ");
+                    Console.ResetColor();
+
+                    string cmdLine = Console.ReadLine() ?? "";
+
+                    if (string.IsNullOrWhiteSpace(cmdLine))
+                        continue;
+
+                    if (cmdLine.Equals("exit", StringComparison.OrdinalIgnoreCase) || 
+                        cmdLine.Equals("quit", StringComparison.OrdinalIgnoreCase))
+                        break;
+
+                    try
+                    {
+                        var result = await executor.ExecuteAsync(cmdLine);
+
+                        if (result.Success)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine(result.Message);
+                            Console.ResetColor();
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"Error: {result.Message}");
+                            Console.ResetColor();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"[ERROR] {ex.Message}");
+                        Console.ResetColor();
+                    }
+
+                    Console.WriteLine();
                 }
-                else if (!string.IsNullOrEmpty(cmd))
-                {
-                    Console.WriteLine("  Command not found. Type 'help' for available commands.");
-                }
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[ERROR] Terminal initialization failed: {ex.Message}");
+                Console.ResetColor();
+                Console.ReadKey();
             }
         }
 
