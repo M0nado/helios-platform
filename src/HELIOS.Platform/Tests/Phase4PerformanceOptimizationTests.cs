@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Xunit;
-using HELIOS.Platform.Core.Logging;
 using HELIOS.Platform.Core.Performance;
 
 namespace HELIOS.Platform.Tests
@@ -14,11 +13,11 @@ namespace HELIOS.Platform.Tests
     /// </summary>
     public class Phase4PerformanceOptimizationTests
     {
-        private readonly Logging.ILogger _logger;
+        private readonly Core.Logging.ILogger _logger;
 
         public Phase4PerformanceOptimizationTests()
         {
-            _logger = new ConsoleLogger();
+            _logger = new Core.Logging.ConsoleLogger();
         }
 
         #region L1 Cache Service Tests

@@ -89,8 +89,20 @@ namespace HELIOS.Platform
                 // Optimization & Resilience Services (Phase 2+ Enhancements)
                 var serviceFactory = new ServiceFactory();
                 var batchOperationService = new BatchOperationService();
-                var advancedCacheService = new AdvancedCacheService();
+                
+                // Phase 4 Performance Optimization Services
+                var l1CacheService = new L1CacheService(logger);
+                var l2CacheService = new InMemoryL2Cache();
+                var advancedCacheService = new AdvancedCacheService(l1CacheService, l2CacheService, logger);
+                var queryOptimizer = new QueryOptimizationService(logger);
+                var memoryOptimizer = new MemoryOptimizationService(logger);
+                var connectionPoolService = new ConnectionPoolService(logger);
+                var databaseIndexService = new DatabaseIndexService(logger);
+                var efCoreOptimizer = new EFCoreQueryOptimizer(logger);
+                var connectionLifecycleService = new ConnectionLifecycleService(logger);
+                
                 var resilienceService = new ResilienceService();
+                
                 
                 // Initialize database context
                 var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
