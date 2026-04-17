@@ -9,6 +9,8 @@ using HELIOS.Platform.Core.Diagnostics;
 using HELIOS.Platform.Core.Monitoring;
 using HELIOS.Platform.Core.Administration;
 using HELIOS.Platform.Core.CLI;
+using HELIOS.Platform.Core.Storage;
+using HELIOS.Platform.Core.Security;
 using HELIOS.Platform.Data.Database;
 
 namespace HELIOS.Platform.Tests;
@@ -589,5 +591,102 @@ public class Phase1ServiceTests
             status.OverallStatus == "Error",
             $"Invalid status: {status.OverallStatus}"
         );
+    }
+
+    /// <summary>
+    /// Cross-Partition Manager Tests
+    /// </summary>
+    [Fact]
+    public async Task CrossPartitionManager_GetAllPartitionsAsync_ReturnsPartitions()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var partitions = await manager.GetAllPartitionsAsync();
+
+        // Assert
+        Assert.NotNull(partitions);
+        Assert.IsType<List<PartitionInfo>>(partitions);
+        Assert.NotEmpty(partitions); // System should have at least C: drive
+    }
+
+    [Fact]
+    public async Task CrossPartitionManager_GetUnifiedStorageViewAsync_ReturnsTotalCapacity()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var view = await manager.GetUnifiedStorageViewAsync();
+
+        // Assert
+        Assert.NotNull(view);
+        Assert.True(view.TotalCapacity > 0);
+        Assert.True(view.TotalUsed >= 0);
+        Assert.True(view.TotalFree >= 0);
+        Assert.True(view.OverallUsagePercent >= 0 && view.OverallUsagePercent <= 100);
+    }
+
+    [Fact]
+    public async Task CrossPartitionManager_AnalyzeStorageBalanceAsync_ReturnsBalance()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var balance = await manager.AnalyzeStorageBalanceAsync();
+
+        // Assert
+        Assert.NotNull(balance);
+        Assert.NotEmpty(balance);
+        
+        foreach (var item in balance)
+        {
+            Assert.True(item.UsagePercent >= 0 && item.UsagePercent <= 100);
+            Assert.NotNull(item.BalanceStatus);
+            Assert.NotNull(item.Recommendations);
+        }
+    }
+
+    [Fact]
+    public async Task CrossPartitionManager_GetPartitionByLetterAsync_FindsCDrive()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var partition = await manager.GetPartitionByLetterAsync("C");
+
+        // Assert
+        Assert.NotNull(partition);
+        Assert.True(partition.TotalBytes > 0);
+    }
+
+    [Fact]
+    public async Task CrossPartitionManager_MigrationReportTracksProgress()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var report = new MigrationReport
+        {
+            SourceDrive = "C",
+            TargetDrive = "D",
+            StartedAt = DateTime.UtcNow,
+            CompletedAt = DateTime.UtcNow.AddSeconds(10),
+            BytesMigrated = 1024 * 1024 * 100 // 100 MB
+        };
+
+        // Assert
+        Assert.Equal("C", report.SourceDrive);
+        Assert.True(report.Duration.TotalSeconds == 10);
+        Assert.True(report.MegabytesMigrated > 99 && report.MegabytesMigrated < 101);
     }
 }

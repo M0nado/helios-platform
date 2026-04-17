@@ -39,6 +39,7 @@ namespace HELIOS.Platform
                 var systemManagement = new SystemManagementService();
                 var cliExecutor = new CliCommandExecutor(orchestrator, systemManagement);
                 var hardeningService = new WindowsHardeningService(logger, systemManagement);
+                var crossPartitionManager = new CrossPartitionManager(logger);
                 
                 // Initialize database context
                 var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
@@ -56,6 +57,7 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<ISystemManagementService>(systemManagement);
                 ServiceContainer.Instance.RegisterSingleton<ICommandExecutor>(cliExecutor);
                 ServiceContainer.Instance.RegisterSingleton<IWindowsHardeningService>(hardeningService);
+                ServiceContainer.Instance.RegisterSingleton<ICrossPartitionManager>(crossPartitionManager);
                 ServiceContainer.Instance.RegisterSingleton<HeliosDatabaseContext>(dbContext);
                 ServiceContainer.Instance.RegisterSingleton<IDataAccessService>(dataAccessService);
                 
