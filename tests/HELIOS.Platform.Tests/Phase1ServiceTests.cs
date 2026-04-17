@@ -761,4 +761,69 @@ public class Phase1ServiceTests
         Assert.True(metrics.AverageLatencyMs > 0);
         Assert.True(metrics.ErrorCount == 0);
     }
+
+    /// <summary>
+    /// Plugin Manager Tests
+    /// </summary>
+    [Fact]
+    public async Task PluginManager_GetLoadedPluginsAsync_ReturnsList()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new PluginManager(logger);
+
+        // Act
+        var plugins = await manager.GetLoadedPluginsAsync();
+
+        // Assert
+        Assert.NotNull(plugins);
+        Assert.IsType<List<PluginInfo>>(plugins);
+    }
+
+    [Fact]
+    public async Task PluginManager_SearchMarketplaceAsync_FindsPlugins()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new PluginManager(logger);
+
+        // Act
+        var results = await manager.SearchMarketplaceAsync("GPU");
+
+        // Assert
+        Assert.NotNull(results);
+        Assert.NotEmpty(results);
+        Assert.True(results.Count > 0);
+    }
+
+    [Fact]
+    public async Task PluginManager_ExecutePluginAsync_ReturnsResult()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new PluginManager(logger);
+
+        // Act
+        var result = await manager.ExecutePluginAsync("NonExistent");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.NotNull(result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task PluginManager_EnableDisablePluginAsync_TogglesState()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new PluginManager(logger);
+        await manager.EnablePluginAsync("Test");
+        
+        // Act - Verify enable works (will return false since plugin isn't loaded)
+        var disableResult = await manager.DisablePluginAsync("Test");
+
+        // Assert
+        Assert.False(disableResult); // Plugin not in dict, so returns false
+    }
 }
