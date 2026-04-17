@@ -54,13 +54,16 @@ public class WebSocketMessage
 /// <summary>
 /// Web UI renderer for server-side rendering.
 /// </summary>
-public interface IWebUIRenderer
+public interface IWebUIServer
 {
     Task<string> RenderPageAsync(string pageName, Dictionary<string, object>? model = null);
     Task<string> RenderComponentAsync(string componentName, Dictionary<string, object>? props = null);
     Task<bool> RegisterLayoutAsync(string layoutName, string html);
     Task<bool> RegisterPageAsync(string pageName, string html);
     Task<string> GetThemeAsync(string themeName);
+    Task<bool> StartServerAsync(int port);
+    Task<bool> StopServerAsync();
+    Task<WebServerHealthStatus> GetHealthAsync();
 }
 
 /// <summary>
@@ -87,13 +90,38 @@ public class SessionData
 /// <summary>
 /// Theme engine for UI customization.
 /// </summary>
-public interface IThemeEngine
+public interface IThemeManager
 {
     Task<string> GetThemeAsync(string themeName);
     Task<bool> RegisterThemeAsync(string themeName, ThemeDefinition theme);
     Task<List<string>> ListThemesAsync();
     Task<bool> SetDefaultThemeAsync(string themeName);
     Task<ThemeDefinition> GetCurrentThemeAsync();
+    Task<bool> DeleteThemeAsync(string themeName);
+    Task<ThemeMetrics> GetMetricsAsync();
+}
+
+/// <summary>
+/// Web server health status.
+/// </summary>
+public class WebServerHealthStatus
+{
+    public bool IsHealthy { get; set; }
+    public int ActiveConnections { get; set; }
+    public DateTime LastHealthCheck { get; set; }
+    public string Status { get; set; } = "Unknown";
+}
+
+/// <summary>
+/// Theme metrics for monitoring.
+/// </summary>
+public class ThemeMetrics
+{
+    public int TotalThemes { get; set; }
+    public string CurrentTheme { get; set; } = string.Empty;
+    public long CacheHits { get; set; }
+    public long CacheMisses { get; set; }
+    public double CacheHitRate => (CacheHits + CacheMisses) > 0 ? (double)CacheHits / (CacheHits + CacheMisses) : 0;
 }
 
 public class ThemeDefinition

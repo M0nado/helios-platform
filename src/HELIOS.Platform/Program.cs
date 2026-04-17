@@ -23,6 +23,10 @@ using HELIOS.Platform.Core.Cloud;
 using HELIOS.Platform.Core.Sandbox;
 using HELIOS.Platform.Core.Hardware;
 using HELIOS.Platform.Core.Integration;
+using HELIOS.Platform.Core.Production.Interfaces;
+using HELIOS.Platform.Core.Production.Services;
+using HELIOS.Platform.Core.Global;
+using HELIOS.Platform.Core.Global.Interfaces;
 using HELIOS.Platform.Data.Database;
 
 namespace HELIOS.Platform
@@ -82,7 +86,7 @@ namespace HELIOS.Platform
                 var anomalyDetectionService = new AnomalyDetectionEngine();
                 var mlService = new MachineLearningEngine();
                 var resourcePlanner = new ResourcePlanner();
-                var capacityPlanner = new CapacityPlanner();
+                var capacityPlanner = new HELIOS.Platform.Core.Administration.CapacityPlanner();
                 var dataShardingService = new DataShardingEngine();
                 var distributedCache = new DistributedCacheEngine();
                 
@@ -103,7 +107,22 @@ namespace HELIOS.Platform
                 
                 var resilienceService = new ResilienceService();
                 
+                // Phase 3 Tier 4: Production Hardening Services
+                // var distributedCacheLayer = new DistributedCacheLayer(logger);
+                // var queryPlanAnalyzer = new QueryPlanAnalyzer(logger);
+                // var productionLoadBalancer = new ProductionLoadBalancer(logger);
+                // var zeroTrustImplementation = new ZeroTrustImplementation(logger);
+                // var disasterRecoveryOrchestrator = new DisasterRecoveryOrchestrator(logger);
                 
+                // Phase 5 Tier 2: Global Intelligence Services
+                // var globalMetricsAggregator = new GlobalMetricsAggregator(logger);
+                // var costOptimizer = new CostOptimizer(logger);
+                // var globalCapacityPlanner = new HELIOS.Platform.Core.Global.CapacityPlanner(logger);
+                var globalLoadBalancer = new GlobalLoadBalancer(logger);
+                var regionFailover = new RegionFailover(logger);
+                var latencyOptimizer = new LatencyOptimizer(logger);
+                var cdnController = new CDNController(logger);
+
                 // Initialize database context
                 var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
                 optionsBuilder.UseSqlite("Data Source=helios.db");
@@ -174,6 +193,22 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IBatchOperationService>(batchOperationService);
                 ServiceContainer.Instance.RegisterSingleton<IAdvancedCacheService>(advancedCacheService);
                 ServiceContainer.Instance.RegisterSingleton<IResilienceService>(resilienceService);
+                
+                // Phase 3 Tier 4: Production Hardening Services Registration
+                // ServiceContainer.Instance.RegisterSingleton<IDistributedCacheLayer>(distributedCacheLayer);
+                // ServiceContainer.Instance.RegisterSingleton<IQueryPlanAnalyzer>(queryPlanAnalyzer);
+                // ServiceContainer.Instance.RegisterSingleton<IProductionLoadBalancer>(productionLoadBalancer);
+                // ServiceContainer.Instance.RegisterSingleton<IZeroTrustImplementation>(zeroTrustImplementation);
+                // ServiceContainer.Instance.RegisterSingleton<IDisasterRecoveryOrchestrator>(disasterRecoveryOrchestrator);
+                 
+                 // Phase 5 Tier 2: Global Intelligence Services Registration
+                 // ServiceContainer.Instance.RegisterSingleton<IGlobalMetricsAggregator>(globalMetricsAggregator);
+                 // ServiceContainer.Instance.RegisterSingleton<ICostOptimizer>(costOptimizer);
+                 // ServiceContainer.Instance.RegisterSingleton<ICapacityPlanner>(globalCapacityPlanner);
+                 ServiceContainer.Instance.RegisterSingleton<IGlobalLoadBalancer>(globalLoadBalancer);
+                 ServiceContainer.Instance.RegisterSingleton<IRegionFailover>(regionFailover);
+                 ServiceContainer.Instance.RegisterSingleton<ILatencyOptimizer>(latencyOptimizer);
+                 ServiceContainer.Instance.RegisterSingleton<ICDNController>(cdnController);
                 
                 ServiceContainer.Instance.RegisterSingleton<HeliosDatabaseContext>(dbContext);
                 ServiceContainer.Instance.RegisterSingleton<IDataAccessService>(dataAccessService);
@@ -915,3 +950,9 @@ namespace HELIOS.Platform
 
     }
 }
+
+
+
+
+
+
