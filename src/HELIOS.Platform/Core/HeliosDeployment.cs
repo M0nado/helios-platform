@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HELIOS.Platform.Core
 {
@@ -13,9 +15,9 @@ namespace HELIOS.Platform.Core
         {
         }
         
-        public async System.Threading.Tasks.Task<DeploymentResult> Execute(DeploymentTier tier)
+        public async Task<DeploymentResult> Execute(DeploymentTier tier)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
     }
     
@@ -29,7 +31,7 @@ namespace HELIOS.Platform.Core
     public class DeploymentResult
     {
         public DeploymentTier Tier { get; set; }
-        public System.Collections.Generic.List<PhaseResult> Phases { get; set; } = new();
+        public List<PhaseResult> Phases { get; set; } = new();
         public bool Success { get; set; }
         public string? Error { get; set; }
     }

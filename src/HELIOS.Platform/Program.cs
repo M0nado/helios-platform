@@ -9,6 +9,7 @@ using HELIOS.Platform.Core.Storage;
 using HELIOS.Platform.Core.Configuration;
 using HELIOS.Platform.Core.Security;
 using HELIOS.Platform.Core.Monitoring;
+using HELIOS.Platform.Core.Administration;
 
 namespace HELIOS.Platform
 {
@@ -32,6 +33,7 @@ namespace HELIOS.Platform
                 var config = new Core.Configuration.ConfigurationManager();
                 var encryption = new EncryptionManager();
                 var dashboardTracker = new DashboardHistoryTracker();
+                var systemManagement = new SystemManagementService();
                 
                 ServiceContainer.Instance.RegisterSingleton<Core.Logging.ILogger>(logger);
                 ServiceContainer.Instance.RegisterSingleton<IServiceOrchestrator>(orchestrator);
@@ -40,6 +42,7 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<Core.Configuration.ConfigurationManager>(config);
                 ServiceContainer.Instance.RegisterSingleton<EncryptionManager>(encryption);
                 ServiceContainer.Instance.RegisterSingleton<IDashboardHistoryTracker>(dashboardTracker);
+                ServiceContainer.Instance.RegisterSingleton<ISystemManagementService>(systemManagement);
                 
                 logger.Info("HELIOS Platform initialized successfully");
                 
@@ -260,20 +263,159 @@ namespace HELIOS.Platform
 
         static async Task ShowSystemManagement()
         {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+                Console.WriteLine("║                    SYSTEM MANAGEMENT                           ║");
+                Console.WriteLine("╚════════════════════════════════════════════════════════════════╝\n");
+
+                Console.WriteLine("┌─ OPTIONS ──────────────────────────────────────────────────────┐");
+                Console.WriteLine("│ 1. Partition & Disk Management                                 │");
+                Console.WriteLine("│ 2. Services Management                                         │");
+                Console.WriteLine("│ 0. Return to Main Menu                                         │");
+                Console.WriteLine("└────────────────────────────────────────────────────────────────┘");
+                Console.Write("\nSelect option (0-2): ");
+
+                string input = Console.ReadLine() ?? "";
+
+                switch (input)
+                {
+                    case "1":
+                        await ShowPartitionManagement();
+                        break;
+                    case "2":
+                        await ShowServicesManagement();
+                        break;
+                    case "0":
+                        return;
+                    default:
+                        Console.WriteLine("Invalid option");
+                        Console.ReadKey();
+                        break;
+                }
+            }
+        }
+
+        static async Task ShowPartitionManagement()
+        {
             Console.Clear();
             Console.WriteLine("╔════════════════════════════════════════════════════════════════╗");
-            Console.WriteLine("║                    SYSTEM MANAGEMENT                           ║");
+            Console.WriteLine("║               PARTITION & DISK MANAGEMENT                      ║");
             Console.WriteLine("╚════════════════════════════════════════════════════════════════╝\n");
 
-            Console.WriteLine("Available tools:");
-            Console.WriteLine("  • Partition Management");
-            Console.WriteLine("  • Disk Optimization");
-            Console.WriteLine("  • User Accounts");
-            Console.WriteLine("  • Security Settings");
-            Console.WriteLine("  • Device Manager");
+            try
+            {
+                var sysManagement = ServiceContainer.Instance.GetService<ISystemManagementService>();
+                if (sysManagement == null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("[ERROR] System Management service not initialized");
+                    Console.ResetColor();
+                    Console.ReadKey();
+                    return;
+                }
 
-            Console.WriteLine("\nPress any key to return to main menu...");
+                var partitions = await sysManagement.GetPartitionsAsync();
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("┌─ DISK PARTITIONS ──────────────────────────────────────────────┐");
+                Console.ResetColor();
+
+                foreach (var partition in partitions)
+                {
+                    var usageBar = GetUsageBar(partition.UsagePercent);
+                    var sizeGB = partition.TotalSizeBytes / (1024.0 * 1024.0 * 1024.0);
+                    var usedGB = partition.UsedSizeBytes / (1024.0 * 1024.0 * 1024.0);
+                    var freeGB = partition.FreeSizeBytes / (1024.0 * 1024.0 * 1024.0);
+
+                    Console.WriteLine($"\n{partition.DriveLetter} ({partition.VolumeLabel})");
+                    Console.WriteLine($"  File System: {partition.FileSystem}");
+                    Console.Write($"  Usage: ");
+                    
+                    if (partition.UsagePercent > 80)
+                        Console.ForegroundColor = ConsoleColor.Red;
+                    else if (partition.UsagePercent > 60)
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                    else
+                        Console.ForegroundColor = ConsoleColor.Green;
+
+                    Console.WriteLine(usageBar);
+                    Console.ResetColor();
+                    Console.WriteLine($"  Size: {usedGB:F1}GB / {sizeGB:F1}GB ({partition.UsagePercent}%)  Free: {freeGB:F1}GB");
+                }
+
+                Console.WriteLine("\n└────────────────────────────────────────────────────────────────┘");
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[ERROR] {ex.Message}");
+                Console.ResetColor();
+            }
+
+            Console.WriteLine("\nPress any key to continue...");
             Console.ReadKey();
+        }
+
+        static async Task ShowServicesManagement()
+        {
+            Console.Clear();
+            Console.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                  WINDOWS SERVICES MANAGEMENT                   ║");
+            Console.WriteLine("╚════════════════════════════════════════════════════════════════╝\n");
+
+            try
+            {
+                var sysManagement = ServiceContainer.Instance.GetService<ISystemManagementService>();
+                if (sysManagement == null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("[ERROR] System Management service not initialized");
+                    Console.ResetColor();
+                    Console.ReadKey();
+                    return;
+                }
+
+                var services = await sysManagement.GetServicesAsync();
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("┌─ SYSTEM SERVICES ──────────────────────────────────────────────┐");
+                Console.ResetColor();
+
+                int index = 1;
+                foreach (var service in services)
+                {
+                    var statusIcon = service.IsRunning ? "✓" : "✗";
+                    var statusColor = service.IsRunning ? ConsoleColor.Green : ConsoleColor.Red;
+
+                    Console.ForegroundColor = statusColor;
+                    Console.Write($"  [{statusIcon}] ");
+                    Console.ResetColor();
+                    Console.WriteLine($"{index}. {service.DisplayName}");
+                    Console.WriteLine($"     Status: {service.Status}  │  Start Type: {service.StartType}");
+                    index++;
+                }
+
+                Console.WriteLine("\n└────────────────────────────────────────────────────────────────┘");
+                Console.WriteLine("\nNote: Service operations require administrator privileges");
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[ERROR] {ex.Message}");
+                Console.ResetColor();
+            }
+
+            Console.WriteLine("\nPress any key to continue...");
+            Console.ReadKey();
+        }
+
+        static string GetUsageBar(int percent, int width = 40)
+        {
+            var filled = (percent * width) / 100;
+            var bar = new string('█', filled) + new string('░', width - filled);
+            return $"[{bar}] {percent}%";
         }
 
         static async Task ShowAiHub()
