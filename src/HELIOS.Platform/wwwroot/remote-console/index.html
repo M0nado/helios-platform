@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HELIOS Remote Access Console</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>HELIOS Remote Access & Management Console</h1>
+                <div class="header-info">
+                    <span id="userInfo" class="user-info">User: Admin</span>
+                    <span id="connectionStatus" class="status-badge disconnected">Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="navbar">
+            <ul class="nav-menu">
+                <li><a href="#" data-tab="dashboard" class="nav-link active">Dashboard</a></li>
+                <li><a href="#" data-tab="connections" class="nav-link">Connections</a></li>
+                <li><a href="#" data-tab="commands" class="nav-link">Commands</a></li>
+                <li><a href="#" data-tab="monitoring" class="nav-link">Monitoring</a></li>
+                <li><a href="#" data-tab="files" class="nav-link">File Manager</a></li>
+                <li><a href="#" data-tab="sessions" class="nav-link">Sessions</a></li>
+                <li><a href="#" data-tab="settings" class="nav-link">Settings</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Tab -->
+            <section id="dashboard" class="tab-content active">
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>Quick Stats</h3>
+                        <div class="stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Active Connections</span>
+                                <span class="stat-value" id="activeConnections">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Active Sessions</span>
+                                <span class="stat-value" id="activeSessions">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Running Commands</span>
+                                <span class="stat-value" id="runningCommands">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">System Health</span>
+                                <span class="stat-value status-good" id="systemHealth">Healthy</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Recent Activity</h3>
+                        <div class="activity-list" id="activityList">
+                            <p>No recent activity</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>System Resources</h3>
+                        <div class="resource-bar">
+                            <label>CPU Usage</label>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="cpuUsage" style="width: 0%"></div>
+                            </div>
+                            <span id="cpuPercent">0%</span>
+                        </div>
+                        <div class="resource-bar">
+                            <label>Memory Usage</label>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="memoryUsage" style="width: 0%"></div>
+                            </div>
+                            <span id="memoryPercent">0%</span>
+                        </div>
+                        <div class="resource-bar">
+                            <label>Disk Usage</label>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="diskUsage" style="width: 0%"></div>
+                            </div>
+                            <span id="diskPercent">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Connections Tab -->
+            <section id="connections" class="tab-content">
+                <div class="section-header">
+                    <h2>Remote Connections</h2>
+                    <button class="btn btn-primary" id="createConnBtn">+ New Connection</button>
+                </div>
+
+                <div class="connections-list" id="connectionsList">
+                    <p>No connections. Create a new connection to get started.</p>
+                </div>
+
+                <!-- Create Connection Modal -->
+                <div id="connectionModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close">&times;</span>
+                        <h2>Create New Connection</h2>
+                        <form id="connectionForm">
+                            <div class="form-group">
+                                <label>Remote Host:</label>
+                                <input type="text" id="remoteHost" placeholder="192.168.1.100 or hostname" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Port:</label>
+                                <input type="number" id="remotePort" value="22" min="1" max="65535" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Protocol:</label>
+                                <select id="protocol" required>
+                                    <option value="SSH">SSH</option>
+                                    <option value="HTTPS">HTTPS</option>
+                                    <option value="VPN">VPN</option>
+                                    <option value="WebSocket">WebSocket</option>
+                                    <option value="RDP">RDP</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Username:</label>
+                                <input type="text" id="username" placeholder="admin" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Password:</label>
+                                <input type="password" id="password" placeholder="Enter password" required>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="useSecureTunneling" checked>
+                                    Use Secure Tunneling (TLS)
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Create Connection</button>
+                                <button type="button" class="btn btn-secondary" id="cancelConnBtn">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Commands Tab -->
+            <section id="commands" class="tab-content">
+                <div class="section-header">
+                    <h2>Remote Command Execution</h2>
+                </div>
+
+                <div class="command-executor">
+                    <div class="form-group">
+                        <label>Select Connection:</label>
+                        <select id="commandConnectionSelect">
+                            <option value="">-- Select a connection --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Command:</label>
+                        <textarea id="commandInput" placeholder="Enter your command here..." rows="4"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Timeout (seconds):</label>
+                        <input type="number" id="commandTimeout" value="300" min="10" max="3600">
+                    </div>
+                    <button class="btn btn-primary" id="executeBtn">Execute Command</button>
+                </div>
+
+                <div class="command-results">
+                    <h3>Results</h3>
+                    <div class="output-panel">
+                        <div class="output-header">
+                            <span>Command Output</span>
+                            <span id="executionStatus" class="status-badge"></span>
+                        </div>
+                        <pre id="commandOutput"></pre>
+                    </div>
+                </div>
+
+                <div class="execution-history">
+                    <h3>Execution History</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Command</th>
+                                <th>Status</th>
+                                <th>Duration</th>
+                                <th>Exit Code</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Monitoring Tab -->
+            <section id="monitoring" class="tab-content">
+                <div class="section-header">
+                    <h2>System Monitoring & Diagnostics</h2>
+                </div>
+
+                <div class="monitoring-controls">
+                    <div class="form-group">
+                        <label>Select Connection:</label>
+                        <select id="monitoringConnectionSelect">
+                            <option value="">-- Select a connection --</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="startMonitoringBtn">Start Monitoring</button>
+                    <button class="btn btn-secondary" id="stopMonitoringBtn" disabled>Stop Monitoring</button>
+                    <button class="btn btn-info" id="generateReportBtn">Generate Report</button>
+                </div>
+
+                <div class="monitoring-dashboard">
+                    <div class="card">
+                        <h3>System Metrics</h3>
+                        <div class="metrics-grid">
+                            <div class="metric">
+                                <h4>CPU Usage</h4>
+                                <canvas id="cpuChart"></canvas>
+                            </div>
+                            <div class="metric">
+                                <h4>Memory Usage</h4>
+                                <canvas id="memoryChart"></canvas>
+                            </div>
+                            <div class="metric">
+                                <h4>Disk Usage</h4>
+                                <canvas id="diskChart"></canvas>
+                            </div>
+                            <div class="metric">
+                                <h4>Network Latency</h4>
+                                <canvas id="latencyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Health Status</h3>
+                        <div id="healthStatus" class="health-info">
+                            <p>Select a connection and start monitoring to view health status.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- File Manager Tab -->
+            <section id="files" class="tab-content">
+                <div class="section-header">
+                    <h2>File Manager</h2>
+                </div>
+
+                <div class="file-manager">
+                    <div class="form-group">
+                        <label>Select Connection:</label>
+                        <select id="fileConnectionSelect">
+                            <option value="">-- Select a connection --</option>
+                        </select>
+                    </div>
+
+                    <div class="file-controls">
+                        <input type="text" id="remotePath" placeholder="/home/user/" value="/">
+                        <button class="btn btn-secondary" id="browseBtn">Browse</button>
+                        <button class="btn btn-primary" id="uploadBtn">Upload File</button>
+                    </div>
+
+                    <div class="file-list">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Modified</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="filesTable">
+                                <tr><td colspan="5">Select a connection and browse to view files.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="file-transfers">
+                        <h3>Transfer Progress</h3>
+                        <div id="transfersList"></div>
+                    </div>
+                </div>
+
+                <input type="file" id="fileInput" hidden>
+            </section>
+
+            <!-- Sessions Tab -->
+            <section id="sessions" class="tab-content">
+                <div class="section-header">
+                    <h2>User Sessions</h2>
+                    <button class="btn btn-primary" id="createSessionBtn">+ New Session</button>
+                </div>
+
+                <div class="sessions-list" id="sessionsList">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Session ID</th>
+                                <th>User</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Last Activity</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessionsTable">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section id="settings" class="tab-content">
+                <div class="section-header">
+                    <h2>Settings</h2>
+                </div>
+
+                <div class="settings-panel">
+                    <div class="card">
+                        <h3>General Settings</h3>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="autoRefresh" checked>
+                                Auto-refresh monitoring data
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Refresh Interval (seconds):</label>
+                            <input type="number" id="refreshInterval" value="60" min="10" max="3600">
+                        </div>
+                        <div class="form-group">
+                            <label>Command Timeout (seconds):</label>
+                            <input type="number" id="globalTimeout" value="300" min="10" max="3600">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Security Settings</h3>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="requireMFA" checked>
+                                Require Multi-Factor Authentication
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="enableAuditLog" checked>
+                                Enable Audit Logging
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="enableEncryption" checked>
+                                Enable End-to-End Encryption
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>API Configuration</h3>
+                        <div class="form-group">
+                            <label>API Endpoint:</label>
+                            <input type="text" id="apiEndpoint" value="https://localhost:5000/api/remote">
+                        </div>
+                        <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 HELIOS Platform - Remote Access & Management System v1.0.0</p>
+            <p>
+                <a href="#">Documentation</a> | 
+                <a href="#">Support</a> | 
+                <a href="#">Privacy</a> | 
+                <a href="#">Terms</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html>
