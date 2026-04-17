@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- HELIOS Dark Theme -->
+    
+    <!-- Colors -->
+    <SolidColorBrush x:Key="HELIOSPrimaryBrush" Color="#1F1F1F" />
+    <SolidColorBrush x:Key="HELIOSSecondaryBrush" Color="#00D9FF" />
+    <SolidColorBrush x:Key="HELIOSAccentBrush" Color="#FF6B35" />
+    <SolidColorBrush x:Key="HELIOSSuccessBrush" Color="#00C4A0" />
+    <SolidColorBrush x:Key="HELIOSWarningBrush" Color="#FFB81C" />
+    <SolidColorBrush x:Key="HELIOSErrorBrush" Color="#FF3B30" />
+    <SolidColorBrush x:Key="HELIOSBackgroundBrush" Color="#0D0D0D" />
+    <SolidColorBrush x:Key="HELIOSCardBackgroundBrush" Color="#1A1A1A" />
+    <SolidColorBrush x:Key="HELIOSBorderBrush" Color="#303030" />
+    <SolidColorBrush x:Key="HELIOSTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="HELIOSSecondaryTextBrush" Color="#A0A0A0" />
+
+    <!-- Fonts -->
+    <FontFamily x:Key="HELIOSFontFamily">Segoe UI Variable, Segoe UI</FontFamily>
+
+    <!-- Button Styles -->
+    <Style x:Key="HELIOSButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource HELIOSSecondaryBrush}" />
+        <Setter Property="Foreground" Value="#0D0D0D" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="FontFamily" Value="{StaticResource HELIOSFontFamily}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Card Styles -->
+    <Style x:Key="HELIOSCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource HELIOSCardBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource HELIOSBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16" />
+    </Style>
+
+</ResourceDictionary>
