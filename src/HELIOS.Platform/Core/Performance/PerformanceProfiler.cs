@@ -125,12 +125,12 @@ public class ResponseTimeMetrics
 public class PerformanceProfiler : IPerformanceProfiler
 {
     private readonly Core.Logging.ILogger _logger;
-    private readonly System.Diagnostics.Process _currentProcess;
+    private readonly global::System.Diagnostics.Process _currentProcess;
 
     public PerformanceProfiler(Core.Logging.ILogger logger)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _currentProcess = System.Diagnostics.Process.GetCurrentProcess();
+        _currentProcess = global::System.Diagnostics.Process.GetCurrentProcess();
     }
 
     public async Task<PerformanceMetrics> ProfileApplicationAsync()
