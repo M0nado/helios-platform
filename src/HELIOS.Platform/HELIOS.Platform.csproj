@@ -96,6 +96,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.2" />
     
     <!-- Logging -->
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
