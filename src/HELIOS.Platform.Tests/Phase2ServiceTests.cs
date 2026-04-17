@@ -8,6 +8,7 @@ using HELIOS.Platform.Core.Cloud;
 using HELIOS.Platform.Core.Performance;
 using HELIOS.Platform.Core.Security;
 using HELIOS.Platform.Core.Configuration;
+using HELIOS.Platform.Core.Administration;
 
 namespace HELIOS.Platform.Tests;
 
@@ -494,5 +495,233 @@ public class Phase2ServiceTests
         
         var updated = await configManager.UpdateProfileAsync(profile.Id, updateSettings);
         Assert.NotNull(updated);
+    }
+
+    // ============ SECURITY COMPLIANCE SERVICE TESTS ============
+
+    [Fact]
+    public async Task SecurityCompliance_RunSecurityAudit_ReturnsComplianceResults()
+    {
+        var complianceService = new SecurityComplianceService();
+        var results = await complianceService.RunSecurityAuditAsync();
+        
+        Assert.NotNull(results);
+        Assert.NotEmpty(results);
+        Assert.All(results, r => Assert.NotNull(r.CheckName));
+    }
+
+    [Fact]
+    public async Task SecurityCompliance_CheckRBAC_VerifiesRoleConfiguration()
+    {
+        var complianceService = new SecurityComplianceService();
+        var result = await complianceService.CheckRBACAsync();
+        
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task SecurityCompliance_CheckAuditLogging_VerifiesAuditState()
+    {
+        var complianceService = new SecurityComplianceService();
+        var result = await complianceService.CheckAuditLoggingAsync();
+        
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task SecurityCompliance_CreateFirewallRule_AddsRuleToCollection()
+    {
+        var complianceService = new SecurityComplianceService();
+        var initialRules = await complianceService.ListFirewallRulesAsync();
+        var initialCount = initialRules.Count;
+        
+        var newRule = new FirewallRule
+        {
+            RuleName = "Test Rule",
+            Direction = "Inbound",
+            Action = "Allow",
+            Protocol = "TCP"
+        };
+        
+        var result = await complianceService.CreateFirewallRuleAsync(newRule);
+        Assert.True(result);
+        
+        var updatedRules = await complianceService.ListFirewallRulesAsync();
+        Assert.Equal(initialCount + 1, updatedRules.Count);
+    }
+
+    [Fact]
+    public async Task SecurityCompliance_ListRoles_ReturnsSystemRoles()
+    {
+        var complianceService = new SecurityComplianceService();
+        var roles = await complianceService.ListRolesAsync();
+        
+        Assert.NotNull(roles);
+        Assert.NotEmpty(roles);
+        Assert.Contains(roles, r => r.RoleName == "Administrator");
+    }
+
+    [Fact]
+    public async Task SecurityCompliance_CreateRole_AddsCustomRole()
+    {
+        var complianceService = new SecurityComplianceService();
+        var permissions = new List<string> { "Read", "Write" };
+        
+        var role = await complianceService.CreateRoleAsync("CustomRole", permissions);
+        
+        Assert.NotNull(role);
+        Assert.Equal("CustomRole", role.RoleName);
+        Assert.Equal(2, role.Permissions.Count);
+    }
+
+    [Fact]
+    public async Task SecurityCompliance_GetSecurityPosture_ReturnsHealthMetrics()
+    {
+        var complianceService = new SecurityComplianceService();
+        var posture = await complianceService.GetSecurityPostureAsync();
+        
+        Assert.NotNull(posture);
+        Assert.Contains("OverallScore", posture.Keys);
+        Assert.Contains("PassedChecks", posture.Keys);
+    }
+
+    // ============ SERVER AUTOMATION SERVICE TESTS ============
+
+    [Fact]
+    public async Task ServerAutomation_CreateTemplate_AddsTemplateSuccessfully()
+    {
+        var automationService = new ServerAutomationService();
+        var steps = new List<WorkflowStep>
+        {
+            new WorkflowStep { StepNumber = 1, StepName = "Step1", ActionType = "Action1", TimeoutSeconds = 60 }
+        };
+        
+        var template = await automationService.CreateTemplateAsync("Test Template", "Test Desc", steps);
+        
+        Assert.NotNull(template);
+        Assert.Equal("Test Template", template.TemplateName);
+        Assert.Single(template.Steps);
+    }
+
+    [Fact]
+    public async Task ServerAutomation_ListTemplates_ReturnsAllTemplates()
+    {
+        var automationService = new ServerAutomationService();
+        var templates = await automationService.ListTemplatesAsync();
+        
+        Assert.NotNull(templates);
+        Assert.NotEmpty(templates);
+    }
+
+    [Fact]
+    public async Task ServerAutomation_ExecuteWorkflow_RunsTemplateSuccessfully()
+    {
+        var automationService = new ServerAutomationService();
+        var templates = await automationService.ListTemplatesAsync();
+        var template = templates.First();
+        
+        var execution = await automationService.ExecuteWorkflowAsync(template.TemplateId, new Dictionary<string, object>());
+        
+        Assert.NotNull(execution);
+        Assert.Equal(ExecutionStatus.Completed, execution.Status);
+        Assert.NotEmpty(execution.StepResults);
+    }
+
+    [Fact]
+    public async Task ServerAutomation_GetExecutionStatus_TracksWorkflowProgress()
+    {
+        var automationService = new ServerAutomationService();
+        var templates = await automationService.ListTemplatesAsync();
+        var execution = await automationService.ExecuteWorkflowAsync(templates.First().TemplateId, new Dictionary<string, object>());
+        
+        var status = await automationService.GetExecutionStatusAsync(execution.ExecutionId);
+        
+        Assert.NotNull(status);
+        Assert.Equal(execution.ExecutionId, status.ExecutionId);
+    }
+
+    [Fact]
+    public async Task ServerAutomation_CancelExecution_StopsRunningWorkflow()
+    {
+        var automationService = new ServerAutomationService();
+        var templates = await automationService.ListTemplatesAsync();
+        var execution = await automationService.ExecuteWorkflowAsync(templates.First().TemplateId, new Dictionary<string, object>());
+        
+        var result = await automationService.CancelExecutionAsync(execution.ExecutionId);
+        
+        Assert.True(result);
+    }
+
+    // ============ MACHINE DISCOVERY SERVICE TESTS ============
+
+    [Fact]
+    public async Task MachineDiscovery_DiscoverMachines_FindsNetworkDevices()
+    {
+        var discoveryService = new MachineDiscoveryService();
+        var options = new DiscoveryOptions { NetworkRange = "192.168.1.0/24", TimeoutSeconds = 30 };
+        
+        var machines = await discoveryService.DiscoverMachinesAsync(options);
+        
+        Assert.NotNull(machines);
+        Assert.NotEmpty(machines);
+    }
+
+    [Fact]
+    public async Task MachineDiscovery_GetOnlineMachines_ReturnsActiveMachines()
+    {
+        var discoveryService = new MachineDiscoveryService();
+        var machines = await discoveryService.GetOnlineMachinesAsync();
+        
+        Assert.NotNull(machines);
+        Assert.NotEmpty(machines);
+        Assert.All(machines, m => Assert.True(m.IsOnline));
+    }
+
+    [Fact]
+    public async Task MachineDiscovery_RegisterMachine_AddsNewMachine()
+    {
+        var discoveryService = new MachineDiscoveryService();
+        var initialCount = (await discoveryService.GetAllMachinesAsync()).Count;
+        
+        var newMachine = new MachineInfo
+        {
+            MachineName = "TestServer",
+            IPAddress = "192.168.1.200",
+            OSVersion = "Windows Server 2022",
+            ProcessorInfo = "Intel Xeon"
+        };
+        
+        var result = await discoveryService.RegisterMachineAsync(newMachine);
+        Assert.True(result);
+        
+        var finalCount = (await discoveryService.GetAllMachinesAsync()).Count;
+        Assert.Equal(initialCount + 1, finalCount);
+    }
+
+    [Fact]
+    public async Task MachineDiscovery_GetMachineHealth_ReturnsMachineMetrics()
+    {
+        var discoveryService = new MachineDiscoveryService();
+        var machines = await discoveryService.GetAllMachinesAsync();
+        var machineId = machines.First().MachineId;
+        
+        var health = await discoveryService.GetMachineHealthAsync(machineId);
+        
+        Assert.NotNull(health);
+        Assert.True(health.HealthScore >= 0 && health.HealthScore <= 100);
+    }
+
+    [Fact]
+    public async Task MachineDiscovery_PingMachine_UpdatesMachineStatus()
+    {
+        var discoveryService = new MachineDiscoveryService();
+        var machines = await discoveryService.GetAllMachinesAsync();
+        var machineId = machines.First().MachineId;
+        
+        var result = await discoveryService.PingMachineAsync(machineId);
+        Assert.True(result);
+        
+        var updated = await discoveryService.GetMachineInfoAsync(machineId);
+        Assert.True(updated.IsOnline);
     }
 }

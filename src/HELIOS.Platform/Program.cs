@@ -66,6 +66,9 @@ namespace HELIOS.Platform
                 var advancedQuarantineSystem = new AdvancedQuarantineSystem();
                 var driverAutoInstallService = new DriverAutoInstallService();
                 var usbAdminAccessService = new USBAdminAccessService();
+                var securityComplianceService = new SecurityComplianceService();
+                var serverAutomationService = new ServerAutomationService();
+                var machineDiscoveryService = new MachineDiscoveryService();
                 
                 // Initialize database context
                 var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
@@ -100,6 +103,9 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IAdvancedQuarantineSystem>(advancedQuarantineSystem);
                 ServiceContainer.Instance.RegisterSingleton<IDriverAutoInstallService>(driverAutoInstallService);
                 ServiceContainer.Instance.RegisterSingleton<IUSBAdminAccessService>(usbAdminAccessService);
+                ServiceContainer.Instance.RegisterSingleton<ISecurityComplianceService>(securityComplianceService);
+                ServiceContainer.Instance.RegisterSingleton<IServerAutomationService>(serverAutomationService);
+                ServiceContainer.Instance.RegisterSingleton<IMachineDiscoveryService>(machineDiscoveryService);
                 ServiceContainer.Instance.RegisterSingleton<HeliosDatabaseContext>(dbContext);
                 ServiceContainer.Instance.RegisterSingleton<IDataAccessService>(dataAccessService);
                 
