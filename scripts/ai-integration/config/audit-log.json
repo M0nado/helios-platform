@@ -1,0 +1,38 @@
+{
+  "auditLog": {
+    "version": "1.0",
+    "created": "2024-01-01T00:00:00Z",
+    "lastModified": "2024-01-01T00:00:00Z",
+    "totalEntries": 0,
+    "entries": []
+  },
+  "logSchema": {
+    "timestamp": "ISO8601 datetime",
+    "eventId": "Unique identifier for the event",
+    "eventType": "api-call|code-generation|refactor|validation|approval|conflict|rollback",
+    "service": "chatgpt-pro|codex-integration|ai-coordination",
+    "action": "Description of the action performed",
+    "status": "success|failure|pending|cancelled",
+    "duration": "Execution time in milliseconds",
+    "inputTokens": "Number of tokens used for input",
+    "outputTokens": "Number of tokens used for output",
+    "cost": "API cost in USD",
+    "userId": "User who initiated the action",
+    "dryRun": "Whether this was a dry-run operation",
+    "details": "Additional context or error information",
+    "conflictIds": "IDs of any conflicts detected",
+    "approvalStatus": "pending|approved|rejected|auto-approved",
+    "sanitized": "Whether sensitive data was redacted"
+  },
+  "statistics": {
+    "totalApiCalls": 0,
+    "successfulCalls": 0,
+    "failedCalls": 0,
+    "totalTokensUsed": 0,
+    "totalCost": 0,
+    "averageResponseTime": 0,
+    "rateLimitHits": 0,
+    "conflictsCaught": 0,
+    "rollbacksPerformed": 0
+  }
+}

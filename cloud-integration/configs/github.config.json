@@ -1,0 +1,122 @@
+{
+  "service": "github",
+  "displayName": "GitHub",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 2,
+  "endpoints": {
+    "api": "https://api.github.com",
+    "graphql": "https://api.github.com/graphql",
+    "repos": "https://api.github.com/repos",
+    "user": "https://api.github.com/user",
+    "packages": "https://npm.pkg.github.com",
+    "releases": "https://api.github.com/repos/{owner}/{repo}/releases"
+  },
+  "authentication": {
+    "type": "token",
+    "token": "${GITHUB_TOKEN}",
+    "tokenType": "personal_access_token",
+    "scopes": [
+      "repo",
+      "workflow",
+      "packages",
+      "read:org",
+      "admin:org_hook",
+      "admin:repo_hook"
+    ],
+    "headers": {
+      "Authorization": "Bearer ${GITHUB_TOKEN}",
+      "Accept": "application/vnd.github+json"
+    }
+  },
+  "repositories": [
+    {
+      "name": "helios-platform",
+      "owner": "your-org",
+      "enabled": true,
+      "branch": "main",
+      "protected": true,
+      "actions": {
+        "enabled": true,
+        "workflows": ["ci.yml", "release.yml"]
+      }
+    }
+  ],
+  "features": {
+    "repositories": {
+      "enabled": true,
+      "operations": ["clone", "push", "pull", "merge", "tag"]
+    },
+    "actions": {
+      "enabled": true,
+      "runners": "github-hosted",
+      "workflows": {
+        "ci": "enabled",
+        "release": "enabled",
+        "security": "enabled"
+      }
+    },
+    "packages": {
+      "enabled": true,
+      "npm": {
+        "registry": "npm.pkg.github.com",
+        "scope": "@your-org"
+      },
+      "nuget": {
+        "feed": "https://nuget.pkg.github.com/your-org/index.json"
+      }
+    },
+    "issues": {
+      "enabled": true,
+      "labels": ["bug", "feature", "documentation", "critical"],
+      "autoClose": true
+    },
+    "pullRequests": {
+      "enabled": true,
+      "requireCodeReview": true,
+      "minimumReviewers": 2,
+      "requireStatusChecks": true
+    },
+    "releases": {
+      "enabled": true,
+      "automaticVersioning": true,
+      "changelog": "auto"
+    },
+    "webhooks": {
+      "enabled": true,
+      "events": ["push", "pull_request", "release", "workflow_run"]
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "apiCallLimit": 5000,
+    "storageLimit": 50000
+  },
+  "costs": {
+    "budgetLimit": 100,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "devops"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 2,
+    "nextService": "gitlab"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 60,
+    "timeout_seconds": 10,
+    "endpoint": "https://api.github.com/repos/github/docs"
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerHour": 5000,
+    "graphqlCostLimit": 5000
+  },
+  "security": {
+    "secretScanning": true,
+    "dependencyUpdates": true,
+    "codeScanning": true
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "workspace": {
+    "name": "HELIOS Platform - Unified Workspace",
+    "version": "1.0.0",
+    "description": "Monorepo workspace coordinating all 7 component repositories",
+    "folders": [
+      {
+        "path": ".",
+        "name": "helios-platform"
+      },
+      {
+        "path": "components/monado-engine",
+        "name": "Monado Engine (submodule)"
+      },
+      {
+        "path": "components/security-system",
+        "name": "Security System (submodule)"
+      },
+      {
+        "path": "components/ai-orchestrator",
+        "name": "AI Orchestrator (submodule)"
+      },
+      {
+        "path": "components/dev-ai-hub",
+        "name": "Developer AI Hub (submodule)"
+      },
+      {
+        "path": "components/build-agents",
+        "name": "Build Agents (submodule)"
+      },
+      {
+        "path": "components/gui-framework",
+        "name": "GUI Framework (submodule)"
+      },
+      {
+        "path": "components/software-stack",
+        "name": "Software Stack (submodule)"
+      }
+    ],
+    "settings": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "files.exclude": {
+        "**/node_modules": true,
+        "**/.git": true,
+        "**/build": true,
+        "**/.devcontainer": false
+      }
+    }
+  }
+}

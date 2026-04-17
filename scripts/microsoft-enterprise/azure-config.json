@@ -1,0 +1,158 @@
+{
+  "azure": {
+    "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
+    "tenantId": "${AZURE_TENANT_ID}",
+    "resourceGroupPrefix": "helios",
+    "location": "eastus",
+    "environment": "production",
+    "authentication": {
+      "type": "ServicePrincipal",
+      "clientId": "${AZURE_CLIENT_ID}",
+      "clientSecret": "${AZURE_CLIENT_SECRET}"
+    },
+    "vmDefaults": {
+      "vmSize": "Standard_D2s_v3",
+      "imageType": "WindowsServer2022",
+      "adminUsername": "azureuser",
+      "enableAcceleratedNetworking": true
+    },
+    "storage": {
+      "defaultSku": "Standard_LRS",
+      "defaultTier": "Hot",
+      "enableEncryption": true
+    },
+    "backup": {
+      "vaultPrefix": "helios-backup",
+      "retentionDays": 30,
+      "enableCrossRegionRestore": true
+    },
+    "costManagement": {
+      "budgetThreshold": 10000,
+      "enableAlerts": true,
+      "alertThresholdPercent": 80
+    }
+  },
+  "entra": {
+    "tenantId": "${ENTRA_TENANT_ID}",
+    "syncConfiguration": {
+      "enabled": true,
+      "syncCycleMinutes": 30,
+      "filteringEnabled": true
+    },
+    "passwordPolicy": {
+      "minimumLength": 12,
+      "requireSpecialCharacters": true,
+      "requireNumbers": true,
+      "requireUpperCase": true,
+      "requireLowerCase": true
+    },
+    "mfa": {
+      "enabled": true,
+      "requireFor": "AllUsers",
+      "allowedMethods": [
+        "MobileApp",
+        "SMS",
+        "PhoneCall",
+        "FIDO2"
+      ]
+    },
+    "conditionalAccess": {
+      "enforceCompliance": true,
+      "requireDeviceCompliance": true,
+      "requireModernAuth": true
+    }
+  },
+  "m365": {
+    "exchangeAdmin": "${EXCHANGE_ADMIN_EMAIL}",
+    "sharepointAdmin": "${SHAREPOINT_ADMIN_EMAIL}",
+    "teamsAdmin": "${TEAMS_ADMIN_EMAIL}",
+    "exchange": {
+      "organizationName": "HELIOS",
+      "enableModernAuth": true,
+      "enableAuditLog": true
+    },
+    "sharepoint": {
+      "siteDesign": "Team",
+      "enableVersioning": true,
+      "enableRecycleBin": true,
+      "retentionPeriod": 2555
+    },
+    "teams": {
+      "enableGuest": true,
+      "enableExternalAccess": true,
+      "enableAnonymousJoin": false
+    },
+    "onedrive": {
+      "defaultQuotaGB": 1000,
+      "enableB2BSync": true,
+      "enableVersioning": true
+    }
+  },
+  "copilot": {
+    "enabled": true,
+    "apiVersion": "v1",
+    "rateLimitPerMinute": 100,
+    "customCopilots": {
+      "enabled": true,
+      "maxInstances": 10
+    }
+  },
+  "purview": {
+    "enabled": true,
+    "dataGovernance": {
+      "enabled": true,
+      "classificationLevel": 3
+    },
+    "compliance": {
+      "enableDLP": true,
+      "enableAudit": true,
+      "retentionPeriodDays": 2555
+    },
+    "riskManagement": {
+      "enabled": true,
+      "assessmentFrequency": "Monthly"
+    }
+  },
+  "fabric": {
+    "enabled": true,
+    "region": "eastus",
+    "capacitySKU": "F64",
+    "autoScale": {
+      "enabled": true,
+      "minCapacity": 1,
+      "maxCapacity": 10
+    }
+  },
+  "power": {
+    "powerBiTenantSettings": {
+      "allowPublishing": false,
+      "allowSharingWith": "Organization"
+    },
+    "powerAutomate": {
+      "cloudFlowLimit": 100,
+      "desktopFlowLimit": 50
+    },
+    "powerApps": {
+      "enableAppSharing": true,
+      "enableComponentSharing": true
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "logLevel": "Info",
+    "retentionDays": 90,
+    "logPath": "C:\\Logs\\HELIOS",
+    "maxLogSizeMB": 100
+  },
+  "notifications": {
+    "enabled": true,
+    "email": "${NOTIFICATION_EMAIL}",
+    "webhookUrl": "${WEBHOOK_URL}"
+  },
+  "deployment": {
+    "environment": "production",
+    "enableTelemetry": true,
+    "autoUpdate": true,
+    "maintenanceWindow": "Sunday 2:00-4:00"
+  }
+}

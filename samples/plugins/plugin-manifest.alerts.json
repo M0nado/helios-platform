@@ -1,0 +1,40 @@
+{
+  "id": "com.helios.plugins.alerts",
+  "version": "1.0.0",
+  "name": "HELIOS Alerts",
+  "description": "Alert management and notification plugin. Creates, manages, and routes alerts based on configurable rules.",
+  "author": "HELIOS Team",
+  "license": "MIT",
+  "homepage": "https://helios.dev/plugins/alerts",
+  "repository": "https://github.com/helios-platform/plugin-alerts",
+  "main": "AlertPlugin.dll",
+  "entryPoint": "HELIOS.Platform.Plugins.Samples.AlertPlugin",
+  "dependencies": [
+    {
+      "id": "com.helios.plugins.log",
+      "version": "^1.0.0",
+      "optional": false
+    },
+    {
+      "id": "com.helios.plugins.metrics",
+      "version": "^1.0.0",
+      "optional": true
+    }
+  ],
+  "capabilities": [
+    "alerts",
+    "notifications",
+    "alerting",
+    "rule-engine"
+  ],
+  "priority": 3,
+  "autoStart": true,
+  "metadata": {
+    "category": "notifications",
+    "tags": ["alerts", "notifications", "monitoring"],
+    "max_active_alerts": 1000,
+    "alert_retention_days": 90,
+    "notification_channels": ["email", "webhook", "api"],
+    "severity_levels": ["INFO", "WARNING", "ERROR", "CRITICAL"]
+  }
+}

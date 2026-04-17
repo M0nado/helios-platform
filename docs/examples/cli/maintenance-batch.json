@@ -1,0 +1,30 @@
+{
+  "name": "Daily Maintenance",
+  "description": "Daily maintenance tasks including health checks, backups, and cleanup",
+  "commands": [
+    {
+      "name": "Morning health check",
+      "command": "health",
+      "options": {
+        "deep": "true"
+      }
+    },
+    {
+      "name": "Database backup",
+      "command": "backup",
+      "options": {
+        "path": "/backups/daily",
+        "compress": "true"
+      }
+    },
+    {
+      "name": "Generate status report",
+      "command": "status"
+    },
+    {
+      "name": "List active deployments",
+      "command": "list",
+      "arguments": ["deployments"]
+    }
+  ]
+}

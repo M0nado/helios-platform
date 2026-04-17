@@ -1,0 +1,28 @@
+{
+  "id": "com.helios.plugins.log",
+  "version": "1.0.0",
+  "name": "HELIOS Logger",
+  "description": "Centralized logging plugin for HELIOS platform. Collects, stores, and manages logs from all platform components.",
+  "author": "HELIOS Team",
+  "license": "MIT",
+  "homepage": "https://helios.dev/plugins/logger",
+  "repository": "https://github.com/helios-platform/plugin-logger",
+  "main": "LogPlugin.dll",
+  "entryPoint": "HELIOS.Platform.Plugins.Samples.LogPlugin",
+  "dependencies": [],
+  "capabilities": [
+    "logging",
+    "log-query",
+    "log-export",
+    "log-aggregation"
+  ],
+  "priority": 1,
+  "autoStart": true,
+  "metadata": {
+    "category": "system",
+    "tags": ["logging", "monitoring", "debugging"],
+    "max_logs": 1000,
+    "retention_days": 30,
+    "export_formats": ["json", "csv", "xml"]
+  }
+}

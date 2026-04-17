@@ -1,0 +1,7 @@
+  Determining projects to restore...
+C:\Users\ADMIN\helios-platform\src\HELIOS.Platform\HELIOS.Platform.csproj : warning NU1902: Package 'KubernetesClient' 13.0.1 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-w7r3-mgwf-4mqq
+C:\Users\ADMIN\helios-platform\src\HELIOS.Platform\HELIOS.Platform.csproj : warning NU1902: Package 'System.IdentityModel.Tokens.Jwt' 7.0.3 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-59j7-ghrg-fj52
+C:\Users\ADMIN\helios-platform\src\HELIOS.Platform\HELIOS.Platform.csproj : error NU1605: Warning As Error: Detected package downgrade: System.Net.NameResolution from 4.3.0 to 4.0.0. Reference the package directly from the project to select a different version. 
+C:\Users\ADMIN\helios-platform\src\HELIOS.Platform\HELIOS.Platform.csproj : error NU1605:  HELIOS.Platform -> Microsoft.Azure.Cosmos.Table 1.0.8 -> Microsoft.Azure.DocumentDB.Core 2.11.2 -> System.Net.NetworkInformation 4.1.0 -> System.Net.Sockets 4.1.0 -> runtime.win.System.Net.Sockets 4.3.0 -> System.Net.NameResolution (>= 4.3.0) 
+C:\Users\ADMIN\helios-platform\src\HELIOS.Platform\HELIOS.Platform.csproj : error NU1605:  HELIOS.Platform -> Microsoft.Azure.Cosmos.Table 1.0.8 -> Microsoft.Azure.DocumentDB.Core 2.11.2 -> System.Net.NameResolution (>= 4.0.0)
+  Failed to restore C:\Users\ADMIN\helios-platform\src\HELIOS.Platform\HELIOS.Platform.csproj (in 2.7 sec).

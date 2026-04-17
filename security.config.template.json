@@ -1,0 +1,196 @@
+{
+  "security": {
+    "enabled": true,
+    "logLevel": "Information",
+    "auditTrail": {
+      "enabled": true,
+      "location": "%APPDATA%/HELIOS.Security/audit.log",
+      "rotationDays": 90,
+      "retentionDays": 365
+    },
+    "encryption": {
+      "algorithm": "AES-256",
+      "keyDerivation": "PBKDF2",
+      "derivationIterations": 10000,
+      "hashAlgorithm": "SHA256",
+      "enableForTransit": true,
+      "enableForRest": true,
+      "enableBitLocker": true,
+      "enableDeviceEncryption": true
+    },
+    "vault": {
+      "enabled": true,
+      "location": "%APPDATA%/HELIOS.Security/vault.secure",
+      "requireMasterPassword": true,
+      "autoLockMinutes": 30,
+      "backupEnabled": true,
+      "backupLocation": "%APPDATA%/HELIOS.Security/vault.backup"
+    },
+    "malware": {
+      "enabled": true,
+      "realTimeScanningEnabled": true,
+      "scheduledScansEnabled": true,
+      "scheduledScanTime": "02:00:00",
+      "scheduledScanDays": "Sunday,Wednesday",
+      "quarantineEnabled": true,
+      "autoQuarantineEnabled": true,
+      "autoRemediationEnabled": true,
+      "excludedPaths": [
+        "%SystemRoot%",
+        "%ProgramFiles%",
+        "%ProgramFiles(x86)%"
+      ],
+      "threatActions": {
+        "critical": "quarantine",
+        "high": "quarantine",
+        "medium": "alert",
+        "low": "log"
+      }
+    },
+    "rootkit": {
+      "enabled": true,
+      "kernelMonitoringEnabled": true,
+      "bootSectorScanEnabled": true,
+      "behavioralAnalysisEnabled": true,
+      "realTimeMonitoringEnabled": true
+    },
+    "accounts": {
+      "enabled": true,
+      "auditEnabled": true,
+      "passwordPolicy": {
+        "minimumLength": 12,
+        "requireUppercase": true,
+        "requireLowercase": true,
+        "requireNumbers": true,
+        "requireSpecialChars": true,
+        "passwordHistorySize": 5,
+        "maximumPasswordAgeDays": 90,
+        "minimumPasswordAgeDays": 1
+      },
+      "accountLockout": {
+        "failedLogonAttempts": 5,
+        "lockoutDurationMinutes": 30,
+        "resetCounterAfterMinutes": 30
+      },
+      "enabledUsers": [
+        "Administrator",
+        "Guest"
+      ],
+      "restrictedGroups": [
+        "Administrators",
+        "Remote Desktop Users"
+      ]
+    },
+    "appLocker": {
+      "enabled": true,
+      "enforcementMode": "enabled",
+      "rules": {
+        "executablesEnabled": true,
+        "dllsEnabled": true,
+        "scriptsEnabled": true,
+        "msiEnabled": true
+      },
+      "defaultAction": "block",
+      "allowWindowsApps": true,
+      "allowProgramFilesApps": true
+    },
+    "quarantine": {
+      "enabled": true,
+      "location": "%APPDATA%/HELIOS.Security/Quarantine",
+      "maxSize": "10GB",
+      "retentionDays": 30,
+      "secureDeleteEnabled": true,
+      "analysisBeforeRestore": true
+    },
+    "hardening": {
+      "enabled": true,
+      "httpsEnforced": true,
+      "tls": {
+        "minimumVersion": "1.2",
+        "enableTls13": true,
+        "strongCiphersOnly": true
+      },
+      "headers": {
+        "strictTransportSecurity": {
+          "enabled": true,
+          "maxAge": 31536000,
+          "includeSubDomains": true
+        },
+        "contentSecurityPolicy": {
+          "enabled": true,
+          "policy": "default-src 'self'; script-src 'self'"
+        },
+        "xFrameOptions": "DENY",
+        "xContentTypeOptions": "nosniff",
+        "xXssProtection": "1; mode=block",
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "api": {
+        "requireAuthentication": true,
+        "requireSignature": true,
+        "rateLimitingEnabled": true,
+        "maxRequestsPerMinute": 1000,
+        "ddosProtectionEnabled": true
+      },
+      "database": {
+        "parameterizedQueriesOnly": true,
+        "sqlInjectionPrevention": true,
+        "connectionPooling": true
+      },
+      "web": {
+        "xssPrevention": true,
+        "csrfProtection": true,
+        "inputValidation": true,
+        "outputEncoding": true
+      },
+      "session": {
+        "secureCookies": true,
+        "httpOnly": true,
+        "sameSite": "Strict",
+        "timeoutMinutes": 30,
+        "renewalThresholdMinutes": 5
+      }
+    },
+    "mfa": {
+      "enabled": true,
+      "requiredForAdministrators": true,
+      "supportedMethods": [
+        "TOTP",
+        "SMS",
+        "EMAIL",
+        "BACKUP_CODES"
+      ],
+      "backupCodesCount": 10
+    },
+    "monitoring": {
+      "enabled": true,
+      "loggingEnabled": true,
+      "alertingEnabled": true,
+      "dashboardEnabled": true,
+      "metricsCollection": true,
+      "performanceMonitoring": true,
+      "anomalyDetection": true
+    },
+    "compliance": {
+      "enabled": true,
+      "soc2TypeII": {
+        "enabled": true,
+        "auditFrequency": "quarterly"
+      },
+      "iso27001": {
+        "enabled": true,
+        "auditFrequency": "annually"
+      },
+      "gdpr": {
+        "enabled": true,
+        "dataEncryption": true,
+        "rightToBeForgotten": true
+      },
+      "hipaa": {
+        "enabled": false,
+        "auditControls": true,
+        "encryptionRequired": true
+      }
+    }
+  }
+}

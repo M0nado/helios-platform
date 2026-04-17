@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Build results
 bin/
 obj/
@@ -21,3 +22,129 @@ logs/
 # Dependencies
 node_modules/
 packages/
+=======
+# Helios Platform Development Configuration
+
+## Environment and Build Output
+node_modules/
+.venv/
+env/
+venv/
+ENV/
+build/
+dist/
+out/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+## Editor and IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.env.local
+.env.*.local
+.vscode-server/
+
+## Testing and Coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.nyc_output/
+coverage/
+*.lcov
+
+## Package managers
+package-lock.json
+yarn.lock
+poetry.lock
+pip-log.txt
+pip-delete-this-directory.txt
+
+## Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+## OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+## Development
+.env
+.env.development
+.devcontainer-state/
+devenv.nix
+flake.nix
+.direnv/
+
+## Git
+.git/
+.gitkeep
+.gitmodules
+
+## Database
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+## Temporary files
+temp/
+tmp/
+.tmp/
+*.tmp
+*.bak
+
+## IDE specific
+.eslintcache
+tsconfig.tsbuildinfo
+
+## Docker
+.dockerignore
+
+## Generated files
+dist/
+build/
+out/
+.next/
+.nuxt/
+_nuxt/
+.cache/
+.cache-loader/
+
+## Platform specific
+.classpath
+.c9/
+*.jar
+*.rar
+*.zip
+
+## CI/CD
+.circleci/
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+## Misc
+*.pem
+*.key
+secret.txt
+secrets/
+.aws/
+.kube/
+>>>>>>> 1c7cf77 (Deploy: Complete metrics tracking infrastructure for 120+ variables and 100+ agents)

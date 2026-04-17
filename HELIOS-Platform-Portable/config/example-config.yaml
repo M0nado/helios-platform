@@ -1,0 +1,18 @@
+# HELIOS Platform Configuration Template
+# Uncomment and modify as needed
+
+# Security Configuration
+security:
+  mfa_enabled: true
+  min_password_length: 12
+  session_timeout_minutes: 30
+
+# Optimization Settings
+optimization:
+  enable_profiling: true
+  auto_tune: true
+
+# Cloud Settings
+cloud:
+  enable_azure: false
+  region: 'eastus'

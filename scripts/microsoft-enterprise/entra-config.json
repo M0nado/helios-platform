@@ -1,0 +1,67 @@
+{
+  "entra": {
+    "tenantId": "${ENTRA_TENANT_ID}",
+    "tenantName": "helios.onmicrosoft.com",
+    "syncConfiguration": {
+      "enabled": true,
+      "adConnectServer": "${AD_CONNECT_SERVER}",
+      "syncScheduleMinutes": 30
+    },
+    "userManagement": {
+      "defaultDomain": "helios.onmicrosoft.com",
+      "passwordPolicy": {
+        "minimumLength": 12,
+        "requireNumbers": true,
+        "requireSpecialChars": true,
+        "expirationDays": 90
+      },
+      "userDefaults": {
+        "usageLocation": "US",
+        "department": "Operations"
+      }
+    },
+    "groupManagement": {
+      "enableDynamicGroups": true,
+      "groupNamingPolicy": "grp-{name}",
+      "ownershipRequired": true
+    },
+    "rbac": {
+      "builtInRoles": [
+        "Global Administrator",
+        "Application Administrator",
+        "Cloud Application Administrator",
+        "User Administrator",
+        "Password Administrator"
+      ],
+      "enableCustomRoles": true
+    },
+    "conditionalAccess": {
+      "policies": [
+        {
+          "name": "Require MFA for all",
+          "state": "enabled",
+          "target": "all"
+        }
+      ]
+    },
+    "mfa": {
+      "enabled": true,
+      "methods": {
+        "microsoftAuthenticator": true,
+        "sms": true,
+        "phoneCall": true,
+        "fido2": true,
+        "windowsHelloForBusiness": true
+      },
+      "temporaryAccessPass": {
+        "enabled": true,
+        "lifetimeMinutes": 60
+      }
+    }
+  },
+  "logging": {
+    "enabled": true,
+    "logPath": "C:\\Logs\\HELIOS\\Entra",
+    "logLevel": "Info"
+  }
+}

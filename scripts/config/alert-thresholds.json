@@ -1,0 +1,105 @@
+{
+  "alertThresholds": {
+    "severity": {
+      "critical": {
+        "priority": 1,
+        "color": "red",
+        "escalation": "immediate",
+        "notificationChannels": ["email", "slack", "pagerduty"],
+        "recipients": ["on-call@company.com"]
+      },
+      "high": {
+        "priority": 2,
+        "color": "orange",
+        "escalation": "5minutes",
+        "notificationChannels": ["slack", "email"],
+        "recipients": ["team@company.com"]
+      },
+      "medium": {
+        "priority": 3,
+        "color": "yellow",
+        "escalation": "30minutes",
+        "notificationChannels": ["slack"],
+        "recipients": ["team@company.com"]
+      },
+      "warning": {
+        "priority": 4,
+        "color": "blue",
+        "escalation": "daily",
+        "notificationChannels": ["email"],
+        "recipients": ["team@company.com"]
+      }
+    },
+    "metrics": {
+      "workflowDuration": {
+        "warning": 300,
+        "critical": 600
+      },
+      "deploymentSuccessRate": {
+        "critical": 90,
+        "high": 95
+      },
+      "buildCacheHitRate": {
+        "warning": 60,
+        "critical": 40
+      },
+      "averageResponseTime": {
+        "warning": 200,
+        "critical": 500
+      },
+      "errorRate": {
+        "warning": 0.5,
+        "critical": 2
+      },
+      "resourceUtilization": {
+        "warning": 70,
+        "critical": 85
+      }
+    },
+    "integrations": {
+      "githubApi": {
+        "timeout": 10,
+        "retries": 3,
+        "alertSeverity": "critical"
+      },
+      "projectBoard": {
+        "timeout": 30,
+        "retries": 5,
+        "alertSeverity": "high"
+      },
+      "workflowEngine": {
+        "timeout": 15,
+        "retries": 3,
+        "alertSeverity": "high"
+      }
+    }
+  },
+  "escalationPolicies": {
+    "default": {
+      "step1": {
+        "delay": 300,
+        "notifyGroups": ["primary-oncall"]
+      },
+      "step2": {
+        "delay": 900,
+        "notifyGroups": ["backup-oncall", "manager"]
+      },
+      "step3": {
+        "delay": 1800,
+        "notifyGroups": ["director", "executive"]
+      }
+    }
+  },
+  "suppressionRules": [
+    {
+      "name": "Maintenance Windows",
+      "trigger": "maintenance_window",
+      "suppressDuration": 3600
+    },
+    {
+      "name": "Deployment Windows",
+      "trigger": "scheduled_deployment",
+      "suppressDuration": 1800
+    }
+  ]
+}

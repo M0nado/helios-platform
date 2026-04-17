@@ -1,0 +1,35 @@
+# {{SCRIPT_NAME}} - Code Snippets
+
+**Template Version:** 1.0  
+**Last Updated:** {{LAST_UPDATED}}
+
+---
+
+## 📄 Reusable Snippets
+
+### Snippet 1: {{SNIPPET_1_NAME}}
+
+```powershell
+# Purpose: {{SNIPPET_1_PURPOSE}}
+{{SNIPPET_1_CODE}}
+```
+
+### Snippet 2: {{SNIPPET_2_NAME}}
+
+```powershell
+# Purpose: {{SNIPPET_2_PURPOSE}}
+{{SNIPPET_2_CODE}}
+```
+
+### Snippet 3: {{SNIPPET_3_NAME}}
+
+```powershell
+# Purpose: {{SNIPPET_3_PURPOSE}}
+{{SNIPPET_3_CODE}}
+```
+
+---
+
+**Examples:** [Full Examples](./{{SCRIPT_NAME}}.examples.md)  
+**See Also:** [Extended Docs](./{{SCRIPT_NAME}}.wiki.md)  
+**Generated from template version 1.0**

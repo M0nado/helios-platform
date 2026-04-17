@@ -1,0 +1,149 @@
+{
+  "total_files": 414,
+  "total_dirs": 243,
+  "total_size_mb": 3.27,
+  "doc_files": 200,
+  "config_files": 41,
+  "script_files": 151,
+  "workflows_count": 13,
+  "other_files": 22,
+  "file_type_breakdown": {
+    "markdown": {
+      "count": 200,
+      "size_kb": 1907.86,
+      "percentage": 48.3
+    },
+    "scripts": {
+      "count": 151,
+      "size_kb": 1192.01,
+      "percentage": 36.4
+    },
+    "configuration": {
+      "count": 41,
+      "size_kb": 162.25,
+      "percentage": 4.9
+    },
+    "workflows": {
+      "count": 13,
+      "size_kb": 88.57,
+      "percentage": 2.7
+    },
+    "other": {
+      "count": 22,
+      "size_kb": 170.0,
+      "percentage": 5.2
+    }
+  },
+  "directory_breakdown": {
+    "dotgithub_workflows": 11,
+    "documentation": 73,
+    "scripts": 200,
+    "phases": 20,
+    "components": 3
+  },
+  "top_level_directories": [
+    ".devcontainer",
+    ".github",
+    ".vscode",
+    "ai-integration",
+    "builds",
+    "components",
+    "config",
+    "configs",
+    "data",
+    "docs",
+    "file-architecture",
+    "installation-media",
+    "logs",
+    "microsoft-ecosystem",
+    "phases",
+    "scripts",
+    "src",
+    "status",
+    "templates",
+    "tests"
+  ],
+  "key_documentation": {
+    "master_docs": 30,
+    "phase_docs": 15,
+    "technical_docs": 40,
+    "component_docs": 20,
+    "analysis_docs": 15,
+    "security_docs": 20,
+    "build_docs": 10,
+    "testing_docs": 15
+  },
+  "workflow_types": {
+    "build_workflows": 3,
+    "validation_workflows": 3,
+    "deployment_workflows": 2,
+    "documentation_workflows": 3
+  },
+  "completion_estimate": {
+    "architecture_design": 95,
+    "documentation": 90,
+    "configuration": 85,
+    "github_infrastructure": 90,
+    "build_scripts": 80,
+    "ai_integration": 75,
+    "phase_planning": 100,
+    "component_catalog": 85,
+    "security_framework": 80,
+    "testing_framework": 75,
+    "overall": 82
+  },
+  "key_systems": [
+    "AI Integration System",
+    "Build Agent Orchestration (11 agents)",
+    "GitHub Workflows Automation (11 active)",
+    "Enterprise Monitoring System",
+    "Microsoft Ecosystem Integration",
+    "Development Devcontainer (6 files)",
+    "Phase-Based Architecture (4 phases)",
+    "Component Catalog",
+    "Security Framework",
+    "Documentation Generation"
+  ],
+  "devcontainer_status": {
+    "configured": true,
+    "files": 6,
+    "includes": [
+      "Docker environment",
+      "Database initialization",
+      "Command execution",
+      "Documentation"
+    ]
+  },
+  "github_workflows": [
+    "build-all-modules.yml",
+    "build-variant-test.yml",
+    "ci-validation.yml",
+    "code-registry-update.yml",
+    "component-version-check.yml",
+    "deploy.yml",
+    "documentation-update.yml",
+    "multi-repo-sync.yml",
+    "phase-build.yml",
+    "status-dashboard.yml",
+    "wiki-generator.yml"
+  ],
+  "build_agents": 11,
+  "ai_integration_scripts": 29,
+  "enterprise_integrations": [
+    "Microsoft Azure",
+    "Microsoft Entra ID",
+    "Microsoft 365",
+    "Power Platform",
+    "Microsoft Fabric"
+  ],
+  "repository_status": {
+    "structure_complete": true,
+    "documentation_comprehensive": true,
+    "workflows_configured": true,
+    "devcontainer_ready": true,
+    "build_system_operational": true,
+    "ai_integration_available": true,
+    "ready_for_development": true
+  },
+  "timestamp": "2026-04-12T18:42:41Z"
+}

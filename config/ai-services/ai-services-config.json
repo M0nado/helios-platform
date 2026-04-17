@@ -1,0 +1,97 @@
+{
+  "services": {
+    "chatgpt-pro": {
+      "enabled": true,
+      "provider": "openai",
+      "model": "gpt-4",
+      "description": "Strategic planning, code review, optimization",
+      "priority": 2,
+      "maxTokens": 4096,
+      "temperature": 0.7,
+      "timeout": 60,
+      "retries": 3,
+      "retryDelay": 2,
+      "costPerThousandTokens": {
+        "input": 0.03,
+        "output": 0.06
+      }
+    },
+    "codex": {
+      "enabled": true,
+      "provider": "openai",
+      "model": "code-davinci-002",
+      "description": "Code generation, refactoring",
+      "priority": 1,
+      "maxTokens": 8000,
+      "temperature": 0.5,
+      "timeout": 45,
+      "retries": 3,
+      "retryDelay": 2,
+      "costPerThousandTokens": {
+        "input": 0.02,
+        "output": 0.1
+      }
+    },
+    "gpt-4-5": {
+      "enabled": true,
+      "provider": "openai",
+      "model": "gpt-4.5",
+      "description": "Complex analysis, architectural decisions",
+      "priority": 3,
+      "maxTokens": 8192,
+      "temperature": 0.8,
+      "timeout": 90,
+      "retries": 3,
+      "retryDelay": 3,
+      "costPerThousandTokens": {
+        "input": 0.04,
+        "output": 0.12
+      }
+    }
+  },
+  "coordination": {
+    "enableConflictDetection": true,
+    "enableCostTracking": true,
+    "enableRateLimiting": true,
+    "enableFallbackStrategies": true,
+    "conflictThreshold": 0.4,
+    "consensusThreshold": 0.7,
+    "maxConcurrentRequests": 5,
+    "requestTimeoutMs": 120000,
+    "logLevel": "Info"
+  },
+  "rateLimiting": {
+    "enabled": true,
+    "requestsPerMinute": 60,
+    "requestsPerHour": 1000,
+    "requestsPerDay": 10000
+  },
+  "costManagement": {
+    "enableCostTracking": true,
+    "dailyBudgetLimit": 50.0,
+    "monthlyBudgetLimit": 500.0,
+    "warnThresholdPercent": 80,
+    "trackByService": true,
+    "trackByUsageType": true
+  },
+  "fallbackStrategy": {
+    "enabled": true,
+    "order": ["chatgpt-pro", "codex", "gpt-4-5"],
+    "retryFailedService": true,
+    "maxFallbacks": 2
+  },
+  "logging": {
+    "enableLogging": true,
+    "logPath": "C:\\Users\\ADMIN\\helios-platform\\logs\\ai-services",
+    "maxLogSize": 52428800,
+    "maxLogFiles": 10,
+    "includeTimestamp": true,
+    "includeCallStack": true
+  },
+  "security": {
+    "maskApiKeys": true,
+    "encryptSensitiveData": true,
+    "auditTrailEnabled": true,
+    "auditLogPath": "C:\\Users\\ADMIN\\helios-platform\\logs\\ai-services\\audit"
+  }
+}

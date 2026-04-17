@@ -1,0 +1,59 @@
+{
+  "integrationMapping": {
+    "issues": {
+      "autoLink": true,
+      "linkPattern": "all",
+      "defaultField": "Status",
+      "defaultValue": "New"
+    },
+    "pullRequests": {
+      "linkRepository": true,
+      "triggerWorkflows": true,
+      "updateBoardStatus": true
+    },
+    "workflows": {
+      "triggerOn": ["opened", "synchronize", "reopened"],
+      "statusMappings": {
+        "workflow_run.concluded": "100% Complete",
+        "workflow_run.failed": "QA Failed",
+        "workflow_run.success": "QA Approved"
+      }
+    },
+    "notifications": {
+      "channels": ["slack", "email", "teams"],
+      "routes": [
+        {
+          "event": "deployment_started",
+          "channels": ["slack"]
+        },
+        {
+          "event": "deployment_failed",
+          "channels": ["email", "slack"]
+        },
+        {
+          "event": "deployment_success",
+          "channels": ["slack"]
+        }
+      ]
+    },
+    "documentation": {
+      "syncEnabled": true,
+      "source": "docs/",
+      "target": "gh-pages",
+      "autoUpdate": true
+    }
+  },
+  "fieldMapping": {
+    "github": {
+      "issue.state": "Status",
+      "issue.assignee": "AssignedTo",
+      "issue.milestone": "Sprint",
+      "issue.labels": "Priority,Component"
+    },
+    "pullRequest": {
+      "pr.state": "ReviewStatus",
+      "pr.reviewDecision": "ApprovalRequired",
+      "pr.checksStatus": "QAStatus"
+    }
+  }
+}

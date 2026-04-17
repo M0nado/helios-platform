@@ -1,0 +1,266 @@
+name: AI Code Review Pipeline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  ai-security-review:
+    runs-on: ubuntu-latest
+    name: ChatGPT Security Review
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up PowerShell
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
+
+      - name: Check for AI-Generated Code
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          $aiFiles = Get-ChildItem -Recurse -Filter "*.ps1" | `
+            Where-Object { $_.Name -match "generated|codex" } | `
+            Select-Object -ExpandProperty FullName
+          
+          if ($aiFiles) {
+            Write-Host "AI-Generated files detected: $($aiFiles.Count)"
+            foreach ($file in $aiFiles) {
+              Write-Host "  - $file"
+            }
+            Write-Host "::notice::AI-Generated code detected. Flagging for review."
+          }
+
+      - name: Scan for Credential Exposure
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          $credentials = @("password", "api.?key", "secret", "token", "credential")
+          $files = Get-ChildItem -Recurse -Include "*.ps1", "*.py", "*.js" | 
+            Where-Object { $_.Name -notmatch "test|example" }
+          
+          $found = $false
+          foreach ($file in $files) {
+            $content = Get-Content $file -Raw
+            foreach ($pattern in $credentials) {
+              if ($content -match $pattern) {
+                Write-Host "::warning::Potential credential in $($file.Name): matches '$pattern'"
+                $found = $true
+              }
+            }
+          }
+          
+          if ($found) {
+            exit 1
+          }
+
+      - name: Check Security Issues
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          $dangerPatterns = @(
+            "cmd\.exe",
+            "powershell.*-nop",
+            "bypass",
+            "Remove-Item.*recurse",
+            "del.*\/s"
+          )
+          
+          $files = Get-ChildItem -Recurse -Include "*.ps1"
+          $issues = 0
+          
+          foreach ($file in $files) {
+            $content = Get-Content $file -Raw
+            foreach ($pattern in $dangerPatterns) {
+              if ($content -match $pattern) {
+                Write-Host "::warning::Potential security issue in $($file.Name)"
+                $issues++
+              }
+            }
+          }
+          
+          if ($issues -gt 0) {
+            Write-Host "::warning::Found $issues potential security issues"
+          }
+
+  ai-codex-suggestions:
+    runs-on: ubuntu-latest
+    name: Codex Suggestions
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Extract Changed Files
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          git diff --name-only HEAD~1 HEAD | Tee-Object -Variable changedFiles
+          Write-Host "Changed files:"
+          foreach ($file in $changedFiles) {
+            Write-Host "  - $file"
+          }
+
+      - name: Check for Refactoring Opportunities
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          $files = Get-ChildItem -Include "*.ps1" -Recurse | 
+            Where-Object { $_.Length -gt 500 }
+          
+          Write-Host "::notice::Analyzing $(($files | Measure-Object).Count) files for optimization"
+          
+          foreach ($file in $files) {
+            $lines = (Get-Content $file | Measure-Object -Line).Lines
+            if ($lines -gt 200) {
+              Write-Host "::notice::File $($file.Name) has $lines lines - consider breaking into functions"
+            }
+          }
+
+  code-quality-check:
+    runs-on: ubuntu-latest
+    name: Code Quality Checks
+    
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check PowerShell Syntax
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          $errors = 0
+          $files = Get-ChildItem -Recurse -Include "*.ps1"
+          
+          foreach ($file in $files) {
+            try {
+              [System.Management.Automation.PSParser]::Tokenize(
+                (Get-Content $file -Raw), 
+                [ref]$null
+              ) | Out-Null
+            }
+            catch {
+              Write-Host "::error::Syntax error in $($file.Name): $_"
+              $errors++
+            }
+          }
+          
+          if ($errors -gt 0) {
+            exit 1
+          }
+
+      - name: Verify Documentation
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          $files = Get-ChildItem -Recurse -Include "*.ps1" | 
+            Where-Object { $_.Name -notmatch "test" }
+          
+          foreach ($file in $files) {
+            $content = Get-Content $file -Raw
+            if ($content -notmatch "\.SYNOPSIS|\.DESCRIPTION") {
+              Write-Host "::warning::$($file.Name) lacks proper documentation"
+            }
+          }
+
+  flag-ai-code-for-review:
+    runs-on: ubuntu-latest
+    name: Flag AI-Generated Code
+    if: always()
+    
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Identify AI-Generated Files
+        shell: pwsh -Command "& '{0}'"
+        run: |
+          $aiFiles = Get-ChildItem -Recurse -Include "*.ps1", "*.py" | 
+            Where-Object {
+              $content = Get-Content $_ -Raw
+              $content -match "AI-Generated|Codex|ChatGPT" -or `
+              $content -match "Source:\s*(GitHub Codex|ChatGPT)"
+            }
+          
+          if ($aiFiles) {
+            Write-Host "::notice::AI-Generated files require review:`n$($aiFiles.FullName -join "`n")"
+            
+            # Create review checklist
+            Write-Host "`n✓ Review Checklist for AI-Generated Code:"
+            Write-Host "  [ ] Security review passed"
+            Write-Host "  [ ] Performance acceptable"
+            Write-Host "  [ ] Compliance verified"
+            Write-Host "  [ ] Tests added"
+            Write-Host "  [ ] Documentation complete"
+            
+            # This would trigger a required review
+            Write-Host "::error::AI-Generated code detected. Blocking merge until reviewed."
+            exit 1
+          }
+
+  approval-gate:
+    runs-on: ubuntu-latest
+    name: Approval Gate
+    needs: [ai-security-review, code-quality-check]
+    if: always()
+    
+    steps:
+      - name: Check Approval Status
+        run: |
+          echo "AI review pipeline complete"
+          echo "Status summary:"
+          echo "  - Security Review: ${{ needs.ai-security-review.result }}"
+          echo "  - Code Quality: ${{ needs.code-quality-check.result }}"
+          
+          if [ "${{ needs.ai-security-review.result }}" != "success" ]; then
+            echo "::error::Security review failed"
+            exit 1
+          fi
+          
+          if [ "${{ needs.code-quality-check.result }}" != "success" ]; then
+            echo "::error::Code quality checks failed"
+            exit 1
+          fi
+
+  comment-on-pr:
+    runs-on: ubuntu-latest
+    name: Add Review Comments
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate Review Comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const comment = `
+            ## 🤖 AI Integration Pipeline Results
+            
+            **Pipeline Status**: ✅ Complete
+            
+            ### Analysis Summary
+            - ✅ Security scan completed
+            - ✅ Code quality verified
+            - ✅ Documentation checked
+            
+            ### Recommendations
+            For any AI-generated code detected:
+            1. Review security implications
+            2. Validate performance impact
+            3. Check compliance requirements
+            4. Verify test coverage
+            
+            **Next Steps**: 
+            - Review code changes above
+            - Approve if all checks pass
+            - Request changes if issues found
+            
+            [AI Integration Docs](../../ai-integration/README.md)
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

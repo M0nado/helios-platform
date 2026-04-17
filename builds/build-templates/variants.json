@@ -1,0 +1,73 @@
+{
+  "build_variants": {
+    "minimal": {
+      "name": "Minimal (Essential 15 Tools)",
+      "description": "Just the essentials - 5-9 hour setup",
+      "components": ["storage", "security.baseline", "tools.essential-15"],
+      "estimated_size_compressed": "50 MB",
+      "estimated_size_decompressed": "350 MB",
+      "time_to_install": "5-9 hours",
+      "features_enabled": 15,
+      "target_use_case": "Fresh install, foundation setup"
+    },
+    "standard": {
+      "name": "Standard (25 Tools)",
+      "description": "Good working system - 10 additional hours",
+      "components": ["storage", "security.baseline", "security.hardening", "tools.extended-25", "optimization.level-1", "optimization.level-2", "gui.dashboard-core"],
+      "estimated_size_compressed": "75 MB",
+      "estimated_size_decompressed": "520 MB",
+      "time_to_install": "10 hours additional",
+      "features_enabled": 42,
+      "depends_on": "minimal",
+      "target_use_case": "Enhanced productive system"
+    },
+    "complete": {
+      "name": "Complete (40 Tools)",
+      "description": "Professional-grade system - 30 additional hours",
+      "components": ["storage", "security", "tools.complete-40", "optimization.level-3", "gui.dashboard-advanced", "ai-hub.dev-interface", "build-agents"],
+      "estimated_size_compressed": "125 MB",
+      "estimated_size_decompressed": "850 MB",
+      "time_to_install": "30 hours additional",
+      "features_enabled": 95,
+      "depends_on": "standard",
+      "target_use_case": "Advanced professional system"
+    },
+    "gaming": {
+      "name": "Gaming-Focused",
+      "description": "Optimized for gaming performance",
+      "components": ["storage.dev-drive", "optimization.level-4", "tools.gaming", "tools.creative", "gui.dashboard-advanced"],
+      "estimated_size_compressed": "110 MB",
+      "estimated_size_decompressed": "750 MB",
+      "time_to_install": "15 hours",
+      "features_enabled": 68,
+      "target_use_case": "Gaming, creative work, max performance"
+    },
+    "development": {
+      "name": "Development-Focused",
+      "description": "Optimized for software development",
+      "components": ["storage.dev-drive", "tools.development", "tools.extended-25", "optimization.level-3", "gui.dashboard-advanced", "ai-hub", "build-agents"],
+      "estimated_size_compressed": "130 MB",
+      "estimated_size_decompressed": "890 MB",
+      "time_to_install": "18 hours",
+      "features_enabled": 102,
+      "target_use_case": "Software development, coding, testing"
+    },
+    "security": {
+      "name": "Security-Focused",
+      "description": "Hardened security system",
+      "components": ["storage.vault-setup", "security.baseline", "security.hardening", "security.advanced", "security.deep-cleaning", "tools.security-tools"],
+      "estimated_size_compressed": "95 MB",
+      "estimated_size_decompressed": "650 MB",
+      "time_to_install": "20 hours",
+      "features_enabled": 78,
+      "target_use_case": "Security-critical systems, sensitive work"
+    },
+    "custom": {
+      "name": "Custom Build",
+      "description": "User-defined configuration",
+      "components": [],
+      "is_template": true,
+      "target_use_case": "Mix & match any components"
+    }
+  }
+}

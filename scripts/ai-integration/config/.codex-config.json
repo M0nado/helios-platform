@@ -1,0 +1,61 @@
+{
+  "codex": {
+    "enabled": true,
+    "engine": "code-davinci-002",
+    "maxTokens": 2048,
+    "temperature": 0.5,
+    "requestTimeout": 60000,
+    "retryAttempts": 3,
+    "retryDelay": 1000
+  },
+  "codeGeneration": {
+    "language": "powershell",
+    "style": "production",
+    "includeComments": true,
+    "includeErrorHandling": true,
+    "includeLogging": true,
+    "minLinesToGenerate": 20,
+    "maxLinesToGenerate": 500
+  },
+  "refactoring": {
+    "enabled": true,
+    "checkComplexity": true,
+    "suggestPatterns": true,
+    "checkPerformance": true,
+    "maxSuggestions": 5,
+    "minImprovement": 15
+  },
+  "testing": {
+    "generateUnitTests": true,
+    "generateIntegrationTests": true,
+    "testFramework": "Pester",
+    "minCoverageRequired": 80,
+    "includeEdgeCases": true
+  },
+  "documentation": {
+    "style": "markdown",
+    "includeExamples": true,
+    "includeErrorCases": true,
+    "maxExamples": 3,
+    "generateReadme": true
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 50,
+    "requestsPerDay": 5000,
+    "burstLimit": 10
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "json",
+    "includeTimestamp": true,
+    "sanitizeApiKeys": true,
+    "logFile": "./logs/codex-operations.log"
+  },
+  "cache": {
+    "enabled": true,
+    "ttlSeconds": 3600,
+    "maxCacheSize": 104857600,
+    "cacheDir": "./cache"
+  }
+}

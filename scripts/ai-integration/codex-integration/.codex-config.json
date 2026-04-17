@@ -1,0 +1,118 @@
+{
+  "codex": {
+    "enabled": true,
+    "apiProvider": "openai",
+    "model": "code-davinci-002",
+    "temperature": 0.5,
+    "maxTokens": 2000
+  },
+  "codeGeneration": {
+    "supportedLanguages": [
+      "PowerShell",
+      "Python",
+      "JavaScript",
+      "Go",
+      "CSharp"
+    ],
+    "defaultLanguage": "PowerShell",
+    "generationQuality": "high",
+    "includeComments": true,
+    "enforceErrorHandling": true,
+    "requiresApproval": true
+  },
+  "refactoring": {
+    "strategies": [
+      "Performance",
+      "Maintainability",
+      "Security",
+      "Testing",
+      "All"
+    ],
+    "backupOnRefactor": true,
+    "requiresReview": true,
+    "versionControlIntegration": true
+  },
+  "testing": {
+    "supportedFrameworks": [
+      "Pester",
+      "pytest",
+      "Jest",
+      "Go-testing",
+      "NUnit"
+    ],
+    "defaultFramework": "Pester",
+    "coverageLevels": [
+      "Basic",
+      "Standard",
+      "Comprehensive"
+    ],
+    "minimumCoveragePercentage": 80,
+    "includeMocks": true
+  },
+  "documentation": {
+    "styles": [
+      "Inline",
+      "Docstrings",
+      "Comments",
+      "Full"
+    ],
+    "defaultStyle": "Full",
+    "includeExamples": true,
+    "includeAuthorInfo": true,
+    "enforceConsistency": true
+  },
+  "auditTrail": {
+    "enabled": true,
+    "logLocation": "./ai-audit-trail",
+    "trackAllOperations": true,
+    "includeTokenUsage": true,
+    "storeDiffs": true,
+    "retentionDays": 90
+  },
+  "rateLimit": {
+    "delayBetweenRequestsMs": 1000,
+    "maxConcurrentRequests": 3,
+    "requestsPerMinute": 60,
+    "requestsPerDay": 10000
+  },
+  "safety": {
+    "requireApprovalFor": [
+      "SecurityChanges",
+      "BreakingChanges",
+      "DeleteOperations",
+      "BulkOperations"
+    ],
+    "dryRunByDefault": false,
+    "previewChanges": true,
+    "enableRollback": true,
+    "backupBeforeApply": true
+  },
+  "approvalWorkflow": {
+    "enabled": true,
+    "autoApproveThreshold": "low-risk",
+    "requiresHumanApprovalFor": "all",
+    "approvalTimeout": 3600,
+    "notifyOnCompletion": true
+  },
+  "versionControl": {
+    "enabled": true,
+    "autoCommitChanges": false,
+    "includeOperationIdInCommit": true,
+    "createBranchForChanges": false,
+    "requirePullRequest": false
+  },
+  "performance": {
+    "cachePreviousResponses": true,
+    "cacheExpirationHours": 24,
+    "parallelProcessing": true,
+    "maxParallelOperations": 3,
+    "timeoutSeconds": 30
+  },
+  "logging": {
+    "logLevel": "INFO",
+    "logFormat": "JSON",
+    "includeStackTraces": true,
+    "includeContextData": true,
+    "compressOldLogs": true
+  }
+}

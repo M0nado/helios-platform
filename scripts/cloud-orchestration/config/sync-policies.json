@@ -1,0 +1,77 @@
+{
+  "SyncPolicies": {
+    "GlobalSettings": {
+      "SyncEnabled": true,
+      "SyncDirection": "Bidirectional",
+      "ConflictResolution": "CloudWins",
+      "DeletedItemHandling": "Soft",
+      "BatchSize": 100
+    },
+    "Users": {
+      "Enabled": true,
+      "SyncCycleMinutes": 30,
+      "AttributesToSync": [
+        "DisplayName",
+        "Mail",
+        "UserPrincipalName",
+        "Department",
+        "Title",
+        "Phone",
+        "MobilePhone",
+        "Manager"
+      ],
+      "FilterOU": "CN=Users,DC=yourdomain,DC=local"
+    },
+    "Groups": {
+      "Enabled": true,
+      "SyncCycleMinutes": 60,
+      "SyncMembers": true,
+      "GroupTypes": [
+        "Security",
+        "Distribution"
+      ],
+      "FilterOU": "CN=Groups,DC=yourdomain,DC=local"
+    },
+    "Devices": {
+      "Enabled": true,
+      "SyncCycleMinutes": 120,
+      "RegisterNewDevices": true,
+      "ComplianceEnforcement": true
+    },
+    "Applications": {
+      "Enabled": true,
+      "SyncCycleMinutes": 1440,
+      "SyncApplications": [
+        "Teams",
+        "OneDrive",
+        "SharePoint",
+        "Exchange",
+        "Stream"
+      ]
+    }
+  },
+  "FailoverPolicies": {
+    "OnPremises": {
+      "SyncTo": "Cloud",
+      "Condition": "Health < 70%",
+      "WarmupTime": 60
+    },
+    "Cloud": {
+      "SyncTo": "OnPremises",
+      "Condition": "Health < 70%",
+      "WarmupTime": 120
+    }
+  },
+  "ConflictResolution": {
+    "Strategy": "CloudWins",
+    "LastModifiedWins": true,
+    "ManualReviewThreshold": 10,
+    "NotifyAdmins": true
+  },
+  "DataIntegrity": {
+    "ValidateAfterSync": true,
+    "ReconciliationCycle": 24,
+    "LogAllChanges": true,
+    "EnableAudit": true
+  }
+}

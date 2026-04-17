@@ -1,0 +1,237 @@
+{
+  "agents": [
+    {
+      "id": 1,
+      "name": "Drive Management",
+      "description": "Manages system storage, partitions, and drive optimization",
+      "scope": "Storage configuration and management",
+      "critical": false,
+      "estimatedDuration": 300,
+      "tasks": [
+        "Inventory current drives",
+        "Check disk health",
+        "Setup storage policies",
+        "Optimize drive layout",
+        "Setup volume shadows",
+        "Configure scheduled optimization"
+      ],
+      "outputs": [
+        "drive-config-backup-*.json"
+      ],
+      "rollback": "Restore original partition configuration"
+    },
+    {
+      "id": 2,
+      "name": "Security Setup",
+      "description": "Configures system security features, hardening, and policies",
+      "scope": "Security configuration",
+      "critical": true,
+      "estimatedDuration": 600,
+      "tasks": [
+        "Enable Windows Defender",
+        "Enable Windows Firewall",
+        "Configure firewall rules",
+        "Enable audit policies",
+        "Configure UAC settings",
+        "Setup password policies",
+        "Enable BitLocker",
+        "Configure Windows Update"
+      ],
+      "outputs": [
+        "security-config-baseline-*.json"
+      ],
+      "rollback": "Disable security features and restore default settings"
+    },
+    {
+      "id": 3,
+      "name": "Software Installation",
+      "description": "Installs and configures required software packages",
+      "scope": "Software installation and configuration",
+      "critical": false,
+      "estimatedDuration": 1200,
+      "tasks": [
+        "Check prerequisites",
+        "Install .NET runtime",
+        "Install Visual C++ redistributables",
+        "Install development tools",
+        "Install productivity software",
+        "Install system utilities",
+        "Verify installations",
+        "Configure software paths"
+      ],
+      "outputs": [
+        "software-manifest-*.json"
+      ],
+      "rollback": "Uninstall all installed software packages"
+    },
+    {
+      "id": 4,
+      "name": "User Accounts Setup",
+      "description": "Creates and configures user accounts, groups, and access control",
+      "scope": "User and group management",
+      "critical": false,
+      "estimatedDuration": 300,
+      "tasks": [
+        "Create system groups",
+        "Create service accounts",
+        "Configure account policies",
+        "Setup group memberships",
+        "Configure file system permissions",
+        "Setup registry permissions"
+      ],
+      "outputs": [
+        "users-config-*.json"
+      ],
+      "rollback": "Delete created accounts and groups"
+    },
+    {
+      "id": 5,
+      "name": "Driver Installation",
+      "description": "Manages device drivers and hardware components",
+      "scope": "Driver and hardware management",
+      "critical": false,
+      "estimatedDuration": 900,
+      "tasks": [
+        "Enumerate hardware devices",
+        "Update chipset drivers",
+        "Install GPU drivers",
+        "Install network drivers",
+        "Install storage drivers",
+        "Verify device status"
+      ],
+      "outputs": [
+        "driver-inventory-*.json"
+      ],
+      "rollback": "Roll back driver updates to previous versions"
+    },
+    {
+      "id": 6,
+      "name": "GUI Dashboard",
+      "description": "Deploys and configures GUI dashboard and monitoring",
+      "scope": "GUI and dashboard deployment",
+      "critical": false,
+      "estimatedDuration": 600,
+      "tasks": [
+        "Create dashboard directory structure",
+        "Deploy dashboard framework",
+        "Configure web server",
+        "Deploy monitoring widgets",
+        "Setup authentication",
+        "Configure SSL/TLS",
+        "Deploy API endpoints"
+      ],
+      "outputs": [
+        "dashboard-config-*.json"
+      ],
+      "rollback": "Uninstall dashboard and remove web server"
+    },
+    {
+      "id": 7,
+      "name": "System Optimization",
+      "description": "Optimizes system performance, tuning, and resource management",
+      "scope": "Performance optimization",
+      "critical": false,
+      "estimatedDuration": 450,
+      "tasks": [
+        "Baseline performance metrics",
+        "Disable unnecessary services",
+        "Optimize startup programs",
+        "Disk defragmentation",
+        "Memory optimization",
+        "Network tuning",
+        "CPU scheduling optimization"
+      ],
+      "outputs": [
+        "optimization-report-*.json"
+      ],
+      "rollback": "Restore original service configuration"
+    },
+    {
+      "id": 8,
+      "name": "Configuration Management",
+      "description": "Applies and manages system configuration and policies",
+      "scope": "System configuration and policies",
+      "critical": false,
+      "estimatedDuration": 400,
+      "tasks": [
+        "Apply group policies",
+        "Configure registry settings",
+        "Deploy environment variables",
+        "Configure Windows settings",
+        "Deploy scheduled tasks",
+        "Configure event log policies"
+      ],
+      "outputs": [
+        "config-backup-*.json"
+      ],
+      "rollback": "Restore previous registry and policy settings"
+    },
+    {
+      "id": 9,
+      "name": "Testing and Validation",
+      "description": "Tests system functionality and validates configurations",
+      "scope": "Testing and validation",
+      "critical": false,
+      "estimatedDuration": 600,
+      "tasks": [
+        "System integrity tests",
+        "Network connectivity tests",
+        "Firewall rule tests",
+        "Security policy validation",
+        "Storage and performance tests",
+        "Application functionality tests",
+        "Dashboard accessibility tests"
+      ],
+      "outputs": [
+        "test-report-*.json"
+      ],
+      "rollback": "None"
+    },
+    {
+      "id": 10,
+      "name": "Monitoring and Alerting",
+      "description": "Sets up system monitoring and alerting infrastructure",
+      "scope": "Monitoring and observability",
+      "critical": false,
+      "estimatedDuration": 500,
+      "tasks": [
+        "Deploy monitoring agent",
+        "Setup performance counters",
+        "Configure event log forwarding",
+        "Setup log aggregation",
+        "Deploy alert rules",
+        "Configure email notifications",
+        "Deploy health checks"
+      ],
+      "outputs": [
+        "monitoring-config-*.json"
+      ],
+      "rollback": "Disable monitoring agents and alerts"
+    },
+    {
+      "id": 11,
+      "name": "Reporting and Documentation",
+      "description": "Generates system reports and documentation",
+      "scope": "Reporting and documentation",
+      "critical": false,
+      "estimatedDuration": 300,
+      "tasks": [
+        "Generate system information report",
+        "Create configuration summary",
+        "Document installed software",
+        "Document network configuration",
+        "Generate security audit report",
+        "Create operational procedures"
+      ],
+      "outputs": [
+        "system-report-*.json"
+      ],
+      "rollback": "None"
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "created": "2024-01-01T00:00:00Z",
+    "description": "Build Agent Orchestration System Configuration"
+  }
+}

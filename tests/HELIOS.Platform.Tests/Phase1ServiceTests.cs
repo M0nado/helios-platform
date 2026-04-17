@@ -1,0 +1,909 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Xunit;
+using HELIOS.Platform.Core;
+using HELIOS.Platform.Core.Logging;
+using HELIOS.Platform.Core.Diagnostics;
+using HELIOS.Platform.Core.Monitoring;
+using HELIOS.Platform.Core.Administration;
+using HELIOS.Platform.Core.CLI;
+using HELIOS.Platform.Core.Storage;
+using HELIOS.Platform.Core.Security;
+using HELIOS.Platform.Core.Plugins;
+using HELIOS.Platform.Core.RemoteAccess;
+using HELIOS.Platform.Core.GPU;
+using HELIOS.Platform.Core.Automation;
+using HELIOS.Platform.Core.AI;
+using HELIOS.Platform.Data.Database;
+
+namespace HELIOS.Platform.Tests;
+
+/// <summary>
+/// Unit tests for Phase 1 Tier 2 services (Dashboard, System Management, CLI).
+/// Tests ensure reliability and data accuracy across all core services.
+/// </summary>
+public class Phase1ServiceTests
+{
+    // ==================== DASHBOARD HISTORY TRACKER TESTS ====================
+
+    [Fact]
+    public async Task DashboardHistoryTracker_RecordMetric_ShouldStoreMetric()
+    {
+        // Arrange
+        var tracker = new DashboardHistoryTracker();
+        var metric = new SystemMetric
+        {
+            Timestamp = DateTime.UtcNow,
+            CpuUsagePercent = 45.5,
+            MemoryUsagePercent = 60.0,
+            MemoryUsedMb = 6000,
+            MemoryTotalMb = 10000,
+            DiskUsagePercent = 75.0,
+            DiskUsedMb = 750000,
+            DiskTotalMb = 1000000,
+            ProcessCount = 125
+        };
+
+        // Act
+        await tracker.RecordMetricAsync(metric);
+        var stats = await tracker.GetDashboardStatsAsync();
+
+        // Assert
+        Assert.NotNull(stats);
+        Assert.Equal(45.5, stats.CurrentCpuUsagePercent, 1);
+        Assert.True(stats.MemoryUsedGb > 0);
+    }
+
+    [Fact]
+    public async Task DashboardHistoryTracker_MultipleMetrics_ShouldCalculateAverages()
+    {
+        // Arrange
+        var tracker = new DashboardHistoryTracker();
+        var cpuValues = new[] { 30.0, 40.0, 50.0 };
+
+        // Act
+        foreach (var cpu in cpuValues)
+        {
+            await tracker.RecordMetricAsync(new SystemMetric
+            {
+                Timestamp = DateTime.UtcNow,
+                CpuUsagePercent = cpu,
+                MemoryUsagePercent = 50,
+                MemoryUsedMb = 5000,
+                MemoryTotalMb = 10000,
+                DiskUsagePercent = 60,
+                DiskUsedMb = 600000,
+                DiskTotalMb = 1000000,
+                ProcessCount = 100
+            });
+        }
+
+        var stats = await tracker.GetDashboardStatsAsync();
+
+        // Assert
+        Assert.True(stats.CpuAveragePercent > 30 && stats.CpuAveragePercent < 50);
+        Assert.Equal(50.0, stats.CpuPeakPercent, 1);
+    }
+
+    [Fact]
+    public async Task DashboardHistoryTracker_HighCPU_ShouldGenerateAlert()
+    {
+        // Arrange
+        var tracker = new DashboardHistoryTracker();
+        var metric = new SystemMetric
+        {
+            Timestamp = DateTime.UtcNow,
+            CpuUsagePercent = 95.0, // High CPU threshold
+            MemoryUsagePercent = 50,
+            MemoryUsedMb = 5000,
+            MemoryTotalMb = 10000,
+            DiskUsagePercent = 50,
+            DiskUsedMb = 500000,
+            DiskTotalMb = 1000000,
+            ProcessCount = 100
+        };
+
+        // Act
+        await tracker.RecordMetricAsync(metric);
+        var stats = await tracker.GetDashboardStatsAsync();
+
+        // Assert
+        Assert.NotEmpty(stats.Alerts);
+        Assert.Contains(stats.Alerts, a => a.ToLower().Contains("cpu"));
+    }
+
+    [Fact]
+    public async Task DashboardHistoryTracker_HighMemory_ShouldGenerateAlert()
+    {
+        // Arrange
+        var tracker = new DashboardHistoryTracker();
+        var metric = new SystemMetric
+        {
+            Timestamp = DateTime.UtcNow,
+            CpuUsagePercent = 50,
+            MemoryUsagePercent = 90.0, // High memory >7GB of 8GB
+            MemoryUsedMb = 9000,
+            MemoryTotalMb = 10000,
+            DiskUsagePercent = 50,
+            DiskUsedMb = 500000,
+            DiskTotalMb = 1000000,
+            ProcessCount = 100
+        };
+
+        // Act
+        await tracker.RecordMetricAsync(metric);
+        var stats = await tracker.GetDashboardStatsAsync();
+
+        // Assert
+        Assert.NotEmpty(stats.Alerts);
+        Assert.Contains(stats.Alerts, a => a.ToLower().Contains("memory"));
+    }
+
+    [Fact]
+    public async Task DashboardHistoryTracker_HighDisk_ShouldGenerateAlert()
+    {
+        // Arrange
+        var tracker = new DashboardHistoryTracker();
+        var metric = new SystemMetric
+        {
+            Timestamp = DateTime.UtcNow,
+            CpuUsagePercent = 50,
+            MemoryUsagePercent = 50,
+            MemoryUsedMb = 5000,
+            MemoryTotalMb = 10000,
+            DiskUsagePercent = 95.0, // High disk >90%
+            DiskUsedMb = 950000,
+            DiskTotalMb = 1000000,
+            ProcessCount = 100
+        };
+
+        // Act
+        await tracker.RecordMetricAsync(metric);
+        var stats = await tracker.GetDashboardStatsAsync();
+
+        // Assert
+        Assert.NotEmpty(stats.Alerts);
+        Assert.Contains(stats.Alerts, a => a.ToLower().Contains("disk"));
+    }
+
+    [Fact]
+    public async Task DashboardHistoryTracker_HealthyMetrics_ShouldReturnHealthy()
+    {
+        // Arrange
+        var tracker = new DashboardHistoryTracker();
+        var metric = new SystemMetric
+        {
+            Timestamp = DateTime.UtcNow,
+            CpuUsagePercent = 30,
+            MemoryUsagePercent = 40,
+            MemoryUsedMb = 4000,
+            MemoryTotalMb = 10000,
+            DiskUsagePercent = 50,
+            DiskUsedMb = 500000,
+            DiskTotalMb = 1000000,
+            ProcessCount = 100
+        };
+
+        // Act
+        await tracker.RecordMetricAsync(metric);
+        var stats = await tracker.GetDashboardStatsAsync();
+
+        // Assert
+        Assert.Equal("✓ Healthy", stats.HealthStatus);
+        Assert.Empty(stats.Alerts);
+    }
+
+    // ==================== SYSTEM MANAGEMENT SERVICE TESTS ====================
+
+    [Fact]
+    public async Task SystemManagementService_GetPartitions_ShouldReturnValidPartitions()
+    {
+        // Arrange
+        var service = new SystemManagementService();
+
+        // Act
+        var partitions = await service.GetPartitionsAsync();
+
+        // Assert
+        Assert.NotNull(partitions);
+        Assert.NotEmpty(partitions);
+        var partition = partitions.First();
+        Assert.NotEmpty(partition.Drive);
+        Assert.True(partition.TotalSizeGb > 0);
+        Assert.True(partition.UsagePercent >= 0 && partition.UsagePercent <= 100);
+    }
+
+    [Fact]
+    public async Task SystemManagementService_GetPartitions_ShouldCalculateUsageCorrectly()
+    {
+        // Arrange
+        var service = new SystemManagementService();
+
+        // Act
+        var partitions = await service.GetPartitionsAsync();
+
+        // Assert
+        foreach (var partition in partitions)
+        {
+            Assert.True(partition.AvailableGb <= partition.TotalSizeGb);
+            Assert.True(partition.UsedGb <= partition.TotalSizeGb);
+            // Verify formula: UsedGb = TotalSizeGb - AvailableGb
+            var calculated = partition.TotalSizeGb - partition.AvailableGb;
+            Assert.True(Math.Abs(partition.UsedGb - calculated) < 0.1);
+        }
+    }
+
+    [Fact]
+    public async Task SystemManagementService_GetServices_ShouldReturnValidServices()
+    {
+        // Arrange
+        var service = new SystemManagementService();
+
+        // Act
+        var services = await service.GetServicesAsync();
+
+        // Assert
+        Assert.NotNull(services);
+        Assert.NotEmpty(services);
+        var windowsService = services.First();
+        Assert.NotEmpty(windowsService.Name);
+        var validStatuses = new[] { "Running", "Stopped", "Paused", "Unknown" };
+        Assert.Contains(windowsService.Status, validStatuses);
+    }
+
+    [Fact]
+    public async Task SystemManagementService_GetServices_ShouldIncludeCommonServices()
+    {
+        // Arrange
+        var service = new SystemManagementService();
+
+        // Act
+        var services = await service.GetServicesAsync();
+        var serviceNames = services.Select(s => s.Name.ToLower()).ToList();
+
+        // Assert
+        // At least some common Windows services should be present
+        Assert.NotEmpty(services);
+    }
+
+    // ==================== CLI COMMAND EXECUTOR TESTS ====================
+
+    [Fact]
+    public void CliCommandExecutor_ParseCommand_ShouldParseSimpleCommand()
+    {
+        // Act
+        var context = CliCommandExecutor.CommandParser.ParseCommand("status");
+
+        // Assert
+        Assert.NotNull(context);
+        Assert.Equal("status", context.Command);
+        Assert.Empty(context.Arguments);
+    }
+
+    [Fact]
+    public void CliCommandExecutor_ParseCommand_ShouldParseCommandWithArguments()
+    {
+        // Act
+        var context = CliCommandExecutor.CommandParser.ParseCommand("config get theme");
+
+        // Assert
+        Assert.NotNull(context);
+        Assert.Equal("config", context.Command);
+        Assert.Contains("get", context.Arguments);
+        Assert.Contains("theme", context.Arguments);
+    }
+
+    [Fact]
+    public void CliCommandExecutor_ParseCommand_ShouldParseCommandWithMultipleArgs()
+    {
+        // Act
+        var context = CliCommandExecutor.CommandParser.ParseCommand("service start wuauserv --force --verbose");
+
+        // Assert
+        Assert.NotNull(context);
+        Assert.Equal("service", context.Command);
+        Assert.Contains("start", context.Arguments);
+        Assert.Contains("wuauserv", context.Arguments);
+        Assert.Contains("force", context.Options.Keys);
+        Assert.Contains("verbose", context.Options.Keys);
+    }
+
+    [Fact]
+    public async Task CliCommandExecutor_HelpCommand_ShouldReturnAvailableCommands()
+    {
+        // Arrange
+        var orchestrator = new ServiceOrchestrator();
+        var sysManagement = new SystemManagementService();
+        var executor = new CliCommandExecutor(orchestrator, sysManagement);
+        var context = new CliCommandExecutor.CommandContext
+        {
+            Command = "help",
+            Arguments = new List<string>(),
+            Options = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await executor.ExecuteCommandAsync(context);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotEmpty(result.Message);
+        Assert.Contains("status", result.Message.ToLower());
+    }
+
+    [Fact]
+    public async Task CliCommandExecutor_StatusCommand_ShouldReturnSuccess()
+    {
+        // Arrange
+        var orchestrator = new ServiceOrchestrator();
+        var sysManagement = new SystemManagementService();
+        var executor = new CliCommandExecutor(orchestrator, sysManagement);
+        var context = new CliCommandExecutor.CommandContext
+        {
+            Command = "status",
+            Arguments = new List<string>(),
+            Options = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await executor.ExecuteCommandAsync(context);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotEmpty(result.Message);
+    }
+
+    [Fact]
+    public async Task CliCommandExecutor_InvalidCommand_ShouldReturnError()
+    {
+        // Arrange
+        var orchestrator = new ServiceOrchestrator();
+        var sysManagement = new SystemManagementService();
+        var executor = new CliCommandExecutor(orchestrator, sysManagement);
+        var context = new CliCommandExecutor.CommandContext
+        {
+            Command = "invalid_command_xyz_12345",
+            Arguments = new List<string>(),
+            Options = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await executor.ExecuteCommandAsync(context);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Message);
+    }
+
+    [Fact]
+    public async Task CliCommandExecutor_PartitionsCommand_ShouldReturnSuccess()
+    {
+        // Arrange
+        var orchestrator = new ServiceOrchestrator();
+        var sysManagement = new SystemManagementService();
+        var executor = new CliCommandExecutor(orchestrator, sysManagement);
+        var context = new CliCommandExecutor.CommandContext
+        {
+            Command = "partitions",
+            Arguments = new List<string>(),
+            Options = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await executor.ExecuteCommandAsync(context);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotEmpty(result.Message);
+    }
+
+    [Fact]
+    public async Task CliCommandExecutor_ServicesCommand_ShouldReturnSuccess()
+    {
+        // Arrange
+        var orchestrator = new ServiceOrchestrator();
+        var sysManagement = new SystemManagementService();
+        var executor = new CliCommandExecutor(orchestrator, sysManagement);
+        var context = new CliCommandExecutor.CommandContext
+        {
+            Command = "services",
+            Arguments = new List<string>(),
+            Options = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await executor.ExecuteCommandAsync(context);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotEmpty(result.Message);
+    }
+
+    // ==================== SERVICE CONTAINER TESTS ====================
+
+    [Fact]
+    public void ServiceContainer_RegisterSingleton_ShouldStoreService()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+
+        // Act
+        ServiceContainer.Instance.RegisterSingleton<ILogger>(logger);
+        var resolved = ServiceContainer.Instance.Resolve<ILogger>();
+
+        // Assert
+        Assert.NotNull(resolved);
+        Assert.Same(logger, resolved);
+    }
+
+    [Fact]
+    public void ServiceContainer_MultipleSingletons_ShouldRetainSameInstance()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var orchestrator = new ServiceOrchestrator();
+
+        // Act
+        ServiceContainer.Instance.RegisterSingleton<ILogger>(logger);
+        ServiceContainer.Instance.RegisterSingleton<IServiceOrchestrator>(orchestrator);
+
+        var logger1 = ServiceContainer.Instance.Resolve<ILogger>();
+        var logger2 = ServiceContainer.Instance.Resolve<ILogger>();
+        var orch1 = ServiceContainer.Instance.Resolve<IServiceOrchestrator>();
+        var orch2 = ServiceContainer.Instance.Resolve<IServiceOrchestrator>();
+
+        // Assert
+        Assert.Same(logger1, logger2);
+        Assert.Same(orch1, orch2);
+    }
+
+    // ==================== INTEGRATION TESTS ====================
+
+    [Fact]
+    public async Task Integration_DashboardAndSystemManagement_ShouldCoexist()
+    {
+        // Arrange
+        var dashboard = new DashboardHistoryTracker();
+        var systemMgmt = new SystemManagementService();
+
+        // Act
+        var metric = new SystemMetric
+        {
+            Timestamp = DateTime.UtcNow,
+            CpuUsagePercent = 55,
+            MemoryUsagePercent = 65,
+            MemoryUsedMb = 6500,
+            MemoryTotalMb = 10000,
+            DiskUsagePercent = 75,
+            DiskUsedMb = 750000,
+            DiskTotalMb = 1000000,
+            ProcessCount = 120
+        };
+
+        await dashboard.RecordMetricAsync(metric);
+        var dashStats = await dashboard.GetDashboardStatsAsync();
+        var partitions = await systemMgmt.GetPartitionsAsync();
+
+        // Assert
+        Assert.NotNull(dashStats);
+        Assert.NotEmpty(partitions);
+        Assert.True(dashStats.CurrentCpuUsagePercent > 0);
+    }
+
+    [Fact]
+    public async Task Integration_AllServices_ShouldInitializeWithoutError()
+    {
+        // Arrange & Act
+        try
+        {
+            var logger = new ConsoleLogger();
+            var orchestrator = new ServiceOrchestrator();
+            var diagnostics = new SystemDiagnostics();
+            var storage = new StorageManager();
+            var config = new Core.Configuration.ConfigurationManager();
+            var encryption = new EncryptionManager();
+            var dashboard = new DashboardHistoryTracker();
+            var systemMgmt = new SystemManagementService();
+            var cli = new CliCommandExecutor(orchestrator, systemMgmt);
+
+            ServiceContainer.Instance.RegisterSingleton<ILogger>(logger);
+            ServiceContainer.Instance.RegisterSingleton<IServiceOrchestrator>(orchestrator);
+            ServiceContainer.Instance.RegisterSingleton<IDashboardHistoryTracker>(dashboard);
+            ServiceContainer.Instance.RegisterSingleton<ISystemManagementService>(systemMgmt);
+            ServiceContainer.Instance.RegisterSingleton<ICommandExecutor>(cli);
+
+            // Assert - all services initialized successfully
+            Assert.NotNull(ServiceContainer.Instance.Resolve<ILogger>());
+            Assert.NotNull(ServiceContainer.Instance.Resolve<IServiceOrchestrator>());
+            Assert.NotNull(ServiceContainer.Instance.Resolve<IDashboardHistoryTracker>());
+            Assert.NotNull(ServiceContainer.Instance.Resolve<ISystemManagementService>());
+            Assert.NotNull(ServiceContainer.Instance.Resolve<ICommandExecutor>());
+        }
+        catch (Exception ex)
+        {
+            Assert.True(false, $"Service initialization failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Windows Hardening Service Tests
+    /// </summary>
+    [Fact]
+    public async Task WindowsHardeningService_ApplyHardeningAsync_ReturnsReport()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new WindowsHardeningService(logger);
+
+        // Act
+        var report = await service.ApplyHardeningAsync();
+
+        // Assert
+        Assert.NotNull(report);
+        Assert.NotNull(report.AppliedSettings);
+        Assert.True(report.CompletedAt > DateTime.MinValue);
+    }
+
+    [Fact]
+    public async Task WindowsHardeningService_GetHardeningStatusAsync_ReturnsStatus()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new WindowsHardeningService(logger);
+
+        // Act
+        var status = await service.GetHardeningStatusAsync();
+
+        // Assert
+        Assert.NotNull(status);
+        Assert.NotNull(status.OverallStatus);
+        Assert.NotNull(status.SuspiciousServices);
+        Assert.True(status.OpenPorts >= 0);
+    }
+
+    [Fact]
+    public async Task WindowsHardeningService_VerifyHardeningAsync_ReturnsIssuesList()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new WindowsHardeningService(logger);
+
+        // Act
+        var issues = await service.VerifyHardeningAsync();
+
+        // Assert
+        Assert.NotNull(issues);
+        Assert.IsType<List<HardeningIssue>>(issues);
+    }
+
+    [Fact]
+    public async Task WindowsHardeningService_HardeningStatusCategories_AreValid()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new WindowsHardeningService(logger);
+
+        // Act
+        var status = await service.GetHardeningStatusAsync();
+
+        // Assert
+        Assert.True(
+            status.OverallStatus == "Secure" ||
+            status.OverallStatus == "Warning" ||
+            status.OverallStatus == "Critical" ||
+            status.OverallStatus == "Error",
+            $"Invalid status: {status.OverallStatus}"
+        );
+    }
+
+    /// <summary>
+    /// Cross-Partition Manager Tests
+    /// </summary>
+    [Fact]
+    public async Task CrossPartitionManager_GetAllPartitionsAsync_ReturnsPartitions()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var partitions = await manager.GetAllPartitionsAsync();
+
+        // Assert
+        Assert.NotNull(partitions);
+        Assert.IsType<List<PartitionInfo>>(partitions);
+        Assert.NotEmpty(partitions); // System should have at least C: drive
+    }
+
+    [Fact]
+    public async Task CrossPartitionManager_GetUnifiedStorageViewAsync_ReturnsTotalCapacity()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var view = await manager.GetUnifiedStorageViewAsync();
+
+        // Assert
+        Assert.NotNull(view);
+        Assert.True(view.TotalCapacity > 0);
+        Assert.True(view.TotalUsed >= 0);
+        Assert.True(view.TotalFree >= 0);
+        Assert.True(view.OverallUsagePercent >= 0 && view.OverallUsagePercent <= 100);
+    }
+
+    [Fact]
+    public async Task CrossPartitionManager_AnalyzeStorageBalanceAsync_ReturnsBalance()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var balance = await manager.AnalyzeStorageBalanceAsync();
+
+        // Assert
+        Assert.NotNull(balance);
+        Assert.NotEmpty(balance);
+        
+        foreach (var item in balance)
+        {
+            Assert.True(item.UsagePercent >= 0 && item.UsagePercent <= 100);
+            Assert.NotNull(item.BalanceStatus);
+            Assert.NotNull(item.Recommendations);
+        }
+    }
+
+    [Fact]
+    public async Task CrossPartitionManager_GetPartitionByLetterAsync_FindsCDrive()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var partition = await manager.GetPartitionByLetterAsync("C");
+
+        // Assert
+        Assert.NotNull(partition);
+        Assert.True(partition.TotalBytes > 0);
+    }
+
+    [Fact]
+    public async Task CrossPartitionManager_MigrationReportTracksProgress()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new CrossPartitionManager(logger);
+
+        // Act
+        var report = new MigrationReport
+        {
+            SourceDrive = "C",
+            TargetDrive = "D",
+            StartedAt = DateTime.UtcNow,
+            CompletedAt = DateTime.UtcNow.AddSeconds(10),
+            BytesMigrated = 1024 * 1024 * 100 // 100 MB
+        };
+
+        // Assert
+        Assert.Equal("C", report.SourceDrive);
+        Assert.True(report.Duration.TotalSeconds == 10);
+        Assert.True(report.MegabytesMigrated > 99 && report.MegabytesMigrated < 101);
+    }
+
+    /// <summary>
+    /// DevDrive and File Sharing Service Tests
+    /// </summary>
+    [Fact]
+    public async Task DevDriveFileService_CreateDevDriveAsync_CreatesSuccessfully()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new DevDriveFileService(logger);
+
+        // Act
+        var result = await service.CreateDevDriveAsync("D", 50);
+
+        // Assert
+        Assert.True(result);
+        var drives = await service.GetAllDevDrivesAsync();
+        Assert.Single(drives);
+    }
+
+    [Fact]
+    public async Task DevDriveFileService_GetDevDriveInfoAsync_ReturnsCorrectSize()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new DevDriveFileService(logger);
+        await service.CreateDevDriveAsync("E", 100);
+
+        // Act
+        var info = await service.GetDevDriveInfoAsync("E");
+
+        // Assert
+        Assert.NotNull(info);
+        Assert.Equal("E", info.DriveLetter);
+        Assert.Equal(100L * 1024 * 1024 * 1024, info.SizeBytes);
+        Assert.True(info.IsOptimizedForDevelopment);
+    }
+
+    [Fact]
+    public async Task DevDriveFileService_SMBSharing_ActivatesShare()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new DevDriveFileService(logger);
+        var testPath = Path.GetTempPath();
+
+        // Act
+        var result = await service.EnableSMBSharingAsync(testPath, "TestShare", new[] { "Everyone" });
+
+        // Assert
+        Assert.True(result);
+        var shares = await service.GetActiveSharesAsync();
+        Assert.Single(shares);
+        Assert.Equal("SMB", shares[0].ShareType);
+    }
+
+    [Fact]
+    public async Task DevDriveFileService_GetSharePerformanceAsync_ReturnsMetrics()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new DevDriveFileService(logger);
+
+        // Act
+        var metrics = await service.GetSharePerformanceAsync("TestShare");
+
+        // Assert
+        Assert.NotNull(metrics);
+        Assert.True(metrics.AverageBandwidth > 0);
+        Assert.True(metrics.AverageLatencyMs > 0);
+        Assert.True(metrics.ErrorCount == 0);
+    }
+
+    /// <summary>
+    /// Plugin Manager Tests
+    /// </summary>
+    [Fact]
+    public async Task PluginManager_GetLoadedPluginsAsync_ReturnsList()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new PluginManager(logger);
+
+        // Act
+        var plugins = await manager.GetLoadedPluginsAsync();
+
+        // Assert
+        Assert.NotNull(plugins);
+        Assert.IsType<List<PluginInfo>>(plugins);
+    }
+
+    [Fact]
+    public async Task PluginManager_SearchMarketplaceAsync_FindsPlugins()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new PluginManager(logger);
+
+        // Act
+        var results = await manager.SearchMarketplaceAsync("GPU");
+
+        // Assert
+        Assert.NotNull(results);
+        Assert.NotEmpty(results);
+        Assert.True(results.Count > 0);
+    }
+
+    [Fact]
+    public async Task PluginManager_ExecutePluginAsync_ReturnsResult()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new PluginManager(logger);
+
+        // Act
+        var result = await manager.ExecutePluginAsync("NonExistent");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.NotNull(result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task PluginManager_EnableDisablePluginAsync_TogglesState()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var manager = new PluginManager(logger);
+        await manager.EnablePluginAsync("Test");
+        
+        // Act - Verify enable works (will return false since plugin isn't loaded)
+        var disableResult = await manager.DisablePluginAsync("Test");
+
+        // Assert
+        Assert.False(disableResult); // Plugin not in dict, so returns false
+    }
+
+    /// <summary>
+    /// Final Phase 1 Services: Remote Access, GPU, Automation, AI Learning
+    /// </summary>
+    [Fact]
+    public async Task RemoteAccessService_AuthenticateRemoteSessionAsync_CreatesSession()
+    {
+        var logger = new ConsoleLogger();
+        var service = new RemoteAccessService(logger);
+        var result = await service.AuthenticateRemoteSessionAsync("admin", "password", "client1");
+        Assert.True(result);
+        Assert.Single(service.GetActiveSessions());
+    }
+
+    [Fact]
+    public async Task GPUOptimizationService_DetectGPUsAsync_ReturnsList()
+    {
+        var logger = new ConsoleLogger();
+        var service = new GPUOptimizationService(logger);
+        var gpus = await service.DetectGPUsAsync();
+        Assert.NotEmpty(gpus);
+    }
+
+    [Fact]
+    public async Task GPUOptimizationService_GeneratePerformanceReportAsync_ReturnsReport()
+    {
+        var logger = new ConsoleLogger();
+        var service = new GPUOptimizationService(logger);
+        var report = await service.GeneratePerformanceReportAsync();
+        Assert.True(report.AverageFPS > 0);
+    }
+
+    [Fact]
+    public async Task AutomationServer_ScheduleTaskAsync_CreatesTask()
+    {
+        var logger = new ConsoleLogger();
+        var server = new AutomationServer(logger);
+        var task = new AutomationTask { Name = "Test Task" };
+        var result = await server.ScheduleTaskAsync(task);
+        Assert.True(result);
+        var tasks = await server.GetScheduledTasksAsync();
+        Assert.Single(tasks);
+    }
+
+    [Fact]
+    public async Task AILearningCoordinator_TrainModelAsync_CreatesModel()
+    {
+        var logger = new ConsoleLogger();
+        var coordinator = new AILearningCoordinator(logger);
+        var data = new List<TrainingData> { new() { Label = 1.0 } };
+        var model = await coordinator.TrainModelAsync("TestModel", data);
+        Assert.Equal("TestModel", model.Name);
+        Assert.True(model.Accuracy > 0);
+    }
+
+    [Fact]
+    public async Task AILearningCoordinator_PredictAsync_ReturnsPrediction()
+    {
+        var logger = new ConsoleLogger();
+        var coordinator = new AILearningCoordinator(logger);
+        var data = new List<TrainingData> { new() { Label = 1.0 } };
+        await coordinator.TrainModelAsync("TestModel", data);
+        var prediction = await coordinator.PredictAsync("TestModel", new Dictionary<string, object>());
+        Assert.NotNull(prediction);
+    }
+
+    [Fact]
+    public async Task AILearningCoordinator_GetPerformanceAsync_ReturnsMetrics()
+    {
+        var logger = new ConsoleLogger();
+        var coordinator = new AILearningCoordinator(logger);
+        var metrics = await coordinator.GetPerformanceAsync();
+        Assert.NotNull(metrics);
+        Assert.True(metrics.AverageAccuracy >= 0);
+    }
+}

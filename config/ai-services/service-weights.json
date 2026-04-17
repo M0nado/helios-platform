@@ -1,0 +1,101 @@
+{
+  "taskTypeToServices": {
+    "strategic-planning": {
+      "primary": "chatgpt-pro",
+      "secondary": ["gpt-4-5", "codex"],
+      "weight": 1.0
+    },
+    "code-review": {
+      "primary": "chatgpt-pro",
+      "secondary": ["codex"],
+      "weight": 0.95
+    },
+    "optimization": {
+      "primary": "chatgpt-pro",
+      "secondary": ["gpt-4-5"],
+      "weight": 0.9
+    },
+    "code-generation": {
+      "primary": "codex",
+      "secondary": ["chatgpt-pro", "gpt-4-5"],
+      "weight": 1.0
+    },
+    "code-refactoring": {
+      "primary": "codex",
+      "secondary": ["chatgpt-pro"],
+      "weight": 0.95
+    },
+    "complex-analysis": {
+      "primary": "gpt-4-5",
+      "secondary": ["chatgpt-pro", "codex"],
+      "weight": 1.0
+    },
+    "architectural-decisions": {
+      "primary": "gpt-4-5",
+      "secondary": ["chatgpt-pro"],
+      "weight": 0.98
+    },
+    "technical-writing": {
+      "primary": "chatgpt-pro",
+      "secondary": ["gpt-4-5"],
+      "weight": 0.85
+    },
+    "bug-analysis": {
+      "primary": "gpt-4-5",
+      "secondary": ["codex", "chatgpt-pro"],
+      "weight": 0.95
+    },
+    "performance-analysis": {
+      "primary": "chatgpt-pro",
+      "secondary": ["gpt-4-5"],
+      "weight": 0.9
+    },
+    "security-review": {
+      "primary": "gpt-4-5",
+      "secondary": ["chatgpt-pro"],
+      "weight": 0.99
+    },
+    "test-generation": {
+      "primary": "codex",
+      "secondary": ["chatgpt-pro"],
+      "weight": 0.9
+    }
+  },
+  "servicePerformance": {
+    "chatgpt-pro": {
+      "successRate": 0.95,
+      "averageResponseTime": 3.5,
+      "costEfficiency": 0.8
+    },
+    "codex": {
+      "successRate": 0.92,
+      "averageResponseTime": 2.8,
+      "costEfficiency": 0.75
+    },
+    "gpt-4-5": {
+      "successRate": 0.97,
+      "averageResponseTime": 5.2,
+      "costEfficiency": 0.7
+    }
+  },
+  "combinationStrategies": {
+    "consensus": {
+      "name": "Weighted Consensus",
+      "description": "Combine suggestions with weighted voting",
+      "enabled": true,
+      "minimumServices": 2
+    },
+    "hierarchical": {
+      "name": "Hierarchical Resolution",
+      "description": "Use primary service, fallback to secondary",
+      "enabled": true,
+      "minimumServices": 1
+    },
+    "complementary": {
+      "name": "Complementary Analysis",
+      "description": "Each service provides different perspective",
+      "enabled": true,
+      "minimumServices": 2
+    }
+  }
+}

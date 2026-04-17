@@ -1,0 +1,61 @@
+{
+  "optimizationParameters": {
+    "githubActions": {
+      "concurrency": {
+        "maxConcurrent": 3,
+        "cancelInProgress": true
+      },
+      "caching": {
+        "nodeModules": true,
+        "dependencies": true,
+        "nuget": true,
+        "ttl": 86400
+      },
+      "jobMatrix": {
+        "enabled": true,
+        "parallelJobs": 4
+      }
+    },
+    "buildSystem": {
+      "incremental": true,
+      "parallel": true,
+      "parallelism": 4,
+      "targetFrameworks": ["net6.0", "net8.0"],
+      "sourceLink": true,
+      "cacheBuildOutput": true
+    },
+    "deployment": {
+      "strategy": "blue-green",
+      "canaryStages": [10, 25, 50, 100],
+      "healthCheckInterval": 30,
+      "autoRollback": true,
+      "rollbackThreshold": 0.05
+    },
+    "containerization": {
+      "baseImage": "alpine",
+      "multiStage": true,
+      "imageName": "helios-platform",
+      "registry": "ghcr.io"
+    },
+    "database": {
+      "indexing": true,
+      "queryTimeout": 30,
+      "connectionPooling": true,
+      "poolSize": 50
+    }
+  },
+  "resourceLimits": {
+    "memory": {
+      "jvm": "512m",
+      "gcType": "G1GC"
+    },
+    "cpu": {
+      "limit": 2,
+      "request": 1
+    },
+    "storage": {
+      "cacheSize": "5Gi",
+      "artifactRetention": 30
+    }
+  }
+}

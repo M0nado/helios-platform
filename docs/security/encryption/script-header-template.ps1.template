@@ -1,0 +1,83 @@
+; PowerShell Script Documentation Header
+; Template for {{SCRIPT_NAME}}.ps1
+;
+; DESCRIPTION:
+;   {{SCRIPT_PURPOSE}}
+;
+; SYNOPSIS:
+;   {{SCRIPT_SYNOPSIS}}
+;
+; PARAMETERS:
+;   -Parameter1 <string>
+;       {{PARAM_1_DESC}}
+;       Required: {{PARAM_1_REQUIRED}}
+;
+;   -Parameter2 <int>
+;       {{PARAM_2_DESC}}
+;       Required: {{PARAM_2_REQUIRED}}
+;
+; RETURNS:
+;   {{RETURN_TYPE}}: {{RETURN_DESC}}
+;
+; EXAMPLES:
+;   1. {{EXAMPLE_1_TITLE}}
+;      {{EXAMPLE_1_CODE}}
+;
+;   2. {{EXAMPLE_2_TITLE}}
+;      {{EXAMPLE_2_CODE}}
+;
+; NOTES:
+;   - {{NOTE_1}}
+;   - {{NOTE_2}}
+;   - {{NOTE_3}}
+;
+; AUTHOR:
+;   {{AUTHOR_NAME}} <{{AUTHOR_EMAIL}}>
+;
+; VERSION HISTORY:
+;   v{{VERSION}}  {{DATE}}  {{AUTHOR_NAME}}
+;     - {{CHANGE_1}}
+;     - {{CHANGE_2}}
+;
+; SEE ALSO:
+;   - {{RELATED_SCRIPT_1}}
+;   - {{RELATED_SCRIPT_2}}
+;   - [Module Documentation](./README.md)
+;   - [Full API Reference](./API.md)
+;
+; METADATA:
+;   Category: {{CATEGORY}}
+;   Module: {{MODULE}}
+;   Status: {{STATUS}}
+;   Requires: {{REQUIREMENT_1}}, {{REQUIREMENT_2}}
+;   Depends On: {{DEPENDENCY_1}}, {{DEPENDENCY_2}}
+
+<#
+.SYNOPSIS
+{{SCRIPT_SYNOPSIS}}
+
+.DESCRIPTION
+{{SCRIPT_DESCRIPTION}}
+
+.PARAMETER {{PARAM_1}}
+{{PARAM_1_DESC}}
+
+.PARAMETER {{PARAM_2}}
+{{PARAM_2_DESC}}
+
+.EXAMPLE
+{{EXAMPLE_1}}
+
+.EXAMPLE
+{{EXAMPLE_2}}
+
+.NOTES
+{{NOTES}}
+
+.LINK
+./{{SCRIPT_NAME}}.meta.json
+
+.LINK
+./{{SCRIPT_NAME}}.wiki.md
+
+#>

@@ -1,0 +1,142 @@
+{
+  "service": "ollama",
+  "displayName": "Ollama - Local LLM Models",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 4,
+  "endpoints": {
+    "api": "http://localhost:11434",
+    "generate": "http://localhost:11434/api/generate",
+    "chat": "http://localhost:11434/api/chat",
+    "embed": "http://localhost:11434/api/embed",
+    "tags": "http://localhost:11434/api/tags",
+    "pull": "http://localhost:11434/api/pull"
+  },
+  "authentication": {
+    "type": "none",
+    "local": true
+  },
+  "models": [
+    {
+      "name": "llama2",
+      "version": "7b",
+      "enabled": true,
+      "pullRequired": true,
+      "size": "3.8gb",
+      "parameters": 7000000000,
+      "contextLength": 4096
+    },
+    {
+      "name": "llama2",
+      "version": "13b",
+      "enabled": false,
+      "pullRequired": true,
+      "size": "7.3gb",
+      "parameters": 13000000000,
+      "contextLength": 4096
+    },
+    {
+      "name": "mistral",
+      "version": "7b",
+      "enabled": true,
+      "pullRequired": true,
+      "size": "4.1gb",
+      "parameters": 7000000000,
+      "contextLength": 32768
+    },
+    {
+      "name": "neural-chat",
+      "version": "7b",
+      "enabled": true,
+      "pullRequired": true,
+      "size": "4.1gb",
+      "parameters": 7000000000,
+      "contextLength": 4096
+    },
+    {
+      "name": "orca-mini",
+      "version": "3b",
+      "enabled": true,
+      "pullRequired": true,
+      "size": "1.9gb",
+      "parameters": 3000000000,
+      "contextLength": 4096
+    }
+  ],
+  "features": {
+    "textGeneration": {
+      "enabled": true,
+      "streaming": true,
+      "temperature": 0.7,
+      "topK": 40,
+      "topP": 0.9
+    },
+    "chatCompletion": {
+      "enabled": true,
+      "streaming": true
+    },
+    "embeddings": {
+      "enabled": true,
+      "dimension": 384
+    },
+    "quantization": {
+      "supported": ["q4", "q5", "q8"],
+      "default": "q4"
+    }
+  },
+  "hardware": {
+    "gpu": {
+      "enabled": true,
+      "type": "nvidia",
+      "memory": 8,
+      "unit": "GB"
+    },
+    "cpu": {
+      "cores": 8,
+      "memory": 16,
+      "unit": "GB"
+    },
+    "disk": {
+      "available": 100,
+      "unit": "GB"
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "maxConcurrentRequests": 4,
+    "timeoutSeconds": 300,
+    "gpuMemoryLimit": 7.5
+  },
+  "costs": {
+    "budgetLimit": 0,
+    "currency": "USD",
+    "note": "Local deployment - no direct API costs",
+    "infraCost": "included-in-hardware"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 4,
+    "nextService": "openai"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 30,
+    "timeout_seconds": 5,
+    "endpoint": "http://localhost:11434/api/tags"
+  },
+  "deployment": {
+    "docker": {
+      "enabled": true,
+      "image": "ollama/ollama:latest",
+      "ports": ["11434:11434"],
+      "volumes": ["/root/.ollama:/root/.ollama"]
+    },
+    "autoStart": true,
+    "autoUpdate": true
+  },
+  "performance": {
+    "caching": true,
+    "batching": true,
+    "optimization": "aggressive"
+  }
+}

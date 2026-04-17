@@ -1,0 +1,33 @@
+{
+  "fabric": {
+    "tenantId": "${FABRIC_TENANT_ID}",
+    "capacitySKU": "F64",
+    "region": "eastus",
+    "workspaces": [
+      {
+        "name": "HELIOS Data",
+        "description": "Main data workspace for HELIOS",
+        "capacity": "F64"
+      }
+    ],
+    "lakehouses": {
+      "defaultFormat": "Delta",
+      "enableOptimization": true
+    },
+    "pipelines": {
+      "enabled": true,
+      "defaultSchedule": "Daily"
+    },
+    "reporting": {
+      "semanticModels": [
+        "HELIOSModel"
+      ],
+      "refreshSchedule": "Daily"
+    },
+    "autoScale": {
+      "enabled": true,
+      "minNodes": 1,
+      "maxNodes": 10
+    }
+  }
+}

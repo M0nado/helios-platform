@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>HELIOS.Platform.Tray</RootNamespace>
+    <AssemblyName>HELIOS.Platform.Tray</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HELIOS.Platform.SystemIntegration\HELIOS.Platform.SystemIntegration.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,116 @@
+{
+  "monitoringRules": {
+    "metrics": [
+      {
+        "name": "Workflow Duration",
+        "query": "workflow_duration",
+        "threshold": 300,
+        "unit": "seconds",
+        "severity": "warning"
+      },
+      {
+        "name": "Deployment Success Rate",
+        "query": "deployment_success_rate",
+        "threshold": 95,
+        "unit": "percent",
+        "severity": "critical"
+      },
+      {
+        "name": "Build Cache Hit Rate",
+        "query": "build_cache_hit_rate",
+        "threshold": 70,
+        "unit": "percent",
+        "severity": "warning"
+      },
+      {
+        "name": "Average Response Time",
+        "query": "avg_response_time",
+        "threshold": 200,
+        "unit": "ms",
+        "severity": "warning"
+      },
+      {
+        "name": "Error Rate",
+        "query": "error_rate",
+        "threshold": 1,
+        "unit": "percent",
+        "severity": "critical"
+      },
+      {
+        "name": "Resource Utilization",
+        "query": "resource_utilization",
+        "threshold": 80,
+        "unit": "percent",
+        "severity": "warning"
+      }
+    ],
+    "healthChecks": [
+      {
+        "name": "GitHub API",
+        "endpoint": "https://api.github.com",
+        "interval": 60,
+        "timeout": 10
+      },
+      {
+        "name": "Project Board",
+        "endpoint": "https://api.github.com/graphql",
+        "interval": 300,
+        "timeout": 30
+      },
+      {
+        "name": "Workflow Engine",
+        "endpoint": "internal",
+        "interval": 120,
+        "timeout": 15
+      },
+      {
+        "name": "Deployment Pipeline",
+        "endpoint": "internal",
+        "interval": 180,
+        "timeout": 20
+      }
+    ]
+  },
+  "alertThresholds": {
+    "critical": {
+      "deploymentSuccessRate": 90,
+      "errorRate": 2,
+      "responseTime": 500,
+      "escalationTime": 0
+    },
+    "high": {
+      "workflowDuration": 600,
+      "cacheHitRate": 50,
+      "resourceUtilization": 90,
+      "escalationTime": 300
+    },
+    "medium": {
+      "workflowDuration": 400,
+      "cacheHitRate": 60,
+      "escalationTime": 600
+    }
+  },
+  "notifications": {
+    "channels": {
+      "slack": {
+        "enabled": true,
+        "webhook": "${SLACK_WEBHOOK_URL}"
+      },
+      "email": {
+        "enabled": true,
+        "recipients": ["team@company.com"]
+      },
+      "teams": {
+        "enabled": true,
+        "webhook": "${TEAMS_WEBHOOK_URL}"
+      }
+    },
+    "escalation": {
+      "timers": {
+        "initial": 300,
+        "remind": 600,
+        "escalate": 1800
+      }
+    }
+  }
+}

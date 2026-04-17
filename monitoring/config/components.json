@@ -1,0 +1,102 @@
+{
+  "components": [
+    {
+      "id": 1,
+      "name": "HELIOS.Platform",
+      "description": "Main platform core API and orchestration",
+      "type": "Core",
+      "sla_target": 99.95,
+      "health_endpoint": "http://localhost:5000/health",
+      "api_base_url": "http://localhost:5000",
+      "port": 5000,
+      "owner_team": "Platform Team"
+    },
+    {
+      "id": 2,
+      "name": "AI-Dashboard",
+      "description": "Analytics and visualization platform",
+      "type": "WebUI",
+      "sla_target": 99.9,
+      "health_endpoint": "http://localhost:5001/health",
+      "api_base_url": "http://localhost:5001",
+      "port": 5001,
+      "owner_team": "Analytics Team"
+    },
+    {
+      "id": 3,
+      "name": "Analytics-Core",
+      "description": "Data processing and analysis service",
+      "type": "Service",
+      "sla_target": 99.95,
+      "health_endpoint": "http://localhost:5002/health",
+      "api_base_url": "http://localhost:5002",
+      "port": 5002,
+      "owner_team": "Data Team"
+    },
+    {
+      "id": 4,
+      "name": "Cloud-Bridge",
+      "description": "Cloud integration and gateway layer",
+      "type": "Gateway",
+      "sla_target": 99.9,
+      "health_endpoint": "http://localhost:5003/health",
+      "api_base_url": "http://localhost:5003",
+      "port": 5003,
+      "owner_team": "Cloud Team"
+    },
+    {
+      "id": 5,
+      "name": "Performance-AI",
+      "description": "Performance optimization and tuning service",
+      "type": "Service",
+      "sla_target": 99.9,
+      "health_endpoint": "http://localhost:5004/health",
+      "api_base_url": "http://localhost:5004",
+      "port": 5004,
+      "owner_team": "Performance Team"
+    },
+    {
+      "id": 6,
+      "name": "Security-Engine",
+      "description": "Security and compliance service",
+      "type": "Security",
+      "sla_target": 99.99,
+      "health_endpoint": "http://localhost:5005/health",
+      "api_base_url": "http://localhost:5005",
+      "port": 5005,
+      "owner_team": "Security Team"
+    },
+    {
+      "id": 7,
+      "name": "Vault-Dynamics",
+      "description": "Secrets management and encryption",
+      "type": "Vault",
+      "sla_target": 99.99,
+      "health_endpoint": "http://localhost:5006/health",
+      "api_base_url": "http://localhost:5006",
+      "port": 5006,
+      "owner_team": "Security Team"
+    }
+  ],
+  "sla_targets": {
+    "HELIOS.Platform": { "uptime_percent": 99.95, "mttr_minutes": 30, "mtbf_hours": 720 },
+    "AI-Dashboard": { "uptime_percent": 99.9, "mttr_minutes": 60, "mtbf_hours": 720 },
+    "Analytics-Core": { "uptime_percent": 99.95, "mttr_minutes": 45, "mtbf_hours": 720 },
+    "Cloud-Bridge": { "uptime_percent": 99.9, "mttr_minutes": 60, "mtbf_hours": 720 },
+    "Performance-AI": { "uptime_percent": 99.9, "mttr_minutes": 60, "mtbf_hours": 720 },
+    "Security-Engine": { "uptime_percent": 99.99, "mttr_minutes": 15, "mtbf_hours": 1440 },
+    "Vault-Dynamics": { "uptime_percent": 99.99, "mttr_minutes": 15, "mtbf_hours": 1440 }
+  },
+  "service_windows": {
+    "default": {
+      "start": "00:00",
+      "end": "23:59",
+      "timezone": "UTC"
+    },
+    "maintenance": {
+      "day": "Sunday",
+      "start": "02:00",
+      "end": "04:00"
+    }
+  }
+}

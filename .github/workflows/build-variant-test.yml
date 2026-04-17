@@ -1,0 +1,219 @@
+name: Build Variant Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '.github/workflows/build-variant-test.yml'
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: 'Build variants to test'
+        required: false
+        default: 'all'
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  setup-variants:
+    name: Setup Build Variants
+    runs-on: ubuntu-latest
+    outputs:
+      variants: ${{ steps.variants.outputs.variants }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Define Build Variants
+        id: variants
+        run: |
+          VARIANTS='[
+            {
+              "name": "dev",
+              "env": "development",
+              "minify": false,
+              "sourcemap": true,
+              "optimization": "none"
+            },
+            {
+              "name": "staging",
+              "env": "staging",
+              "minify": true,
+              "sourcemap": true,
+              "optimization": "balanced"
+            },
+            {
+              "name": "prod",
+              "env": "production",
+              "minify": true,
+              "sourcemap": false,
+              "optimization": "full"
+            },
+            {
+              "name": "test",
+              "env": "test",
+              "minify": false,
+              "sourcemap": true,
+              "optimization": "none",
+              "coverage": true
+            }
+          ]'
+          echo "variants=$VARIANTS" >> $GITHUB_OUTPUT
+
+      - name: Build Matrix
+        id: matrix
+        run: |
+          MATRIX='[
+            {"os": "ubuntu-latest", "node": "18"},
+            {"os": "ubuntu-latest", "node": "20"},
+            {"os": "windows-latest", "node": "18"}
+          ]'
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  test-variants:
+    name: Test ${{ matrix.variant.name }} on Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    needs: setup-variants
+    strategy:
+      matrix:
+        variant: ${{ fromJson(needs.setup-variants.outputs.variants) }}
+        include: ${{ fromJson(needs.setup-variants.outputs.matrix) }}
+      fail-fast: false
+    env:
+      NODE_ENV: ${{ matrix.variant.env }}
+      BUILD_MINIFY: ${{ matrix.variant.minify }}
+      BUILD_SOURCEMAP: ${{ matrix.variant.sourcemap }}
+      BUILD_OPTIMIZATION: ${{ matrix.variant.optimization }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - name: Display Configuration
+        run: |
+          echo "===== Build Configuration ====="
+          echo "Variant: ${{ matrix.variant.name }}"
+          echo "OS: ${{ matrix.os }}"
+          echo "Node: ${{ matrix.node }}"
+          echo "Environment: ${{ matrix.variant.env }}"
+          echo "Minify: ${{ matrix.variant.minify }}"
+          echo "Sourcemap: ${{ matrix.variant.sourcemap }}"
+          echo "Optimization: ${{ matrix.variant.optimization }}"
+          echo "==============================="
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build for ${{ matrix.variant.name }}
+        run: |
+          npm run build:${{ matrix.variant.name }}
+
+      - name: Run Tests
+        run: |
+          npm test -- --testTimeout=30000
+
+      - name: Generate Coverage
+        if: matrix.variant.name == 'test'
+        run: |
+          npm run test:coverage
+
+      - name: Validate Build Output
+        run: |
+          ls -la dist/ || echo "No dist directory"
+          echo "Build output size: $(du -sh dist 2>/dev/null || echo 'N/A')"
+
+      - name: Performance Check
+        run: |
+          if [ -f "dist/bundle.js" ]; then
+            SIZE=$(stat -f%z "dist/bundle.js" 2>/dev/null || stat -c%s "dist/bundle.js" 2>/dev/null)
+            echo "Bundle size: $SIZE bytes"
+            if [ "$SIZE" -gt 1048576 ]; then
+              echo "::warning::Bundle exceeds 1MB"
+            fi
+          fi
+
+      - name: Upload Variant Artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: variant-${{ matrix.variant.name }}-node${{ matrix.node }}-${{ matrix.os }}
+          path: |
+            dist/
+            coverage/
+          if-no-files-found: warn
+          retention-days: 5
+
+  compare-variants:
+    name: Compare Build Variants
+    runs-on: ubuntu-latest
+    needs: test-variants
+    if: always()
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: variants
+
+      - name: Generate Comparison Report
+        run: |
+          echo "## Build Variant Comparison" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Variants Tested" >> $GITHUB_STEP_SUMMARY
+          echo "- Development" >> $GITHUB_STEP_SUMMARY
+          echo "- Staging" >> $GITHUB_STEP_SUMMARY
+          echo "- Production" >> $GITHUB_STEP_SUMMARY
+          echo "- Test" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Platforms Tested" >> $GITHUB_STEP_SUMMARY
+          echo "- Ubuntu 20.04 (Node 18, 20)" >> $GITHUB_STEP_SUMMARY
+          echo "- Windows Server (Node 18)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Analyze Results
+        run: |
+          echo "Analyzing variant test results..."
+          find variants -type f -name "*.json" | wc -l
+          echo "✓ Analysis complete"
+
+  report-results:
+    name: Report Test Results
+    runs-on: ubuntu-latest
+    needs: [test-variants, compare-variants]
+    if: always()
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "Test Status: ${{ needs.test-variants.result }}"
+          echo "Comparison Status: ${{ needs.compare-variants.result }}"
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ needs.test-variants.result }}' === 'success' ? '✓' : '✗';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ${status} Build Variant Tests\n\n**Status**: ${{ needs.test-variants.result }}\n\n**Variants Tested**:\n- Development\n- Staging\n- Production\n- Test\n\n**Platforms**:\n- Ubuntu (Node 18, 20)\n- Windows (Node 18)\n\n[View detailed results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            })

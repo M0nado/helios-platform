@@ -1,0 +1,215 @@
+name: Build All Modules
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  workflow_dispatch:
+    inputs:
+      clean_build:
+        description: 'Clean build (no cache)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  setup:
+    name: Setup Build Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.setup.outputs.modules }}
+      node-version: ${{ steps.setup.outputs.node-version }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Setup Build Configuration
+        id: setup
+        run: |
+          # Define available modules
+          MODULES='["core", "modules", "registry", "cli", "ui"]'
+          echo "modules=$MODULES" >> $GITHUB_OUTPUT
+          echo "node-version=18" >> $GITHUB_OUTPUT
+          echo "Build matrix configured"
+
+  build:
+    name: Build ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    needs: setup
+    strategy:
+      matrix:
+        module: ${{ fromJson(needs.setup.outputs.modules) }}
+      fail-fast: false
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.setup.outputs.node-version }}
+          cache: 'npm'
+          cache-dependency-path: '${{ matrix.module }}/package-lock.json'
+
+      - name: Setup Build Cache
+        if: github.event.inputs.clean_build != 'true'
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ matrix.module }}/node_modules
+            ${{ matrix.module }}/dist
+            ${{ matrix.module }}/build
+          key: ${{ runner.os }}-${{ matrix.module }}-${{ hashFiles(format('{0}/package-lock.json', matrix.module)) }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.module }}-
+
+      - name: Display Environment
+        run: |
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo "Module: ${{ matrix.module }}"
+          echo "Clean build: ${{ github.event.inputs.clean_build }}"
+
+      - name: Install Dependencies
+        run: |
+          cd ${{ matrix.module }}
+          npm ci --prefer-offline --no-audit
+
+      - name: Lint Code
+        continue-on-error: true
+        run: |
+          cd ${{ matrix.module }}
+          if [ -f "package.json" ] && grep -q '"lint"' package.json; then
+            npm run lint
+          else
+            echo "No lint script found"
+          fi
+
+      - name: Build Module
+        run: |
+          cd ${{ matrix.module }}
+          if [ -f "package.json" ] && grep -q '"build"' package.json; then
+            npm run build
+          else
+            echo "No build script found"
+          fi
+
+      - name: Run Tests
+        run: |
+          cd ${{ matrix.module }}
+          if [ -f "package.json" ] && grep -q '"test"' package.json; then
+            npm test -- --coverage --passWithNoTests
+          else
+            echo "No test script found"
+          fi
+
+      - name: Generate Coverage Report
+        if: always()
+        run: |
+          cd ${{ matrix.module }}
+          if [ -d "coverage" ]; then
+            echo "Coverage report generated"
+            find coverage -name "*.json" -o -name "*.html" | head -10
+          fi
+
+      - name: Upload Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts-${{ matrix.module }}
+          path: |
+            ${{ matrix.module }}/dist/
+            ${{ matrix.module }}/build/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload Coverage Reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-${{ matrix.module }}
+          path: ${{ matrix.module }}/coverage/
+          if-no-files-found: warn
+          retention-days: 7
+
+  verify-builds:
+    name: Verify Build Integrity
+    runs-on: ubuntu-latest
+    needs: build
+    if: always()
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: build-results
+
+      - name: Verify Artifacts
+        run: |
+          echo "Verifying build artifacts..."
+          find build-results -type f -name "*.json" -o -name "*.js" | wc -l
+          echo "✓ Build verification complete"
+
+      - name: Generate Build Report
+        run: |
+          echo "## Build All Modules Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Modules Built" >> $GITHUB_STEP_SUMMARY
+          echo "- core" >> $GITHUB_STEP_SUMMARY
+          echo "- modules" >> $GITHUB_STEP_SUMMARY
+          echo "- registry" >> $GITHUB_STEP_SUMMARY
+          echo "- cli" >> $GITHUB_STEP_SUMMARY
+          echo "- ui" >> $GITHUB_STEP_SUMMARY
+
+  report-status:
+    name: Report Build Status
+    runs-on: ubuntu-latest
+    needs: [build, verify-builds]
+    if: always()
+    steps:
+      - name: Check Build Status
+        run: |
+          if [ "${{ needs.build.result }}" == "success" ]; then
+            echo "✓ All modules built successfully"
+            exit 0
+          else
+            echo "✗ Build failed for one or more modules"
+            exit 1
+          fi
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ needs.build.result }}' === 'success' ? '✓' : '✗';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ${status} Build All Modules\n\n**Status**: ${{ needs.build.result }}\n\n[View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            })

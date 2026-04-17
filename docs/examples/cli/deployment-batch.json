@@ -1,0 +1,61 @@
+{
+  "name": "Full Platform Deployment",
+  "description": "Complete deployment workflow with health checks and verification",
+  "commands": [
+    {
+      "name": "Pre-deployment health check",
+      "command": "health",
+      "options": {
+        "checks": "critical"
+      }
+    },
+    {
+      "name": "Create backup",
+      "command": "backup",
+      "options": {
+        "path": "/backups",
+        "compress": "true"
+      }
+    },
+    {
+      "name": "Deploy database migrations",
+      "command": "deploy",
+      "options": {
+        "config": "db-migrations.json"
+      }
+    },
+    {
+      "name": "Deploy API services",
+      "command": "deploy",
+      "options": {
+        "config": "api-deployment.json"
+      }
+    },
+    {
+      "name": "Scale API servers",
+      "command": "scale",
+      "arguments": ["api"],
+      "options": {
+        "instances": "5"
+      }
+    },
+    {
+      "name": "Deploy worker services",
+      "command": "deploy",
+      "options": {
+        "config": "worker-deployment.json"
+      }
+    },
+    {
+      "name": "Post-deployment health check",
+      "command": "health",
+      "options": {
+        "checks": "all"
+      }
+    },
+    {
+      "name": "Verify deployment status",
+      "command": "status"
+    }
+  ]
+}

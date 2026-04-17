@@ -1,0 +1,87 @@
+{
+  "Orchestrator": {
+    "Name": "HELIOS Cloud Orchestrator",
+    "Version": "1.0.0",
+    "Environment": "Production",
+    "Timezone": "UTC"
+  },
+  "Azure": {
+    "AzureSubscriptionId": "YOUR_AZURE_SUBSCRIPTION_ID",
+    "TenantId": "YOUR_TENANT_ID",
+    "ResourceGroup": "helios-orchestration",
+    "Location": "eastus"
+  },
+  "Microsoft365": {
+    "TenantName": "YOUR_TENANT.onmicrosoft.com",
+    "SharePointAdminUrl": "https://YOUR_TENANT-admin.sharepoint.com"
+  },
+  "Synchronization": {
+    "SyncBatchSize": 100,
+    "RetryAttempts": 3,
+    "RetryDelaySeconds": 30,
+    "SyncIntervalMinutes": 30
+  },
+  "Hybrid": {
+    "OnPremisesDomain": "yourdomain.local",
+    "AADConnectServer": "aad-connect-server.yourdomain.local",
+    "SyncMethod": "PasswordHashSync",
+    "PassThroughAuthAgents": []
+  },
+  "FailoverPolicy": {
+    "HealthThreshold": 0.7,
+    "FailoverStrategy": "Hybrid",
+    "RtoSeconds": 300,
+    "RpoSeconds": 60
+  },
+  "Monitoring": {
+    "EnableMonitoring": true,
+    "MonitoringIntervalSeconds": 300,
+    "AlertThreshold": 85,
+    "LogRetentionDays": 730
+  },
+  "DataIntegration": {
+    "FabricWorkspaceId": "",
+    "LakehouseId": "",
+    "DataRetentionPolicy": "90days",
+    "ArchiveOlderThan": "7days"
+  },
+  "Compliance": {
+    "ComplianceFramework": "SOC2",
+    "AuditLogRetention": 2555,
+    "DataClassifications": [
+      "Public",
+      "Internal",
+      "Confidential",
+      "Highly Confidential",
+      "PersonalData",
+      "TradeSecrets"
+    ]
+  },
+  "Security": {
+    "MFARequired": true,
+    "PasswordPolicy": {
+      "MinimumLength": 14,
+      "ComplexityRequired": true,
+      "HistoryCount": 24,
+      "ExpirationDays": 90
+    },
+    "ConditionalAccessEnabled": true
+  },
+  "AI": {
+    "EnableAI": true,
+    "CopilotInstances": [
+      "Copilot-Excel",
+      "Copilot-Word",
+      "Copilot-PowerPoint",
+      "Copilot-Teams",
+      "Copilot-Outlook"
+    ],
+    "PredictiveAnalytics": true
+  },
+  "Cost": {
+    "MaxCloudCostPerHour": 100,
+    "MaxCloudCostPerMonth": 72000,
+    "CostOptimizationEnabled": true,
+    "RI_RecommendationsEnabled": true
+  }
+}

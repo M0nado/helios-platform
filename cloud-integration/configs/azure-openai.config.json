@@ -1,0 +1,105 @@
+{
+  "service": "azure-openai",
+  "displayName": "Azure OpenAI Service",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 2,
+  "endpoints": {
+    "api": "https://${AZURE_OPENAI_RESOURCE}.openai.azure.com",
+    "chat": "https://${AZURE_OPENAI_RESOURCE}.openai.azure.com/openai/deployments/${DEPLOYMENT_NAME}/chat/completions",
+    "embeddings": "https://${AZURE_OPENAI_RESOURCE}.openai.azure.com/openai/deployments/${DEPLOYMENT_NAME}/embeddings"
+  },
+  "authentication": {
+    "type": "api_key",
+    "apiKey": "${AZURE_OPENAI_KEY}",
+    "apiVersion": "2024-02-15-preview",
+    "headers": {
+      "api-key": "${AZURE_OPENAI_KEY}",
+      "Content-Type": "application/json"
+    }
+  },
+  "deployments": [
+    {
+      "name": "gpt-4-deployment",
+      "model": "gpt-4",
+      "version": "turbo",
+      "capacity": 30,
+      "enabled": true,
+      "costPer1kTokens": {
+        "input": 0.03,
+        "output": 0.06
+      }
+    },
+    {
+      "name": "gpt-35-turbo",
+      "model": "gpt-3.5-turbo",
+      "version": "latest",
+      "capacity": 120,
+      "enabled": true,
+      "costPer1kTokens": {
+        "input": 0.0005,
+        "output": 0.0015
+      }
+    },
+    {
+      "name": "embedding-deployment",
+      "model": "text-embedding-ada-002",
+      "version": "2",
+      "capacity": 50,
+      "enabled": true,
+      "costPer1kTokens": 0.0001
+    }
+  ],
+  "features": {
+    "chat": {
+      "enabled": true,
+      "maxContextLength": 8192,
+      "systemPromptTemplate": "You are an AI assistant powering the HELIOS Platform on Azure."
+    },
+    "embeddings": {
+      "enabled": true,
+      "dimension": 1536,
+      "normalization": true
+    },
+    "contentFilter": {
+      "enabled": true,
+      "level": "medium"
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "monthlyLimit": 150000,
+    "dailyLimit": 15000,
+    "perRequestLimit": 200
+  },
+  "costs": {
+    "budgetLimit": 1500,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "azure-ai"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 2,
+    "nextService": "claude"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 30,
+    "timeout_seconds": 5,
+    "endpoint": "https://${AZURE_OPENAI_RESOURCE}.openai.azure.com/openai/deployments"
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 5000,
+    "tokensPerMinute": 150000,
+    "requestsPerDay": 500000
+  },
+  "autoscaling": {
+    "enabled": true,
+    "minCapacity": 10,
+    "maxCapacity": 200,
+    "scaleUpThreshold": 70,
+    "scaleDownThreshold": 30
+  }
+}

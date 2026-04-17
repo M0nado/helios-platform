@@ -1,0 +1,108 @@
+{
+  "service": "claude",
+  "displayName": "Anthropic Claude API",
+  "version": "1.0",
+  "enabled": true,
+  "priority": 3,
+  "endpoints": {
+    "messages": "https://api.anthropic.com/v1/messages",
+    "models": "https://api.anthropic.com/v1/models"
+  },
+  "authentication": {
+    "type": "api_key",
+    "apiKey": "${ANTHROPIC_API_KEY}",
+    "headers": {
+      "x-api-key": "${ANTHROPIC_API_KEY}",
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json"
+    }
+  },
+  "models": [
+    {
+      "name": "claude-3-opus-20240229",
+      "version": "latest",
+      "enabled": true,
+      "maxTokens": 200000,
+      "inputCost": 0.015,
+      "outputCost": 0.075,
+      "costPer1kTokens": {
+        "input": 0.015,
+        "output": 0.075
+      }
+    },
+    {
+      "name": "claude-3-sonnet-20240229",
+      "version": "latest",
+      "enabled": true,
+      "maxTokens": 200000,
+      "inputCost": 0.003,
+      "outputCost": 0.015,
+      "costPer1kTokens": {
+        "input": 0.003,
+        "output": 0.015
+      }
+    },
+    {
+      "name": "claude-3-haiku-20240307",
+      "version": "latest",
+      "enabled": true,
+      "maxTokens": 200000,
+      "inputCost": 0.00080,
+      "outputCost": 0.0024,
+      "costPer1kTokens": {
+        "input": 0.00080,
+        "output": 0.0024
+      }
+    }
+  ],
+  "features": {
+    "messages": {
+      "enabled": true,
+      "maxContextLength": 200000,
+      "systemPromptTemplate": "You are an expert assistant helping the HELIOS Platform with code, analysis, and decision making."
+    },
+    "visionCapabilities": {
+      "enabled": true,
+      "imageFormats": ["jpeg", "png", "gif", "webp"]
+    },
+    "toolUse": {
+      "enabled": true,
+      "maxToolResults": 10
+    }
+  },
+  "usage": {
+    "trackingEnabled": true,
+    "monthlyLimit": 50000,
+    "dailyLimit": 5000,
+    "perRequestLimit": 50
+  },
+  "costs": {
+    "budgetLimit": 500,
+    "currency": "USD",
+    "alertThreshold": 80,
+    "costCenter": "ai-research"
+  },
+  "fallback": {
+    "enabled": true,
+    "priority": 3,
+    "nextService": "ollama"
+  },
+  "healthCheck": {
+    "enabled": true,
+    "interval_seconds": 60,
+    "timeout_seconds": 10,
+    "endpoint": "https://api.anthropic.com/v1/models"
+  },
+  "rateLimit": {
+    "enabled": true,
+    "requestsPerMinute": 50,
+    "tokensPerMinute": 2000000,
+    "requestsPerDay": 10000
+  },
+  "retry": {
+    "maxAttempts": 3,
+    "initialBackoffMs": 1000,
+    "maxBackoffMs": 60000,
+    "exponentialBase": 2
+  }
+}
