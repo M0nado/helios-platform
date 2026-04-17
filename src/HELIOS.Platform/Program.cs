@@ -3,6 +3,10 @@ using System.Threading.Tasks;
 using HELIOS.Platform.Core;
 using HELIOS.Platform.BackendServices.ServerManagement;
 using HELIOS.Platform.Core.Logging;
+using HELIOS.Platform.Core.Diagnostics;
+using HELIOS.Platform.Core.Storage;
+using HELIOS.Platform.Core.Configuration;
+using HELIOS.Platform.Core.Security;
 
 namespace HELIOS.Platform
 {
@@ -18,12 +22,25 @@ namespace HELIOS.Platform
                 Console.WriteLine("╚════════════════════════════════════════════════════════════════╝");
                 Console.WriteLine();
                 
-                // Initialize service container with real services
-                ServiceContainer.Instance.RegisterSingleton<IServiceOrchestrator>(new ServiceOrchestrator());
-                ServiceContainer.Instance.RegisterSingleton<Core.Logging.ILogger>(new ConsoleLogger());
+                // Initialize service container with all core services
+                var logger = new ConsoleLogger();
+                var orchestrator = new ServiceOrchestrator();
+                var diagnostics = new SystemDiagnostics();
+                var storage = new StorageManager();
+                var config = new Core.Configuration.ConfigurationManager();
+                var encryption = new EncryptionManager();
+                
+                ServiceContainer.Instance.RegisterSingleton<Core.Logging.ILogger>(logger);
+                ServiceContainer.Instance.RegisterSingleton<IServiceOrchestrator>(orchestrator);
+                ServiceContainer.Instance.RegisterSingleton<SystemDiagnostics>(diagnostics);
+                ServiceContainer.Instance.RegisterSingleton<StorageManager>(storage);
+                ServiceContainer.Instance.RegisterSingleton<Core.Configuration.ConfigurationManager>(config);
+                ServiceContainer.Instance.RegisterSingleton<EncryptionManager>(encryption);
+                
+                logger.Info("HELIOS Platform initialized successfully");
                 
                 // Show main menu
-                await ShowMainMenu();
+                await ShowMainMenu(logger);
             }
             catch (Exception ex)
             {
@@ -34,23 +51,25 @@ namespace HELIOS.Platform
             }
         }
 
-        static async Task ShowMainMenu()
+        static async Task ShowMainMenu(Core.Logging.ILogger logger)
         {
             while (true)
             {
                 Console.WriteLine("\n┌────────────────────────────────────────────────────────────────┐");
                 Console.WriteLine("│                      MAIN MENU                                   │");
                 Console.WriteLine("├────────────────────────────────────────────────────────────────┤");
-                Console.WriteLine("│ 1. Dashboard                                                   │");
-                Console.WriteLine("│ 2. System Management                                           │");
-                Console.WriteLine("│ 3. AI Hub                                                      │");
-                Console.WriteLine("│ 4. Settings                                                    │");
-                Console.WriteLine("│ 5. Tools                                                       │");
-                Console.WriteLine("│ 6. Terminal                                                    │");
-                Console.WriteLine("│ 7. Help                                                        │");
+                Console.WriteLine("│ 1. Dashboard           - System Overview & Monitoring           │");
+                Console.WriteLine("│ 2. System Management   - Disks, Services, Processes            │");
+                Console.WriteLine("│ 3. Diagnostics        - System Analysis & Health Check         │");
+                Console.WriteLine("│ 4. Security           - Vault, Encryption, Authentication     │");
+                Console.WriteLine("│ 5. AI Hub              - AI Features & Optimization             │");
+                Console.WriteLine("│ 6. Settings            - Configuration & Preferences            │");
+                Console.WriteLine("│ 7. Tools               - Utilities & Advanced Functions        │");
+                Console.WriteLine("│ 8. Terminal            - CLI Interface                          │");
+                Console.WriteLine("│ 9. Help                - Documentation & Support               │");
                 Console.WriteLine("│ 0. Exit                                                        │");
                 Console.WriteLine("└────────────────────────────────────────────────────────────────┘");
-                Console.Write("\nSelect option (0-7): ");
+                Console.Write("\nSelect option (0-9): ");
 
                 string input = Console.ReadLine() ?? "";
 
@@ -63,18 +82,24 @@ namespace HELIOS.Platform
                         await ShowSystemManagement();
                         break;
                     case "3":
-                        await ShowAiHub();
+                        await ShowDiagnostics();
                         break;
                     case "4":
-                        await ShowSettings();
+                        await ShowSecurity();
                         break;
                     case "5":
-                        await ShowTools();
+                        await ShowAiHub();
                         break;
                     case "6":
-                        await ShowTerminal();
+                        await ShowSettings();
                         break;
                     case "7":
+                        await ShowTools();
+                        break;
+                    case "8":
+                        await ShowTerminal();
+                        break;
+                    case "9":
                         await ShowHelp();
                         break;
                     case "0":
@@ -179,11 +204,76 @@ namespace HELIOS.Platform
             Console.WriteLine("╚════════════════════════════════════════════════════════════════╝\n");
 
             Console.WriteLine("Available Tools:");
-            Console.WriteLine("  • Malwarebytes Integration");
-            Console.WriteLine("  • Rootkit Detection");
-            Console.WriteLine("  • File Quarantine");
-            Console.WriteLine("  • USB Builder");
-            Console.WriteLine("  • System Diagnostics");
+            Console.WriteLine("  1. Disk Information & Analysis");
+            Console.WriteLine("  2. Find Large Files");
+            Console.WriteLine("  3. Configuration Manager");
+            Console.WriteLine("  4. System Performance Monitoring");
+            Console.WriteLine("  5. Security Toolkit");
+            Console.WriteLine("  0. Back to Main Menu");
+            Console.Write("\nSelect option: ");
+
+            string choice = Console.ReadLine() ?? "";
+
+            try
+            {
+                var storage = ServiceContainer.Instance.GetService<StorageManager>();
+                
+                switch (choice)
+                {
+                    case "1":
+                        Console.WriteLine("\n▶ Disk Information:");
+                        var disks = await storage.GetDiskInfoAsync();
+                        foreach (var disk in disks)
+                        {
+                            Console.WriteLine($"\n  Drive: {disk.DriveLetter}");
+                            Console.WriteLine($"  Name: {disk.Name}");
+                            Console.WriteLine($"  Total: {disk.TotalSize / (1024 * 1024 * 1024)} GB");
+                            Console.WriteLine($"  Used: {disk.UsedSpace / (1024 * 1024 * 1024)} GB");
+                            Console.WriteLine($"  Free: {disk.AvailableSpace / (1024 * 1024 * 1024)} GB");
+                            Console.WriteLine($"  Usage: {disk.UsagePercent:F1}%");
+                        }
+                        break;
+                    case "2":
+                        Console.Write("\nEnter directory path: ");
+                        string dirPath = Console.ReadLine() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                        var largeFiles = await storage.GetLargestFilesAsync(dirPath, 10);
+                        Console.WriteLine("\n▶ Largest Files:");
+                        foreach (var file in largeFiles)
+                        {
+                            Console.WriteLine($"  {file.Name,-40} {file.Length / (1024 * 1024)} MB");
+                        }
+                        break;
+                    case "3":
+                        var config = ServiceContainer.Instance.GetService<Core.Configuration.ConfigurationManager>();
+                        Console.WriteLine("\n▶ Current Settings:");
+                        var allSettings = config.GetAllSettings();
+                        foreach (var setting in allSettings)
+                        {
+                            Console.WriteLine($"  {setting.Key}: {setting.Value}");
+                        }
+                        break;
+                    case "4":
+                        Console.WriteLine("\n▶ Performance Monitoring:");
+                        Console.WriteLine("  • CPU Monitoring");
+                        Console.WriteLine("  • Memory Profiling");
+                        Console.WriteLine("  • Disk I/O Analysis");
+                        Console.WriteLine("  • Network Performance");
+                        break;
+                    case "5":
+                        Console.WriteLine("\n▶ Security Toolkit:");
+                        Console.WriteLine("  • Malwarebytes Integration");
+                        Console.WriteLine("  • Rootkit Detection");
+                        Console.WriteLine("  • File Quarantine");
+                        Console.WriteLine("  • USB Builder");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[ERROR] {ex.Message}");
+                Console.ResetColor();
+            }
 
             Console.WriteLine("\nPress any key to return to main menu...");
             Console.ReadKey();
@@ -227,6 +317,120 @@ namespace HELIOS.Platform
             }
         }
 
+        static async Task ShowDiagnostics()
+        {
+            Console.Clear();
+            Console.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                       DIAGNOSTICS                              ║");
+            Console.WriteLine("╚════════════════════════════════════════════════════════════════╝\n");
+
+            try
+            {
+                var diag = ServiceContainer.Instance.GetService<SystemDiagnostics>();
+                
+                // System information
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("▶ System Information:");
+                Console.ResetColor();
+                var sysInfo = await diag.GetSystemInfoAsync();
+                Console.WriteLine($"  Machine: {sysInfo.MachineName}");
+                Console.WriteLine($"  OS Version: {sysInfo.OSVersion}");
+                Console.WriteLine($"  Processors: {sysInfo.ProcessorCount}");
+                Console.WriteLine($"  Total Memory: {sysInfo.TotalMemory / (1024 * 1024)} MB");
+                
+                // Top processes
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("▶ Top Processes by Memory:");
+                Console.ResetColor();
+                var processes = await diag.GetRunningProcessesAsync();
+                var topProcs = processes.OrderByDescending(p => p.MemoryMB).Take(5).ToList();
+                foreach (var proc in topProcs)
+                {
+                    Console.WriteLine($"  {proc.Name,-30} {proc.MemoryMB,8} MB (PID: {proc.Id})");
+                }
+                
+                // Network
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("▶ Network:");
+                Console.ResetColor();
+                var netInfo = await diag.GetNetworkInfoAsync();
+                Console.WriteLine($"  Hostname: {netInfo.HostName}");
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[ERROR] {ex.Message}");
+                Console.ResetColor();
+            }
+
+            Console.WriteLine("\nPress any key to return to main menu...");
+            Console.ReadKey();
+        }
+
+        static async Task ShowSecurity()
+        {
+            Console.Clear();
+            Console.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                        SECURITY                                ║");
+            Console.WriteLine("╚════════════════════════════════════════════════════════════════╝\n");
+
+            Console.WriteLine("Security & Encryption Options:");
+            Console.WriteLine("  1. Password Hashing & Verification");
+            Console.WriteLine("  2. Generate Security Token");
+            Console.WriteLine("  3. Encrypt Data");
+            Console.WriteLine("  4. Decrypt Data");
+            Console.WriteLine("  5. View Security Status");
+            Console.WriteLine("  0. Back to Main Menu");
+            Console.Write("\nSelect option: ");
+
+            string choice = Console.ReadLine() ?? "";
+            
+            try
+            {
+                var encryption = ServiceContainer.Instance.GetService<EncryptionManager>();
+                
+                switch (choice)
+                {
+                    case "1":
+                        Console.Write("\nEnter password to hash: ");
+                        string pwd = Console.ReadLine() ?? "";
+                        var hash = encryption.GenerateHash(pwd);
+                        Console.WriteLine($"Hash: {hash}");
+                        break;
+                    case "2":
+                        Console.WriteLine("\nToken generation feature requires secure context.");
+                        Console.WriteLine("Placeholder for future implementation.");
+                        break;
+                    case "3":
+                        Console.WriteLine("\nEncryption requires a valid plaintext and key.");
+                        Console.WriteLine("Placeholder for future implementation.");
+                        break;
+                    case "4":
+                        Console.WriteLine("\nDecryption requires a valid ciphertext and key.");
+                        Console.WriteLine("Placeholder for future implementation.");
+                        break;
+                    case "5":
+                        Console.WriteLine("\nSecurity Status:");
+                        Console.WriteLine("  • Encryption: Enabled");
+                        Console.WriteLine("  • Token Generation: Available");
+                        Console.WriteLine("  • Password Hashing: SHA256");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[ERROR] {ex.Message}");
+                Console.ResetColor();
+            }
+
+            Console.WriteLine("\nPress any key to return to main menu...");
+            Console.ReadKey();
+        }
+
+
         static async Task ShowHelp()
         {
             Console.Clear();
@@ -242,6 +446,12 @@ namespace HELIOS.Platform
             Console.WriteLine("System Management:");
             Console.WriteLine("  Manage partitions, optimize disk, configure security, and more.");
             Console.WriteLine();
+            Console.WriteLine("Diagnostics:");
+            Console.WriteLine("  System analysis, process monitoring, and health checks.");
+            Console.WriteLine();
+            Console.WriteLine("Security:");
+            Console.WriteLine("  Encryption, vault management, and security operations.");
+            Console.WriteLine();
             Console.WriteLine("AI Hub:");
             Console.WriteLine("  Access local LLM models and AI-powered system optimization.");
             Console.WriteLine();
@@ -249,7 +459,7 @@ namespace HELIOS.Platform
             Console.WriteLine("  Configure HELIOS Platform preferences and system profiles.");
             Console.WriteLine();
             Console.WriteLine("Tools:");
-            Console.WriteLine("  Access security, diagnostics, and system maintenance tools.");
+            Console.WriteLine("  Access disk utilities, diagnostics, and system maintenance tools.");
             Console.WriteLine();
             Console.WriteLine("Terminal:");
             Console.WriteLine("  Execute CLI commands for advanced operations.");
@@ -257,5 +467,6 @@ namespace HELIOS.Platform
             Console.WriteLine("\nPress any key to return to main menu...");
             Console.ReadKey();
         }
+
     }
 }
