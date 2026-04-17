@@ -689,4 +689,76 @@ public class Phase1ServiceTests
         Assert.True(report.Duration.TotalSeconds == 10);
         Assert.True(report.MegabytesMigrated > 99 && report.MegabytesMigrated < 101);
     }
+
+    /// <summary>
+    /// DevDrive and File Sharing Service Tests
+    /// </summary>
+    [Fact]
+    public async Task DevDriveFileService_CreateDevDriveAsync_CreatesSuccessfully()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new DevDriveFileService(logger);
+
+        // Act
+        var result = await service.CreateDevDriveAsync("D", 50);
+
+        // Assert
+        Assert.True(result);
+        var drives = await service.GetAllDevDrivesAsync();
+        Assert.Single(drives);
+    }
+
+    [Fact]
+    public async Task DevDriveFileService_GetDevDriveInfoAsync_ReturnsCorrectSize()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new DevDriveFileService(logger);
+        await service.CreateDevDriveAsync("E", 100);
+
+        // Act
+        var info = await service.GetDevDriveInfoAsync("E");
+
+        // Assert
+        Assert.NotNull(info);
+        Assert.Equal("E", info.DriveLetter);
+        Assert.Equal(100L * 1024 * 1024 * 1024, info.SizeBytes);
+        Assert.True(info.IsOptimizedForDevelopment);
+    }
+
+    [Fact]
+    public async Task DevDriveFileService_SMBSharing_ActivatesShare()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new DevDriveFileService(logger);
+        var testPath = Path.GetTempPath();
+
+        // Act
+        var result = await service.EnableSMBSharingAsync(testPath, "TestShare", new[] { "Everyone" });
+
+        // Assert
+        Assert.True(result);
+        var shares = await service.GetActiveSharesAsync();
+        Assert.Single(shares);
+        Assert.Equal("SMB", shares[0].ShareType);
+    }
+
+    [Fact]
+    public async Task DevDriveFileService_GetSharePerformanceAsync_ReturnsMetrics()
+    {
+        // Arrange
+        var logger = new ConsoleLogger();
+        var service = new DevDriveFileService(logger);
+
+        // Act
+        var metrics = await service.GetSharePerformanceAsync("TestShare");
+
+        // Assert
+        Assert.NotNull(metrics);
+        Assert.True(metrics.AverageBandwidth > 0);
+        Assert.True(metrics.AverageLatencyMs > 0);
+        Assert.True(metrics.ErrorCount == 0);
+    }
 }
