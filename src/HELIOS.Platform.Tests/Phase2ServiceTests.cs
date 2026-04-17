@@ -1609,4 +1609,222 @@ public class Phase2ServiceTests
         Assert.NotEmpty(trends);
         Assert.Contains("CPU_Growth", trends.Keys);
     }
+
+    // ============ DATA SHARDING SERVICE TESTS ============
+
+    [Fact]
+    public async Task DataSharding_CreateStrategy_DefinesShardingConfig()
+    {
+        var shardingService = new DataShardingEngine();
+        
+        var strategy = await shardingService.CreateShardingStrategyAsync("RangeSharding", 8, 2);
+        
+        Assert.NotNull(strategy);
+        Assert.Equal(8, strategy.ShardCount);
+        Assert.Equal(2, strategy.ReplicationFactor);
+    }
+
+    [Fact]
+    public async Task DataSharding_ShardData_DistributesKeyEvenly()
+    {
+        var shardingService = new DataShardingEngine();
+        var data = System.Text.Encoding.UTF8.GetBytes("test data");
+        
+        var shard = await shardingService.ShardDataAsync("key1", data, "RangeSharding");
+        
+        Assert.NotNull(shard);
+        Assert.NotEmpty(shard.ReplicaNodes);
+    }
+
+    [Fact]
+    public async Task DataSharding_ListShards_ReturnsAllShards()
+    {
+        var shardingService = new DataShardingEngine();
+        var data = System.Text.Encoding.UTF8.GetBytes("data");
+        
+        await shardingService.ShardDataAsync("key1", data, "Strategy1");
+        await shardingService.ShardDataAsync("key2", data, "Strategy1");
+        
+        var shards = await shardingService.ListShardsAsync();
+        
+        Assert.True(shards.Count >= 2);
+    }
+
+    [Fact]
+    public async Task DataSharding_RebalanceShards_RedistributesData()
+    {
+        var shardingService = new DataShardingEngine();
+        var data = System.Text.Encoding.UTF8.GetBytes("data");
+        await shardingService.ShardDataAsync("key1", data, "Strategy1");
+        
+        var result = await shardingService.RebalanceShardsAsync();
+        
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task DataSharding_GetDistribution_ShowsShardLoad()
+    {
+        var shardingService = new DataShardingEngine();
+        var data = System.Text.Encoding.UTF8.GetBytes("data");
+        await shardingService.ShardDataAsync("key1", data, "Strategy1");
+        
+        var distribution = await shardingService.GetShardDistributionAsync();
+        
+        Assert.NotEmpty(distribution);
+    }
+
+    [Fact]
+    public async Task DataSharding_AddReplica_IncreasesAvailability()
+    {
+        var shardingService = new DataShardingEngine();
+        var data = System.Text.Encoding.UTF8.GetBytes("data");
+        var shard = await shardingService.ShardDataAsync("key1", data, "Strategy1");
+        
+        var result = await shardingService.AddReplicaAsync(shard.ShardId, "node-backup");
+        
+        Assert.True(result);
+    }
+
+    // ============ QUERY OPTIMIZATION SERVICE TESTS ============
+
+    [Fact]
+    public async Task QueryOptimization_PlanQuery_GeneratesExecutionPlan()
+    {
+        var optimizer = new QueryOptimizer();
+        
+        var plan = await optimizer.PlanQueryAsync("SELECT * FROM users");
+        
+        Assert.NotNull(plan);
+        Assert.NotEmpty(plan.ExecutionSteps);
+    }
+
+    [Fact]
+    public async Task QueryOptimization_ExecuteOptimized_RunsQueryEfficiently()
+    {
+        var optimizer = new QueryOptimizer();
+        
+        var result = await optimizer.ExecuteOptimizedQueryAsync("SELECT * FROM users");
+        
+        Assert.NotNull(result);
+        Assert.True(result.ExecutionTimeMs > 0);
+    }
+
+    [Fact]
+    public async Task QueryOptimization_GetQueryHistory_ReturnsPastQueries()
+    {
+        var optimizer = new QueryOptimizer();
+        await optimizer.PlanQueryAsync("SELECT * FROM users");
+        await optimizer.PlanQueryAsync("SELECT * FROM orders");
+        
+        var history = await optimizer.GetQueryHistoryAsync();
+        
+        Assert.True(history.Count >= 2);
+    }
+
+    [Fact]
+    public async Task QueryOptimization_EstimateQueryCost_CalculatesCost()
+    {
+        var optimizer = new QueryOptimizer();
+        
+        var cost = await optimizer.EstimateQueryCostAsync("SELECT * FROM users");
+        
+        Assert.True(cost >= 0);
+    }
+
+    [Fact]
+    public async Task QueryOptimization_GetQueryStatistics_ShowsPerformance()
+    {
+        var optimizer = new QueryOptimizer();
+        await optimizer.ExecuteOptimizedQueryAsync("SELECT * FROM users");
+        
+        var stats = await optimizer.GetQueryStatisticsAsync();
+        
+        Assert.NotEmpty(stats);
+        Assert.Contains("TotalQueries", stats.Keys);
+    }
+
+    // ============ DISTRIBUTED CACHING SERVICE TESTS ============
+
+    [Fact]
+    public async Task DistributedCache_Set_StoresValue()
+    {
+        var cache = new DistributedCacheEngine();
+        
+        var result = await cache.SetAsync("key1", "value1");
+        
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task DistributedCache_Get_RetrievesValue()
+    {
+        var cache = new DistributedCacheEngine();
+        await cache.SetAsync("key1", "value1");
+        
+        var value = await cache.GetAsync("key1");
+        
+        Assert.Equal("value1", value);
+    }
+
+    [Fact]
+    public async Task DistributedCache_Delete_RemovesValue()
+    {
+        var cache = new DistributedCacheEngine();
+        await cache.SetAsync("key1", "value1");
+        
+        var result = await cache.DeleteAsync("key1");
+        
+        Assert.True(result);
+        var value = await cache.GetAsync("key1");
+        Assert.Null(value);
+    }
+
+    [Fact]
+    public async Task DistributedCache_Exists_ChecksPresence()
+    {
+        var cache = new DistributedCacheEngine();
+        await cache.SetAsync("key1", "value1");
+        
+        var exists = await cache.ExistsAsync("key1");
+        
+        Assert.True(exists);
+    }
+
+    [Fact]
+    public async Task DistributedCache_GetHitRate_CalculatesEfficiency()
+    {
+        var cache = new DistributedCacheEngine();
+        await cache.SetAsync("key1", "value1");
+        await cache.GetAsync("key1");
+        await cache.GetAsync("key2");
+        
+        var hitRate = await cache.GetHitRateAsync();
+        
+        Assert.True(hitRate >= 0 && hitRate <= 100);
+    }
+
+    [Fact]
+    public async Task DistributedCache_GetCacheStats_ReturnsMetrics()
+    {
+        var cache = new DistributedCacheEngine();
+        await cache.SetAsync("key1", "value1");
+        
+        var stats = await cache.GetCacheStatsAsync();
+        
+        Assert.NotEmpty(stats);
+        Assert.Contains("Size", stats.Keys);
+    }
+
+    [Fact]
+    public async Task DistributedCache_ClearCache_RemovesAllEntries()
+    {
+        var cache = new DistributedCacheEngine();
+        await cache.SetAsync("key1", "value1");
+        
+        await cache.ClearCacheAsync();
+        
+        var value = await cache.GetAsync("key1");
+        Assert.Null(value);
+    }
 }

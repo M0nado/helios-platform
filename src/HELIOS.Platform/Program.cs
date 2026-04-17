@@ -83,6 +83,9 @@ namespace HELIOS.Platform
                 var mlService = new MachineLearningEngine();
                 var resourcePlanner = new ResourcePlanner();
                 var capacityPlanner = new CapacityPlanner();
+                var dataShardingService = new DataShardingEngine();
+                var queryOptimizer = new QueryOptimizer();
+                var distributedCache = new DistributedCacheEngine();
                 
                 // Initialize database context
                 var optionsBuilder = new DbContextOptionsBuilder<HeliosDatabaseContext>();
@@ -134,6 +137,9 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IMachineLearningService>(mlService);
                 ServiceContainer.Instance.RegisterSingleton<IPredictiveResourcePlanning>(resourcePlanner);
                 ServiceContainer.Instance.RegisterSingleton<ICapacityPlanningService>(capacityPlanner);
+                ServiceContainer.Instance.RegisterSingleton<IDataShardingService>(dataShardingService);
+                ServiceContainer.Instance.RegisterSingleton<IQueryOptimizationService>(queryOptimizer);
+                ServiceContainer.Instance.RegisterSingleton<IDistributedCachingService>(distributedCache);
                 ServiceContainer.Instance.RegisterSingleton<HeliosDatabaseContext>(dbContext);
                 ServiceContainer.Instance.RegisterSingleton<IDataAccessService>(dataAccessService);
                 
