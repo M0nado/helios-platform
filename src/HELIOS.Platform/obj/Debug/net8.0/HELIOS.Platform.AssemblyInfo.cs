@@ -12,9 +12,10 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("M0nado")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyDescriptionAttribute(@"Complete Windows optimization ecosystem with 7 integrated components providing enterprise-grade deployment, automation, and management capabilities. Includes MonadoEngine, SecuritySystem, AIOrchestrator, GUIDashboard, BuildAgents, DevAIHub, and SoftwareStack.")]
+[assembly: System.Reflection.AssemblyDescriptionAttribute(("Complete Windows optimization ecosystem with integrated components providing ente" +
+    "rprise-grade deployment, automation, and management capabilities."))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+725e57be49aca15a84ba16b17ef8be50bf8b33dc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0fc54f66e2a551a688022a6ff54e464456743f93")]
 [assembly: System.Reflection.AssemblyProductAttribute("HELIOS.Platform")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HELIOS.Platform")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

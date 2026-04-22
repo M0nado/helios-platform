@@ -13,34 +13,25 @@
         "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
         "outputPath": "C:\\helios-platform\\src\\HELIOS.Platform\\obj\\",
         "projectStyle": "PackageReference",
-        "crossTargeting": true,
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
+          "C:\\helios-platform\\NuGet.Config",
           "C:\\Users\\ADMIN\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
-          "net6.0",
-          "net7.0",
           "net8.0"
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "C:\\Program Files\\dotnet\\library-packs": {},
-          "https://api.nuget.org/v3/index.json": {}
+          "https://api.nuget.org/v3/index.json": {},
+          "https://nuget.pkg.github.com/M0nado/index.json": {}
         },
         "frameworks": {
-          "net6.0": {
-            "targetAlias": "net6.0",
-            "projectReferences": {}
-          },
-          "net7.0": {
-            "targetAlias": "net7.0",
-            "projectReferences": {}
-          },
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {}
@@ -59,128 +50,214 @@
         "SdkAnalysisLevel": "10.0.200"
       },
       "frameworks": {
-        "net6.0": {
-          "targetAlias": "net6.0",
-          "dependencies": {
-            "Azure.Identity": {
-              "target": "Package",
-              "version": "[1.10.0, )"
-            },
-            "Azure.ResourceManager.Storage": {
-              "target": "Package",
-              "version": "[1.6.0, )"
-            },
-            "Microsoft.Extensions.Logging": {
-              "target": "Package",
-              "version": "[8.0.0, )"
-            },
-            "System.Diagnostics.EventLog": {
-              "target": "Package",
-              "version": "[4.7.0, )"
-            }
-          },
-          "imports": [
-            "net461",
-            "net462",
-            "net47",
-            "net471",
-            "net472",
-            "net48",
-            "net481"
-          ],
-          "assetTargetFallback": true,
-          "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[6.0.36, 6.0.36]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[6.0.36, 6.0.36]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[6.0.36, 6.0.36]"
-            }
-          ],
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201\\RuntimeIdentifierGraph.json"
-        },
-        "net7.0": {
-          "targetAlias": "net7.0",
-          "dependencies": {
-            "Azure.Identity": {
-              "target": "Package",
-              "version": "[1.10.0, )"
-            },
-            "Azure.ResourceManager.Storage": {
-              "target": "Package",
-              "version": "[1.6.0, )"
-            },
-            "Microsoft.Extensions.Logging": {
-              "target": "Package",
-              "version": "[8.0.0, )"
-            },
-            "System.Diagnostics.EventLog": {
-              "target": "Package",
-              "version": "[4.7.0, )"
-            }
-          },
-          "imports": [
-            "net461",
-            "net462",
-            "net47",
-            "net471",
-            "net472",
-            "net48",
-            "net481"
-          ],
-          "assetTargetFallback": true,
-          "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[7.0.20, 7.0.20]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[7.0.20, 7.0.20]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[7.0.20, 7.0.20]"
-            }
-          ],
-          "frameworkReferences": {
-            "Microsoft.NETCore.App": {
-              "privateAssets": "all"
-            }
-          },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201\\RuntimeIdentifierGraph.json"
-        },
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "Accord.Imaging": {
+              "target": "Package",
+              "version": "[3.8.0, )"
+            },
+            "Accord.MachineLearning": {
+              "target": "Package",
+              "version": "[3.8.0, )"
+            },
+            "Azure.Data.Tables": {
+              "target": "Package",
+              "version": "[12.8.0, )"
+            },
             "Azure.Identity": {
               "target": "Package",
-              "version": "[1.10.0, )"
+              "version": "[1.11.4, )"
+            },
+            "Azure.Messaging.EventHubs": {
+              "target": "Package",
+              "version": "[5.11.3, )"
+            },
+            "Azure.Messaging.ServiceBus": {
+              "target": "Package",
+              "version": "[7.17.3, )"
+            },
+            "Azure.ResourceManager": {
+              "target": "Package",
+              "version": "[1.13.2, )"
             },
             "Azure.ResourceManager.Storage": {
               "target": "Package",
               "version": "[1.6.0, )"
             },
+            "Azure.Security.KeyVault.Secrets": {
+              "target": "Package",
+              "version": "[4.5.0, )"
+            },
+            "Azure.Storage.Blobs": {
+              "target": "Package",
+              "version": "[12.21.0, )"
+            },
+            "Docker.DotNet": {
+              "target": "Package",
+              "version": "[3.125.15, )"
+            },
+            "GraphQL": {
+              "target": "Package",
+              "version": "[8.3.0, )"
+            },
+            "IDisposableAnalyzers": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[4.0.8, )"
+            },
+            "KubernetesClient": {
+              "target": "Package",
+              "version": "[14.0.2, )"
+            },
+            "Microsoft.Azure.Cosmos": {
+              "target": "Package",
+              "version": "[3.40.0, )"
+            },
+            "Microsoft.Azure.Cosmos.Table": {
+              "target": "Package",
+              "version": "[1.0.8, )"
+            },
+            "Microsoft.CodeAnalysis.NetAnalyzers": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.201, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Sqlite": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.Tools": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Caching.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Configuration": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.Configuration.Binder": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Microsoft.Extensions.DependencyInjection": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
             "Microsoft.Extensions.Logging": {
               "target": "Package",
               "version": "[8.0.0, )"
             },
+            "Microsoft.IdentityModel.Tokens": {
+              "target": "Package",
+              "version": "[8.2.0, )"
+            },
+            "Microsoft.ML": {
+              "target": "Package",
+              "version": "[3.0.1, )"
+            },
+            "Microsoft.NET.Test.Sdk": {
+              "target": "Package",
+              "version": "[17.8.2, )"
+            },
+            "Prometheus.Client": {
+              "target": "Package",
+              "version": "[6.2.0, )"
+            },
+            "SciSharp.TensorFlow.Redist": {
+              "target": "Package",
+              "version": "[2.16.0, )"
+            },
+            "Serilog": {
+              "target": "Package",
+              "version": "[3.1.1, )"
+            },
+            "Serilog.Extensions.Logging": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "Serilog.Sinks.Console": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            },
+            "Serilog.Sinks.File": {
+              "target": "Package",
+              "version": "[5.0.0, )"
+            },
+            "StyleCop.Analyzers": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[1.2.0-beta.556, )"
+            },
+            "System.Data.SqlClient": {
+              "target": "Package",
+              "version": "[4.8.6, )"
+            },
             "System.Diagnostics.EventLog": {
               "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "System.Diagnostics.PerformanceCounter": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "System.Drawing.Common": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "System.IO.Compression": {
+              "target": "Package",
+              "version": "[4.3.0, )"
+            },
+            "System.IO.Compression.ZipFile": {
+              "target": "Package",
+              "version": "[4.3.0, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.2.0, )"
+            },
+            "System.Management": {
+              "target": "Package",
               "version": "[4.7.0, )"
+            },
+            "System.Net.NameResolution": {
+              "target": "Package",
+              "version": "[4.3.0, )"
+            },
+            "System.ServiceProcess.ServiceController": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "xunit": {
+              "target": "Package",
+              "version": "[2.7.1, )"
+            },
+            "xunit.runner.visualstudio": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[2.5.6, )"
             }
           },
           "imports": [

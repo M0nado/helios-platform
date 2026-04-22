@@ -172,8 +172,8 @@ namespace HELIOS.Platform.Core.Server
                 if (_services.TryGetValue(serviceId, out var service))
                 {
                     service.HealthStatus = currentHealth.IsHealthy
-                        ? ServiceHealthStatus.Healthy
-                        : ServiceHealthStatus.Unhealthy;
+                        ? ServiceHealthStatusConstants.Healthy
+                        : ServiceHealthStatusConstants.Unhealthy;
                     service.AverageResponseTimeMs = currentHealth.ResponseTimeMs;
                 }
 
@@ -323,7 +323,7 @@ namespace HELIOS.Platform.Core.Server
     /// <summary>
     /// Health status constants.
     /// </summary>
-    public static class ServiceHealthStatus
+    public static class ServiceHealthStatusConstants
     {
         public const string Healthy = "Healthy";
         public const string Unhealthy = "Unhealthy";
