@@ -1,0 +1,115 @@
+{
+  "vaultSystem": {
+    "name": "HELIOS Phase 10 Vault System",
+    "version": "1.0.0",
+    "description": "Encrypted vault partition with secure locker system",
+    "partition": {
+      "drive": "E:",
+      "minSizeGB": 30,
+      "maxSizeGB": 50,
+      "encryption": "BitLocker",
+      "algorithm": "AES-256-XTS"
+    },
+    "lockers": {
+      "Personal": {
+        "description": "Personal files and documents",
+        "subfolders": ["Documents", "Financial", "Medical"],
+        "maxSizeGB": 10,
+        "requireAuth": true,
+        "backupEnabled": true
+      },
+      "Work": {
+        "description": "Work-related files and projects",
+        "subfolders": ["Projects", "Clients", "Contracts"],
+        "maxSizeGB": 15,
+        "requireAuth": true,
+        "backupEnabled": true
+      },
+      "Gaming": {
+        "description": "Gaming saves and credentials",
+        "subfolders": ["Saves", "Credentials", "Configs"],
+        "maxSizeGB": 8,
+        "require2FA": true,
+        "backupEnabled": true
+      },
+      "Security": {
+        "description": "Security-sensitive files",
+        "subfolders": ["KeePass", "SSHKeys", "APIKeys", "Certificates"],
+        "maxSizeGB": 5,
+        "require2FA": true,
+        "backupEnabled": true,
+        "autoLock": 15
+      },
+      "Media": {
+        "description": "Photos, videos, and recordings",
+        "subfolders": ["Photos", "Videos", "Recordings"],
+        "maxSizeGB": 20,
+        "requireAuth": true,
+        "backupEnabled": true
+      }
+    },
+    "encryption": {
+      "method": "AES-256-GCM",
+      "keyLength": 256,
+      "algorithm": "AES",
+      "mode": "GCM",
+      "nonceLength": 96,
+      "tagLength": 128,
+      "keyRotationDays": 90,
+      "backupEncryption": true
+    },
+    "authentication": {
+      "passwordPolicy": {
+        "minLength": 12,
+        "requireUppercase": true,
+        "requireLowercase": true,
+        "requireNumbers": true,
+        "requireSpecialChars": true
+      },
+      "twoFactorAuth": {
+        "enabled": true,
+        "type": "TOTP",
+        "backupCodes": 10
+      },
+      "sessionTimeout": {
+        "idleMinutes": 30,
+        "absoluteMinutes": 480,
+        "onSuspend": true
+      }
+    },
+    "backup": {
+      "location": "J:",
+      "type": "Incremental",
+      "frequency": "Daily",
+      "retention": {
+        "dailyDays": 7,
+        "weeklyWeeks": 4,
+        "monthlyMonths": 12
+      },
+      "encryption": true,
+      "compression": true,
+      "verification": true
+    },
+    "integration": {
+      "keepass": {
+        "enabled": true,
+        "autoSync": true
+      },
+      "fileSystem": {
+        "contextMenu": true,
+        "dragDrop": true,
+        "shortcuts": true
+      },
+      "quarantine": {
+        "enabled": true,
+        "autoIsolate": true
+      }
+    },
+    "monitoring": {
+      "auditLogging": true,
+      "accessTracking": true,
+      "performanceMonitoring": true,
+      "alerting": true
+    }
+  }
+}

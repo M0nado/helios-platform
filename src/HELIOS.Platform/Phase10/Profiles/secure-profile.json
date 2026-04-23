@@ -1,0 +1,38 @@
+{
+  "name": "Secure",
+  "description": "Security lockdown and hardening profile",
+  "created": "2024-01-01T00:00:00Z",
+  "modified": "2024-01-01T00:00:00Z",
+  "settings": {
+    "firewallStrict": true,
+    "firewallInboundRules": "block all",
+    "firewallOutboundRules": "allow essential",
+    "vpnMandatory": true,
+    "diskEncryptionEnforced": true,
+    "bitLockerEnabled": true,
+    "usbRestricted": true,
+    "usbSignedDriversOnly": true,
+    "networkIsolated": true,
+    "fileSharingDisabled": true,
+    "printerSharingDisabled": true,
+    "autoLoginDisabled": true,
+    "passwordLoginRequired": true,
+    "sessionTimeout": "5 minutes",
+    "antivirusAggressive": true,
+    "autoUpdateEnforced": true,
+    "securityUpdateSchedule": "immediate",
+    "backupsScheduled": true,
+    "backupsEncrypted": true,
+    "registryHardened": true,
+    "remoteRegistryDisabled": true,
+    "behaviouralAnalysis": true,
+    "advancedMonitoring": true,
+    "dnsPrivate": true,
+    "usbActivityLogging": true
+  },
+  "requirements": {
+    "administratorRequired": true,
+    "bitLockerCapable": true,
+    "defenderRequired": true
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "threatSignatures": {
+    "version": "1.0.0",
+    "lastUpdated": "2024-01-20T12:00:00Z",
+    "signatures": [
+      {
+        "id": "SIG001",
+        "name": "WannaCry",
+        "signature": "4d5a90000300000004000000ffff0000b800000000000000400000000000000000000000000000000000000000000000000000e00000000e1fba0e00b409cd21b8409200",
+        "severity": "Critical",
+        "family": "Ransomware",
+        "detectionMethod": "Static",
+        "firstSeen": "2017-05-12",
+        "description": "WannaCry ransomware - encrypts files and demands payment"
+      },
+      {
+        "id": "SIG002",
+        "name": "Locky",
+        "signature": "7f454c4602010100000000000000000003003e0001000000",
+        "severity": "High",
+        "family": "Ransomware",
+        "detectionMethod": "Signature",
+        "firstSeen": "2016-02-16",
+        "description": "Locky ransomware variant"
+      },
+      {
+        "id": "SIG003",
+        "name": "Emotet",
+        "signature": "504b03040a0000000000",
+        "severity": "Critical",
+        "family": "Banking Trojan",
+        "detectionMethod": "Signature",
+        "firstSeen": "2014-06-30",
+        "description": "Emotet banking trojan - steals credentials and spreads malware"
+      },
+      {
+        "id": "SIG004",
+        "name": "NotPetya",
+        "signature": "4d5a900003000000",
+        "severity": "Critical",
+        "family": "Wiper",
+        "detectionMethod": "Signature",
+        "firstSeen": "2017-06-27",
+        "description": "NotPetya wiper malware - causes system failure"
+      }
+    ]
+  },
+  "heuristicRules": {
+    "version": "1.0.0",
+    "rules": [
+      {
+        "id": "H001",
+        "name": "Registry Modification Heuristic",
+        "description": "Detects suspicious registry modifications",
+        "riskScore": 0.75,
+        "enabled": true,
+        "conditions": [
+          "RegSetValueEx",
+          "RegCreateKeyEx",
+          "HKLM\\System\\CurrentControlSet\\Services"
+        ]
+      },
+      {
+        "id": "H002",
+        "name": "Network Connection Heuristic",
+        "description": "Detects suspicious network connections",
+        "riskScore": 0.65,
+        "enabled": true,
+        "conditions": [
+          "WSASocket",
+          "ConnectEx",
+          "InternetConnect",
+          "suspicious_port"
+        ]
+      },
+      {
+        "id": "H003",
+        "name": "Process Injection Heuristic",
+        "description": "Detects process injection attempts",
+        "riskScore": 0.85,
+        "enabled": true,
+        "conditions": [
+          "CreateRemoteThread",
+          "WriteProcessMemory",
+          "VirtualAllocEx",
+          "SetWindowsHookEx"
+        ]
+      },
+      {
+        "id": "H004",
+        "name": "File System Modification Heuristic",
+        "description": "Detects suspicious file system modifications",
+        "riskScore": 0.70,
+        "enabled": true,
+        "conditions": [
+          "CreateFileA",
+          "WriteFile",
+          "DeleteFileA",
+          "system_directory_write"
+        ]
+      }
+    ]
+  },
+  "behaviorPatterns": {
+    "version": "1.0.0",
+    "patterns": [
+      {
+        "id": "BP001",
+        "name": "Encryption Loop Pattern",
+        "description": "Detects file encryption behavior typical of ransomware",
+        "confidence": 0.9,
+        "indicators": [
+          "file_access",
+          "encryption_api_calls",
+          "file_writes",
+          "file_deletion"
+        ],
+        "severity": "Critical"
+      },
+      {
+        "id": "BP002",
+        "name": "Command & Control Pattern",
+        "description": "Detects C&C communication behavior",
+        "confidence": 0.85,
+        "indicators": [
+          "network_connect",
+          "dns_query",
+          "http_request",
+          "outbound_connection"
+        ],
+        "severity": "High"
+      },
+      {
+        "id": "BP003",
+        "name": "Credential Theft Pattern",
+        "description": "Detects credential harvesting behavior",
+        "confidence": 0.80,
+        "indicators": [
+          "registry_read",
+          "memory_scan",
+          "clipboard_access",
+          "password_string"
+        ],
+        "severity": "High"
+      },
+      {
+        "id": "BP004",
+        "name": "Privilege Escalation Pattern",
+        "description": "Detects privilege escalation attempts",
+        "confidence": 0.75,
+        "indicators": [
+          "token_elevation",
+          "privilege_increase",
+          "admin_check",
+          "UAC_bypass"
+        ],
+        "severity": "High"
+      }
+    ]
+  }
+}

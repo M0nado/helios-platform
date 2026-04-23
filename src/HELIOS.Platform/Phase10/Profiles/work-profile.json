@@ -1,0 +1,34 @@
+{
+  "name": "Work",
+  "description": "Productivity and collaboration optimization profile",
+  "created": "2024-01-01T00:00:00Z",
+  "modified": "2024-01-01T00:00:00Z",
+  "settings": {
+    "powerPlan": "Balanced",
+    "teamsConfigured": true,
+    "outlookConfigured": true,
+    "officeOptimized": true,
+    "oneDriveSynced": true,
+    "vpnReady": true,
+    "screenTimeout": "15 minutes",
+    "sleepTimeout": "30 minutes",
+    "networkReliability": "high",
+    "cloudServicesPriority": "high",
+    "notificationManagement": true,
+    "calendarSyncEnabled": true,
+    "calendarNotificationsEnabled": true,
+    "autoStartTeams": true,
+    "autoStartOutlook": true,
+    "autoStartOneDrive": true,
+    "officeAutoSave": true,
+    "systemNotifications": "managed",
+    "applicationNotifications": "managed",
+    "backgroundUpdates": true,
+    "updateSchedule": "afterHours"
+  },
+  "requirements": {
+    "minRam": "4GB",
+    "minCPUCores": 2,
+    "networkRequired": true
+  }
+}

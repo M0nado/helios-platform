@@ -1,0 +1,156 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Xenblade Theme Colors -->
+    <Color x:Key="XenbladePrimary">#0F0F23</Color>
+    <Color x:Key="XenbladePrimaryLight">#1A1A3E</Color>
+    <Color x:Key="XenbladeAccent">#00D4FF</Color>
+    <Color x:Key="XenbladeAccentLight">#4DFF00</Color>
+    <Color x:Key="XenbladeDark">#000000</Color>
+    <Color x:Key="XenbladeLightText">#E0E0E0</Color>
+    
+    <!-- Brushes -->
+    <SolidColorBrush x:Key="XenbladePrimaryBrush" Color="#0F0F23"/>
+    <SolidColorBrush x:Key="XenbladePrimaryLightBrush" Color="#1A1A3E"/>
+    <SolidColorBrush x:Key="XenbladeAccentBrush" Color="#00D4FF"/>
+    <SolidColorBrush x:Key="XenbladeAccentLightBrush" Color="#4DFF00"/>
+    <SolidColorBrush x:Key="XenbladeDarkBrush" Color="#000000"/>
+    <SolidColorBrush x:Key="XenbladeLightTextBrush" Color="#E0E0E0"/>
+    
+    <!-- Window Style -->
+    <Style TargetType="Window">
+        <Setter Property="Background" Value="{StaticResource XenbladePrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="BorderBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    
+    <!-- Button Style -->
+    <Style TargetType="Button">
+        <Setter Property="Background" Value="{StaticResource XenbladePrimaryLightBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,5,10,5"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource XenbladeAccentBrush}"/>
+                            <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource XenbladeAccentLightBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource XenbladePrimaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="{StaticResource XenbladeAccentLightBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- TextBlock Style -->
+    <Style TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+    </Style>
+    
+    <!-- ProgressBar Style -->
+    <Style TargetType="ProgressBar">
+        <Setter Property="Background" Value="{StaticResource XenbladePrimaryLightBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource XenbladeAccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    
+    <!-- GroupBox Style -->
+    <Style TargetType="GroupBox">
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+        <Setter Property="Background" Value="{StaticResource XenbladePrimaryLightBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+    
+    <!-- ListBox Style -->
+    <Style TargetType="ListBox">
+        <Setter Property="Background" Value="{StaticResource XenbladePrimaryLightBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    
+    <!-- ListBoxItem Style -->
+    <Style TargetType="ListBoxItem">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="Padding" Value="10,5,10,5"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" 
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource XenbladeAccentBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource XenbladePrimaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource XenbladePrimaryLightBrush}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+                            <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+    <!-- CheckBox Style -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+    
+    <!-- RadioButton Style -->
+    <Style TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+    
+    <!-- TextBox Style -->
+    <Style TargetType="TextBox">
+        <Setter Property="Background" Value="{StaticResource XenbladePrimaryLightBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource XenbladeLightTextBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="CaretBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+    </Style>
+    
+    <!-- ScrollBar Style -->
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="{StaticResource XenbladePrimaryLightBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource XenbladeAccentBrush}"/>
+    </Style>
+    
+    <!-- Separator Style -->
+    <Style TargetType="Separator">
+        <Setter Property="Background" Value="{StaticResource XenbladeAccentBrush}"/>
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Margin" Value="0,10,0,10"/>
+    </Style>
+    
+</ResourceDictionary>

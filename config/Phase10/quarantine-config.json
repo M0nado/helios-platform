@@ -1,0 +1,91 @@
+{
+  "quarantineConfig": {
+    "version": "1.0.0",
+    "quarantineRootPath": "I:\\",
+    "partitionSizeGB": 20,
+    "encryption": {
+      "enabled": true,
+      "algorithm": "AES-256",
+      "keySize": 256,
+      "provider": "VeraCrypt"
+    },
+    "folderStructure": {
+      "activeThreats": "active-threats",
+      "analysisLogs": "analysis-logs",
+      "backupQuarantined": "backup-quarantined",
+      "threatDatabase": "threat-database",
+      "metadata": "metadata",
+      "backups": "backups",
+      "archive": "archive"
+    },
+    "accessControl": {
+      "adminOnly": true,
+      "requireAuthentication": true,
+      "auditLogging": true
+    },
+    "threatCapture": {
+      "computeFileHash": true,
+      "hashAlgorithm": "SHA256",
+      "extractMetadata": true,
+      "createBackup": true,
+      "notifyUser": true,
+      "maxConcurrentCaptures": 5
+    },
+    "threatAnalysis": {
+      "enableStaticAnalysis": true,
+      "enableBehavioralAnalysis": true,
+      "enableSandboxAnalysis": true,
+      "generateReport": true,
+      "classifyThreatLevel": true,
+      "updateDatabase": true,
+      "analysisTimeout": 300
+    },
+    "quarantineManagement": {
+      "maxQuarantinedFiles": 1000,
+      "archiveThresholdDays": 90,
+      "secureDelete": true,
+      "secureDeletePasses": 3,
+      "enableExport": true
+    },
+    "threatIntelligence": {
+      "autoUpdate": true,
+      "updateFrequencyHours": 24,
+      "downloadDefinitions": true,
+      "updateHeuristics": true,
+      "updatePatterns": true,
+      "syncExternal": false,
+      "externalSources": [
+        "MISP",
+        "AlienVault OTX",
+        "VirusShare"
+      ]
+    },
+    "logging": {
+      "enabled": true,
+      "logLevel": "Info",
+      "maxLogFileSizeMB": 100,
+      "retentionDays": 90
+    },
+    "backup": {
+      "enabled": true,
+      "frequency": "daily",
+      "time": "02:00",
+      "destination": "I:\\backups",
+      "retentionDays": 90,
+      "compression": true
+    },
+    "alerts": {
+      "enableAlerts": true,
+      "criticalThreatAlert": true,
+      "highThreatAlert": true,
+      "storageWarningPercentage": 80,
+      "alertMethod": "Windows Notification"
+    }
+  },
+  "complianceSettings": {
+    "complianceLevel": "HELIOS-Phase10",
+    "requireMasterKey": true,
+    "encryptionRequired": true,
+    "auditTrailRequired": true
+  }
+}

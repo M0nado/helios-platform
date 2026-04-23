@@ -1,0 +1,34 @@
+{
+  "name": "Gaming",
+  "description": "Gaming optimization profile for maximum performance",
+  "created": "2024-01-01T00:00:00Z",
+  "modified": "2024-01-01T00:00:00Z",
+  "settings": {
+    "powerPlan": "High Performance",
+    "gpuPriority": 100,
+    "cpuAffinity": "P-cores",
+    "gpuDrivers": "optimized",
+    "networkLatency": "low",
+    "telemetry": "disabled",
+    "discordAutoLaunch": true,
+    "steamConfigured": true,
+    "ramReserved": "8GB",
+    "pageFileDisabled": true,
+    "screenTimeout": "disabled",
+    "sleepEnabled": false,
+    "networkThrottling": "disabled",
+    "cpuGovernor": "performance",
+    "cpuPowerSaving": "disabled",
+    "gpuPowerSaving": "disabled",
+    "exclusiveFullscreen": true,
+    "hardwareAcceleration": true,
+    "memoryPageCombining": "disabled",
+    "audioBufferSize": 256
+  },
+  "requirements": {
+    "minRam": "8GB",
+    "minCPUCores": 4,
+    "minGPUMemory": "2GB",
+    "dedicatedGPU": true
+  }
+}
