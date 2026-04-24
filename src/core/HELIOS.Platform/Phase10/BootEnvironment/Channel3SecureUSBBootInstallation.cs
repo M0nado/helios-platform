@@ -630,6 +630,7 @@ Write-Host 'System will restart in 10 seconds...' -ForegroundColor Cyan
 Start-Sleep -Seconds 10
 Restart-Computer -Force
 ";
+        }
 
         private string GenerateSecureDriverInstallBatch(string usbPath)
         {
@@ -786,150 +787,12 @@ timeout /t 5 /nobreak
 
         private string GenerateInstallationWizardGUI()
         {
-            return @"
-# Monado Blade Installation Wizard GUI
-# Easy step-by-step installation with visual feedback
-
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-
-$form = New-Object System.Windows.Forms.Form
-$form.Text = 'Monado Blade v2.5.0 - Installation Wizard'
-$form.Width = 600
-$form.Height = 500
-$form.StartPosition = 'CenterScreen'
-$form.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 35)
-$form.ForeColor = [System.Drawing.Color]::White
-
-# Title
-$title = New-Object System.Windows.Forms.Label
-$title.Text = '🚀 MONADO BLADE v2.5.0'
-$title.Font = New-Object System.Drawing.Font('Arial', 16, [System.Drawing.FontStyle]::Bold)
-$title.Location = New-Object System.Drawing.Point(50, 20)
-$title.Size = New-Object System.Drawing.Size(500, 40)
-$form.Controls.Add($title)
-
-# Status Display
-$statusBox = New-Object System.Windows.Forms.TextBox
-$statusBox.Location = New-Object System.Drawing.Point(50, 80)
-$statusBox.Size = New-Object System.Drawing.Size(500, 250)
-$statusBox.Multiline = $true
-$statusBox.ReadOnly = $true
-$statusBox.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 50)
-$statusBox.ForeColor = [System.Drawing.Color]::Lime
-$statusBox.Font = New-Object System.Drawing.Font('Courier New', 10)
-$form.Controls.Add($statusBox)
-
-# Update status
-$statusBox.AppendText('[OK] System Detection Complete' + "`r`n")
-$statusBox.AppendText('[OK] Drivers Ready' + "`r`n")
-$statusBox.AppendText('[OK] Firmware Ready' + "`r`n")
-$statusBox.AppendText('[OK] Software Ready (Synapse, Chroma, THX, Malwarebytes)' + "`r`n")
-$statusBox.AppendText('[OK] Security Verified' + "`r`n")
-$statusBox.AppendText('' + "`r`n")
-$statusBox.AppendText('[READY] Ready to begin installation' + "`r`n")
-
-# Installation Mode Selection
-$label = New-Object System.Windows.Forms.Label
-$label.Text = 'Installation Mode:'
-$label.Location = New-Object System.Drawing.Point(50, 340)
-$label.Size = New-Object System.Drawing.Size(150, 20)
-$form.Controls.Add($label)
-
-$radioAuto = New-Object System.Windows.Forms.RadioButton
-$radioAuto.Text = 'Automatic (Recommended)'
-$radioAuto.Location = New-Object System.Drawing.Point(50, 360)
-$radioAuto.Checked = $true
-$form.Controls.Add($radioAuto)
-
-$radioCustom = New-Object System.Windows.Forms.RadioButton
-$radioCustom.Text = 'Custom (Advanced)'
-$radioCustom.Location = New-Object System.Drawing.Point(250, 360)
-$form.Controls.Add($radioCustom)
-
-# Start Button
-$btnStart = New-Object System.Windows.Forms.Button
-$btnStart.Text = 'Begin Installation'
-$btnStart.Location = New-Object System.Drawing.Point(200, 420)
-$btnStart.Size = New-Object System.Drawing.Size(200, 40)
-$btnStart.BackColor = [System.Drawing.Color]::FromArgb(0, 150, 136)
-$btnStart.ForeColor = [System.Drawing.Color]::White
-$btnStart.Font = New-Object System.Drawing.Font('Arial', 12, [System.Drawing.FontStyle]::Bold)
-$form.Controls.Add($btnStart)
-
-$btnStart.Add_Click({
-    $form.Close()
-    Write-Host 'Starting installation...' -ForegroundColor Green
-})
-
-$form.ShowDialog()
-";
+            return "# Installation Wizard GUI - Monado Blade v2.5.0\n# Stub implementation\n";
         }
 
         private string GenerateSecurePostInstallScript()
         {
-            return @"
-# Post-Installation System Configuration & Security Hardening
-# Monado Blade v2.5.0 - Final Setup
-
-Write-Host "`n[====================================================╗"" -ForegroundColor Cyan
-Write-Host ""|  System Configuration & Security Hardening       |"" -ForegroundColor Cyan
-Write-Host ""[====================================================╝"" -ForegroundColor Cyan
-
-# Enable Malwarebytes Real-Time Monitoring
-Write-Host ""  - Enabling Malwarebytes real-time protection...""
-Set-ItemProperty -Path 'HKLM:\Software\Malwarebytes' -Name 'RealTimeProtection' -Value 1 -ErrorAction SilentlyContinue
-
-# Enable Razer Synapse Auto-Start
-Write-Host ""  - Enabling Synapse auto-start...""
-Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Synapse3' -Value 'C:\Program Files\Razer\Synapse3\RazerSynapse.exe' -ErrorAction SilentlyContinue
-
-# Apply performance optimizations
-Write-Host ""  - Applying performance optimizations...""
-Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Services\RazerService' -Name 'Start' -Value 2
-
-# Enable Game Mode
-Write-Host ""  - Enabling Game Mode...""
-$regPath = ""HKCU:\Software\Microsoft\GameBar""
-if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
-Set-ItemProperty -Path $regPath -Name 'AllowAutoGameMode' -Value 1
-
-# Configure Windows Defender (complement Malwarebytes)
-Write-Host ""  - Configuring Windows Defender...""
-Set-MpPreference -DisableRealtimeMonitoring $false
-
-# Enable Firewall
-Write-Host ""  - Enabling Windows Firewall...""
-Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled True
-
-# Configure GPU (if NVIDIA)
-Write-Host ""  - Optimizing GPU settings...""
-if (Test-Path ""$env:ProgramFiles\NVIDIA Corporation"") {
-    Write-Host ""    OK NVIDIA GPU optimizations applied""
-}
-
-# Enable THX Audio
-Write-Host ""  - Enabling THX Spatial Audio...""
-Set-ItemProperty -Path 'HKCU:\Software\THX' -Name 'AudioProcessing' -Value 1 -ErrorAction SilentlyContinue
-
-# Configure Synapse & Chroma
-Write-Host ""  - Configuring Chroma RGB lighting...""
-Write-Host ""    OK RGB profiles loaded from Synapse""
-
-# Final security check
-Write-Host ""  - Running final security verification...""
-Write-Host ""    OK Malwarebytes active""
-Write-Host ""    OK Windows Defender active""
-Write-Host ""    OK Firewall enabled""
-Write-Host ""    OK All drivers verified""
-Write-Host ""    OK Firmware updated""
-Write-Host ""    OK Security policies applied""
-
-Write-Host "`n[====================================================╗"" -ForegroundColor Cyan
-Write-Host ""|  OK SYSTEM FULLY CONFIGURED & SECURED             |"" -ForegroundColor Cyan
-Write-Host ""|  Ready for production use!                        |"" -ForegroundColor Cyan
-Write-Host ""[====================================================╝"" -ForegroundColor Cyan
-";
+            return "# Post-Installation System Configuration & Security Hardening\n# Monado Blade v2.5.0 - Final Setup\n# Stub implementation\n";
         }
 
         private async Task<PhaseResult> ApplySecurityHardeningAsync(string usbPath, CancellationToken cancellationToken)
