@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HELIOS.Platform.Phase10.Quarantine
@@ -402,61 +403,52 @@ namespace HELIOS.Platform.Phase10.Quarantine
 
         #region Helper Methods
 
-        private async Task<bool> SaveSignatureDatabaseAsync(List<ThreatSignature> signatures, string path)
+        private async Task<bool> SaveSignatureDatabaseAsync(List<ThreatSignature> signatures, string path, CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
-                {
-                    var json = System.Text.Json.JsonSerializer.Serialize(signatures,
-                        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(path, json);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Failed to save signatures: {ex.Message}");
-                    return false;
-                }
-            });
+                var json = System.Text.Json.JsonSerializer.Serialize(signatures,
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(path, json, cancellationToken);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to save signatures: {ex.Message}");
+                return false;
+            }
         }
 
-        private async Task<bool> SaveDefinitionsDatabaseAsync(List<MalwareDefinition> definitions, string path)
+        private async Task<bool> SaveDefinitionsDatabaseAsync(List<MalwareDefinition> definitions, string path, CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
-                {
-                    var json = System.Text.Json.JsonSerializer.Serialize(definitions,
-                        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(path, json);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Failed to save definitions: {ex.Message}");
-                    return false;
-                }
-            });
+                var json = System.Text.Json.JsonSerializer.Serialize(definitions,
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(path, json, cancellationToken);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to save definitions: {ex.Message}");
+                return false;
+            }
         }
 
-        private async Task<bool> SaveHeuristicRulesAsync(List<HeuristicRule> rules, string path)
+        private async Task<bool> SaveHeuristicRulesAsync(List<HeuristicRule> rules, string path, CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() =>
+            try
             {
-                try
-                {
-                    var json = System.Text.Json.JsonSerializer.Serialize(rules,
-                        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(path, json);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Failed to save heuristic rules: {ex.Message}");
-                    return false;
-                }
-            });
+                var json = System.Text.Json.JsonSerializer.Serialize(rules,
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(path, json, cancellationToken);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to save heuristic rules: {ex.Message}");
+                return false;
+            }
         }
 
         private async Task<bool> SaveBehaviorPatternsAsync(List<BehaviorPattern> patterns, string path)

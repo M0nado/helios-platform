@@ -1,0 +1,21 @@
+﻿# Git Attributes Configuration
+# Prevent certain files from being tracked/diffed
+
+# Environment files - never diff
+*.env diff=secret
+*.key diff=secret
+*.pem diff=secret
+*.p12 diff=secret
+*.pfx diff=secret
+
+# Config files with credentials
+appsettings.*.json diff=secret
+config/*.json diff=secret
+secrets/** diff=secret
+
+# Binary files
+*.dll binary
+*.exe binary
+*.pdb binary
+*.so binary
+*.dylib binary

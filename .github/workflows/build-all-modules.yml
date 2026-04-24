@@ -73,7 +73,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: '${{ matrix.module }}/package-lock.json'
 
-      - name: Setup Build Cache
+      - name: Setup NPM Build Cache
         if: github.event.inputs.clean_build != 'true'
         uses: actions/cache@v3
         with:
@@ -81,9 +81,11 @@ jobs:
             ${{ matrix.module }}/node_modules
             ${{ matrix.module }}/dist
             ${{ matrix.module }}/build
-          key: ${{ runner.os }}-${{ matrix.module }}-${{ hashFiles(format('{0}/package-lock.json', matrix.module)) }}
+            ~/.npm
+          key: ${{ runner.os }}-npm-${{ matrix.module }}-${{ hashFiles(format('{0}/package-lock.json', matrix.module)) }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.module }}-
+            ${{ runner.os }}-npm-${{ matrix.module }}-
+            ${{ runner.os }}-npm-
 
       - name: Display Environment
         run: |

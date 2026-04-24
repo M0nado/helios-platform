@@ -69,25 +69,28 @@
   <!-- NuGet Dependencies -->
   <ItemGroup>
     <!-- Azure Core -->
-    <PackageReference Include="Azure.Identity" Version="1.11.4" />
-    <PackageReference Include="Azure.ResourceManager" Version="1.13.2" />
-    <PackageReference Include="Azure.ResourceManager.Storage" Version="1.6.0" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.21.0" />
-    <PackageReference Include="Azure.Data.Tables" Version="12.8.0" />
-    <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.5.0" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+    <PackageReference Include="Azure.ResourceManager" Version="1.14.0" />
+    <PackageReference Include="Azure.ResourceManager.Storage" Version="1.6.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
+    <PackageReference Include="Azure.Data.Tables" Version="12.11.0" />
+    <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.10.0" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
-    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.17.3" />
-    <PackageReference Include="Azure.Messaging.EventHubs" Version="5.11.3" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.40.0" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.20.1" />
+    <PackageReference Include="Azure.Messaging.EventHubs" Version="5.12.2" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.58.0" />
     
     <!-- GraphQL -->
-    <PackageReference Include="GraphQL" Version="8.3.0" />
+    <PackageReference Include="GraphQL" Version="8.8.4" />
     
     <!-- Container & Orchestration -->
     <PackageReference Include="Docker.DotNet" Version="3.125.15" />
+    <!-- NOTE: KubernetesClient 14.0.2 has a MODERATE severity vulnerability (GHSA-w7r3-mgwf-4mqq)
+         Latest version is 19.0.2 (major version bump) - NOT updated, requires manual review -->
     <PackageReference Include="KubernetesClient" Version="14.0.2" />
     
     <!-- Entity Framework Core & Database -->
+    <!-- NOTE: EntityFramework 8.0.0 → 10.0.7 is a major version bump (2.0 bump) - NOT updated -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
@@ -96,38 +99,47 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     
     <!-- Logging -->
-    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     
     <!-- System & Windows Dependencies -->
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
+    <!-- NOTE: System.ServiceProcess.ServiceController 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
+    <!-- NOTE: System.Diagnostics.PerformanceCounter 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+    <!-- NOTE: System.Diagnostics.EventLog 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
+    <!-- NOTE: System.Management 4.7.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="System.Management" Version="4.7.0" />
+    <!-- NOTE: System.Drawing.Common 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
     <PackageReference Include="System.IO.Compression.ZipFile" Version="4.3.0" />
+    <!-- NOTE: Microsoft.Extensions.Configuration.Binder 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
     
     <!-- Core Extensions -->
+    <!-- NOTE: Microsoft.Extensions.* 8.0.0 → 10.0.7 are major version bumps - NOT updated -->
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.2.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.17.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
     
     <!-- Monitoring & Observability -->
-    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
+    <!-- NOTE: Serilog.Extensions.Logging 8.0.0 → 10.0.0 is a major version bump - NOT updated -->
     <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
-    <PackageReference Include="Prometheus.Client" Version="6.2.0" />
+    <PackageReference Include="Prometheus.Client" Version="6.3.0" />
     
     <!-- AI/ML Libraries -->
+    <!-- NOTE: Microsoft.ML 3.0.1 → 5.0.0 is a major version bump - NOT updated -->
     <PackageReference Include="Microsoft.ML" Version="3.0.1" />
     <PackageReference Include="SciSharp.TensorFlow.Redist" Version="2.16.0" />
     <PackageReference Include="Accord.MachineLearning" Version="3.8.0" />
@@ -138,7 +150,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.201">
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.203">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -148,8 +160,8 @@
     </PackageReference>
 
     <!-- Testing -->
-    <PackageReference Include="xunit" Version="2.7.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6">
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

@@ -1,39 +1,35 @@
-<<<<<<< HEAD
-# Build results
+# Helios Platform Development Configuration
+
+## Build Results
 bin/
 obj/
 dist/
+build/
+out/
 
-# Azure
+## Environment and Configuration (CRITICAL - Do not commit secrets!)
 .env
+.env.local
+.env.*.local
+.env.development
+.env.production
 local.settings.json
+appsettings.development.json
+appsettings.production.json
+api-keys.env
+api-keys.json
+secrets/
+*.key
+*.pem
+secret.txt
+.aws/
+.kube/
 
-# Editor
-.vscode/
-.idea/
-
-# OS
-.DS_Store
-
-# Logs
-logs/
-*.log
-
-# Dependencies
-node_modules/
-packages/
-=======
-# Helios Platform Development Configuration
-
-## Environment and Build Output
-node_modules/
+## Python Virtual Environments
 .venv/
 env/
 venv/
 ENV/
-build/
-dist/
-out/
 *.egg-info/
 __pycache__/
 *.pyc
@@ -47,10 +43,18 @@ __pycache__/
 *.swp
 *.swo
 *~
-.DS_Store
-.env.local
-.env.*.local
 .vscode-server/
+.eslintcache
+tsconfig.tsbuildinfo
+
+## OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 ## Testing and Coverage
 .coverage
@@ -61,6 +65,8 @@ coverage/
 *.lcov
 
 ## Package managers
+node_modules/
+packages/
 package-lock.json
 yarn.lock
 poetry.lock
@@ -75,27 +81,11 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-## OS Files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-## Development
-.env
-.env.development
+## Development Container
 .devcontainer-state/
 devenv.nix
 flake.nix
 .direnv/
-
-## Git
-.git/
-.gitkeep
-.gitmodules
 
 ## Database
 *.db
@@ -110,17 +100,10 @@ tmp/
 *.tmp
 *.bak
 
-## IDE specific
-.eslintcache
-tsconfig.tsbuildinfo
-
 ## Docker
 .dockerignore
 
 ## Generated files
-dist/
-build/
-out/
 .next/
 .nuxt/
 _nuxt/
@@ -140,11 +123,7 @@ _nuxt/
 .travis.yml
 azure-pipelines.yml
 
-## Misc
-*.pem
-*.key
-secret.txt
-secrets/
-.aws/
-.kube/
->>>>>>> 1c7cf77 (Deploy: Complete metrics tracking infrastructure for 120+ variables and 100+ agents)
+## Git
+.git/
+.gitkeep
+.gitmodules

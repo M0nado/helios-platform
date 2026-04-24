@@ -57,9 +57,9 @@
 
   <!-- Exclude all non-core projects -->
   <ItemGroup>
-    <Compile Remove="tests/**/*.cs" />
+    <Compile Remove="src/tests/**/*.cs" />
     <Compile Remove="src/**/*Tests.cs" />
-    <Compile Remove="src/HELIOS-MINIMAL/**/*.cs" />
+    <Compile Remove="src/core/HELIOS.Platform.Minimal/**/*.cs" />
     <Compile Remove="docs/**/*.cs" />
     <Compile Remove="samples/**/*.cs" />
     <Compile Remove="demos/**/*.cs" />
