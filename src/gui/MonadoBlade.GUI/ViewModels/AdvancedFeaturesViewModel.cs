@@ -48,11 +48,11 @@ namespace MonadoBlade.GUI.ViewModels
 
         private void InitializeData()
         {
-            _dependencies.Add(new DependencyNode { Name = "System.Runtime", Version = "6.0.0", DependencyCount = 5, HasCircular = false, StatusColor = Colors.Green });
-            _dependencies.Add(new DependencyNode { Name = "WindowsBase", Version = "6.0.0", DependencyCount = 3, HasCircular = false, StatusColor = Colors.Green });
-            _memoryAllocations.Add(new MemoryAllocation { Type = "String", BytesAllocated = 104857600, BytesRetained = 52428800, AllocationCount = 125000, PercentOfTotal = 35.5 });
-            _memoryAllocations.Add(new MemoryAllocation { Type = "Object[]", BytesAllocated = 83886080, BytesRetained = 41943040, AllocationCount = 95000, PercentOfTotal = 28.3 });
-            _memoryAllocations.Add(new MemoryAllocation { Type = "byte[]", BytesAllocated = 62914560, BytesRetained = 31457280, AllocationCount = 45000, PercentOfTotal = 21.2 });
+            _dependencies.Add(new DependencyNode { Name = \"System.Runtime\", Version = \"6.0.0\", DependencyCount = 5, HasCircular = false, StatusColor = Colors.Green });
+            _dependencies.Add(new DependencyNode { Name = \"WindowsBase\", Version = \"6.0.0\", DependencyCount = 3, HasCircular = false, StatusColor = Colors.Green });
+            _memoryAllocations.Add(new MemoryAllocation { Type = \"String\", BytesAllocated = 104857600, BytesRetained = 52428800, AllocationCount = 125000, PercentOfTotal = 35.5 });
+            _memoryAllocations.Add(new MemoryAllocation { Type = \"Object[]\", BytesAllocated = 83886080, BytesRetained = 41943040, AllocationCount = 95000, PercentOfTotal = 28.3 });
+            _memoryAllocations.Add(new MemoryAllocation { Type = \"byte[]\", BytesAllocated = 62914560, BytesRetained = 31457280, AllocationCount = 45000, PercentOfTotal = 21.2 });
             _overallHealth = 82.5;
             _criticalIssues = 0;
             _warningIssues = 2;
@@ -88,13 +88,13 @@ namespace MonadoBlade.GUI.ViewModels
         private bool CanStartTrace() => !IsTracing;
         private bool CanStopTrace() => IsTracing;
 
-        private void AnalyzeCrash() { IsAnalyzing = true; try { CrashDumps.Clear(); StatusMessage = "Crash analysis complete"; } finally { IsAnalyzing = false; } }
-        private void DetectBottlenecks() { IsAnalyzing = true; try { Bottlenecks.Clear(); Bottlenecks.Add(new BottleneckDetection { Category = "Memory", Issue = "High memory allocation rate", Severity = "Warning", SeverityColor = Colors.Orange, Recommendation = "Consider object pooling", ImpactScore = 7.5 }); StatusMessage = $"Detected {Bottlenecks.Count} bottlenecks"; WarningIssues = Bottlenecks.Count; } finally { IsAnalyzing = false; } }
-        private void VisualizeDependencies() { StatusMessage = "Generating dependency graph..."; }
-        private void StartMemoryProfiling() { IsProfilingMemory = true; StatusMessage = "Memory profiling started"; }
-        private void StopMemoryProfiling() { IsProfilingMemory = false; StatusMessage = "Memory profiling stopped"; }
-        private void ViewCrashDetails(CrashDump crash) { if (crash != null) StatusMessage = $"Viewing crash details for {crash.ProcessName}"; }
-        private void StartTrace() { IsTracing = true; TraceEvents.Clear(); StatusMessage = "Trace recording started"; }
-        private void StopTrace() { IsTracing = false; if (TraceEvents.Count == 0) TraceEvents.Add(new TraceEvent { Timestamp = DateTime.Now.AddSeconds(-30), EventType = "Method Call", ComponentName = "Dashboard.OnRender", Details = "Rendering dashboard view", Duration = 15, EventColor = Colors.Cyan }); StatusMessage = "Trace recording stopped"; }
+        private void AnalyzeCrash() { IsAnalyzing = true; try { CrashDumps.Clear(); StatusMessage = \"Crash analysis complete\"; } finally { IsAnalyzing = false; } }
+        private void DetectBottlenecks() { IsAnalyzing = true; try { Bottlenecks.Clear(); Bottlenecks.Add(new BottleneckDetection { Category = \"Memory\", Issue = \"High memory allocation rate\", Severity = \"Warning\", SeverityColor = Colors.Orange, Recommendation = \"Consider object pooling\", ImpactScore = 7.5 }); StatusMessage = $\"Detected {Bottlenecks.Count} bottlenecks\"; WarningIssues = Bottlenecks.Count; } finally { IsAnalyzing = false; } }
+        private void VisualizeDependencies() { StatusMessage = \"Generating dependency graph...\"; }
+        private void StartMemoryProfiling() { IsProfilingMemory = true; StatusMessage = \"Memory profiling started\"; }
+        private void StopMemoryProfiling() { IsProfilingMemory = false; StatusMessage = \"Memory profiling stopped\"; }
+        private void ViewCrashDetails(CrashDump crash) { if (crash != null) StatusMessage = $\"Viewing crash details for {crash.ProcessName}\"; }
+        private void StartTrace() { IsTracing = true; TraceEvents.Clear(); StatusMessage = \"Trace recording started\"; }
+        private void StopTrace() { IsTracing = false; if (TraceEvents.Count == 0) TraceEvents.Add(new TraceEvent { Timestamp = DateTime.Now.AddSeconds(-30), EventType = \"Method Call\", ComponentName = \"Dashboard.OnRender\", Details = \"Rendering dashboard view\", Duration = 15, EventColor = Colors.Cyan }); StatusMessage = \"Trace recording stopped\"; }
     }
 }
