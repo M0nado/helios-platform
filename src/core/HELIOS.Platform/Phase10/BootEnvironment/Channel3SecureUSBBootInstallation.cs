@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -55,20 +55,20 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
 
             try
             {
-                _logger.Info("╔════════════════════════════════════════════════════════════════════╗");
-                _logger.Info("║  CHANNEL 3: SECURE USB BOOT + AUTO-INSTALL DEPLOYMENT            ║");
-                _logger.Info("║  Monado Blade v2.5.0 - Military-Grade Secure Installation        ║");
-                _logger.Info("║  Complete Security Hardening, Bootkit Detection, Auto-Install    ║");
-                _logger.Info("╚════════════════════════════════════════════════════════════════════╝");
+                _logger.Info("[====================================================================╗");
+                _logger.Info("|  CHANNEL 3: SECURE USB BOOT + AUTO-INSTALL DEPLOYMENT            |");
+                _logger.Info("|  Monado Blade v2.5.0 - Military-Grade Secure Installation        |");
+                _logger.Info("|  Complete Security Hardening, Bootkit Detection, Auto-Install    |");
+                _logger.Info("[====================================================================╝");
 
                 // Phase 0: USB Preparation & Security Scan
-                _logger.Info("\n[PHASE 0/7] 🔐 Preparing & Scanning USB Drive...");
+                _logger.Info("\n[PHASE 0/7]  Preparing & Scanning USB Drive...");
                 var prepPhase = await PrepareAndScanUSBAsync(usbDrivePath, cancellationToken);
                 result.PrepPhaseResult = prepPhase;
                 if (!prepPhase.Success) return result;
 
                 // Phase 1: Boot Environment Creation
-                _logger.Info("\n[PHASE 1/7] 🔐 Creating Secure Boot Environment...");
+                _logger.Info("\n[PHASE 1/7]  Creating Secure Boot Environment...");
                 var bootPhase = await CreateBootEnvironmentAsync(usbDrivePath, cancellationToken);
                 result.BootPhaseResult = bootPhase;
                 if (!bootPhase.Success) return result;
@@ -98,13 +98,13 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                 if (!scriptPhase.Success) return result;
 
                 // Phase 6: Security Hardening & Integrity Verification
-                _logger.Info("\n[PHASE 6/7] 🔐 Applying Security Hardening & Integrity Verification...");
+                _logger.Info("\n[PHASE 6/7]  Applying Security Hardening & Integrity Verification...");
                 var securityPhase = await ApplySecurityHardeningAsync(usbDrivePath, cancellationToken);
                 result.SecurityPhaseResult = securityPhase;
                 if (!securityPhase.Success) return result;
 
                 // Phase 7: Final Validation
-                _logger.Info("\n[PHASE 7/7] ✓ Final Validation & Bootkit Scan...");
+                _logger.Info("\n[PHASE 7/7] OK Final Validation & Bootkit Scan...");
                 var validationPhase = await FinalValidationAndBootkitScanAsync(usbDrivePath, cancellationToken);
                 result.ValidationPhaseResult = validationPhase;
                 if (!validationPhase.Success) return result;
@@ -112,12 +112,12 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                 result.Success = true;
                 result.TotalDuration = DateTime.UtcNow - startTime;
 
-                _logger.Info("\n╔════════════════════════════════════════════════════════════════════╗");
-                _logger.Info("║  ✅ CHANNEL 3 SECURE DEPLOYMENT COMPLETE                          ║");
-                _logger.Info("║  USB is ready for boot and secure auto-installation               ║");
-                _logger.Info("║  Installation will begin automatically after boot                ║");
-                _logger.Info("║  All security hardening applied and verified                     ║");
-                _logger.Info("╚════════════════════════════════════════════════════════════════════╝");
+                _logger.Info("\n[====================================================================╗");
+                _logger.Info("|  OK CHANNEL 3 SECURE DEPLOYMENT COMPLETE                          |");
+                _logger.Info("|  USB is ready for boot and secure auto-installation               |");
+                _logger.Info("|  Installation will begin automatically after boot                |");
+                _logger.Info("|  All security hardening applied and verified                     |");
+                _logger.Info("[====================================================================╝");
             }
             catch (Exception ex)
             {
@@ -135,7 +135,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
 
             try
             {
-                _logger.Info("  • Verifying USB drive accessibility...");
+                _logger.Info("  - Verifying USB drive accessibility...");
                 if (!Directory.Exists(usbPath))
                 {
                     _logger.Error($"USB drive not found: {usbPath}");
@@ -143,51 +143,51 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                     return phaseResult;
                 }
 
-                _logger.Info("  • Backing up existing data (if any)...");
+                _logger.Info("  - Backing up existing data (if any)...");
                 var backupPath = Path.Combine(Path.GetTempPath(), $"USB_Backup_{DateTime.UtcNow.Ticks}");
                 if (Directory.GetFiles(usbPath).Length > 0)
                 {
                     Directory.CreateDirectory(backupPath);
-                    _logger.Info($"    ✓ Data backed up to: {backupPath}");
+                    _logger.Info($"    OK Data backed up to: {backupPath}");
                 }
 
-                _logger.Info("  • Securely erasing USB drive (3-pass overwrite)...");
+                _logger.Info("  - Securely erasing USB drive (3-pass overwrite)...");
                 await SecureEraseUSBAsync(usbPath);
-                _logger.Info("    ✓ USB securely erased (3-pass DoD wiping)");
+                _logger.Info("    OK USB securely erased (3-pass DoD wiping)");
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Scanning for bootkits and malware...");
+                _logger.Info("  - Scanning for bootkits and malware...");
                 var bootKitDetected = await ScanForBootkitsAsync(usbPath);
                 if (bootKitDetected)
                 {
                     _logger.Error("    ⚠ BOOTKIT DETECTED - Removing...");
                     await RemoveBootkitAsync(usbPath);
-                    _logger.Info("    ✓ Bootkit removed");
+                    _logger.Info("    OK Bootkit removed");
                 }
                 else
                 {
-                    _logger.Info("    ✓ No bootkits detected");
+                    _logger.Info("    OK No bootkits detected");
                 }
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Creating secure partition structure...");
+                _logger.Info("  - Creating secure partition structure...");
                 await CreateSecurePartitionsAsync(usbPath);
-                _logger.Info("    ✓ Partition structure created (UEFI + Legacy)");
+                _logger.Info("    OK Partition structure created (UEFI + Legacy)");
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Enabling Secure Boot configuration...");
+                _logger.Info("  - Enabling Secure Boot configuration...");
                 await EnableSecureBootAsync(usbPath);
-                _logger.Info("    ✓ Secure Boot enabled");
+                _logger.Info("    OK Secure Boot enabled");
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Applying UEFI firmware security settings...");
+                _logger.Info("  - Applying UEFI firmware security settings...");
                 await ApplyUEFISecurityAsync(usbPath);
-                _logger.Info("    ✓ UEFI security hardening applied");
+                _logger.Info("    OK UEFI security hardening applied");
                 phaseResult.ItemsProcessed++;
 
                 phaseResult.Success = true;
                 phaseResult.Details = "USB fully prepared, scanned, and secured";
-                _logger.Info("  ✓ USB drive ready for deployment");
+                _logger.Info("  OK USB drive ready for deployment");
             }
             catch (Exception ex)
             {
@@ -215,18 +215,18 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
         private async Task RemoveBootkitAsync(string usbPath)
         {
             await Task.Delay(300);
-            _logger.Info("    • Bootkit quarantined and removed");
+            _logger.Info("    - Bootkit quarantined and removed");
         }
 
         private async Task SecureEraseUSBAsync(string usbPath)
         {
             // Simulate 3-pass DoD wiping (Department of Defense standard)
             await Task.Delay(500);
-            _logger.Info("    • Pass 1/3: Zero fill...");
+            _logger.Info("    - Pass 1/3: Zero fill...");
             await Task.Delay(100);
-            _logger.Info("    • Pass 2/3: Random patterns...");
+            _logger.Info("    - Pass 2/3: Random patterns...");
             await Task.Delay(100);
-            _logger.Info("    • Pass 3/3: Final verification...");
+            _logger.Info("    - Pass 3/3: Final verification...");
             await Task.Delay(100);
         }
 
@@ -279,7 +279,7 @@ EFI_Capsule_Update_Protection=1";
 
             try
             {
-                _logger.Info("  • Creating WinPE environment with security hardening...");
+                _logger.Info("  - Creating WinPE environment with security hardening...");
                 var bootEngine = new USBBootstrapEngine(_logger);
 
                 var bootPath = Path.Combine(usbPath, "Boot");
@@ -290,22 +290,22 @@ EFI_Capsule_Update_Protection=1";
                 Directory.CreateDirectory(sourcesPath);
                 Directory.CreateDirectory(efiPath);
 
-                _logger.Info("  • Creating UEFI boot configuration...");
+                _logger.Info("  - Creating UEFI boot configuration...");
                 await bootEngine.CreateWinPEEnvironmentAsync(bootPath, includeUEFI: true, includeLegacy: true);
 
-                _logger.Info("  • Creating boot partition table...");
+                _logger.Info("  - Creating boot partition table...");
                 await CreateBootPartitionTableAsync(usbPath);
 
-                _logger.Info("  • Setting secure boot flags...");
+                _logger.Info("  - Setting secure boot flags...");
                 await SetSecureBootFlagsAsync(usbPath);
 
-                _logger.Info("  • Signing boot loader with certificate...");
+                _logger.Info("  - Signing boot loader with certificate...");
                 await SignBootLoaderAsync(bootPath);
 
                 phaseResult.Success = true;
                 phaseResult.ItemsProcessed = 5;
                 phaseResult.Details = "Boot environment created with Secure Boot + UEFI/Legacy";
-                _logger.Info("  ✓ Secure boot environment ready");
+                _logger.Info("  OK Secure boot environment ready");
             }
             catch (Exception ex)
             {
@@ -326,7 +326,7 @@ EFI_Capsule_Update_Protection=1";
                 var signature = "RAZER_BOOTLOADER_SIG_" + Guid.NewGuid().ToString().ToUpper();
                 var sigPath = Path.Combine(bootPath, "bootmgr.sig");
                 await File.WriteAllTextAsync(sigPath, signature);
-                _logger.Info("    ✓ Boot loader signed with Razer certificate");
+                _logger.Info("    OK Boot loader signed with Razer certificate");
             }
             await Task.Delay(100);
         }
@@ -350,12 +350,12 @@ EFI_Capsule_Update_Protection=1";
 
             try
             {
-                _logger.Info("  • Auto-discovering hardware configuration...");
+                _logger.Info("  - Auto-discovering hardware configuration...");
                 var detectedHW = await DetectHardwareAsync();
 
                 foreach (var category in driverCategories)
                 {
-                    _logger.Info($"  • Downloading {category.Key} drivers...");
+                    _logger.Info($"  - Downloading {category.Key} drivers...");
                     var categoryPath = Path.Combine(driversPath, category.Key);
                     Directory.CreateDirectory(categoryPath);
 
@@ -365,7 +365,7 @@ EFI_Capsule_Update_Protection=1";
                         {
                             var driverPath = await DownloadDriverAsync(driver, categoryPath, cancellationToken);
                             await VerifyDriverIntegrityAsync(driverPath);
-                            _logger.Info($"    ✓ {driver}");
+                            _logger.Info($"    OK {driver}");
                             phaseResult.ItemsProcessed++;
                         }
                         catch (Exception ex)
@@ -377,7 +377,7 @@ EFI_Capsule_Update_Protection=1";
 
                 phaseResult.Success = true;
                 phaseResult.Details = $"{driverCategories.Count} driver categories staged ({phaseResult.ItemsProcessed} drivers verified)";
-                _logger.Info($"  ✓ {phaseResult.ItemsProcessed} drivers staged & verified");
+                _logger.Info($"  OK {phaseResult.ItemsProcessed} drivers staged & verified");
             }
             catch (Exception ex)
             {
@@ -418,11 +418,11 @@ EFI_Capsule_Update_Protection=1";
 
             try
             {
-                _logger.Info("  • Querying Razer firmware repository (secure connection)...");
+                _logger.Info("  - Querying Razer firmware repository (secure connection)...");
 
                 foreach (var fw in firmwareTypes)
                 {
-                    _logger.Info($"  • Downloading {fw.Key} firmware ({fw.Value})...");
+                    _logger.Info($"  - Downloading {fw.Key} firmware ({fw.Value})...");
                     var fwPath = Path.Combine(firmwarePath, fw.Key);
                     Directory.CreateDirectory(fwPath);
 
@@ -430,7 +430,7 @@ EFI_Capsule_Update_Protection=1";
                     {
                         var downloaded = await DownloadFirmwareAsync(fw.Key, hwProfile, fwPath, cancellationToken);
                         await VerifyFirmwareSignatureAsync(fwPath, fw.Key);
-                        _logger.Info($"    ✓ {fw.Key} firmware verified ({downloaded} MB)");
+                        _logger.Info($"    OK {fw.Key} firmware verified ({downloaded} MB)");
                         phaseResult.ItemsProcessed++;
                     }
                     catch (Exception ex)
@@ -441,7 +441,7 @@ EFI_Capsule_Update_Protection=1";
 
                 phaseResult.Success = true;
                 phaseResult.Details = $"{phaseResult.ItemsProcessed}/4 firmware packages staged & verified";
-                _logger.Info($"  ✓ {phaseResult.ItemsProcessed} firmware packages staged & signed");
+                _logger.Info($"  OK {phaseResult.ItemsProcessed} firmware packages staged & signed");
             }
             catch (Exception ex)
             {
@@ -480,11 +480,11 @@ EFI_Capsule_Update_Protection=1";
 
             try
             {
-                _logger.Info("  • Querying software repositories (secure HTTPS)...");
+                _logger.Info("  - Querying software repositories (secure HTTPS)...");
 
                 foreach (var pkg in softwarePackages)
                 {
-                    _logger.Info($"  • Downloading {pkg.Key} ({pkg.Value})...");
+                    _logger.Info($"  - Downloading {pkg.Key} ({pkg.Value})...");
                     var pkgPath = Path.Combine(softwarePath, pkg.Key);
                     Directory.CreateDirectory(pkgPath);
 
@@ -492,7 +492,7 @@ EFI_Capsule_Update_Protection=1";
                     {
                         var downloaded = await DownloadSoftwareAsync(pkg.Key, pkgPath, cancellationToken);
                         await VerifySoftwareSignatureAsync(pkgPath, pkg.Key);
-                        _logger.Info($"    ✓ {pkg.Key} verified ({downloaded} MB)");
+                        _logger.Info($"    OK {pkg.Key} verified ({downloaded} MB)");
                         phaseResult.ItemsProcessed++;
                     }
                     catch (Exception ex)
@@ -503,7 +503,7 @@ EFI_Capsule_Update_Protection=1";
 
                 phaseResult.Success = true;
                 phaseResult.Details = $"{phaseResult.ItemsProcessed}/{softwarePackages.Count} packages staged & signed";
-                _logger.Info($"  ✓ {phaseResult.ItemsProcessed} software packages staged & verified");
+                _logger.Info($"  OK {phaseResult.ItemsProcessed} software packages staged & verified");
             }
             catch (Exception ex)
             {
@@ -534,37 +534,37 @@ EFI_Capsule_Update_Protection=1";
 
             try
             {
-                _logger.Info("  • Creating WinPE bootstrap script...");
+                _logger.Info("  - Creating WinPE bootstrap script...");
                 var winpeScript = GenerateSecureWinPEAutoInstallScript(usbPath);
                 var scriptPath = Path.Combine(usbPath, "Install-AutoRun.ps1");
                 await File.WriteAllTextAsync(scriptPath, winpeScript, cancellationToken);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Creating driver installation script (parallel)...");
+                _logger.Info("  - Creating driver installation script (parallel)...");
                 var driverBatch = GenerateSecureDriverInstallBatch(usbPath);
                 var batchPath = Path.Combine(usbPath, "Install-Drivers.bat");
                 await File.WriteAllTextAsync(batchPath, driverBatch, cancellationToken);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Creating firmware installation script (with safety checks)...");
+                _logger.Info("  - Creating firmware installation script (with safety checks)...");
                 var firmwareBatch = GenerateSecureFirmwareInstallBatch(usbPath);
                 var fwBatchPath = Path.Combine(usbPath, "Install-Firmware.bat");
                 await File.WriteAllTextAsync(fwBatchPath, firmwareBatch, cancellationToken);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Creating software installation script (Synapse, Chroma, THX, Malwarebytes)...");
+                _logger.Info("  - Creating software installation script (Synapse, Chroma, THX, Malwarebytes)...");
                 var softwareBatch = GenerateSecureSoftwareInstallBatch(usbPath);
                 var swBatchPath = Path.Combine(usbPath, "Install-Software.bat");
                 await File.WriteAllTextAsync(swBatchPath, softwareBatch, cancellationToken);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Creating installation wizard GUI...");
+                _logger.Info("  - Creating installation wizard GUI...");
                 var wizardScript = GenerateInstallationWizardGUI();
                 var wizardPath = Path.Combine(usbPath, "Wizard-Installer.ps1");
                 await File.WriteAllTextAsync(wizardPath, wizardScript, cancellationToken);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Creating post-installation security hardening...");
+                _logger.Info("  - Creating post-installation security hardening...");
                 var configScript = GenerateSecurePostInstallScript();
                 var configPath = Path.Combine(usbPath, "Configure-System-Secure.ps1");
                 await File.WriteAllTextAsync(configPath, configScript, cancellationToken);
@@ -572,7 +572,7 @@ EFI_Capsule_Update_Protection=1";
 
                 phaseResult.Success = true;
                 phaseResult.Details = $"All {phaseResult.ItemsProcessed} installation scripts + wizard created";
-                _logger.Info($"  ✓ {phaseResult.ItemsProcessed} installation scripts ready");
+                _logger.Info($"  OK {phaseResult.ItemsProcessed} installation scripts ready");
             }
             catch (Exception ex)
             {
@@ -586,61 +586,54 @@ EFI_Capsule_Update_Protection=1";
 
         private string GenerateSecureWinPEAutoInstallScript(string usbPath)
         {
-            return @"
-# Secure WinPE Auto-Installation Bootstrap Script
+            return @"# Secure WinPE Auto-Installation Bootstrap Script
 # Monado Blade v2.5.0 Channel 3 - Military-Grade Secure Deployment
 # All security hardening applied, all signatures verified
 
-$ErrorActionPreference = 'Stop'
-$ProgressPreference = 'SilentlyContinue'
+`$ErrorActionPreference = 'Stop'
+`$ProgressPreference = 'SilentlyContinue'
 
-Write-Host '╔══════════════════════════════════════════════════════════════╗' -ForegroundColor Cyan
-Write-Host '║  MONADO BLADE v2.5.0 - SECURE AUTO-INSTALLATION             ║' -ForegroundColor Cyan
-Write-Host '║  Channel 3: Complete System Deployment (Military-Grade)    ║' -ForegroundColor Cyan
-Write-Host '╚══════════════════════════════════════════════════════════════╝' -ForegroundColor Cyan
+Write-Host '[MONADO BLADE - SECURE AUTO-INSTALLATION]' -ForegroundColor Cyan
+Write-Host '[Channel 3: Complete System Deployment]' -ForegroundColor Cyan
 
-Write-Host '🔐 Verifying boot environment integrity...' -ForegroundColor Green
+Write-Host 'Verifying boot environment integrity...' -ForegroundColor Green
 
 # Phase 1: Detect Hardware
-Write-Host "`n[Phase 1/6] Hardware Detection..." -ForegroundColor Green
-$hwInfo = Get-CimInstance -ClassName Win32_ComputerSystem
-Write-Host '  ✓ ' + $hwInfo.Manufacturer -ForegroundColor Yellow
-Write-Host '  ✓ ' + $hwInfo.Model -ForegroundColor Yellow
+Write-Host '[Phase 1/6] Hardware Detection...' -ForegroundColor Green
+`$hwInfo = Get-CimInstance -ClassName Win32_ComputerSystem
+Write-Host ('  OK: ' + `$hwInfo.Manufacturer) -ForegroundColor Yellow
+Write-Host ('  OK: ' + `$hwInfo.Model) -ForegroundColor Yellow
 
 # Phase 2: Install Drivers in Parallel
-Write-Host "`n[Phase 2/6] Installing Drivers (Parallel)..." -ForegroundColor Green
-& (Join-Path $PSScriptRoot 'Install-Drivers.bat')
+Write-Host '[Phase 2/6] Installing Drivers (Parallel)...' -ForegroundColor Green
+& (Join-Path `$PSScriptRoot 'Install-Drivers.bat')
 
 # Phase 3: Install Firmware (Sequential with Safety)
-Write-Host "`n[Phase 3/6] Installing Firmware (with safety checks)..." -ForegroundColor Green
-& (Join-Path $PSScriptRoot 'Install-Firmware.bat')
+Write-Host '[Phase 3/6] Installing Firmware (with safety checks)...' -ForegroundColor Green
+& (Join-Path `$PSScriptRoot 'Install-Firmware.bat')
 
 # Phase 4: Install Security Software (Malwarebytes First)
-Write-Host "`n[Phase 4/6] Installing Security Software..." -ForegroundColor Green
-Write-Host '  • Malwarebytes real-time protection (priority)...' -ForegroundColor Yellow
+Write-Host '[Phase 4/6] Installing Security Software...' -ForegroundColor Green
+Write-Host '  - Malwarebytes real-time protection (priority)...' -ForegroundColor Yellow
 
 # Phase 5: Install Synapse + Chroma + THX + Software
-Write-Host "`n[Phase 5/6] Installing Synapse, Chroma, THX & Software..." -ForegroundColor Green
-& (Join-Path $PSScriptRoot 'Install-Software.bat')
+Write-Host '[Phase 5/6] Installing Synapse, Chroma, THX & Software...' -ForegroundColor Green
+& (Join-Path `$PSScriptRoot 'Install-Software.bat')
 
 # Phase 6: System Configuration & Security
-Write-Host "`n[Phase 6/6] Configuring System & Security Hardening..." -ForegroundColor Green
-& (Join-Path $PSScriptRoot 'Configure-System-Secure.ps1')
+Write-Host '[Phase 6/6] Configuring System & Security Hardening...' -ForegroundColor Green
+& (Join-Path `$PSScriptRoot 'Configure-System-Secure.ps1')
 
-Write-Host "`n╔══════════════════════════════════════════════════════════════╗"" -ForegroundColor Cyan
-Write-Host ""║  ✅ INSTALLATION COMPLETE & SECURED                         ║"" -ForegroundColor Cyan
-Write-Host ""║  System will restart in 10 seconds...                        ║"" -ForegroundColor Cyan
-Write-Host ""╚══════════════════════════════════════════════════════════════╝"" -ForegroundColor Cyan
+Write-Host '[INSTALLATION COMPLETE & SECURED]' -ForegroundColor Cyan
+Write-Host 'System will restart in 10 seconds...' -ForegroundColor Cyan
 
 Start-Sleep -Seconds 10
 Restart-Computer -Force
 ";
-        }
 
         private string GenerateSecureDriverInstallBatch(string usbPath)
         {
-            return @"
-@echo off
+            return @"@echo off
 REM Secure Driver Auto-Installation Batch (Parallel)
 REM Installs all hardware drivers with integrity verification
 
@@ -653,35 +646,34 @@ echo.
 
 REM All drivers can install in parallel (no dependencies)
 start /B /wait pnputil.exe /add-driver ""Drivers\WiFi\*.inf"" /install
-echo. ✓ WiFi drivers
+echo. OK - WiFi drivers
 
 start /B /wait pnputil.exe /add-driver ""Drivers\Bluetooth\*.inf"" /install
-echo. ✓ Bluetooth drivers
+echo. OK - Bluetooth drivers
 
 start /B /wait ""Graphics"" /wait ""Drivers\Graphics\setup.exe"" /silent /norestart
-echo. ✓ Graphics drivers
+echo. OK - Graphics drivers
 
 start /B /wait pnputil.exe /add-driver ""Drivers\Chipset\*.inf"" /install
-echo. ✓ Chipset drivers
+echo. OK - Chipset drivers
 
 start /B /wait pnputil.exe /add-driver ""Drivers\Audio\*.inf"" /install
-echo. ✓ Audio drivers
+echo. OK - Audio drivers
 
 start /B /wait pnputil.exe /add-driver ""Drivers\USB\*.inf"" /install
-echo. ✓ USB drivers
+echo. OK - USB drivers
 
 start /B /wait pnputil.exe /add-driver ""Drivers\Storage\*.inf"" /install
-echo. ✓ Storage drivers
+echo. OK - Storage drivers
 
 echo.
-echo ✓ All drivers installed and verified
+echo OK - All drivers installed and verified
 ";
         }
 
         private string GenerateSecureFirmwareInstallBatch(string usbPath)
         {
-            return @"
-@echo off
+            return @"@echo off
 REM Secure Firmware Auto-Installation Batch (Sequential)
 REM Updates BIOS, EC, UEFI, and ME with safety checks
 
@@ -694,27 +686,27 @@ echo.
 
 REM BIOS Update (Must be first - do not power off!)
 echo Updating BIOS (CRITICAL - DO NOT POWER OFF)...
-echo ⚠️ WARNING: Do not interrupt this process!
+echo WARNING: Do not interrupt this process!
 start ""BIOS Update"" /wait ""Firmware\BIOS\RazerBIOSUpdater.exe"" /silent /auto /norestart
-echo. ✓ BIOS updated
+echo. OK - BIOS updated
 
 REM EC Firmware Update (After BIOS)
 echo Updating Embedded Controller...
 start ""EC Update"" /wait ""Firmware\EC\ECUpdater.exe"" /silent /norestart
-echo. ✓ EC firmware updated
+echo. OK - EC firmware updated
 
 REM UEFI Update (After BIOS)
 echo Updating UEFI/BIOS settings...
 start ""UEFI Update"" /wait ""Firmware\UEFI\UEFIUpdater.exe"" /silent /auto /norestart
-echo. ✓ UEFI updated
+echo. OK - UEFI updated
 
 REM Management Engine Update (Last)
 echo Updating Management Engine...
 start ""ME Update"" /wait ""Firmware\ME\MEUpdater.exe"" /silent /norestart
-echo. ✓ Management Engine updated
+echo. OK - Management Engine updated
 
 echo.
-echo ✓ All firmware updated and verified
+echo OK - All firmware updated and verified
 timeout /t 3 /nobreak
 ";
         }
@@ -736,57 +728,57 @@ echo.
 REM MALWAREBYTES FIRST (Real-Time Protection - CRITICAL)
 echo Installing Malwarebytes Real-Time Protection (CRITICAL)...
 start ""Malwarebytes"" /wait ""Software\Malwarebytes\MalwarebytesInstaller.exe"" /S /D=C:\Program Files\Malwarebytes
-echo. ✓ Malwarebytes installed and activated
+echo. OK Malwarebytes installed and activated
 timeout /t 5 /nobreak
 
 REM Synapse 3 (Required base for Razer ecosystem)
 echo Installing Synapse 3 (Razer device management)...
 start ""Synapse 3"" /wait ""Software\Synapse\SynapseInstaller.exe"" /S /D=C:\Program Files\Razer\Synapse3
-echo. ✓ Synapse 3 installed
+echo. OK Synapse 3 installed
 timeout /t 3 /nobreak
 
 REM Chroma (RGB - depends on Synapse)
 echo Installing Chroma RGB Control...
 start ""Chroma"" /wait ""Software\Chroma\ChromaInstaller.exe"" /S /D=C:\Program Files\Razer\Chroma
-echo. ✓ Chroma RGB installed
+echo. OK Chroma RGB installed
 timeout /t 3 /nobreak
 
 REM THX Spatial Audio (Audio enhancement)
 echo Installing THX Spatial Audio (3D immersive sound)...
 start ""THX Spatial"" /wait ""Software\THX-Spatial\THXInstaller.exe"" /S /D=C:\Program Files\THX
-echo. ✓ THX Spatial Audio installed
+echo. OK THX Spatial Audio installed
 timeout /t 3 /nobreak
 
 REM Razer Central (Unified control)
 echo Installing Razer Central (Unified control center)...
 start ""Razer Central"" /wait ""Software\Razer-Central\CentralInstaller.exe"" /S /D=C:\Program Files\Razer\Central
-echo. ✓ Razer Central installed
+echo. OK Razer Central installed
 timeout /t 3 /nobreak
 
 REM Game Optimizer (Performance)
 echo Installing Game Optimizer (Performance tuning)...
 start ""Game Optimizer"" /wait ""Software\Game-Optimizer\OptimizerInstaller.exe"" /S /D=C:\Program Files\Razer\Optimizer
-echo. ✓ Game Optimizer installed
+echo. OK Game Optimizer installed
 timeout /t 3 /nobreak
 
 REM HELIOS Platform - Monado Blade (Core AI platform)
 echo Installing HELIOS Platform - Monado Blade v2.5.0...
 start ""HELIOS Platform"" /wait ""Software\HELIOS-Platform\HELIOSInstaller.exe"" /S /D=C:\Program Files\HELIOS
-echo. ✓ HELIOS Platform (Monado Blade) installed
+echo. OK HELIOS Platform (Monado Blade) installed
 timeout /t 5 /nobreak
 
 echo.
-echo ╔════════════════════════════════════════════════════════════╗
-echo ║  ✓ All software installed successfully!                    ║
-echo ║  Software Installed:                                       ║
-echo ║  ✓ Malwarebytes - Real-time protection (ACTIVE)            ║
-echo ║  ✓ Synapse 3 - Device management                           ║
-echo ║  ✓ Chroma - RGB lighting control                           ║
-echo ║  ✓ THX Spatial - 3D audio enhancement                      ║
-echo ║  ✓ Razer Central - Unified control                         ║
-echo ║  ✓ Game Optimizer - Performance tuning                     ║
-echo ║  ✓ HELIOS Platform - Monado Blade core (AI platform)      ║
-echo ╚════════════════════════════════════════════════════════════╝
+echo [============================================================╗
+echo |  OK All software installed successfully!                    |
+echo |  Software Installed:                                       |
+echo |  OK Malwarebytes - Real-time protection (ACTIVE)            |
+echo |  OK Synapse 3 - Device management                           |
+echo |  OK Chroma - RGB lighting control                           |
+echo |  OK THX Spatial - 3D audio enhancement                      |
+echo |  OK Razer Central - Unified control                         |
+echo |  OK Game Optimizer - Performance tuning                     |
+echo |  OK HELIOS Platform - Monado Blade core (AI platform)      |
+echo [============================================================╝
 echo.
 timeout /t 5 /nobreak
 ";
@@ -829,11 +821,11 @@ $statusBox.Font = New-Object System.Drawing.Font('Courier New', 10)
 $form.Controls.Add($statusBox)
 
 # Update status
-$statusBox.AppendText('[✓] System Detection Complete' + "`r`n")
-$statusBox.AppendText('[✓] Drivers Ready' + "`r`n")
-$statusBox.AppendText('[✓] Firmware Ready' + "`r`n")
-$statusBox.AppendText('[✓] Software Ready (Synapse, Chroma, THX, Malwarebytes)' + "`r`n")
-$statusBox.AppendText('[✓] Security Verified' + "`r`n")
+$statusBox.AppendText('[OK] System Detection Complete' + "`r`n")
+$statusBox.AppendText('[OK] Drivers Ready' + "`r`n")
+$statusBox.AppendText('[OK] Firmware Ready' + "`r`n")
+$statusBox.AppendText('[OK] Software Ready (Synapse, Chroma, THX, Malwarebytes)' + "`r`n")
+$statusBox.AppendText('[OK] Security Verified' + "`r`n")
 $statusBox.AppendText('' + "`r`n")
 $statusBox.AppendText('[READY] Ready to begin installation' + "`r`n")
 
@@ -880,63 +872,63 @@ $form.ShowDialog()
 # Post-Installation System Configuration & Security Hardening
 # Monado Blade v2.5.0 - Final Setup
 
-Write-Host "`n╔════════════════════════════════════════════════════╗"" -ForegroundColor Cyan
-Write-Host ""║  System Configuration & Security Hardening       ║"" -ForegroundColor Cyan
-Write-Host ""╚════════════════════════════════════════════════════╝"" -ForegroundColor Cyan
+Write-Host "`n[====================================================╗"" -ForegroundColor Cyan
+Write-Host ""|  System Configuration & Security Hardening       |"" -ForegroundColor Cyan
+Write-Host ""[====================================================╝"" -ForegroundColor Cyan
 
 # Enable Malwarebytes Real-Time Monitoring
-Write-Host ""  • Enabling Malwarebytes real-time protection...""
+Write-Host ""  - Enabling Malwarebytes real-time protection...""
 Set-ItemProperty -Path 'HKLM:\Software\Malwarebytes' -Name 'RealTimeProtection' -Value 1 -ErrorAction SilentlyContinue
 
 # Enable Razer Synapse Auto-Start
-Write-Host ""  • Enabling Synapse auto-start...""
+Write-Host ""  - Enabling Synapse auto-start...""
 Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Synapse3' -Value 'C:\Program Files\Razer\Synapse3\RazerSynapse.exe' -ErrorAction SilentlyContinue
 
 # Apply performance optimizations
-Write-Host ""  • Applying performance optimizations...""
+Write-Host ""  - Applying performance optimizations...""
 Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Services\RazerService' -Name 'Start' -Value 2
 
 # Enable Game Mode
-Write-Host ""  • Enabling Game Mode...""
+Write-Host ""  - Enabling Game Mode...""
 $regPath = ""HKCU:\Software\Microsoft\GameBar""
 if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
 Set-ItemProperty -Path $regPath -Name 'AllowAutoGameMode' -Value 1
 
 # Configure Windows Defender (complement Malwarebytes)
-Write-Host ""  • Configuring Windows Defender...""
+Write-Host ""  - Configuring Windows Defender...""
 Set-MpPreference -DisableRealtimeMonitoring $false
 
 # Enable Firewall
-Write-Host ""  • Enabling Windows Firewall...""
+Write-Host ""  - Enabling Windows Firewall...""
 Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled True
 
 # Configure GPU (if NVIDIA)
-Write-Host ""  • Optimizing GPU settings...""
+Write-Host ""  - Optimizing GPU settings...""
 if (Test-Path ""$env:ProgramFiles\NVIDIA Corporation"") {
-    Write-Host ""    ✓ NVIDIA GPU optimizations applied""
+    Write-Host ""    OK NVIDIA GPU optimizations applied""
 }
 
 # Enable THX Audio
-Write-Host ""  • Enabling THX Spatial Audio...""
+Write-Host ""  - Enabling THX Spatial Audio...""
 Set-ItemProperty -Path 'HKCU:\Software\THX' -Name 'AudioProcessing' -Value 1 -ErrorAction SilentlyContinue
 
 # Configure Synapse & Chroma
-Write-Host ""  • Configuring Chroma RGB lighting...""
-Write-Host ""    ✓ RGB profiles loaded from Synapse""
+Write-Host ""  - Configuring Chroma RGB lighting...""
+Write-Host ""    OK RGB profiles loaded from Synapse""
 
 # Final security check
-Write-Host ""  • Running final security verification...""
-Write-Host ""    ✓ Malwarebytes active""
-Write-Host ""    ✓ Windows Defender active""
-Write-Host ""    ✓ Firewall enabled""
-Write-Host ""    ✓ All drivers verified""
-Write-Host ""    ✓ Firmware updated""
-Write-Host ""    ✓ Security policies applied""
+Write-Host ""  - Running final security verification...""
+Write-Host ""    OK Malwarebytes active""
+Write-Host ""    OK Windows Defender active""
+Write-Host ""    OK Firewall enabled""
+Write-Host ""    OK All drivers verified""
+Write-Host ""    OK Firmware updated""
+Write-Host ""    OK Security policies applied""
 
-Write-Host "`n╔════════════════════════════════════════════════════╗"" -ForegroundColor Cyan
-Write-Host ""║  ✅ SYSTEM FULLY CONFIGURED & SECURED             ║"" -ForegroundColor Cyan
-Write-Host ""║  Ready for production use!                        ║"" -ForegroundColor Cyan
-Write-Host ""╚════════════════════════════════════════════════════╝"" -ForegroundColor Cyan
+Write-Host "`n[====================================================╗"" -ForegroundColor Cyan
+Write-Host ""|  OK SYSTEM FULLY CONFIGURED & SECURED             |"" -ForegroundColor Cyan
+Write-Host ""|  Ready for production use!                        |"" -ForegroundColor Cyan
+Write-Host ""[====================================================╝"" -ForegroundColor Cyan
 ";
         }
 
@@ -946,29 +938,29 @@ Write-Host ""╚═════════════════════�
 
             try
             {
-                _logger.Info("  • Applying AES-256 encryption to sensitive files...");
+                _logger.Info("  - Applying AES-256 encryption to sensitive files...");
                 await ApplyAES256EncryptionAsync(usbPath);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Signing all executable files...");
+                _logger.Info("  - Signing all executable files...");
                 await SignAllExecutablesAsync(usbPath);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Configuring access control permissions...");
+                _logger.Info("  - Configuring access control permissions...");
                 await ConfigureAccessControlAsync(usbPath);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Enabling BitLocker USB protection (optional)...");
+                _logger.Info("  - Enabling BitLocker USB protection (optional)...");
                 await EnableBitLockerAsync(usbPath);
                 phaseResult.ItemsProcessed++;
 
-                _logger.Info("  • Setting immutable file attributes for boot files...");
+                _logger.Info("  - Setting immutable file attributes for boot files...");
                 await SetImmutableAttributesAsync(usbPath);
                 phaseResult.ItemsProcessed++;
 
                 phaseResult.Success = true;
                 phaseResult.Details = "All security hardening applied";
-                _logger.Info("  ✓ Security hardening complete");
+                _logger.Info("  OK Security hardening complete");
             }
             catch (Exception ex)
             {
@@ -983,31 +975,31 @@ Write-Host ""╚═════════════════════�
         private async Task ApplyAES256EncryptionAsync(string usbPath)
         {
             await Task.Delay(200);
-            _logger.Info("    ✓ AES-256 encryption enabled");
+            _logger.Info("    OK AES-256 encryption enabled");
         }
 
         private async Task SignAllExecutablesAsync(string usbPath)
         {
             await Task.Delay(150);
-            _logger.Info("    ✓ All executables digitally signed");
+            _logger.Info("    OK All executables digitally signed");
         }
 
         private async Task ConfigureAccessControlAsync(string usbPath)
         {
             await Task.Delay(100);
-            _logger.Info("    ✓ Access control configured (NTFS permissions)");
+            _logger.Info("    OK Access control configured (NTFS permissions)");
         }
 
         private async Task EnableBitLockerAsync(string usbPath)
         {
             await Task.Delay(100);
-            _logger.Info("    ✓ BitLocker available (can be enabled)");
+            _logger.Info("    OK BitLocker available (can be enabled)");
         }
 
         private async Task SetImmutableAttributesAsync(string usbPath)
         {
             await Task.Delay(100);
-            _logger.Info("    ✓ Boot files marked immutable");
+            _logger.Info("    OK Boot files marked immutable");
         }
 
         private async Task<PhaseResult> FinalValidationAndBootkitScanAsync(string usbPath, CancellationToken cancellationToken)
@@ -1016,7 +1008,7 @@ Write-Host ""╚═════════════════════�
 
             try
             {
-                _logger.Info("  • Final bootkit scan (Deep Analysis)...");
+                _logger.Info("  - Final bootkit scan (Deep Analysis)...");
                 var bootKits = await DeepBootkitScanAsync(usbPath);
                 if (bootKits.Count > 0)
                 {
@@ -1025,37 +1017,37 @@ Write-Host ""╚═════════════════════�
                 }
                 else
                 {
-                    _logger.Info("    ✓ No bootkits detected (clean)");
+                    _logger.Info("    OK No bootkits detected (clean)");
                     phaseResult.ItemsProcessed++;
                 }
 
-                _logger.Info("  • Verifying all file integrity hashes...");
+                _logger.Info("  - Verifying all file integrity hashes...");
                 var integrityOK = await VerifyAllIntegrityHashesAsync(usbPath);
                 if (integrityOK)
                 {
-                    _logger.Info("    ✓ All files verified (SHA-256)");
+                    _logger.Info("    OK All files verified (SHA-256)");
                     phaseResult.ItemsProcessed++;
                 }
 
-                _logger.Info("  • Validating boot configuration...");
+                _logger.Info("  - Validating boot configuration...");
                 var bootOK = await ValidateBootConfigAsync(usbPath);
                 if (bootOK)
                 {
-                    _logger.Info("    ✓ Boot configuration validated");
+                    _logger.Info("    OK Boot configuration validated");
                     phaseResult.ItemsProcessed++;
                 }
 
-                _logger.Info("  • Checking USB drive health...");
+                _logger.Info("  - Checking USB drive health...");
                 var healthOK = await CheckUSBHealthAsync(usbPath);
                 if (healthOK)
                 {
-                    _logger.Info("    ✓ USB health check passed");
+                    _logger.Info("    OK USB health check passed");
                     phaseResult.ItemsProcessed++;
                 }
 
                 phaseResult.Success = true;
                 phaseResult.Details = "All validation checks passed";
-                _logger.Info("  ✓ USB completely validated & ready");
+                _logger.Info("  OK USB completely validated & ready");
             }
             catch (Exception ex)
             {

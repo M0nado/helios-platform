@@ -16,7 +16,7 @@ namespace MonadoBlade.GUI.Windows
     {
         private Canvas _mainCanvas;
         private Canvas _wheelCanvas;
-        private Canvas _kanji OrbitCanvas;
+        private Canvas _kanjiOrbitCanvas;
         private RotateTransform _wheelRotation;
         private RotateTransform _kanjiRotation;
         private TextBlock _statusLabel;

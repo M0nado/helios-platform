@@ -130,7 +130,7 @@ namespace MonadoBlade.GUI.Windows
                 FontSize = 16,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 0, 0, 12),
-                x:Name = "SelectedProfileLabel"
+                Name = "SelectedProfileLabel"
             };
 
             infoPanel.Children.Add(selectedLabel);
@@ -160,7 +160,7 @@ namespace MonadoBlade.GUI.Windows
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(12, 8),
                 FontSize = 14,
-                x:Name = "PasswordBox"
+                Name = "PasswordBox"
             };
 
             passwordPanel.Children.Add(passwordLabel);
