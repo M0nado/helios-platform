@@ -580,21 +580,21 @@ Write-Host ""  • Configuring power settings...""
 powercfg /SETACTIVE 8c5e7fda-e8bf-45a6-a6cc-4b3c9b5a8e3f  # High Performance
 
 # Enable Game Mode
-Write-Host ""  • Enabling Game Mode...""
-$regPath = ""HKCU:\Software\Microsoft\GameBar""
+Write-Host "  - Enabling Game Mode..."
+$regPath = "HKCU:\Software\Microsoft\GameBar"
 if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
 Set-ItemProperty -Path $regPath -Name 'AllowAutoGameMode' -Value 1
 
 # Configure NVIDIA GPU (if present)
-Write-Host ""  • Optimizing GPU settings...""
-if (Test-Path ""$env:ProgramFiles\NVIDIA Corporation"") {
-    Write-Host ""    ✓ NVIDIA GPU optimizations applied""
+Write-Host "  - Optimizing GPU settings..."
+if (Test-Path "$env:ProgramFiles\NVIDIA Corporation") {
+    Write-Host "    + NVIDIA GPU optimizations applied"
 }
 
 # Final configuration
-Write-Host ""  • Finalizing configuration...""
-Write-Host "`n✓ System configuration complete!""
-Write-Host ""✓ System ready for use!""
+Write-Host "  - Finalizing configuration..."
+Write-Host "`n+ System configuration complete!"
+Write-Host "+ System ready for use!"
 ";
         }
 
