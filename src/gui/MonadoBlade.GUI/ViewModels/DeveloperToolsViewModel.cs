@@ -23,8 +23,8 @@ namespace MonadoBlade.GUI.ViewModels
         private RelayCommand _exportThemeCommand;
         private RelayCommand _startProfilingCommand;
         private RelayCommand _stopProfilingCommand;
-        private string _apiMethod;
-        private string _apiEndpoint;
+        private string _apiMethod = "GET";
+        private string _apiEndpoint = "https://api.example.com/";
         private string _apiPayload;
         private string _selectedTemplateId;
         private string _pluginName;
@@ -45,8 +45,6 @@ namespace MonadoBlade.GUI.ViewModels
 
         private void InitializeDefaults()
         {
-            _apiMethod = "GET";
-            _apiEndpoint = "https://api.example.com/";
             _themeColors.Add(new ThemeColor { Name = "Primary", Value = Color.FromRgb(0, 217, 255), HexValue = "#00D9FF" });
             _themeColors.Add(new ThemeColor { Name = "Secondary", Value = Color.FromRgb(102, 51, 153), HexValue = "#663399" });
             _themeColors.Add(new ThemeColor { Name = "Accent", Value = Color.FromRgb(255, 107, 107), HexValue = "#FF6B6B" });
@@ -86,17 +84,11 @@ namespace MonadoBlade.GUI.ViewModels
         private bool CanStartProfiling() => !_isProfiling;
         private bool CanStopProfiling() => _isProfiling;
 
-        private void ExecuteApi(ApiRequest req)
-        {
-            var request = new ApiRequest { Id = Guid.NewGuid().ToString(), Method = ApiMethod, Endpoint = ApiEndpoint, Payload = ApiPayload, Timestamp = DateTime.Now, Duration = new Random().Next(10, 500), StatusCode = 200, Response = $"{{ \"success\": true, \"timestamp\": \"{DateTime.Now:O}\" }}" };
-            ApiRequests.Insert(0, request);
-            StatusMessage = $"API call completed in {request.Duration}ms";
-        }
-
-        private void ClearApi() { ApiRequests.Clear(); StatusMessage = "API request history cleared"; }
-        private void GeneratePlugin() { var template = PluginTemplates.FirstOrDefault(t => t.Id == SelectedTemplateId); if (template != null) StatusMessage = $"Plugin '{PluginName}' generated successfully"; }
-        private void ExportTheme() { StatusMessage = "Theme exported to clipboard"; }
-        private void StartProfiling() { IsProfiling = true; PerformanceProfiles.Clear(); PerformanceProfiles.Add(new PerformanceProfile { FunctionName = "OnRender", TimeMs = 5, CallCount = 1200, AverageMs = 4.2, TrendColor = Colors.Green }); StatusMessage = "Performance profiling started"; }
-        private void StopProfiling() { IsProfiling = false; StatusMessage = "Performance profiling stopped"; }
+        private void ExecuteApi(ApiRequest req) { var request = new ApiRequest { Id = Guid.NewGuid().ToString(), Method = ApiMethod, Endpoint = ApiEndpoint, Payload = ApiPayload, Timestamp = DateTime.Now, Duration = new Random().Next(10, 500), StatusCode = 200, Response = $\"{{ \\\"success\\\": true, \\\"timestamp\\\": \\\"{DateTime.Now:O}\\\" }}\" }; ApiRequests.Insert(0, request); StatusMessage = $\"API call completed in {request.Duration}ms\"; }
+        private void ClearApi() { ApiRequests.Clear(); StatusMessage = \"API request history cleared\"; }
+        private void GeneratePlugin() { var template = PluginTemplates.FirstOrDefault(t => t.Id == SelectedTemplateId); if (template != null) StatusMessage = $\"Plugin '{PluginName}' generated successfully\"; }
+        private void ExportTheme() { StatusMessage = \"Theme exported to clipboard\"; }
+        private void StartProfiling() { IsProfiling = true; PerformanceProfiles.Clear(); PerformanceProfiles.Add(new PerformanceProfile { FunctionName = \"OnRender\", TimeMs = 5, CallCount = 1200, AverageMs = 4.2, TrendColor = Colors.Green }); StatusMessage = \"Performance profiling started\"; }
+        private void StopProfiling() { IsProfiling = false; StatusMessage = \"Performance profiling stopped\"; }
     }
 }
