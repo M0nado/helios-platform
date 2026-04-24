@@ -1,43 +1,41 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
     /// <summary>
-    /// Implementation of Service Mesh Optimizer with circuit breaker and caching support.
+    /// Service Mesh Optimizer implementation.
+    /// Optimizes service communication and routing.
     /// </summary>
     public class ServiceMeshOptimizer : IServiceMeshOptimizer
     {
-        private readonly Logging.ILogger? _logger;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
-        private readonly Dictionary<string, ServiceRoute> _optimizedRoutes = new();
-        private readonly Dictionary<string, CircuitBreakerStatus> _circuitBreakers = new();
-        private readonly Dictionary<string, object> _responseCache = new();
-        private long _totalRequests = 0;
-        private long _cacheHits = 0;
-        private long _cacheMisses = 0;
+        private readonly ILogger<ServiceMeshOptimizer> _logger;
+        private readonly SemaphoreSlim _semaphore;
+        private readonly ConcurrentQueue<CommunicationOptimizationResult> _optimizationHistory;
+        private bool _isRunning;
 
-        public ServiceMeshOptimizer(ILogger? logger = null)
+        /// <summary>
+        /// Initializes a new instance of the ServiceMeshOptimizer class.
+        /// </summary>
+        public ServiceMeshOptimizer(ILogger<ServiceMeshOptimizer> logger)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _semaphore = new SemaphoreSlim(1, 1);
+            _optimizationHistory = new ConcurrentQueue<CommunicationOptimizationResult>();
+            _isRunning = false;
         }
 
-        public async Task<bool> InitializeAsync()
+        /// <inheritdoc/>
+        public string ServiceName => nameof(ServiceMeshOptimizer);
+
+        /// <inheritdoc/>
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-                _logger?.Info("Service Mesh Optimizer initialized");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Optimizer initialization failed: {ex.Message}");
-                return false;
+                _logger.LogInformation("{ServiceName} initializing", ServiceName);
+                await Task.CompletedTask;
             }
             finally
             {
@@ -45,43 +43,138 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<ServiceRoute[]> OptimizeRoutesAsync()
+        /// <inheritdoc/>
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                _isRunning = true;
+                _logger.LogInformation("{ServiceName} started", ServiceName);
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
 
-                var routes = new List<ServiceRoute>();
-                var services = new[] { "Service_A", "Service_B", "Service_C", "Service_D", "Service_E" };
+        /// <inheritdoc/>
+        public async Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                _isRunning = false;
+                _logger.LogInformation("{ServiceName} stopped", ServiceName);
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
 
-                for (int i = 0; i < services.Length - 1; i++)
+        /// <inheritdoc/>
+        public bool IsRunning() => _isRunning;
+
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
+        {
+            _semaphore?.Dispose();
+            await Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public async Task<CommunicationOptimizationResult> OptimizeCommunicationAsync(Dictionary<string, CommunicationMetric> communicationMetrics, CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                var result = new CommunicationOptimizationResult { Timestamp = DateTime.UtcNow };
+
+                if (communicationMetrics == null || communicationMetrics.Count == 0)
                 {
-                    for (int j = i + 1; j < services.Length; j++)
+                    result.EfficiencyScore = 100;
+                    _optimizationHistory.Enqueue(result);
+                    return result;
+                }
+
+                double totalLatency = 0;
+                double totalErrorRate = 0;
+
+                foreach (var metric in communicationMetrics.Values)
+                {
+                    double latencyImprovement = Math.Max(0, 100 - metric.AverageLatency);
+                    double errorReduction = metric.ErrorRate * 100;
+
+                    string pair = $"{metric.SourceService}-{metric.DestinationService}";
+                    result.LatencyImprovements[pair] = latencyImprovement;
+                    result.ErrorRateReductions[pair] = errorReduction;
+
+                    totalLatency += metric.AverageLatency;
+                    totalErrorRate += metric.ErrorRate;
+                }
+
+                double avgLatency = totalLatency / communicationMetrics.Count;
+                double avgErrorRate = totalErrorRate / communicationMetrics.Count;
+                result.EfficiencyScore = Math.Max(0, 100 - (avgLatency * 0.5 + avgErrorRate * 50));
+
+                result.RecommendedConfigurations.Add("Implement connection pooling");
+                result.RecommendedConfigurations.Add("Enable request batching");
+                if (avgErrorRate > 0.05)
+                {
+                    result.RecommendedConfigurations.Add("Review retry policies");
+                }
+
+                _optimizationHistory.Enqueue(result);
+                _logger.LogInformation("Communication optimization completed with efficiency: {Score}", result.EfficiencyScore);
+
+                return result;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<CircuitBreakerManagementResult> ManageCircuitBreakersAsync(Dictionary<string, ServiceHealthMetrics> serviceHealthData, CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                var result = new CircuitBreakerManagementResult { Timestamp = DateTime.UtcNow };
+
+                if (serviceHealthData == null)
+                {
+                    return result;
+                }
+
+                result.TotalManaged = serviceHealthData.Count;
+
+                foreach (var service in serviceHealthData)
+                {
+                    var settings = new CircuitBreakerSettings
                     {
-                        var route = new ServiceRoute
-                        {
-                            SourceService = services[i],
-                            DestinationService = services[j],
-                            PathNodes = GenerateOptimalPath(services[i], services[j]),
-                            LatencyMs = Random.Shared.Next(5, 50),
-                            Throughput = Random.Shared.Next(1000, 10000),
-                            Priority = Random.Shared.Next(1, 5),
-                            OptimizationScore = 0.75 + (Random.Shared.NextDouble() * 0.24),
-                            IsActive = true
-                        };
+                        Enabled = true,
+                        FailureThreshold = service.Value.ErrorRate > 0.1 ? 3 : 5,
+                        TimeoutSeconds = (int)(service.Value.ResponseTime / 100),
+                        SuccessThreshold = 2
+                    };
 
-                        routes.Add(route);
-                        _optimizedRoutes[route.RouteId] = route;
+                    if (service.Value.ErrorRate > 0.1)
+                    {
+                        result.AdjustedServices.Add(service.Key);
+                        result.OpenCount++;
                     }
+
+                    result.UpdatedSettings[service.Key] = settings;
                 }
 
-                _logger?.Info($"Routes optimized: {routes.Count} routes generated");
-                return routes.ToArray();
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Route optimization failed: {ex.Message}");
-                return Array.Empty<ServiceRoute>();
+                _logger.LogInformation("Circuit breakers managed. Open count: {Count}", result.OpenCount);
+
+                return result;
             }
             finally
             {
@@ -89,66 +182,51 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<bool> ApplyRouteAsync(ServiceRoute route)
+        /// <inheritdoc/>
+        public async Task<RoutingOptimizationResult> OptimizeRoutingAsync(RoutingConfiguration routingData, CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                var result = new RoutingOptimizationResult { Timestamp = DateTime.UtcNow, Success = true };
 
-                _optimizedRoutes[route.RouteId] = route;
-                InitializeCircuitBreaker(route.DestinationService);
-
-                _logger?.Info($"Route applied: {route.SourceService} -> {route.DestinationService}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to apply route: {ex.Message}");
-                return false;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        public async Task<CircuitBreakerStatus[]> GetCircuitBreakerStatusAsync()
-        {
-            try
-            {
-                await _semaphore.WaitAsync();
-                return _circuitBreakers.Values.ToArray();
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to retrieve circuit breaker status: {ex.Message}");
-                return Array.Empty<CircuitBreakerStatus>();
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        public async Task<bool> UpdateCircuitBreakerAsync(string serviceId, CircuitBreakerConfig config)
-        {
-            try
-            {
-                await _semaphore.WaitAsync();
-
-                if (_circuitBreakers.TryGetValue(serviceId, out var status))
+                if (routingData == null || routingData.ServiceEndpoints == null || routingData.ServiceEndpoints.Count == 0)
                 {
-                    status.FailureRate = config.FailureRateThreshold;
-                    _logger?.Info($"Circuit breaker updated for {serviceId}");
-                    return true;
+                    return result;
                 }
 
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to update circuit breaker: {ex.Message}");
-                return false;
+                double totalLatency = 0;
+                double totalAvailability = 0;
+
+                foreach (var endpoint in routingData.ServiceEndpoints.Values)
+                {
+                    totalLatency += endpoint.Latency;
+                    totalAvailability += endpoint.Availability;
+                }
+
+                double avgLatency = totalLatency / routingData.ServiceEndpoints.Count;
+                double avgAvailability = totalAvailability / routingData.ServiceEndpoints.Count;
+
+                result.ExpectedLatencyImprovement = Math.Max(0, avgLatency / 100 * 10);
+                result.ExpectedAvailabilityImprovement = Math.Max(0, (100 - avgAvailability) * 0.5);
+
+                foreach (var rule in routingData.RoutingRules.Values)
+                {
+                    var optimizedRule = new RoutingRule { RuleId = rule.RuleId, SourcePattern = rule.SourcePattern };
+
+                    foreach (var target in rule.DestinationTargets)
+                    {
+                        int weight = (int)((1.0 / rule.DestinationTargets.Count) * 100);
+                        optimizedRule.TargetWeights[target] = weight;
+                    }
+
+                    result.UpdatedRules[rule.RuleId] = optimizedRule;
+                    result.OptimizedRuleCount++;
+                }
+
+                _logger.LogInformation("Routing optimization completed. Optimized rules: {Count}", result.OptimizedRuleCount);
+
+                return result;
             }
             finally
             {
@@ -156,32 +234,13 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<MeshPerformanceMetrics> GetMeshMetricsAsync()
+        /// <inheritdoc/>
+        public async Task RecordMetricsAsync(CommunicationMetric metrics)
         {
+            await _semaphore.WaitAsync();
             try
             {
-                await _semaphore.WaitAsync();
-
-                var cacheHitRate = _totalRequests > 0 ? (double)_cacheHits / _totalRequests : 0;
-                var trippedBreakers = _circuitBreakers.Values.Count(cb => cb.State == CircuitBreakerState.Open);
-
-                return new MeshPerformanceMetrics
-                {
-                    TotalServices = _circuitBreakers.Count,
-                    OptimizedRoutes = _optimizedRoutes.Count,
-                    CircuitBreakersActive = _circuitBreakers.Count,
-                    AverageLatencyMs = _optimizedRoutes.Values.Average(r => r.LatencyMs),
-                    AverageThroughput = _optimizedRoutes.Values.Average(r => r.Throughput),
-                    RequestSuccessRate = 0.98,
-                    TotalRequestsProcessed = _totalRequests,
-                    CircuitBreakersTripped = trippedBreakers,
-                    CacheHitRate = cacheHitRate * 100
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Metrics retrieval failed: {ex.Message}");
-                return new MeshPerformanceMetrics();
+                await Task.CompletedTask;
             }
             finally
             {
@@ -189,78 +248,20 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<CacheStats> GetCacheStatsAsync()
+        /// <inheritdoc/>
+        public async Task<List<CommunicationOptimizationResult>> GetOptimizationHistoryAsync(int limit = 100)
         {
-            try
+            var results = new List<CommunicationOptimizationResult>();
+            int count = 0;
+
+            foreach (var item in _optimizationHistory.Reverse())
             {
-                await _semaphore.WaitAsync();
-
-                var totalAccesses = _cacheHits + _cacheMisses;
-                var hitRate = totalAccesses > 0 ? (double)_cacheHits / totalAccesses : 0;
-
-                var cacheEntries = _responseCache.Select((kvp, idx) => new CacheEntry
-                {
-                    Key = kvp.Key,
-                    Size = kvp.Value?.ToString()?.Length ?? 0,
-                    AccessCount = Random.Shared.Next(1, 100),
-                    CreatedAt = DateTime.UtcNow.AddMinutes(-Random.Shared.Next(60)),
-                    LastAccessedAt = DateTime.UtcNow.AddSeconds(-Random.Shared.Next(120)),
-                    TimeToLive = TimeSpan.FromHours(1)
-                }).ToList();
-
-                return new CacheStats
-                {
-                    CacheHits = _cacheHits,
-                    CacheMisses = _cacheMisses,
-                    HitRate = hitRate,
-                    CachedItems = _responseCache.Count,
-                    CacheSize = _responseCache.Values.Sum(v => v?.ToString()?.Length ?? 0),
-                    MaxCacheSize = 1000000,
-                    EvictionRate = _cacheHits > 0 ? (double)_cacheMisses / (_cacheHits + _cacheMisses) : 0,
-                    TopCachedResponses = cacheEntries.OrderByDescending(c => c.AccessCount).Take(10).ToList()
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Cache stats retrieval failed: {ex.Message}");
-                return new CacheStats();
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        private List<string> GenerateOptimalPath(string source, string destination)
-        {
-            var path = new List<string> { source };
-            var intermediates = Math.Max(0, Random.Shared.Next(0, 2));
-
-            for (int i = 0; i < intermediates; i++)
-            {
-                path.Add($"Gateway_{i}");
+                if (count >= limit) break;
+                results.Add(item);
+                count++;
             }
 
-            path.Add(destination);
-            return path;
-        }
-
-        private void InitializeCircuitBreaker(string serviceId)
-        {
-            if (!_circuitBreakers.ContainsKey(serviceId))
-            {
-                _circuitBreakers[serviceId] = new CircuitBreakerStatus
-                {
-                    ServiceId = serviceId,
-                    State = CircuitBreakerState.Closed,
-                    FailureCount = 0,
-                    SuccessCount = 0,
-                    RequestCount = 0,
-                    FailureRate = 0.0,
-                    HealthScore = 1.0,
-                    StateChangedAt = DateTime.UtcNow
-                };
-            }
+            return await Task.FromResult(results);
         }
     }
 }

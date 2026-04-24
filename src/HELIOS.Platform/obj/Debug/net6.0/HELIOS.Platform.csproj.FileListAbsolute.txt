@@ -1,0 +1,6 @@
+C:\helios-platform\src\HELIOS.Platform\obj\Debug\net6.0\HELIOS.Platform.csproj.AssemblyReference.cache
+C:\helios-platform\src\HELIOS.Platform\obj\Debug\net6.0\HELIOS.Platform.GeneratedMSBuildEditorConfig.editorconfig
+C:\helios-platform\src\HELIOS.Platform\obj\Debug\net6.0\HELIOS.Platform.AssemblyInfoInputs.cache
+C:\helios-platform\src\HELIOS.Platform\obj\Debug\net6.0\HELIOS.Platform.AssemblyInfo.cs
+C:\helios-platform\src\HELIOS.Platform\obj\Debug\net6.0\HELIOS.Platform.csproj.CoreCompileInputs.cache
+C:\helios-platform\src\HELIOS.Platform\obj\Debug\net6.0\HELIOS.Platform.sourcelink.json

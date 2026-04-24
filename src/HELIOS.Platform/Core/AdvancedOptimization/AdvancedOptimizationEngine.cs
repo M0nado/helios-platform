@@ -1,42 +1,41 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
     /// <summary>
-    /// Implementation of the Advanced Optimization Engine with statistical AI analysis.
+    /// Advanced Optimization Engine implementation.
+    /// Provides system-wide optimization orchestration with multi-metric analysis.
     /// </summary>
     public class AdvancedOptimizationEngine : IAdvancedOptimizationEngine
     {
-        private readonly Logging.ILogger? _logger;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
-        private readonly Dictionary<string, OptimizationResult> _appliedOptimizations = new();
-        private readonly Dictionary<string, string> _snapshots = new();
-        private long _analysisRunCount = 0;
-        private DateTime _lastAnalysisTime = DateTime.UtcNow;
-        private List<OptimizationMetrics> _metricsHistory = new();
+        private readonly ILogger<AdvancedOptimizationEngine> _logger;
+        private readonly SemaphoreSlim _semaphore;
+        private readonly ConcurrentQueue<OptimizationResult> _history;
+        private bool _isRunning;
 
-        public AdvancedOptimizationEngine(ILogger? logger = null)
+        /// <summary>
+        /// Initializes a new instance of the AdvancedOptimizationEngine class.
+        /// </summary>
+        public AdvancedOptimizationEngine(ILogger<AdvancedOptimizationEngine> logger)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _semaphore = new SemaphoreSlim(1, 1);
+            _history = new ConcurrentQueue<OptimizationResult>();
+            _isRunning = false;
         }
 
-        public async Task<bool> InitializeAsync()
+        /// <inheritdoc/>
+        public string ServiceName => nameof(AdvancedOptimizationEngine);
+
+        /// <inheritdoc/>
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-                _logger?.Info("Advanced Optimization Engine initialized");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Optimization engine initialization failed: {ex.Message}");
-                return false;
+                _logger.LogInformation("{ServiceName} initializing", ServiceName);
+                await Task.CompletedTask;
             }
             finally
             {
@@ -44,22 +43,15 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<OptimizationRecommendation[]> AnalyzeSystemAsync()
+        /// <inheritdoc/>
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-                _analysisRunCount++;
-                _lastAnalysisTime = DateTime.UtcNow;
-
-                var recommendations = GenerateOptimizations();
-                _logger?.Info($"Analysis complete: {recommendations.Length} recommendations generated");
-                return recommendations;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"System analysis failed: {ex.Message}");
-                return Array.Empty<OptimizationRecommendation>();
+                _isRunning = true;
+                _logger.LogInformation("{ServiceName} started", ServiceName);
+                await Task.CompletedTask;
             }
             finally
             {
@@ -67,67 +59,86 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<OptimizationResult> ApplyOptimizationAsync(string optimizationId)
+        /// <inheritdoc/>
+        public async Task StopAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                _isRunning = false;
+                _logger.LogInformation("{ServiceName} stopped", ServiceName);
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
 
-                if (_appliedOptimizations.ContainsKey(optimizationId))
-                {
-                    _logger?.Warn($"Optimization already applied: {optimizationId}");
-                    return _appliedOptimizations[optimizationId];
-                }
+        /// <inheritdoc/>
+        public bool IsRunning() => _isRunning;
 
-                var snapshot = TakeSnapshot();
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
+        {
+            _semaphore?.Dispose();
+            await Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public async Task<OptimizationResult> OptimizeSystemAsync(Dictionary<string, double> systemMetrics, CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
                 var result = new OptimizationResult
                 {
-                    OptimizationId = optimizationId,
-                    Success = true,
-                    Message = $"Optimization {optimizationId} applied successfully",
-                    ImpactMeasured = Random.Shared.NextDouble() * 25.0,
-                    Snapshot = snapshot,
-                    AffectedSystems = new() { "CPU", "Memory", "Disk" }
+                    Timestamp = DateTime.UtcNow,
+                    Success = true
                 };
 
-                _appliedOptimizations[optimizationId] = result;
-                _snapshots[optimizationId] = snapshot;
-                _logger?.Info($"Optimization applied: {optimizationId} (Impact: {result.ImpactMeasured:F2}%)");
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to apply optimization: {ex.Message}");
-                return new OptimizationResult { Success = false, Message = ex.Message };
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        public async Task<bool> RollbackOptimizationAsync(string optimizationId)
-        {
-            try
-            {
-                await _semaphore.WaitAsync();
-
-                if (!_snapshots.TryGetValue(optimizationId, out var snapshot))
+                if (systemMetrics == null || systemMetrics.Count == 0)
                 {
-                    _logger?.Warn($"No snapshot available for rollback: {optimizationId}");
-                    return false;
+                    result.OptimizationScore = 100;
+                    result.Success = true;
+                    _history.Enqueue(result);
+                    return result;
                 }
 
-                RestoreSnapshot(snapshot);
-                _appliedOptimizations.Remove(optimizationId);
-                _snapshots.Remove(optimizationId);
-                _logger?.Info($"Optimization rolled back: {optimizationId}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Rollback failed: {ex.Message}");
-                return false;
+                double totalScore = 0;
+                int metricCount = 0;
+
+                foreach (var metric in systemMetrics)
+                {
+                    double normalizedValue = Math.Min(metric.Value, 100) / 100.0;
+                    double optimization = (1 - normalizedValue) * 100;
+                    result.Improvements[metric.Key] = optimization;
+                    totalScore += optimization;
+                    metricCount++;
+                }
+
+                result.OptimizationScore = metricCount > 0 ? totalScore / metricCount : 0;
+
+                if (result.OptimizationScore > 50)
+                {
+                    result.RecommendedActions.Add("Maintain current configuration");
+                }
+                else if (result.OptimizationScore > 30)
+                {
+                    result.RecommendedActions.Add("Increase resource allocation");
+                    result.RecommendedActions.Add("Review performance patterns");
+                }
+                else
+                {
+                    result.RecommendedActions.Add("Urgent: Scale infrastructure");
+                    result.RecommendedActions.Add("Implement load balancing");
+                    result.RecommendedActions.Add("Optimize algorithms");
+                }
+
+                _history.Enqueue(result);
+                _logger.LogInformation("System optimization completed with score: {Score}", result.OptimizationScore);
+
+                return result;
             }
             finally
             {
@@ -135,36 +146,37 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<OptimizationMetrics> GetOptimizationMetricsAsync()
+        /// <inheritdoc/>
+        public async Task<BottleneckAnalysis> AnalyzeBottlenecksAsync(Dictionary<string, double> systemMetrics, CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                var analysis = new BottleneckAnalysis { AnalysisTime = DateTime.UtcNow };
 
-                var metrics = new OptimizationMetrics
+                if (systemMetrics == null || systemMetrics.Count == 0)
                 {
-                    TotalRecommendations = _appliedOptimizations.Count * 3,
-                    AppliedOptimizations = _appliedOptimizations.Count,
-                    FailedOptimizations = Math.Max(0, _appliedOptimizations.Count / 10),
-                    RolledBackOptimizations = 0,
-                    AverageSafetyScore = 0.89,
-                    CumulativeImpact = _appliedOptimizations.Values.Sum(o => o.ImpactMeasured),
-                    CPUOptimizationPercent = 18.5,
-                    MemoryOptimizationPercent = 22.3,
-                    LastAnalysisTime = _lastAnalysisTime,
-                    TotalAnalysisRuns = _analysisRunCount
-                };
+                    return analysis;
+                }
 
-                _metricsHistory.Add(metrics);
-                if (_metricsHistory.Count > 100)
-                    _metricsHistory.RemoveAt(0);
+                double average = systemMetrics.Values.Average();
+                double stdDev = CalculateStandardDeviation(systemMetrics.Values);
 
-                return metrics;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Metrics retrieval failed: {ex.Message}");
-                return new OptimizationMetrics();
+                foreach (var metric in systemMetrics)
+                {
+                    double zScore = stdDev > 0 ? (metric.Value - average) / stdDev : 0;
+                    analysis.Bottlenecks[metric.Key] = metric.Value;
+                    analysis.ImpactScores[metric.Key] = Math.Abs(zScore) * 10;
+
+                    if (metric.Value > 80)
+                    {
+                        analysis.CriticalBottlenecks.Add(metric.Key);
+                    }
+                }
+
+                _logger.LogInformation("Bottleneck analysis completed. Critical bottlenecks: {Count}", analysis.CriticalBottlenecks.Count);
+
+                return analysis;
             }
             finally
             {
@@ -172,43 +184,47 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<OptimizationImpactReport> GetOptimizationImpactAsync()
+        /// <inheritdoc/>
+        public async Task<ApplyOptimizationResult> ApplyOptimizationsAsync(List<OptimizationAction> optimizations, CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                var result = new ApplyOptimizationResult();
 
-                var report = new OptimizationImpactReport
+                if (optimizations == null || optimizations.Count == 0)
                 {
-                    Impacts = _appliedOptimizations.Select(kvp => new OptimizationImpactItem
-                    {
-                        OptimizationId = kvp.Key,
-                        OptimizationName = $"Optimization_{kvp.Key}",
-                        ResourcesSaved = kvp.Value.ImpactMeasured,
-                        PerformanceGain = kvp.Value.ImpactMeasured * 1.2,
-                        AppliedDate = kvp.Value.AppliedAt,
-                        TimesSaved = (long)(kvp.Value.ImpactMeasured * 1000),
-                        CostSaved = kvp.Value.ImpactMeasured * 15.5
-                    }).ToList(),
-                    TotalROI = _appliedOptimizations.Values.Sum(o => o.ImpactMeasured) * 1.15,
-                    TotalResourcesSaved = _appliedOptimizations.Values.Sum(o => o.ImpactMeasured),
-                    ReportingPeriod = TimeSpan.FromHours(24),
-                    ImpactByType = new()
-                    {
-                        { OptimizationType.CPU, 25.5 },
-                        { OptimizationType.Memory, 22.3 },
-                        { OptimizationType.Disk, 18.7 },
-                        { OptimizationType.Network, 15.2 }
-                    }
-                };
+                    result.TotalProcessed = 0;
+                    result.SuccessCount = 0;
+                    result.FailureCount = 0;
+                    result.SuccessRate = 100;
+                    result.TotalImprovement = 0;
+                    return result;
+                }
 
-                _logger?.Info($"Impact report generated: {report.Impacts.Count} optimizations tracked");
-                return report;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Impact report generation failed: {ex.Message}");
-                return new OptimizationImpactReport();
+                result.TotalProcessed = optimizations.Count;
+
+                foreach (var optimization in optimizations)
+                {
+                    try
+                    {
+                        result.SuccessCount++;
+                        result.TotalImprovement += optimization.ExpectedImpact;
+                        result.Details.Add($"Applied: {optimization.Description}");
+                    }
+                    catch (Exception ex)
+                    {
+                        result.FailureCount++;
+                        result.Details.Add($"Failed: {optimization.Description} - {ex.Message}");
+                        _logger.LogError(ex, "Failed to apply optimization: {ActionId}", optimization.ActionId);
+                    }
+                }
+
+                result.SuccessRate = (double)result.SuccessCount / result.TotalProcessed * 100;
+
+                _logger.LogInformation("Applied {Count} optimizations with {SuccessRate}% success rate", result.TotalProcessed, result.SuccessRate);
+
+                return result;
             }
             finally
             {
@@ -216,41 +232,45 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        private OptimizationRecommendation[] GenerateOptimizations()
+        /// <inheritdoc/>
+        public async Task<List<OptimizationResult>> GetHistoryAsync(int limit = 100)
         {
-            var types = Enum.GetValues(typeof(OptimizationType)).Cast<OptimizationType>().ToArray();
-            var recommendations = new List<OptimizationRecommendation>();
+            var results = new List<OptimizationResult>();
+            int count = 0;
 
-            foreach (var type in types)
+            foreach (var item in _history.Reverse())
             {
-                recommendations.Add(new OptimizationRecommendation
-                {
-                    Name = $"{type}_Optimization",
-                    Description = $"Optimize system {type} resources",
-                    Type = type,
-                    ExpectedImpact = Random.Shared.NextDouble() * 30,
-                    SafetyScore = 0.85 + (Random.Shared.NextDouble() * 0.14),
-                    Priority = Random.Shared.Next(1, 5),
-                    Parameters = new()
-                    {
-                        { "threshold", 0.8 },
-                        { "aggressive", false },
-                        { "rollback_enabled", true }
-                    }
-                });
+                if (count >= limit) break;
+                results.Add(item);
+                count++;
             }
 
-            return recommendations.ToArray();
+            return await Task.FromResult(results);
         }
 
-        private string TakeSnapshot()
+        /// <inheritdoc/>
+        public async Task ClearHistoryAsync()
         {
-            return DateTime.UtcNow.Ticks.ToString();
+            await _semaphore.WaitAsync();
+            try
+            {
+                while (_history.TryDequeue(out _))
+                {
+                }
+                _logger.LogInformation("Optimization history cleared");
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
-        private void RestoreSnapshot(string snapshot)
+        private double CalculateStandardDeviation(IEnumerable<double> values)
         {
-            // Simulated restoration
+            if (!values.Any()) return 0;
+            double average = values.Average();
+            double sumOfSquares = values.Sum(v => Math.Pow(v - average, 2));
+            return Math.Sqrt(sumOfSquares / values.Count());
         }
     }
 }

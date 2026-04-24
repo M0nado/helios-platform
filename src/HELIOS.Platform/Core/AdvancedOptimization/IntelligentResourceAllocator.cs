@@ -1,41 +1,43 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
     /// <summary>
-    /// Implementation of the Intelligent Resource Allocator using statistical prediction.
+    /// Intelligent Resource Allocator implementation.
+    /// Provides AI-driven resource allocation with predictive sizing.
     /// </summary>
     public class IntelligentResourceAllocator : IIntelligentResourceAllocator
     {
-        private readonly Logging.ILogger? _logger;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
-        private readonly Dictionary<string, List<TrendDataPoint>> _historicalData = new();
-        private readonly Dictionary<string, ResourceUtilization> _currentUtilization = new();
-        private long _allocationEventCount = 0;
-        private DateTime _lastReallocationTime = DateTime.UtcNow;
-        private int _reallocationCount = 0;
+        private readonly ILogger<IntelligentResourceAllocator> _logger;
+        private readonly SemaphoreSlim _semaphore;
+        private readonly ConcurrentQueue<ResourceUsagePoint> _usageHistory;
+        private readonly ConcurrentQueue<ResourceAllocationResult> _allocationHistory;
+        private bool _isRunning;
 
-        public IntelligentResourceAllocator(Logging.ILogger? logger = null)
+        /// <summary>
+        /// Initializes a new instance of the IntelligentResourceAllocator class.
+        /// </summary>
+        public IntelligentResourceAllocator(ILogger<IntelligentResourceAllocator> logger)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _semaphore = new SemaphoreSlim(1, 1);
+            _usageHistory = new ConcurrentQueue<ResourceUsagePoint>();
+            _allocationHistory = new ConcurrentQueue<ResourceAllocationResult>();
+            _isRunning = false;
         }
 
-        public async Task<bool> InitializeAsync()
+        /// <inheritdoc/>
+        public string ServiceName => nameof(IntelligentResourceAllocator);
+
+        /// <inheritdoc/>
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-                _logger?.Info("Intelligent Resource Allocator initialized");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Allocator initialization failed: {ex.Message}");
-                return false;
+                _logger.LogInformation("{ServiceName} initializing", ServiceName);
+                await Task.CompletedTask;
             }
             finally
             {
@@ -43,24 +45,15 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<ResourcePrediction> PredictResourceNeedsAsync(string serviceId, int timeHorizonMinutes)
+        /// <inheritdoc/>
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-
-                var trends = GetOrCreateTrends(serviceId);
-                var prediction = CalculatePrediction(trends, timeHorizonMinutes);
-                prediction.ServiceId = serviceId;
-                prediction.HistoricalTrends = trends.TakeLast(10).ToList();
-
-                _logger?.Info($"Predicted resources for {serviceId}: CPU={prediction.PredictedCPUPercent:F2}%");
-                return prediction;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Resource prediction failed: {ex.Message}");
-                return new ResourcePrediction { ServiceId = serviceId };
+                _isRunning = true;
+                _logger.LogInformation("{ServiceName} started", ServiceName);
+                await Task.CompletedTask;
             }
             finally
             {
@@ -68,88 +61,61 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<AllocationPlan> GenerateAllocationPlanAsync(Dictionary<string, ResourceRequirement> services)
+        /// <inheritdoc/>
+        public async Task StopAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                _isRunning = false;
+                _logger.LogInformation("{ServiceName} stopped", ServiceName);
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
 
-                var plan = new AllocationPlan { PlanId = Guid.NewGuid().ToString() };
-                var totalCPU = 0.0;
-                var totalMemory = 0.0;
+        /// <inheritdoc/>
+        public bool IsRunning() => _isRunning;
 
-                foreach (var kvp in services)
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
+        {
+            _semaphore?.Dispose();
+            await Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public async Task<ResourceAllocationResult> AllocateResourcesAsync(double currentLoad, Dictionary<string, double> resourceRequirements, CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                var result = new ResourceAllocationResult { Timestamp = DateTime.UtcNow, Success = true };
+
+                if (resourceRequirements == null || resourceRequirements.Count == 0)
                 {
-                    var serviceId = kvp.Key;
-                    var requirement = kvp.Value;
-
-                    var prediction = await PredictResourceNeedsAsync(serviceId, 15);
-                    var allocatedCPU = Math.Min(prediction.PredictedCPUPercent * 1.2, requirement.MaxCPUPercent);
-                    var allocatedMemory = Math.Min(prediction.PredictedMemoryMB * 1.15, requirement.MaxMemoryMB);
-
-                    plan.Allocations.Add(new ServiceAllocation
-                    {
-                        ServiceId = serviceId,
-                        AllocatedCPUPercent = Math.Max(allocatedCPU, requirement.MinCPUPercent),
-                        AllocatedMemoryMB = Math.Max(allocatedMemory, requirement.MinMemoryMB),
-                        AllocatedDiskIOPS = prediction.PredictedDiskIOPS * 1.1,
-                        AllocatedNetworkMbps = prediction.PredictedNetworkMbps * 1.1,
-                        Priority = requirement.Priority
-                    });
-
-                    totalCPU += allocatedCPU;
-                    totalMemory += allocatedMemory;
+                    result.EfficiencyScore = 100;
+                    _allocationHistory.Enqueue(result);
+                    return result;
                 }
 
-                plan.TotalCPUAllocated = totalCPU;
-                plan.TotalMemoryAllocated = totalMemory;
-                plan.UtilizationScore = CalculateUtilizationScore(plan);
-                plan.WastePercentage = CalculateWaste(plan);
-                plan.ValidUntil = DateTime.UtcNow.AddHours(1);
-
-                _logger?.Info($"Allocation plan generated: {plan.Allocations.Count} services, Waste: {plan.WastePercentage:F2}%");
-                return plan;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Allocation plan generation failed: {ex.Message}");
-                return new AllocationPlan();
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        public async Task<bool> ApplyAllocationAsync(AllocationPlan plan)
-        {
-            try
-            {
-                await _semaphore.WaitAsync();
-
-                foreach (var allocation in plan.Allocations)
+                double totalAllocated = 0;
+                foreach (var req in resourceRequirements)
                 {
-                    _currentUtilization[allocation.ServiceId] = new ResourceUtilization
-                    {
-                        ServiceId = allocation.ServiceId,
-                        AllocatedCPUPercent = allocation.AllocatedCPUPercent,
-                        AllocatedMemoryMB = allocation.AllocatedMemoryMB,
-                        CPUUsedPercent = allocation.AllocatedCPUPercent * (0.7 + Random.Shared.NextDouble() * 0.25),
-                        MemoryUsedMB = allocation.AllocatedMemoryMB * (0.65 + Random.Shared.NextDouble() * 0.3)
-                    };
+                    double allocatedAmount = req.Value * (1 + (currentLoad / 100.0) * 0.5);
+                    result.AllocatedResources[req.Key] = allocatedAmount;
+                    totalAllocated += allocatedAmount;
                 }
 
-                _allocationEventCount++;
-                _reallocationCount++;
-                _lastReallocationTime = DateTime.UtcNow;
+                result.EfficiencyScore = Math.Max(0, 100 - (currentLoad * 0.5));
 
-                _logger?.Info($"Allocation plan applied: {plan.Allocations.Count} services updated");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to apply allocation: {ex.Message}");
-                return false;
+                _allocationHistory.Enqueue(result);
+                _logger.LogInformation("Resource allocation completed with efficiency score: {Score}", result.EfficiencyScore);
+
+                return result;
             }
             finally
             {
@@ -157,32 +123,39 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<ResourceAllocationMetrics> GetAllocationMetricsAsync()
+        /// <inheritdoc/>
+        public async Task<ResourceRequirementsPrediction> PredictRequirementsAsync(List<ResourceUsagePoint> historicalData, int forecastPeriodMinutes, CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-
-                var metrics = new ResourceAllocationMetrics
+                var prediction = new ResourceRequirementsPrediction
                 {
-                    TotalServices = _currentUtilization.Count,
-                    TotalAllocatedCPU = _currentUtilization.Values.Sum(u => u.AllocatedCPUPercent),
-                    TotalAllocatedMemory = _currentUtilization.Values.Sum(u => u.AllocatedMemoryMB),
-                    AverageCPUUtilization = _currentUtilization.Values.Average(u => u.CPUUsedPercent),
-                    AverageMemoryUtilization = _currentUtilization.Values.Average(u => u.MemoryUsedMB),
-                    WastePercentage = CalculateOverallWaste(),
-                    UtilizationScore = 0.82,
-                    ReallocationCount = _reallocationCount,
-                    LastReallocationTime = _lastReallocationTime,
-                    TotalAllocationEvents = _allocationEventCount
+                    PredictionTime = DateTime.UtcNow,
+                    ForecastPeriodMinutes = forecastPeriodMinutes
                 };
 
-                return metrics;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Metrics retrieval failed: {ex.Message}");
-                return new ResourceAllocationMetrics();
+                if (historicalData == null || historicalData.Count == 0)
+                {
+                    return prediction;
+                }
+
+                var lastPoint = historicalData.LastOrDefault();
+                if (lastPoint?.Resources != null)
+                {
+                    foreach (var resource in lastPoint.Resources)
+                    {
+                        double trend = CalculateTrend(historicalData.Select(p => p.Resources.ContainsKey(resource.Key) ? p.Resources[resource.Key] : 0).ToList());
+                        double predicted = resource.Value * (1 + trend * (forecastPeriodMinutes / 60.0));
+                        prediction.PredictedRequirements[resource.Key] = Math.Max(0, predicted);
+                        prediction.ConfidenceScores[resource.Key] = 0.8;
+                        prediction.Trends[resource.Key] = trend > 0 ? "Increasing" : (trend < 0 ? "Decreasing" : "Stable");
+                    }
+                }
+
+                _logger.LogInformation("Predicted resource requirements for {Minutes} minutes", forecastPeriodMinutes);
+
+                return prediction;
             }
             finally
             {
@@ -190,17 +163,47 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<ResourceUtilization[]> GetCurrentUtilizationAsync()
+        /// <inheritdoc/>
+        public async Task<RebalancingResult> RebalanceAsync(Dictionary<string, ResourceAllocation> currentAllocations, CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-                return _currentUtilization.Values.ToArray();
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to retrieve utilization data: {ex.Message}");
-                return Array.Empty<ResourceUtilization>();
+                var result = new RebalancingResult { Timestamp = DateTime.UtcNow, Success = true };
+
+                if (currentAllocations == null || currentAllocations.Count == 0)
+                {
+                    result.EfficiencyImprovement = 0;
+                    return result;
+                }
+
+                double totalUtilization = 0;
+                int allocationCount = 0;
+
+                foreach (var alloc in currentAllocations.Values)
+                {
+                    totalUtilization += alloc.UtilizationPercentage;
+                    allocationCount++;
+                }
+
+                double averageUtilization = allocationCount > 0 ? totalUtilization / allocationCount : 0;
+
+                foreach (var alloc in currentAllocations)
+                {
+                    double targetUtilization = averageUtilization;
+                    double currentUtilization = alloc.Value.UtilizationPercentage;
+                    double adjustmentFactor = targetUtilization / (currentUtilization + 0.1);
+                    double newAllocation = alloc.Value.CurrentAllocation * adjustmentFactor;
+
+                    result.NewAllocations[alloc.Key] = Math.Min(newAllocation, alloc.Value.MaxAvailable);
+                    result.Changes[alloc.Key] = newAllocation - alloc.Value.CurrentAllocation;
+                }
+
+                result.EfficiencyImprovement = Math.Abs(averageUtilization - 50) / 50 * 100;
+
+                _logger.LogInformation("Resource rebalancing completed with {Improvement}% efficiency improvement", result.EfficiencyImprovement);
+
+                return result;
             }
             finally
             {
@@ -208,86 +211,57 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        private List<TrendDataPoint> GetOrCreateTrends(string serviceId)
+        /// <inheritdoc/>
+        public async Task RecordUsageAsync(ResourceUsagePoint usageData)
         {
-            if (!_historicalData.TryGetValue(serviceId, out var trends))
+            await _semaphore.WaitAsync();
+            try
             {
-                trends = GenerateHistoricalTrends();
-                _historicalData[serviceId] = trends;
-            }
-            return trends;
-        }
-
-        private List<TrendDataPoint> GenerateHistoricalTrends()
-        {
-            var trends = new List<TrendDataPoint>();
-            var baseValue = 30.0 + Random.Shared.NextDouble() * 40;
-
-            for (int i = -100; i <= 0; i++)
-            {
-                trends.Add(new TrendDataPoint
+                _usageHistory.Enqueue(usageData);
+                if (_usageHistory.Count > 1000)
                 {
-                    Timestamp = DateTime.UtcNow.AddMinutes(i),
-                    Value = baseValue + (Random.Shared.NextDouble() - 0.5) * 10,
-                    Variance = Math.Abs(Random.Shared.NextDouble() * 5)
-                });
+                    _usageHistory.TryDequeue(out _);
+                }
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<List<ResourceAllocationResult>> GetAllocationHistoryAsync(int limit = 100)
+        {
+            var results = new List<ResourceAllocationResult>();
+            int count = 0;
+
+            foreach (var item in _allocationHistory.Reverse())
+            {
+                if (count >= limit) break;
+                results.Add(item);
+                count++;
             }
 
-            return trends;
+            return await Task.FromResult(results);
         }
 
-        private ResourcePrediction CalculatePrediction(List<TrendDataPoint> trends, int timeHorizonMinutes)
+        private double CalculateTrend(List<double> values)
         {
-            var recentTrends = trends.TakeLast(20).ToList();
-            var average = recentTrends.Average(t => t.Value);
-            var variance = recentTrends.Average(t => t.Variance);
-            var trend = CalculateTrend(recentTrends);
+            if (values.Count < 2) return 0;
 
-            var predictedCPU = average + (trend * timeHorizonMinutes / 15);
-            predictedCPU = Math.Max(0, Math.Min(100, predictedCPU));
+            double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            int n = values.Count;
 
-            return new ResourcePrediction
+            for (int i = 0; i < n; i++)
             {
-                PredictedCPUPercent = predictedCPU,
-                PredictedMemoryMB = predictedCPU * 8 + (Random.Shared.NextDouble() * 100),
-                PredictedDiskIOPS = (predictedCPU / 100) * 5000,
-                PredictedNetworkMbps = (predictedCPU / 100) * 500,
-                Confidence = 0.88 - (Math.Abs(variance) / 100)
-            };
-        }
-
-        private double CalculateTrend(List<TrendDataPoint> trends)
-        {
-            if (trends.Count < 2) return 0;
-
-            var sum = 0.0;
-            for (int i = 1; i < trends.Count; i++)
-            {
-                sum += trends[i].Value - trends[i - 1].Value;
+                sumX += i;
+                sumY += values[i];
+                sumXY += i * values[i];
+                sumX2 += i * i;
             }
 
-            return sum / (trends.Count - 1);
-        }
-
-        private double CalculateUtilizationScore(AllocationPlan plan)
-        {
-            var averageUtilization = (plan.TotalCPUAllocated + plan.TotalMemoryAllocated / 100) / 2;
-            return Math.Min(1.0, averageUtilization / 100);
-        }
-
-        private double CalculateWaste(AllocationPlan plan)
-        {
-            return Math.Max(0, 100 - (plan.TotalCPUAllocated + plan.TotalMemoryAllocated / 100) / 2);
-        }
-
-        private double CalculateOverallWaste()
-        {
-            if (_currentUtilization.Count == 0) return 0;
-
-            var totalAllocated = _currentUtilization.Values.Sum(u => u.AllocatedCPUPercent);
-            var totalUsed = _currentUtilization.Values.Sum(u => u.CPUUsedPercent);
-
-            return totalAllocated > 0 ? ((totalAllocated - totalUsed) / totalAllocated) * 100 : 0;
+            double slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            return slope / (sumY / n + 0.0001);
         }
     }
 }

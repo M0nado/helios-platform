@@ -1,0 +1,159 @@
+{
+  "profiles": {
+    "Gaming": {
+      "profileName": "Gaming",
+      "description": "High performance profile for gaming and graphics-intensive tasks",
+      "resourceAllocation": {
+        "maxCpuPercent": 80,
+        "maxMemoryMB": 1024,
+        "maxDiskIOOps": 5000,
+        "maxGpuPercent": 90,
+        "priority": 10
+      },
+      "settings": {
+        "threadPoolSize": 16,
+        "cacheSizeMB": 512,
+        "gcFrequency": "adaptive",
+        "asyncBufferSize": 65536,
+        "networkTimeout": 30000,
+        "enableGpuAcceleration": true,
+        "enableParallelProcessing": true
+      },
+      "thresholds": {
+        "cpuWarning": 75,
+        "cpuCritical": 90,
+        "memoryWarning": 800,
+        "memoryCritical": 950,
+        "latencyWarning": 100,
+        "latencyCritical": 500
+      },
+      "enabled": true
+    },
+    "Development": {
+      "profileName": "Development",
+      "description": "Balanced profile for development and debugging",
+      "resourceAllocation": {
+        "maxCpuPercent": 60,
+        "maxMemoryMB": 768,
+        "maxDiskIOOps": 2000,
+        "maxGpuPercent": 50,
+        "priority": 7
+      },
+      "settings": {
+        "threadPoolSize": 8,
+        "cacheSizeMB": 256,
+        "gcFrequency": "balanced",
+        "asyncBufferSize": 32768,
+        "networkTimeout": 60000,
+        "enableGpuAcceleration": false,
+        "enableParallelProcessing": true,
+        "enableDebugLogging": true
+      },
+      "thresholds": {
+        "cpuWarning": 50,
+        "cpuCritical": 70,
+        "memoryWarning": 600,
+        "memoryCritical": 700,
+        "latencyWarning": 200,
+        "latencyCritical": 1000
+      },
+      "enabled": true
+    },
+    "Work": {
+      "profileName": "Work",
+      "description": "Conservative profile for productivity and stability",
+      "resourceAllocation": {
+        "maxCpuPercent": 50,
+        "maxMemoryMB": 512,
+        "maxDiskIOOps": 1000,
+        "maxGpuPercent": 30,
+        "priority": 5
+      },
+      "settings": {
+        "threadPoolSize": 4,
+        "cacheSizeMB": 128,
+        "gcFrequency": "conservative",
+        "asyncBufferSize": 16384,
+        "networkTimeout": 90000,
+        "enableGpuAcceleration": false,
+        "enableParallelProcessing": false,
+        "enablePowerSaving": true
+      },
+      "thresholds": {
+        "cpuWarning": 40,
+        "cpuCritical": 60,
+        "memoryWarning": 400,
+        "memoryCritical": 480,
+        "latencyWarning": 500,
+        "latencyCritical": 2000
+      },
+      "enabled": true
+    },
+    "Secure": {
+      "profileName": "Secure",
+      "description": "Security-focused profile with strict monitoring and isolation",
+      "resourceAllocation": {
+        "maxCpuPercent": 40,
+        "maxMemoryMB": 256,
+        "maxDiskIOOps": 500,
+        "maxGpuPercent": 10,
+        "priority": 8
+      },
+      "settings": {
+        "threadPoolSize": 2,
+        "cacheSizeMB": 64,
+        "gcFrequency": "aggressive",
+        "asyncBufferSize": 8192,
+        "networkTimeout": 120000,
+        "enableGpuAcceleration": false,
+        "enableParallelProcessing": false,
+        "enableSandboxing": true,
+        "enableSecurityAuditing": true,
+        "isolationLevel": "strict"
+      },
+      "thresholds": {
+        "cpuWarning": 30,
+        "cpuCritical": 50,
+        "memoryWarning": 200,
+        "memoryCritical": 240,
+        "latencyWarning": 1000,
+        "latencyCritical": 5000
+      },
+      "enabled": true
+    }
+  },
+  "globalSettings": {
+    "orchestrationIntervalMs": 5000,
+    "healthCheckIntervalMs": 3000,
+    "maxRestartAttempts": 3,
+    "conflictDetectionEnabled": true,
+    "autoOptimizationEnabled": true,
+    "aiLearningEnabled": true,
+    "eventLogMaxSize": 1000,
+    "metricsRetentionDays": 7
+  },
+  "toolCategories": {
+    "Razer": [
+      "Razer Synapse",
+      "Razer Chroma SDK",
+      "Razer Chroma GUI"
+    ],
+    "System": [
+      "CPU Monitor",
+      "Memory Manager",
+      "Disk Manager",
+      "Network Monitor"
+    ],
+    "Security": [
+      "Firewall",
+      "Antivirus",
+      "Encryption",
+      "Authentication"
+    ],
+    "Performance": [
+      "Cache Optimizer",
+      "I/O Scheduler",
+      "Process Balancer"
+    ]
+  }
+}

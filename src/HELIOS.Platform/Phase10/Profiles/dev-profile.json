@@ -1,0 +1,37 @@
+{
+  "name": "Development",
+  "description": "Software development optimization profile",
+  "created": "2024-01-01T00:00:00Z",
+  "modified": "2024-01-01T00:00:00Z",
+  "settings": {
+    "vsCodeConfigured": true,
+    "gitConfigured": true,
+    "nodePathSet": true,
+    "pythonPathSet": true,
+    "dockerRunning": true,
+    "databaseToolsReady": true,
+    "sshKeysImported": true,
+    "powerShellEnhanced": true,
+    "debuggersActive": true,
+    "performanceCountersOn": true,
+    "extensionsInstalled": true,
+    "compilerCaching": true,
+    "incrementalBuilds": true,
+    "buildCacheEnabled": true,
+    "eventTracingEnabled": true,
+    "gitHooksSetup": true,
+    "npmConfigured": true,
+    "pipConfigured": true,
+    "dockerImagesConfigured": true,
+    "sshAgentEnabled": true,
+    "powerShellTranscription": true,
+    "vscodeDebugger": true,
+    "visualStudioDebugger": true
+  },
+  "requirements": {
+    "minRam": "8GB",
+    "minCPUCores": 4,
+    "diskSpaceRequired": "50GB",
+    "powerShellVersion": "5.0+"
+  }
+}

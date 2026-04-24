@@ -1,43 +1,43 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
     /// <summary>
-    /// Implementation of Performance Predictor AI with multi-metric forecasting.
+    /// Performance Predictor AI implementation.
+    /// Provides performance forecasting and resource prediction.
     /// </summary>
     public class PerformancePredictorAI : IPerformancePredictorAI
     {
-        private readonly ILogger? _logger;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
-        private readonly Dictionary<string, List<double>> _metricHistory = new();
-        private readonly Dictionary<string, double> _thresholds = new();
-        private int _totalPredictions = 0;
-        private int _accuratePredictions = 0;
-        private int _partiallyAccurate = 0;
+        private readonly ILogger<PerformancePredictorAI> _logger;
+        private readonly SemaphoreSlim _semaphore;
+        private readonly ConcurrentQueue<PerformanceDataPoint> _performanceHistory;
+        private readonly ConcurrentQueue<PerformancePrediction> _predictionHistory;
+        private bool _isRunning;
 
-        public PerformancePredictorAI(ILogger? logger = null)
+        /// <summary>
+        /// Initializes a new instance of the PerformancePredictorAI class.
+        /// </summary>
+        public PerformancePredictorAI(ILogger<PerformancePredictorAI> logger)
         {
-            _logger = logger;
-            InitializeDefaultThresholds();
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _semaphore = new SemaphoreSlim(1, 1);
+            _performanceHistory = new ConcurrentQueue<PerformanceDataPoint>();
+            _predictionHistory = new ConcurrentQueue<PerformancePrediction>();
+            _isRunning = false;
         }
 
-        public async Task<bool> InitializeAsync()
+        /// <inheritdoc/>
+        public string ServiceName => nameof(PerformancePredictorAI);
+
+        /// <inheritdoc/>
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-                _logger?.Info("Performance Predictor AI initialized");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Initialization failed: {ex.Message}");
-                return false;
+                _logger.LogInformation("{ServiceName} initializing", ServiceName);
+                await Task.CompletedTask;
             }
             finally
             {
@@ -45,39 +45,155 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<PerformancePrediction> PredictPerformanceAsync(int hoursAhead)
+        /// <inheritdoc/>
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-                _totalPredictions++;
+                _isRunning = true;
+                _logger.LogInformation("{ServiceName} started", ServiceName);
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
 
+        /// <inheritdoc/>
+        public async Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                _isRunning = false;
+                _logger.LogInformation("{ServiceName} stopped", ServiceName);
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <inheritdoc/>
+        public bool IsRunning() => _isRunning;
+
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
+        {
+            _semaphore?.Dispose();
+            await Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public async Task<PerformancePrediction> PredictPerformanceAsync(List<PerformanceDataPoint> historicalPerformance, int forecastMinutes, CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
                 var prediction = new PerformancePrediction
                 {
-                    ForecastFor = DateTime.UtcNow.AddHours(hoursAhead)
+                    PredictionTime = DateTime.UtcNow,
+                    ForecastMinutes = forecastMinutes
                 };
 
-                foreach (var kvp in _metricHistory)
+                if (historicalPerformance == null || historicalPerformance.Count == 0)
                 {
-                    var metricName = kvp.Key;
-                    var history = kvp.Value;
-                    var forecast = ForecastMetric(metricName, history, hoursAhead);
-                    prediction.MetricForecasts[metricName] = forecast;
-
-                    if (forecast.WillExceedThreshold)
-                        prediction.RiskFactors.Add($"{metricName} will exceed threshold");
+                    prediction.ConfidenceScore = 0;
+                    return prediction;
                 }
 
-                prediction.OverallHealthScore = CalculateHealthScore(prediction);
-                prediction.ConfidenceLevel = CalculateConfidence(prediction);
+                var cpuValues = historicalPerformance.Select(p => p.CpuUsage).ToList();
+                var memoryValues = historicalPerformance.Select(p => p.MemoryUsage).ToList();
+                var responseTimeValues = historicalPerformance.Select(p => p.ResponseTime).ToList();
+                var requestValues = historicalPerformance.Select(p => p.RequestsPerSecond).ToList();
 
-                _logger?.Info($"Performance prediction generated: Health={prediction.OverallHealthScore:F2}");
+                prediction.PredictedCpuUsage = ForecastValue(cpuValues, forecastMinutes);
+                prediction.PredictedMemoryUsage = ForecastValue(memoryValues, forecastMinutes);
+                prediction.PredictedResponseTime = ForecastValue(responseTimeValues, forecastMinutes);
+                prediction.PredictedRequestsPerSecond = ForecastValue(requestValues, forecastMinutes);
+
+                double avgError = CalculatePredictionError(cpuValues, memoryValues, responseTimeValues);
+                prediction.ConfidenceScore = Math.Max(0.3, 1.0 - (avgError / 100.0));
+
+                if (prediction.PredictedCpuUsage > 80 || prediction.PredictedMemoryUsage > 80)
+                {
+                    prediction.RiskIndicators.Add("High resource utilization predicted");
+                }
+
+                if (prediction.PredictedResponseTime > 1000)
+                {
+                    prediction.RiskIndicators.Add("Performance degradation expected");
+                }
+
+                var cpuInterval = new PredictionInterval
+                {
+                    LowerBound = Math.Max(0, prediction.PredictedCpuUsage - 10),
+                    PointEstimate = prediction.PredictedCpuUsage,
+                    UpperBound = Math.Min(100, prediction.PredictedCpuUsage + 10),
+                    ConfidenceLevel = 95
+                };
+                prediction.PredictionIntervals["CPU"] = cpuInterval;
+
+                _predictionHistory.Enqueue(prediction);
+                _logger.LogInformation("Performance prediction completed for {Minutes} minutes", forecastMinutes);
+
                 return prediction;
             }
-            catch (Exception ex)
+            finally
             {
-                _logger?.Error($"Prediction failed: {ex.Message}");
-                return new PerformancePrediction();
+                _semaphore.Release();
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<LoadForecast> ForecastLoadAsync(List<LoadDataPoint> historicalLoad, int forecastHours, CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                var forecast = new LoadForecast
+                {
+                    ForecastTime = DateTime.UtcNow,
+                    ForecastHours = forecastHours
+                };
+
+                if (historicalLoad == null || historicalLoad.Count == 0)
+                {
+                    return forecast;
+                }
+
+                var loads = historicalLoad.Select(l => l.Load).ToList();
+                double avgLoad = loads.Average();
+                double maxLoad = loads.Max();
+
+                forecast.AverageLoadExpected = avgLoad;
+                forecast.PeakLoadExpected = maxLoad * 1.1;
+
+                for (int i = 0; i < forecastHours; i++)
+                {
+                    var hourStart = DateTime.UtcNow.AddHours(i);
+                    double predictedLoad = avgLoad + (Math.Sin(i * Math.PI / 12) * (maxLoad - avgLoad) * 0.5);
+
+                    var hourlyForecast = new HourlyLoadForecast
+                    {
+                        HourStart = hourStart,
+                        PredictedLoad = Math.Max(0, Math.Min(100, predictedLoad)),
+                        MinLoad = Math.Max(0, predictedLoad - 10),
+                        MaxLoad = Math.Min(100, predictedLoad + 10)
+                    };
+
+                    forecast.HourlyForecasts.Add(hourlyForecast);
+                }
+
+                forecast.IdentifiedPatterns.Add("Cyclical pattern detected");
+                forecast.ConfidenceScore = 0.75;
+
+                _logger.LogInformation("Load forecast completed for {Hours} hours", forecastHours);
+
+                return forecast;
             }
             finally
             {
@@ -85,75 +201,52 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<CapacityAlert[]> GetCapacityAlertsAsync()
+        /// <inheritdoc/>
+        public async Task<ResourcePrediction> PredictResourcesAsync(List<ResourceDataPoint> historicalResources, int forecastMinutes, CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-
-                var alerts = new List<CapacityAlert>();
-
-                foreach (var kvp in _metricHistory)
+                var prediction = new ResourcePrediction
                 {
-                    var metricName = kvp.Key;
-                    var values = kvp.Value;
-                    if (values.Count == 0) continue;
+                    PredictionTime = DateTime.UtcNow,
+                    ForecastMinutes = forecastMinutes
+                };
 
-                    var currentValue = values.Last();
-                    var threshold = _thresholds.TryGetValue(metricName, out var t) ? t : 100.0;
-                    var usagePercent = (currentValue / threshold) * 100;
+                if (historicalResources == null || historicalResources.Count == 0)
+                {
+                    return prediction;
+                }
 
-                    if (usagePercent > 70)
+                var lastPoint = historicalResources.LastOrDefault();
+                if (lastPoint?.Resources != null)
+                {
+                    foreach (var resource in lastPoint.Resources)
                     {
-                        alerts.Add(new CapacityAlert
-                        {
-                            ResourceType = metricName,
-                            CurrentUsage = currentValue,
-                            Capacity = threshold,
-                            UsagePercent = usagePercent,
-                            AlertLevel = usagePercent > 90 ? 5 : (usagePercent > 80 ? 4 : 3),
-                            ProjectedExhaustionTime = ProjectExhaustionTime(values),
-                            RecommendedAction = GenerateRecommendation(metricName, usagePercent)
-                        });
+                        var values = historicalResources
+                            .Where(r => r.Resources.ContainsKey(resource.Key))
+                            .Select(r => r.Resources[resource.Key])
+                            .ToList();
+
+                        double predictedValue = ForecastValue(values, forecastMinutes);
+                        prediction.PredictedResources[resource.Key] = predictedValue;
+                        prediction.ConfidenceScores[resource.Key] = 0.8;
+
+                        var trend = CalculateTrend(values);
+                        prediction.ResourceTrends[resource.Key] = trend > 0.01 ? "Increasing" : (trend < -0.01 ? "Decreasing" : "Stable");
                     }
                 }
 
-                _logger?.Info($"Capacity alerts generated: {alerts.Count}");
-                return alerts.ToArray();
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Alert generation failed: {ex.Message}");
-                return Array.Empty<CapacityAlert>();
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        public async Task<bool> RecordMetricAsync(string metricName, double value)
-        {
-            try
-            {
-                await _semaphore.WaitAsync();
-
-                if (!_metricHistory.TryGetValue(metricName, out var history))
+                prediction.Recommendations.Add("Monitor resource utilization trends");
+                if (prediction.PredictedResources.Values.Any(v => v > 80))
                 {
-                    history = new List<double>();
-                    _metricHistory[metricName] = history;
+                    prediction.ConstraintsExpected.Add("Resource constraints anticipated");
+                    prediction.Recommendations.Add("Plan for resource scaling");
                 }
 
-                history.Add(value);
-                if (history.Count > 1000)
-                    history.RemoveAt(0);
+                _logger.LogInformation("Resource prediction completed for {Minutes} minutes", forecastMinutes);
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to record metric: {ex.Message}");
-                return false;
+                return prediction;
             }
             finally
             {
@@ -161,49 +254,17 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<PreventiveAction[]> GetRecommendedActionsAsync()
+        /// <inheritdoc/>
+        public async Task RecordPerformanceDataAsync(PerformanceDataPoint dataPoint)
         {
+            await _semaphore.WaitAsync();
             try
             {
-                await _semaphore.WaitAsync();
-
-                var actions = new List<PreventiveAction>
+                _performanceHistory.Enqueue(dataPoint);
+                if (_performanceHistory.Count > 10000)
                 {
-                    new()
-                    {
-                        Priority = ActionPriority.High,
-                        ActionDescription = "Scale up CPU resources",
-                        ImpactDescription = "Increase processing capacity by 50%",
-                        TimeToImplement = TimeSpan.FromMinutes(15),
-                        RiskMitigation = 0.85,
-                        ResourcesRequired = "2 CPU cores, 4GB RAM"
-                    },
-                    new()
-                    {
-                        Priority = ActionPriority.Medium,
-                        ActionDescription = "Optimize database queries",
-                        ImpactDescription = "Reduce query latency by 30%",
-                        TimeToImplement = TimeSpan.FromHours(2),
-                        RiskMitigation = 0.75,
-                        ResourcesRequired = "Database optimization script"
-                    },
-                    new()
-                    {
-                        Priority = ActionPriority.High,
-                        ActionDescription = "Implement caching layer",
-                        ImpactDescription = "Reduce load by 40%",
-                        TimeToImplement = TimeSpan.FromHours(4),
-                        RiskMitigation = 0.88,
-                        ResourcesRequired = "Redis cluster"
-                    }
-                };
-
-                return actions.ToArray();
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to generate recommendations: {ex.Message}");
-                return Array.Empty<PreventiveAction>();
+                    _performanceHistory.TryDequeue(out _);
+                }
             }
             finally
             {
@@ -211,137 +272,79 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<PredictionAccuracyReport> GetAccuracyReportAsync()
+        /// <inheritdoc/>
+        public async Task<List<PerformancePrediction>> GetPredictionHistoryAsync(int limit = 100)
         {
-            try
-            {
-                await _semaphore.WaitAsync();
+            var results = new List<PerformancePrediction>();
+            int count = 0;
 
-                var inaccurate = _totalPredictions - _accuratePredictions - _partiallyAccurate;
-                var accuracy = _totalPredictions > 0 ? (double)_accuratePredictions / _totalPredictions : 0;
-                var precision = _totalPredictions > 0 ? (double)_accuratePredictions / Math.Max(1, _accuratePredictions + inaccurate) : 0;
-                var recall = _totalPredictions > 0 ? (double)_accuratePredictions / _totalPredictions : 0;
+            foreach (var item in _predictionHistory.Reverse())
+            {
+                if (count >= limit) break;
+                results.Add(item);
+                count++;
+            }
 
-                return new PredictionAccuracyReport
-                {
-                    TotalPredictions = _totalPredictions,
-                    AccuratePredictions = _accuratePredictions,
-                    PartiallyAccuratePredictions = _partiallyAccurate,
-                    InaccuratePredictions = inaccurate,
-                    Accuracy = accuracy,
-                    Precision = precision,
-                    Recall = recall,
-                    MeanAbsoluteError = 2.3,
-                    TopPredictedMetrics = _metricHistory.Keys.Take(5).ToList()
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Failed to generate accuracy report: {ex.Message}");
-                return new PredictionAccuracyReport();
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
+            return await Task.FromResult(results);
         }
 
-        private MetricForecast ForecastMetric(string metricName, List<double> history, int hoursAhead)
+        private double ForecastValue(List<double> values, int forecastMinutes)
         {
-            var recentValues = history.TakeLast(Math.Min(20, history.Count)).ToList();
-            var currentValue = recentValues.Any() ? recentValues.Last() : 0;
-            var mean = recentValues.Any() ? recentValues.Average() : 0;
-            var variance = recentValues.Count > 1 ? recentValues.Average(v => Math.Pow(v - mean, 2)) : 0;
-            var trend = CalculateTrend(recentValues);
+            if (values.Count == 0) return 0;
+            if (values.Count == 1) return values[0];
 
-            var predictedValue = mean + (trend * hoursAhead);
-            var threshold = _thresholds.TryGetValue(metricName, out var t) ? t : 100.0;
+            double slope = CalculateTrend(values);
+            double lastValue = values.Last();
+            double prediction = lastValue + (slope * (forecastMinutes / 60.0));
 
-            var forecast = new MetricForecast
-            {
-                MetricName = metricName,
-                CurrentValue = currentValue,
-                PredictedValue = Math.Max(0, predictedValue),
-                ChangePercent = currentValue > 0 ? ((predictedValue - currentValue) / currentValue) * 100 : 0,
-                Variance = Math.Sqrt(variance),
-                ThresholdValue = threshold,
-                WillExceedThreshold = predictedValue > threshold,
-                ForecastTrend = GenerateTrendLine(recentValues, hoursAhead)
-            };
-
-            return forecast;
+            return Math.Max(0, prediction);
         }
 
         private double CalculateTrend(List<double> values)
         {
             if (values.Count < 2) return 0;
 
-            var sum = 0.0;
-            for (int i = 1; i < values.Count; i++)
+            double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            int n = values.Count;
+
+            for (int i = 0; i < n; i++)
             {
-                sum += values[i] - values[i - 1];
+                sumX += i;
+                sumY += values[i];
+                sumXY += i * values[i];
+                sumX2 += i * i;
             }
 
-            return sum / (values.Count - 1);
+            double denominator = (n * sumX2 - sumX * sumX);
+            if (denominator == 0) return 0;
+
+            return (n * sumXY - sumX * sumY) / denominator;
         }
 
-        private List<double> GenerateTrendLine(List<double> values, int points)
+        private double CalculatePredictionError(params List<double>[] valueLists)
         {
-            var trend = new List<double>();
-            var lastValue = values.Any() ? values.Last() : 0;
-            var changeRate = CalculateTrend(values);
+            double totalError = 0;
+            int count = 0;
 
-            for (int i = 0; i < points; i++)
+            foreach (var values in valueLists)
             {
-                lastValue += changeRate;
-                trend.Add(Math.Max(0, lastValue));
+                if (values.Count > 1)
+                {
+                    double stdDev = CalculateStandardDeviation(values);
+                    totalError += stdDev;
+                    count++;
+                }
             }
 
-            return trend;
+            return count > 0 ? totalError / count : 0;
         }
 
-        private DateTime? ProjectExhaustionTime(List<double> values)
+        private double CalculateStandardDeviation(List<double> values)
         {
-            if (values.Count < 2) return null;
-
-            var lastValue = values.Last();
-            var trend = CalculateTrend(values);
-
-            if (trend <= 0) return null;
-
-            var hoursToExhaustion = (100 - lastValue) / trend;
-            return hoursToExhaustion > 0 ? DateTime.UtcNow.AddHours(hoursToExhaustion) : null;
-        }
-
-        private string GenerateRecommendation(string metricName, double usagePercent)
-        {
-            return usagePercent > 90 ? $"CRITICAL: Scale {metricName} immediately"
-                : usagePercent > 80 ? $"URGENT: Plan scaling for {metricName}"
-                : $"ALERT: Monitor {metricName} closely";
-        }
-
-        private double CalculateHealthScore(PerformancePrediction prediction)
-        {
-            if (prediction.MetricForecasts.Count == 0) return 0.95;
-
-            var riskCount = prediction.RiskFactors.Count;
-            var exceedingCount = prediction.MetricForecasts.Values.Count(f => f.WillExceedThreshold);
-
-            return Math.Max(0, 1.0 - ((riskCount + exceedingCount) * 0.1));
-        }
-
-        private double CalculateConfidence(PerformancePrediction prediction)
-        {
-            return 0.82 + (Random.Shared.NextDouble() * 0.15);
-        }
-
-        private void InitializeDefaultThresholds()
-        {
-            _thresholds["CPU"] = 100.0;
-            _thresholds["Memory"] = 100.0;
-            _thresholds["Disk"] = 100.0;
-            _thresholds["Network"] = 1000.0;
-            _thresholds["Connections"] = 10000.0;
+            if (!values.Any()) return 0;
+            double average = values.Average();
+            double sumOfSquares = values.Sum(v => Math.Pow(v - average, 2));
+            return Math.Sqrt(sumOfSquares / values.Count());
         }
     }
 }

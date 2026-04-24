@@ -1,43 +1,41 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
     /// <summary>
-    /// Implementation of Security Threat Analyzer with pattern detection and correlation.
+    /// Security Threat Analyzer implementation.
+    /// Provides advanced threat detection and security analysis.
     /// </summary>
     public class SecurityThreatAnalyzer : ISecurityThreatAnalyzer
     {
-        private readonly Logging.ILogger? _logger;
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
-        private readonly List<SecurityEvent> _eventHistory = new();
-        private readonly Dictionary<string, ThreatDetection> _detectedThreats = new();
-        private readonly List<ThreatPattern> _identifiedPatterns = new();
-        private long _eventCount = 0;
-        private int _blockedThreats = 0;
-        private int _falsePositives = 0;
+        private readonly ILogger<SecurityThreatAnalyzer> _logger;
+        private readonly SemaphoreSlim _semaphore;
+        private readonly ConcurrentQueue<ThreatAnalysisResult> _analysisHistory;
+        private bool _isRunning;
 
-        public SecurityThreatAnalyzer(ILogger? logger = null)
+        /// <summary>
+        /// Initializes a new instance of the SecurityThreatAnalyzer class.
+        /// </summary>
+        public SecurityThreatAnalyzer(ILogger<SecurityThreatAnalyzer> logger)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _semaphore = new SemaphoreSlim(1, 1);
+            _analysisHistory = new ConcurrentQueue<ThreatAnalysisResult>();
+            _isRunning = false;
         }
 
-        public async Task<bool> InitializeAsync()
+        /// <inheritdoc/>
+        public string ServiceName => nameof(SecurityThreatAnalyzer);
+
+        /// <inheritdoc/>
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
-                _logger?.Info("Security Threat Analyzer initialized");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Analyzer initialization failed: {ex.Message}");
-                return false;
+                _logger.LogInformation("{ServiceName} initializing", ServiceName);
+                await Task.CompletedTask;
             }
             finally
             {
@@ -45,76 +43,109 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<bool> AnalyzeSecurityEventAsync(SecurityEvent securityEvent)
+        /// <inheritdoc/>
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                _isRunning = true;
+                _logger.LogInformation("{ServiceName} started", ServiceName);
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
 
-                _eventCount++;
-                _eventHistory.Add(securityEvent);
-                if (_eventHistory.Count > 10000)
-                    _eventHistory.RemoveAt(0);
+        /// <inheritdoc/>
+        public async Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                _isRunning = false;
+                _logger.LogInformation("{ServiceName} stopped", ServiceName);
+                await Task.CompletedTask;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
 
-                var threats = DetectThreatsFromEvent(securityEvent);
-                foreach (var threat in threats)
+        /// <inheritdoc/>
+        public bool IsRunning() => _isRunning;
+
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
+        {
+            _semaphore?.Dispose();
+            await Task.CompletedTask;
+        }
+
+        /// <inheritdoc/>
+        public async Task<ThreatAnalysisResult> AnalyzeThreatsAsync(List<SecurityEvent> securityData, CancellationToken cancellationToken = default)
+        {
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                var result = new ThreatAnalysisResult { Timestamp = DateTime.UtcNow };
+
+                if (securityData == null || securityData.Count == 0)
                 {
-                    _detectedThreats[threat.ThreatId] = threat;
-                    if (securityEvent.IsBlocked)
-                        _blockedThreats++;
+                    result.SecurityScore = 100;
+                    _analysisHistory.Enqueue(result);
+                    return result;
                 }
 
-                _logger?.Info($"Event analyzed: {securityEvent.EventType} (Severity: {securityEvent.SeverityLevel})");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Event analysis failed: {ex.Message}");
-                return false;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
+                var failureEvents = securityData.Where(e => e.Result == "Failure").ToList();
+                var uniqueSources = securityData.Select(e => e.SourceIp).Distinct().Count();
+                var failureRate = (double)failureEvents.Count / securityData.Count;
 
-        public async Task<ThreatDetection[]> DetectThreatsAsync()
-        {
-            try
-            {
-                await _semaphore.WaitAsync();
-
-                var threats = new List<ThreatDetection>();
-                var recentEvents = _eventHistory.TakeLast(100).ToList();
-
-                // Pattern-based detection
-                var patterns = IdentifyPatterns(recentEvents);
-                _identifiedPatterns.AddRange(patterns);
-
-                // Correlation-based detection
-                foreach (var pattern in patterns)
+                if (failureRate > 0.3 && uniqueSources > 5)
                 {
-                    var threat = new ThreatDetection
+                    result.AttackPatterns.Add("Brute Force Attack");
+                }
+
+                if (failureEvents.Any(e => e.EventType == "PrivilegeEscalation"))
+                {
+                    result.AttackPatterns.Add("Privilege Escalation");
+                }
+
+                if (securityData.Any(e => e.EventType == "DataAccess" && e.Result == "Success"))
+                {
+                    result.AttackPatterns.Add("Data Exfiltration Risk");
+                }
+
+                foreach (var evt in securityData.Where(e => e.Result == "Failure").Take(10))
+                {
+                    var threat = new ThreatIndicator
                     {
-                        Type = DetermineThreatType(pattern),
-                        Confidence = 0.82 + (Random.Shared.NextDouble() * 0.17),
-                        SeverityLevel = pattern.Occurrences > 3 ? 4 : 2,
-                        Description = $"Suspicious pattern detected: {pattern.PatternName}",
-                        SourceEvents = pattern.EventSequence.Select(e => e.EventId).ToList(),
-                        IsCorrelatedThreat = true
+                        ThreatType = ClassifyThreat(evt),
+                        Description = $"Event: {evt.EventType} from {evt.SourceIp}",
+                        Source = evt.SourceIp,
+                        ConfidenceScore = Math.Min(failureRate * 2, 1.0),
+                        DetectionTime = evt.Timestamp,
+                        Evidence = new List<string> { evt.Principal, evt.TargetResource }
                     };
 
-                    threats.Add(threat);
-                    _detectedThreats[threat.ThreatId] = threat;
+                    if (threat.ConfidenceScore > 0.5)
+                    {
+                        result.DetectedThreats.Add(threat);
+                    }
                 }
 
-                _logger?.Info($"Threats detected: {threats.Count}");
-                return threats.ToArray();
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Threat detection failed: {ex.Message}");
-                return Array.Empty<ThreatDetection>();
+                result.CriticalThreatCount = result.DetectedThreats.Count(t => t.ConfidenceScore > 0.8);
+                result.HighSeverityCount = result.DetectedThreats.Count(t => t.ConfidenceScore > 0.6 && t.ConfidenceScore <= 0.8);
+                result.SecurityScore = Math.Max(0, 100 - (result.CriticalThreatCount * 20 + result.HighSeverityCount * 5));
+                result.RiskAssessment = result.SecurityScore > 80 ? "Low Risk" : (result.SecurityScore > 60 ? "Medium Risk" : "High Risk");
+
+                _analysisHistory.Enqueue(result);
+                _logger.LogInformation("Threat analysis completed. Security score: {Score}", result.SecurityScore);
+
+                return result;
             }
             finally
             {
@@ -122,24 +153,51 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<bool> GenerateAlertAsync(string threatId, string description)
+        /// <inheritdoc/>
+        public async Task<ThreatSeverityScoring> ScoreSeverityAsync(List<ThreatIndicator> threats, CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                var scoring = new ThreatSeverityScoring { Timestamp = DateTime.UtcNow };
 
-                if (_detectedThreats.TryGetValue(threatId, out var threat))
+                if (threats == null || threats.Count == 0)
                 {
-                    _logger?.Warn($"SECURITY ALERT: {description} (Threat ID: {threatId})");
-                    return true;
+                    scoring.OverallRiskLevel = "Low";
+                    return scoring;
                 }
 
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Alert generation failed: {ex.Message}");
-                return false;
+                foreach (var threat in threats)
+                {
+                    int score = (int)(threat.ConfidenceScore * 100);
+                    scoring.ThreatSeverityScores[threat.ThreatId] = score;
+
+                    if (score >= 80)
+                    {
+                        scoring.CriticalCount++;
+                    }
+                    else if (score >= 60)
+                    {
+                        scoring.HighCount++;
+                    }
+                }
+
+                if (scoring.CriticalCount > 0)
+                {
+                    scoring.OverallRiskLevel = "Critical";
+                }
+                else if (scoring.HighCount > 2)
+                {
+                    scoring.OverallRiskLevel = "High";
+                }
+                else if (scoring.HighCount > 0)
+                {
+                    scoring.OverallRiskLevel = "Medium";
+                }
+
+                scoring.ScoringNotes = $"Analyzed {threats.Count} threats using statistical confidence scoring";
+
+                return scoring;
             }
             finally
             {
@@ -147,34 +205,53 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<ThreatMetrics> GetThreatMetricsAsync()
+        /// <inheritdoc/>
+        public async Task<MitigationRecommendations> RecommendMitigationsAsync(List<ThreatIndicator> threats, CancellationToken cancellationToken = default)
         {
+            await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                await _semaphore.WaitAsync();
+                var recommendations = new MitigationRecommendations { Timestamp = DateTime.UtcNow };
 
-                var accuracy = _eventCount > 0 ? 1.0 - ((double)_falsePositives / _eventCount) : 0;
-                var highSeverity = _detectedThreats.Values.Count(t => t.SeverityLevel >= 3);
-                var critical = _detectedThreats.Values.Count(t => t.SeverityLevel >= 4);
-
-                return new ThreatMetrics
+                if (threats == null || threats.Count == 0)
                 {
-                    TotalEventsAnalyzed = (int)_eventCount,
-                    ThreatsDetected = _detectedThreats.Count,
-                    BlockedThreats = _blockedThreats,
-                    FalsePositives = _falsePositives,
-                    DetectionAccuracy = accuracy,
-                    HighSeverityThreats = highSeverity,
-                    CriticalThreats = critical,
-                    LastThreatDetectedTime = _detectedThreats.Values.Any() ? _detectedThreats.Values.Max(t => t.DetectedTime) : DateTime.UtcNow,
-                    AverageThreatConfidence = _detectedThreats.Values.Any() ? _detectedThreats.Values.Average(t => t.Confidence) : 0,
-                    TotalAnalysisRuns = _eventCount
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Metrics retrieval failed: {ex.Message}");
-                return new ThreatMetrics();
+                    recommendations.RiskReductionPotential = 0;
+                    return recommendations;
+                }
+
+                foreach (var threat in threats.OrderByDescending(t => t.ConfidenceScore).Take(5))
+                {
+                    var action = new MitigationAction
+                    {
+                        Description = $"Address {threat.ThreatType} threat from {threat.Source}",
+                        Priority = threat.ConfidenceScore > 0.8 ? 5 : (threat.ConfidenceScore > 0.5 ? 4 : 3),
+                        RiskReduction = threat.ConfidenceScore * 50,
+                        ImplementationEffort = threat.ConfidenceScore > 0.8 ? 8 : 5,
+                        RelatedThreats = new List<string> { threat.ThreatType }
+                    };
+
+                    if (action.Priority == 5)
+                    {
+                        recommendations.ImmediateActions.Add(action);
+                    }
+                    else if (action.Priority >= 4)
+                    {
+                        recommendations.ShortTermActions.Add(action);
+                    }
+                    else
+                    {
+                        recommendations.LongTermMeasures.Add(action);
+                    }
+
+                    recommendations.PriorityRanking.Add(action.ActionId);
+                    recommendations.RiskReductionPotential += action.RiskReduction;
+                }
+
+                recommendations.RiskReductionPotential = Math.Min(recommendations.RiskReductionPotential / Math.Max(1, threats.Count), 100);
+
+                _logger.LogInformation("Generated {Count} mitigation recommendations", recommendations.ImmediateActions.Count + recommendations.ShortTermActions.Count);
+
+                return recommendations;
             }
             finally
             {
@@ -182,41 +259,13 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        public async Task<ThreatIntelligenceReport> GenerateThreatReportAsync()
+        /// <inheritdoc/>
+        public async Task RecordEventAsync(SecurityEvent securityEvent)
         {
+            await _semaphore.WaitAsync();
             try
             {
-                await _semaphore.WaitAsync();
-
-                var report = new ThreatIntelligenceReport
-                {
-                    Detections = _detectedThreats.Values.ToList(),
-                    IdentifiedPatterns = _identifiedPatterns.ToList(),
-                    ReportingPeriod = TimeSpan.FromHours(24),
-                    TopAttackVectors = new()
-                    {
-                        "Brute Force Attacks",
-                        "SQL Injection",
-                        "Cross-Site Scripting",
-                        "Privilege Escalation"
-                    },
-                    RecommendedDefenses = new()
-                    {
-                        "Enable MFA",
-                        "Update security policies",
-                        "Implement WAF rules",
-                        "Monitor API access"
-                    },
-                    OverallRiskScore = CalculateRiskScore()
-                };
-
-                _logger?.Info($"Threat intelligence report generated: {report.Detections.Count} detections");
-                return report;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Report generation failed: {ex.Message}");
-                return new ThreatIntelligenceReport();
+                await Task.CompletedTask;
             }
             finally
             {
@@ -224,87 +273,32 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             }
         }
 
-        private List<ThreatDetection> DetectThreatsFromEvent(SecurityEvent securityEvent)
+        /// <inheritdoc/>
+        public async Task<List<ThreatAnalysisResult>> GetAnalysisHistoryAsync(int limit = 100)
         {
-            var threats = new List<ThreatDetection>();
+            var results = new List<ThreatAnalysisResult>();
+            int count = 0;
 
-            if (securityEvent.SeverityLevel >= 3)
+            foreach (var item in _analysisHistory.Reverse())
             {
-                threats.Add(new ThreatDetection
-                {
-                    Type = DetermineThreatFromEventType(securityEvent.EventType),
-                    Confidence = 0.75 + (Random.Shared.NextDouble() * 0.24),
-                    SeverityLevel = securityEvent.SeverityLevel,
-                    Description = $"Detected: {securityEvent.Description}",
-                    SourceEvents = new() { securityEvent.EventId }
-                });
+                if (count >= limit) break;
+                results.Add(item);
+                count++;
             }
 
-            return threats;
+            return await Task.FromResult(results);
         }
 
-        private List<ThreatPattern> IdentifyPatterns(List<SecurityEvent> events)
+        private string ClassifyThreat(SecurityEvent evt)
         {
-            var patterns = new List<ThreatPattern>();
-
-            // Brute force pattern
-            var failedLogins = events.Where(e => e.EventType == SecurityEventType.FailedLogin).ToList();
-            if (failedLogins.Count > 5)
+            return evt.EventType switch
             {
-                patterns.Add(new ThreatPattern
-                {
-                    PatternName = "Brute Force Attack",
-                    Occurrences = failedLogins.Count,
-                    LikelihoodScore = 0.9,
-                    EventSequence = failedLogins.Take(5).ToList(),
-                    AssociatedThreatType = ThreatType.BruteForce
-                });
-            }
-
-            // Privilege escalation pattern
-            var privEscEvents = events.Where(e => e.EventType == SecurityEventType.PrivilegeEscalation).ToList();
-            if (privEscEvents.Count > 0)
-            {
-                patterns.Add(new ThreatPattern
-                {
-                    PatternName = "Privilege Escalation",
-                    Occurrences = privEscEvents.Count,
-                    LikelihoodScore = 0.88,
-                    EventSequence = privEscEvents.Take(3).ToList(),
-                    AssociatedThreatType = ThreatType.InsiderThreat
-                });
-            }
-
-            return patterns;
-        }
-
-        private ThreatType DetermineThreatFromEventType(SecurityEventType eventType)
-        {
-            return eventType switch
-            {
-                SecurityEventType.FailedLogin => ThreatType.BruteForce,
-                SecurityEventType.MalwareDetected => ThreatType.Malware,
-                SecurityEventType.DDoS => ThreatType.DDoS,
-                SecurityEventType.DataExfiltration => ThreatType.DataBreach,
-                SecurityEventType.PrivilegeEscalation => ThreatType.InsiderThreat,
-                _ => ThreatType.InsiderThreat
+                "Login" => "AuthenticationAttempt",
+                "AccessDenied" => "AuthorizationFailure",
+                "DataAccess" => "DataAccess",
+                "PrivilegeEscalation" => "PrivilegeEscalation",
+                _ => "Unknown"
             };
-        }
-
-        private ThreatType DetermineThreatType(ThreatPattern pattern)
-        {
-            var types = new[] { ThreatType.Intrusion, ThreatType.Malware, ThreatType.BruteForce, ThreatType.DataBreach };
-            return types[Random.Shared.Next(types.Length)];
-        }
-
-        private double CalculateRiskScore()
-        {
-            if (_detectedThreats.Count == 0) return 0;
-
-            var criticalCount = _detectedThreats.Values.Count(t => t.SeverityLevel >= 4);
-            var highCount = _detectedThreats.Values.Count(t => t.SeverityLevel >= 3);
-
-            return Math.Min(1.0, (criticalCount * 0.5 + highCount * 0.2) / _detectedThreats.Count);
         }
     }
 }
