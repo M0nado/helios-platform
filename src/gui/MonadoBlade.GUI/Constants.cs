@@ -68,6 +68,38 @@ namespace MonadoBlade.GUI
         // Charge level control
         public const double CHARGE_INCREMENT = 0.1;
         public const double CHARGE_MAX = 1.0;
+
+        // Advanced animation timing constants (Phase 8, Stream 2)
+        // UI transitions: 300-500ms for smooth professional feel
+        public const int ANIMATION_DURATION_FAST = 150;      // Quick feedback
+        public const int ANIMATION_DURATION_NORMAL = 300;    // Standard transition
+        public const int ANIMATION_DURATION_SLOW = 500;      // Smooth/cinematic
+        
+        // Boot/splash screen animations
+        public const int SPLASH_BLADE_GROW_MS = 800;         // Blade expansion on load
+        public const int SPLASH_KANJI_FADE_MS = 600;         // Kanji appear duration
+        public const int SPLASH_APP_FADE_MS = 400;           // Application fade-in
+        public const int SPLASH_COMPLETION_MS = 300;         // Final blade expansion
+
+        // Login screen wheel animation
+        public const int WHEEL_ROTATION_FULL_MS = 8000;      // Full 360° rotation
+        public const double WHEEL_ROTATION_SPEED = 0.045;    // Degrees per frame
+        public const int WHEEL_HOVER_GLOW_BOOST = 200;       // Glow increase on hover
+
+        // Profile switching animation
+        public const int PROFILE_TRANSITION_MS = 400;        // Profile change duration
+        public const int PROFILE_ICON_SCALE_MS = 300;        // Icon animation
+
+        // Idle breathing/pulse animation
+        public const int IDLE_PULSE_FREQUENCY_MS = 2000;     // Full pulse cycle
+        public const double IDLE_PULSE_MIN_GLOW = 0.25;
+        public const double IDLE_PULSE_MAX_GLOW = 0.55;
+
+        // Easing function targets
+        public const string EASING_EASE_IN_OUT_CUBIC = "EaseInOutCubic";
+        public const string EASING_LINEAR = "Linear";
+        public const string EASING_EASE_OUT_QUAD = "EaseOutQuad";
+        public const string EASING_EASE_IN_CUBIC = "EaseInCubic";
     }
 
     /// <summary>

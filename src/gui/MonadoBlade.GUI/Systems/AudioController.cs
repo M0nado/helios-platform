@@ -87,6 +87,14 @@ namespace MonadoBlade.GUI.Systems
         }
 
         /// <summary>
+        /// Play tone at specified frequency (used by kanji animations).
+        /// </summary>
+        public void PlayTone(int frequency, int durationMs = 200)
+        {
+            PlayKanjiTone(frequency, durationMs);
+        }
+
+        /// <summary>
         /// Play kanji tone based on frequency.
         /// </summary>
         public void PlayKanjiTone(int frequency, int durationMs = 200)
