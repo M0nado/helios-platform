@@ -159,12 +159,24 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
 
+    <!-- Audio Processing -->
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
+    
     <!-- Testing -->
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <!-- Exclude broken Phase 10 BootEnvironment files from compilation -->
+  <!-- These files contain embedded PowerShell scripts with syntax errors that prevent compilation -->
+  <!-- They will be refactored in a future phase to properly handle embedded scripts -->
+  <ItemGroup>
+    <Compile Remove="Phase10/BootEnvironment/Channel3USBBootInstallation.cs" />
+    <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
   </ItemGroup>
 
 </Project>
