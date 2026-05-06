@@ -1,53 +1,87 @@
 {
-<<<<<<< HEAD
-  "name": "HELIOS-DevContainer",
-  "image": "mcr.microsoft.com/devcontainers/universal:latest",
+  "name": "HELIOS Platform Codespace",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm",
   "features": {
-    "ghcr.io/devcontainers/features/azure-cli:1": {},
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/powershell:1": {},
-    "ghcr.io/devcontainers/features/dotnet:1": {
-      "version": "8"
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/powershell:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
     }
   },
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-vscode.powershell",
-        "ms-azure-tools.vscode-azurefunctions",
-        "ms-azure-tools.vscode-azuretools",
-        "ms-azure-tools.vscode-cosmosdb",
-        "ms-azure-tools.vscode-docker",
         "ms-dotnettools.csharp",
-        "ms-dotnettools.vscode-dotnet-runtime",
-        "GitHub.Copilot",
-        "eamodio.gitlens",
+        "ms-dotnettools.csdevkit",
+        "ms-vscode.powershell",
+        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-azurefunctions",
+        "ms-azuretools.vscode-azureappservice",
         "ms-python.python",
-        "charliermarsh.ruff"
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "GitHub.copilot",
+        "GitHub.vscode-pull-request-github",
+        "eamodio.gitlens",
+        "redhat.vscode-yaml",
+        "DavidAnson.vscode-markdownlint"
       ],
       "settings": {
-        "terminal.defaultProfile": "PowerShell",
+        "terminal.integrated.defaultProfile.linux": "pwsh",
+        "terminal.integrated.profiles.linux": {
+          "pwsh": {
+            "path": "/usr/bin/pwsh"
+          },
+          "bash": {
+            "path": "/bin/bash"
+          }
+        },
+        "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+        "editor.formatOnSave": true,
+        "files.autoSave": "onFocusChange",
         "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": true,
         "[powershell]": {
-          "editor.defaultFormatter": "ms-vscode.powershell",
-          "editor.formatOnSave": true
+          "editor.defaultFormatter": "ms-vscode.powershell"
+        },
+        "[csharp]": {
+          "editor.defaultFormatter": "ms-dotnettools.csharp"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "vscode.json-language-features"
+        },
+        "[yaml]": {
+          "editor.insertSpaces": true,
+          "editor.tabSize": 2
         }
       }
     }
   },
   "remoteEnv": {
     "HELIOS_ENV": "development",
-    "AZURE_SUBSCRIPTION_ID": "${localEnv:AZURE_SUBSCRIPTION_ID}",
-    "AZURE_TENANT_ID": "${localEnv:AZURE_TENANT_ID}"
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "DOTNET_NOLOGO": "1"
   },
-  "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/vscode/.azure,type=bind,consistency=cached"
+  "forwardPorts": [
+    3000,
+    5000,
+    5173,
+    8080,
+    8443
   ],
-  "forwardPorts": [3000, 5000, 5432, 8080, 8443],
   "portsAttributes": {
     "3000": {
       "label": "Web UI",
@@ -57,201 +91,19 @@
       "label": "API Server",
       "onAutoForward": "notify"
     },
-    "8080": {
-      "label": "Dashboard",
-      "onAutoForward": "notify"
-    }
-  },
-  "postCreateCommand": "pwsh -Command 'Write-Host \"🚀 HELIOS DevContainer Ready\" -ForegroundColor Cyan; Write-Host \"📦 Installing dependencies...\" -ForegroundColor Yellow; npm install; dotnet restore; pip install -r requirements.txt 2>/dev/null || true; Write-Host \"✅ Setup complete\" -ForegroundColor Green'",
-  "postStartCommand": "pwsh -Command 'Write-Host \"Welcome back to HELIOS Development!\" -ForegroundColor Green'"
-=======
-  "name": "Helios Platform Dev Environment",
-  "description": "Complete development environment for Helios Platform with PowerShell, Node.js, Python, and Docker",
-
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "devcontainer",
-  "workspaceFolder": "/workspace",
-
-  "features": {
-    "ghcr.io/devcontainers/features/git:1": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/github-cli:1": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/powershell:1": {
-      "version": "7.4"
-    },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest"
-    }
-  },
-
-  "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/root/.ssh,readonly",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/root/.gitconfig,readonly",
-    "source=/var/run/docker.sock,target=/var/run/docker.sock",
-    "type=volume,source=node_modules,target=/workspace/node_modules",
-    "type=volume,source=python_cache,target=/workspace/.venv"
-  ],
-
-  "forwardPorts": [
-    8080,
-    5432,
-    3000,
-    5173,
-    3001
-  ],
-  "portsAttributes": {
-    "8080": {
-      "label": "Wiki Application",
-      "onAutoForward": "notify"
-    },
-    "5432": {
-      "label": "PostgreSQL Database",
-      "onAutoForward": "notify"
-    },
-    "3000": {
-      "label": "Node.js Development Server",
-      "onAutoForward": "notify"
-    },
     "5173": {
       "label": "Vite Dev Server",
       "onAutoForward": "notify"
     },
-    "3001": {
-      "label": "API Server",
+    "8080": {
+      "label": "HELIOS Dashboard",
+      "onAutoForward": "notify"
+    },
+    "8443": {
+      "label": "Secure API",
       "onAutoForward": "notify"
     }
   },
-
-  "remoteUser": "devuser",
-  "remoteEnv": {
-    "NODE_ENV": "development",
-    "PYTHONUNBUFFERED": "1",
-    "SHELL": "/bin/bash",
-    "WORKSPACE": "/workspace",
-    "PATH": "/home/devuser/.local/bin:${PATH}",
-    "HISTFILE": "/workspace/.devcontainer/.bash_history",
-    "PS1": "\\[\\033[1;32m\\]devcontainer\\[\\033[0m\\] \\w $ "
-  },
-
-  "customizations": {
-    "vscode": {
-      "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python3",
-        "python.linting.enabled": true,
-        "python.linting.pylintEnabled": true,
-        "python.formatting.provider": "black",
-        "python.formatting.blackArgs": [
-          "--line-length",
-          "100"
-        ],
-        "[python]": {
-          "editor.formatOnSave": true,
-          "editor.codeActionsOnSave": {
-            "source.organizeImports": true
-          }
-        },
-        "editor.formatOnSave": true,
-        "editor.formatOnPaste": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "[json]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
-        },
-        "[javascript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
-        },
-        "[typescript]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode"
-        },
-        "[yaml]": {
-          "editor.insertSpaces": true,
-          "editor.tabSize": 2
-        },
-        "[powershell]": {
-          "editor.formatOnSave": true,
-          "editor.defaultFormatter": "ms-vscode.powershell"
-        },
-        "editor.rulers": [
-          80,
-          120
-        ],
-        "editor.wordWrap": "on",
-        "editor.wordWrapColumn": 120,
-        "files.autoSave": "onFocusChange",
-        "files.exclude": {
-          "**/.git": false,
-          "**/node_modules": true,
-          "**/.venv": true,
-          "**/__pycache__": true,
-          "**/.pytest_cache": true,
-          "**/.DS_Store": true
-        },
-        "search.exclude": {
-          "**/node_modules": true,
-          "**/.venv": true,
-          "**/__pycache__": true,
-          ".git": true
-        },
-        "git.ignoreLimitWarning": true,
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "terminal.integrated.profiles.linux": {
-          "bash": {
-            "path": "/bin/bash",
-            "icon": "terminal-bash"
-          },
-          "pwsh": {
-            "path": "/usr/bin/pwsh",
-            "icon": "terminal-powershell"
-          }
-        },
-        "powershell.codeFormatting.preset": "OTBS",
-        "powershell.pester.useLegacyEditorOnOpen": false,
-        "workbench.iconTheme": "vscode-icons",
-        "explorer.confirmDelete": false,
-        "explorer.confirmDragAndDrop": false
-      },
-      "extensions": [
-        "ms-vscode.powershell",
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "ms-python.black-formatter",
-        "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint",
-        "ms-vscode.makefile-tools",
-        "GitHub.copilot",
-        "GitHub.vscode-pull-request-github",
-        "ms-vscode.remote-explorer",
-        "ms-azuretools.vscode-docker",
-        "ms-vscode-remote.remote-containers",
-        "ms-vscode.azure-repos",
-        "DavidAnson.vscode-markdownlint",
-        "redhat.vscode-yaml",
-        "wholroyd.jinja",
-        "rangav.vscode-thunder-client",
-        "eamodio.gitlens",
-        "ms-vscode.live-server",
-        "gitpod.workspace-full",
-        "Postman.postman-for-vscode"
-      ]
-    }
-  },
-
-  "postCreateCommand": "bash /workspace/.devcontainer/onCreateCommand.sh",
-  "postStartCommand": "git config --global --add safe.directory /workspace && powershell -NoProfile -Command 'Write-Host \"✓ Dev environment ready\"'",
-
-  "initializeCommand": "bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'",
-
-  "capAdd": [
-    "SYS_PTRACE"
-  ],
-  "securityOpt": [
-    "seccomp=unconfined"
-  ],
-
-  "otherPortsAttributes": {
-    "onAutoForward": "notify"
-  }
->>>>>>> 1c7cf77 (Deploy: Complete metrics tracking infrastructure for 120+ variables and 100+ agents)
+  "postCreateCommand": "pwsh -NoLogo -NoProfile -Command \"Write-Host 'HELIOS Codespace ready: restoring primary .NET projects...' -ForegroundColor Cyan; if (Test-Path 'src/core/HELIOS.Platform/HELIOS.Platform.csproj') { dotnet restore 'src/core/HELIOS.Platform/HELIOS.Platform.csproj' }; if (Test-Path 'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj') { dotnet restore 'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj' }; Write-Host 'Next: run ./scripts/build/build.ps1 or dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj' -ForegroundColor Green\"",
+  "postStartCommand": "pwsh -NoLogo -NoProfile -Command \"Write-Host 'Welcome back to HELIOS Platform Codespace' -ForegroundColor Green; gh --version | Select-Object -First 1; dotnet --version\""
 }
