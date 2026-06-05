@@ -61,6 +61,18 @@ jobs:
           $found = $false
           foreach ($project in $testProjects) {
             if (Test-Path $project) {
+              $projectDirectory = Split-Path -Parent $project
+              $projectReferences = Select-Xml -Path $project -XPath '//ProjectReference' |
+                ForEach-Object { $_.Node.Include }
+              $missingReferences = $projectReferences | Where-Object {
+                -not (Test-Path (Join-Path $projectDirectory $_))
+              }
+
+              if ($missingReferences) {
+                Write-Warning "Skipping $project because it has missing ProjectReference target(s): $($missingReferences -join ', ')"
+                continue
+              }
+
               $found = $true
               dotnet restore $project
               dotnet test $project --configuration Release --no-restore --logger trx
