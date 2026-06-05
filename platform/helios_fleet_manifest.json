@@ -1,0 +1,79 @@
+{
+  "platform": "helios-platform",
+  "branch_consolidation": {
+    "inspected_refs": ["work"],
+    "note": "Repository currently contains a single local branch named work; future remote branches should be merged here before release validation."
+  },
+  "systems": [
+    {
+      "name": "helios-control",
+      "role": "operator control plane and WinUI 3 shell",
+      "primary_stack": ["C#", "WinUI 3", "Windows App SDK"],
+      "responsibilities": [
+        "secure workstation dashboard",
+        "installer and fleet status views",
+        "Azure identity and AI Hub controls"
+      ]
+    },
+    {
+      "name": "hermes-fleet-production",
+      "role": "production fleet automation and deployment backbone",
+      "primary_stack": ["Python", "Azure CLI", "PowerShell", "Bash"],
+      "responsibilities": [
+        "fleet provisioning",
+        "policy drift detection",
+        "repeatable Azure bootstrap"
+      ]
+    },
+    {
+      "name": "hermes-xcore",
+      "role": "specialist high-performance execution core",
+      "primary_stack": ["C++20"],
+      "responsibilities": [
+        "CPU-affinity aware workers",
+        "low-latency telemetry transforms",
+        "native security-sensitive primitives"
+      ]
+    },
+    {
+      "name": "hermes-analytics",
+      "role": "math, prediction, analytics, and parallel scoring layer",
+      "primary_stack": ["F#", ".NET"],
+      "responsibilities": [
+        "forecasting kernels",
+        "parallel analytical pipelines",
+        "risk scoring and optimization models"
+      ]
+    },
+    {
+      "name": "aihub-integration",
+      "role": "Python AI Hub and orchestration bridge",
+      "primary_stack": ["Python 3.10+", "Azure AI", "Azure ML"],
+      "responsibilities": [
+        "model endpoint configuration",
+        "secure AI workload routing",
+        "fleet telemetry enrichment"
+      ]
+    }
+  ],
+  "azure_cli": {
+    "required_commands": ["az"],
+    "extensions": ["account", "azure-devops", "ml", "ssh", "resource-graph"],
+    "bootstrap_scripts": [
+      "scripts/setup_azure_cli.sh",
+      "scripts/setup_azure_cli.ps1"
+    ],
+    "minimum_checks": [
+      "az version",
+      "az account show",
+      "az extension list"
+    ]
+  },
+  "optimization_priorities": [
+    "security baseline first",
+    "native C++ performance paths behind stable interfaces",
+    "F# analytics for deterministic prediction workloads",
+    "Python for AI Hub integration and fleet automation",
+    "WinUI 3 for operator-facing controls only"
+  ]
+}
