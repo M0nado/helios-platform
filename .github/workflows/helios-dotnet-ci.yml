@@ -58,15 +58,17 @@ jobs:
             'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj',
             'src/tests/HELIOS.Platform.Tests.csproj'
           )
-          $testProject = $testProjects | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $testProject) {
-            Write-Host 'No primary test project found yet. Skipping test execution.'
-            exit 0
+          $found = $false
+          foreach ($project in $testProjects) {
+            if (Test-Path $project) {
+              $found = $true
+              dotnet restore $project
+              dotnet test $project --configuration Release --no-restore --logger trx
+            }
           }
-
-          Write-Host "Running tests from $testProject"
-          dotnet restore $testProject
-          dotnet test $testProject --configuration Release --no-restore --logger trx
+          if (-not $found) {
+            Write-Host 'No primary test project found yet. Skipping test execution.'
+          }
 
   powershell-validation:
     name: Validate PowerShell scripts
