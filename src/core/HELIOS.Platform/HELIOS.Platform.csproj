@@ -87,7 +87,7 @@
     <PackageReference Include="Docker.DotNet" Version="3.125.15" />
     <!-- NOTE: KubernetesClient 14.0.2 has a MODERATE severity vulnerability (GHSA-w7r3-mgwf-4mqq)
          Latest version is 19.0.2 (major version bump) - NOT updated, requires manual review -->
-    <PackageReference Include="KubernetesClient" Version="14.0.2" />
+    <PackageReference Include="KubernetesClient" Version="17.0.14" />
     
     <!-- Entity Framework Core & Database -->
     <!-- NOTE: EntityFramework 8.0.0 → 10.0.7 is a major version bump (2.0 bump) - NOT updated -->
