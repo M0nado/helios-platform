@@ -44,3 +44,41 @@ sudo bash run_installer.sh
 | 7 | Verification & validation |
 
 See **[helios-installer/README.md](helios-installer/README.md)** for full documentation.
+
+---
+
+## HELIOS Control + HERMES Fleet Production Backbone
+
+This repository now includes a cross-stack consolidation manifest and bootstrap
+scripts for the highest-priority integration areas:
+
+```
+platform/helios_fleet_manifest.json   # source of truth for merged HELIOS/HERMES responsibilities
+tools/helios_orchestrator.py          # manifest validator + Azure CLI probe
+scripts/setup_azure_cli.sh            # Linux / WSL Azure CLI extension bootstrap
+scripts/setup_azure_cli.ps1           # Windows Azure CLI extension bootstrap
+src/csharp/Helios.Control/            # C# WinUI 3 operator shell notes
+src/cpp/Hermes.XCore/                 # C++ performance backend notes
+src/fsharp/Hermes.Analytics/          # F# analytics and prediction notes
+ai/aihub/                             # Python AI Hub integration notes
+```
+
+Validate the integrated platform plan from the repo root:
+
+```bash
+python3 tools/helios_orchestrator.py --summary
+```
+
+Probe local Azure CLI readiness after installing `az`:
+
+```bash
+python3 tools/helios_orchestrator.py --check-azure-cli
+```
+
+Bootstrap Azure CLI extensions for HERMES fleet production:
+
+```bash
+bash scripts/setup_azure_cli.sh
+# or on Windows PowerShell
+pwsh -File scripts/setup_azure_cli.ps1
+```
