@@ -1,326 +1,458 @@
 * `Heli0s-dynamics` = enterprise umbrella
-* `M0nado` = business/product owner
+* `M0nado` = GitHub organization / business-product owner
 * `helios-platform` = official source-of-truth repo
 * `helios-control` = C# / WinUI / WPF control center
 * `hermes-fleet-production` = Hermes fleet production automation
 
 # Owner Start Here
 
-This is the owner-friendly, click-by-click setup guide for making `helios-platform` the official source of truth and then safely connecting the related `helios-control` and `hermes-fleet-production` repositories.
+This guide is written for the owner who needs to click through GitHub and Azure settings without relying on GitHub Copilot. It assumes `Heli0s-dynamics` is the enterprise umbrella, `M0nado` is the GitHub organization and business/product owner, `helios-platform` is the official source-of-truth repository, `helios-control` is the C# / WinUI / WPF control center, and `hermes-fleet-production` is the production automation repository for the Hermes fleet.
 
-Use it when the repositories are under a personal GitHub user, a business organization, or an enterprise account. If a button or tab is missing, it usually means you are not signed in as an owner, the repository is under a different account, or the feature is controlled by an enterprise policy.
+Follow the sections in order. Do not connect production Azure credentials, deployment environments, fleet automation, or release workflows until repository ownership, branch protection, Actions permissions, and environments are locked down.
 
-## Quick map: where am I supposed to click?
+## Read this first: where everything belongs
 
-| If the repo is under... | Example URL | Start here | What it means |
+| Item | Intended owner | What it is for | First place to click |
 | --- | --- | --- | --- |
-| Personal user | `github.com/M0nado/helios-platform` | Click your avatar → **Your repositories** → `helios-platform` → **Settings** | The user account owns settings directly. Use collaborators carefully because there are no organization teams. |
-| Business / organization | `github.com/Heli0s-dynamics/helios-platform` | Click your avatar → **Your organizations** → `Heli0s-dynamics` → repository → **Settings** | The organization owns access, teams, billing, security defaults, and many policies. This is the preferred long-term home. |
-| Enterprise | `github.com/enterprises/<enterprise-name>` plus an org/repo | Click your avatar → **Your enterprises** → enterprise → **Policies**, then go to the organization and repo settings | Enterprise policies can override organization and repository settings. Check enterprise policy first if a setting is locked. |
-| Different owner / vendor repo | Any URL that is not controlled by `M0nado` or `Heli0s-dynamics` | Open the repo → check whether **Settings** is visible → ask the listed owner for transfer/admin access | Do not merge production automation until ownership, visibility, and branch rules are documented. |
+| `Heli0s-dynamics` | Enterprise umbrella | Enterprise policy, billing, SSO/SAML, audit, global security posture | GitHub avatar → **Your enterprises** → `Heli0s-dynamics` |
+| `M0nado` | GitHub organization / business-product owner | Organization teams, repositories, Projects, org secrets, repo transfer destination | GitHub avatar → **Your organizations** → `M0nado` |
+| `helios-platform` | `M0nado` organization, under the `Heli0s-dynamics` enterprise when enterprise features are available | Source of truth for shared platform governance, AIHub, setup docs, release rules | `https://github.com/M0nado/helios-platform` → **Settings** |
+| `helios-control` | `M0nado` organization unless there is a documented exception | Control center UI repo for C# / WinUI 3 / WPF work | `https://github.com/M0nado/helios-control` → **Settings** |
+| `hermes-fleet-production` | `M0nado` organization unless there is a documented exception | Production automation, deployment, fleet operations, secrets, runbooks | `https://github.com/M0nado/hermes-fleet-production` → **Settings** |
 
-## Owner fast path
+If a repository is still under a personal user or a different organization, treat that as temporary. Document the current owner, who has `Admin`, and the plan to transfer it into `M0nado` before you attach production secrets or production Azure resources.
 
-1. Open `https://github.com/M0nado/helios-platform` or the current canonical repository URL.
-2. Confirm the repository owner shown before the slash: `M0nado`, `Heli0s-dynamics`, or another organization.
-3. Click **Settings**. If **Settings** is missing, stop and ask the current owner for `Admin` access or a repository transfer.
-4. Complete sections 1 through 10 below in order.
-5. Open or create matching records for `helios-control` and `hermes-fleet-production` only after `helios-platform` is protected.
-6. Put every decision into an issue, milestone, or project item so the setup is auditable.
+## Zero-Copilot setup path
 
-## Owner workstation preflight
+You can complete this guide without GitHub Copilot. Use:
 
-Run these commands only after installing GitHub CLI and Azure CLI. They do not change the repository by themselves; they confirm which account and subscription you are using.
+1. **GitHub web settings** for ownership, visibility, branch rules, Actions permissions, environments, Pages, Wiki, Projects, labels, and milestones.
+2. **Azure Portal** for tenant, subscription, resource groups, app registrations, managed identities, Key Vault, budgets, and role assignments.
+3. **Azure CLI** for repeatable setup commands from your own terminal.
+4. **GitHub CLI** only if you want a command-line audit. The web clicks are still the source of truth in this guide.
+
+## Owner fast path: do these in order
+
+1. Open the source-of-truth repository: `https://github.com/M0nado/helios-platform`.
+2. Confirm the owner before the slash is `M0nado`. If it is not, write down the actual owner before changing anything.
+3. Click **Settings**. If **Settings** is missing, you do not have admin access. Ask an owner for `Admin` or request a repository transfer.
+4. Complete **1. Repository access**.
+5. Complete **2. Organization ownership**.
+6. Complete **3. Repository visibility**.
+7. Complete **4. Branch protection**.
+8. Complete **5. GitHub Actions permissions**.
+9. Complete **6. Environments**.
+10. Complete **Azure direct setup** before adding deployment workflows.
+11. Complete **7. Pages**, **8. Wiki**, **9. Projects**, and **10. Labels and milestones**.
+12. Repeat the same baseline for `helios-control` and `hermes-fleet-production`.
+13. Only after the baseline is done, merge long-running branches and connect production automation.
+
+## If repositories are under different places
+
+| Situation | What to click | What to do |
+| --- | --- | --- |
+| Repo is under `M0nado` | GitHub avatar → **Your organizations** → `M0nado` → **Repositories** → repo → **Settings** | Continue with this guide. Use organization teams, org Projects, and org-level security defaults. |
+| Repo is under a personal account | Repo → **Settings** → **General** → **Danger Zone** → **Transfer ownership** | Transfer to `M0nado` before adding production secrets. If transfer is not possible today, document the personal owner and add branch protection now. |
+| Repo is under another organization | Repo → **Settings** → **Collaborators and teams**; then organization owner settings | Ask that organization owner for `Admin` access or transfer to `M0nado`. Do not assume you can enforce enterprise policy there. |
+| Repo is under `M0nado` but enterprise settings are locked | Avatar → **Your enterprises** → `Heli0s-dynamics` → **Policies** | Enterprise policy is overriding organization/repo settings. Change policy at the enterprise level first. |
+| You can see code but not Settings | Repo page only | You have read/write but not admin. Stop owner setup and request admin/maintain access. |
+| You cannot access a related repo | Browser returns 404 or access denied | Ask the current owner to invite you or transfer the repo. Do not create a duplicate production repo unless the owner approves. |
+
+## Repository roles to create first
+
+Create teams in `M0nado` before adding individual collaborators everywhere.
+
+| Team | Suggested permission | Repos | Purpose |
+| --- | --- | --- | --- |
+| `owners` | Admin | All three repos | Final ownership, emergency recovery, policy changes |
+| `platform-engineering` | Maintain or Write | `helios-platform` | Shared C#/.NET, AIHub, core services, CI |
+| `control-center-ui` | Write | `helios-control` | C# front end, WinUI 3, WPF, installer UI |
+| `cpp-performance` | Write | `helios-platform`, performance repos if split | C++ performance backend and native integration work |
+| `fsharp-analytics` | Write | Analytics/prediction code paths | F# math, predictions, analytics, parallel computation |
+| `python-aihub` | Write | AIHub and integration repos | Python AIHub integrations, model tooling, automation scripts |
+| `security-ops` | Maintain | All three repos | Code scanning, Dependabot, secret scanning, release gates |
+| `hermes-xcore` | Write or Maintain | `hermes-fleet-production` | Hermes XCore specialist setup and fleet production automation |
+| `release-managers` | Maintain | All three repos | Versioning, releases, deployments, rollback coordination |
+
+## Azure direct setup: owner workstation
+
+Use this when you cannot access GitHub Copilot but can set up Azure directly.
+
+### Install or update tools
+
+#### Windows PowerShell
 
 ```powershell
-# GitHub: confirms the signed-in GitHub account and token scopes
-gh auth status
-
-# Azure: confirms the signed-in tenant and subscription
-az account show
-
-# Azure: select the intended subscription before any deployment setup
-az account set --subscription "<subscription-id-or-name>"
+winget install --id Microsoft.AzureCLI -e
+winget install --id GitHub.cli -e
+winget install --id Microsoft.PowerShell -e
+az version
+gh --version
 ```
 
-If `az account show` fails, open a terminal and run:
+#### macOS
+
+```bash
+brew update
+brew install azure-cli gh
+az version
+gh --version
+```
+
+#### Linux
+
+```bash
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+sudo apt-get update && sudo apt-get install -y gh
+az version
+gh --version
+```
+
+### Sign in and select the correct Azure tenant/subscription
 
 ```powershell
 az login
+az account tenant list --output table
 az account list --output table
 az account set --subscription "<subscription-id-or-name>"
+az account show --output table
 ```
 
-## If repositories are split across user, business, and enterprise accounts
+Write down:
 
-Use this decision tree before changing settings:
+- Tenant ID
+- Subscription ID
+- Subscription name
+- Billing owner
+- Production resource group naming pattern
+- Whether this is commercial Azure, Azure Government, or another cloud
 
-1. **Find the source-of-truth owner.** The intended owner is the account that should own production history, branch protection, Actions permissions, releases, and environment secrets.
-2. **Prefer organization ownership for production.** If `helios-platform` is under a personal user but production work belongs to `Heli0s-dynamics`, plan a transfer to the organization before connecting production secrets.
-3. **Do not copy secrets between accounts.** Re-create secrets in the destination repository or environment after transfer.
-4. **If `helios-control` is elsewhere**, document whether it is a downstream UI/control-center repo, a fork, or a separate product repo. It should not override `helios-platform` governance.
-5. **If `hermes-fleet-production` is elsewhere**, treat it as production automation. Require private/internal visibility, branch protection, reviewed deployments, and restricted environments before connecting it.
-6. **If an enterprise policy blocks a setting**, go to enterprise settings first, then organization settings, then repository settings.
+### Create baseline resource groups
+
+Use names that clearly separate owner setup, non-production, and production.
+
+```powershell
+$location = "eastus"
+az group create --name "rg-helios-platform-dev" --location $location
+az group create --name "rg-helios-platform-staging" --location $location
+az group create --name "rg-helios-platform-prod" --location $location
+az group create --name "rg-hermes-fleet-prod" --location $location
+```
+
+### Create a deployment identity for GitHub Actions OIDC
+
+Prefer OpenID Connect over long-lived client secrets.
+
+```powershell
+$subscriptionId = az account show --query id -o tsv
+$tenantId = az account show --query tenantId -o tsv
+$appName = "app-github-m0nado-helios-platform"
+$appId = az ad app create --display-name $appName --query appId -o tsv
+az ad sp create --id $appId
+az role assignment create --assignee $appId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-dev"
+az role assignment create --assignee $appId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-staging"
+az role assignment create --assignee $appId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-prod"
+```
+
+Create one federated credential per GitHub environment or branch pattern. The `subject` value must match the repository and environment/branch that will request the token.
+
+```powershell
+$parameters = @{
+  name = "github-helios-platform-production"
+  issuer = "https://token.actions.githubusercontent.com"
+  subject = "repo:M0nado/helios-platform:environment:production"
+  audiences = @("api://AzureADTokenExchange")
+} | ConvertTo-Json
+
+$parameters | Out-File -FilePath federated-credential.json -Encoding utf8
+az ad app federated-credential create --id $appId --parameters federated-credential.json
+Remove-Item federated-credential.json
+```
+
+Store these as GitHub environment variables or secrets in `helios-platform` → **Settings** → **Environments** → target environment:
+
+| Name | Store as | Value |
+| --- | --- | --- |
+| `AZURE_CLIENT_ID` | Environment variable or secret | App/client ID from `$appId` |
+| `AZURE_TENANT_ID` | Environment variable or secret | Tenant ID from `$tenantId` |
+| `AZURE_SUBSCRIPTION_ID` | Environment variable or secret | Subscription ID from `$subscriptionId` |
+| `AZURE_RESOURCE_GROUP` | Environment variable | Environment-specific resource group |
+
+For `hermes-fleet-production`, create a separate app registration or managed identity with the narrowest roles possible. Do not reuse broad platform credentials for fleet production unless the owner explicitly approves it.
+
+### Add Key Vault for secrets that should not live in GitHub
+
+```powershell
+az keyvault create --name "kv-helios-platform-prod" --resource-group "rg-helios-platform-prod" --location $location --enable-rbac-authorization true
+az role assignment create --assignee $appId --role "Key Vault Secrets User" --scope "$(az keyvault show --name kv-helios-platform-prod --query id -o tsv)"
+```
+
+Put only non-sensitive IDs in GitHub variables. Put production credentials, connection strings, certificates, and fleet secrets in Key Vault.
+
+### Add budgets and basic monitoring
+
+```powershell
+az consumption budget create \
+  --budget-name "helios-platform-monthly" \
+  --amount 100 \
+  --time-grain Monthly \
+  --start-date "2026-06-01" \
+  --end-date "2036-06-01" \
+  --category Cost \
+  --resource-group "rg-helios-platform-prod"
+```
+
+If the budget command is not available in your tenant, create the budget in Azure Portal: **Cost Management + Billing** → **Cost Management** → **Budgets** → **Add**.
 
 ## 1. Repository access
 
-Goal: confirm who can read, triage, write, maintain, administer, and deploy from the source-of-truth repository.
+Goal: confirm who can read, triage, write, maintain, administer, and deploy from each repository.
 
-### Click-by-click
+### Click-by-click for `M0nado` organization repos
 
-1. Open the repository.
-2. Click **Settings** in the repository navigation bar.
-3. In the left sidebar, click **Collaborators and teams** or **Manage access**.
-4. Review every person, team, bot, app, and deploy key.
-5. Remove unknown users and stale service accounts.
-6. Add access using least privilege:
-   - **Read** for observers and auditors.
-   - **Triage** for issue/project managers.
-   - **Write** for normal contributors.
-   - **Maintain** for release operators who manage settings but should not own everything.
-   - **Admin** only for trusted owners who can change security, delete the repo, or transfer ownership.
-7. For organizations, prefer adding teams instead of individual users.
-8. Save or confirm changes.
-
-### If the repo is under a personal user
-
-1. Click **Settings** → **Collaborators**.
-2. Invite individual users only when necessary.
-3. If several people need access, move the repo to an organization so teams can be used.
-
-### If the repo is under an organization
-
-1. Click **Settings** → **Collaborators and teams**.
-2. Add teams such as:
-   - `platform-engineering`
-   - `control-center-ui`
-   - `hermes-fleet-ops`
-   - `security-reviewers`
-   - `release-managers`
-3. Confirm each team has the minimum role needed.
+1. Open `https://github.com/M0nado/helios-platform`.
+2. Click **Settings**.
+3. Click **Collaborators and teams**.
+4. Review every user, team, GitHub App, deploy key, and pending invitation.
+5. Remove unknown users and stale automation accounts.
+6. Add teams instead of individual users whenever possible.
+7. Set permissions using least privilege:
+   1. **Read** for auditors and observers.
+   2. **Triage** for issue/project managers.
+   3. **Write** for regular contributors.
+   4. **Maintain** for release operators and repo managers.
+   5. **Admin** only for owners who can change security, transfer, archive, or delete the repo.
+8. Repeat for `helios-control`.
+9. Repeat for `hermes-fleet-production` with stricter access because it controls production automation.
 
 ### Done when
 
-- Unknown users are removed.
-- Admin access is limited.
-- Teams or collaborators are documented.
-- Service accounts have an owner, purpose, expiry, and rotation plan.
+- Only expected owners, teams, apps, and deploy keys have access.
+- `hermes-fleet-production` has the smallest access list.
+- Every individual admin has a documented reason.
 
 ## 2. Organization ownership
 
-Goal: make sure `Heli0s-dynamics` and `M0nado` have clear owner responsibility and recovery paths.
+Goal: make `M0nado` the operational GitHub organization and connect it to the `Heli0s-dynamics` enterprise umbrella when enterprise features are available.
 
-### Click-by-click for an organization
+### Click-by-click for `M0nado`
 
-1. Click your avatar in the top-right corner.
+1. Click your GitHub avatar.
 2. Click **Your organizations**.
-3. Click **Settings** next to `Heli0s-dynamics`.
-4. In the left sidebar, review:
-   - **People** for members and owners.
-   - **Teams** for team structure.
-   - **Member privileges** for base permissions.
-   - **Authentication security** for MFA/security requirements.
-   - **Billing and plans** for ownership and payment.
-   - **Third-party access** / **GitHub Apps** for integrations.
-5. Make sure at least two trusted human owners exist.
-6. Set organization base permissions to the lowest practical level, commonly **No permission** or **Read**.
-7. Document emergency contacts and recovery steps outside the repo.
+3. Click `M0nado`.
+4. Click **Settings**.
+5. Click **People**.
+6. Confirm at least two trusted people are organization owners for recovery.
+7. Click **Teams** and create the baseline teams from this guide.
+8. Click **Member privileges**.
+9. Set repository creation, forking, Pages, Actions, and outside-collaborator policies intentionally.
+10. Click **Security** and enable available security defaults.
 
-### Click-by-click for enterprise-controlled orgs
+### Click-by-click for `Heli0s-dynamics` enterprise
 
-1. Click your avatar.
+1. Click your GitHub avatar.
 2. Click **Your enterprises**.
-3. Select the enterprise.
-4. Review **Policies** and **Organizations**.
-5. If repository settings are locked, check the enterprise policy before changing the organization or repository.
+3. Click `Heli0s-dynamics`.
+4. Click **Policies**.
+5. Review repository visibility, Actions, Codespaces, SSO/SAML, IP allow list, and security policies.
+6. If a repo setting is locked inside `M0nado`, come back here and change the enterprise policy first.
+7. Click **Organizations** and confirm `M0nado` is listed if enterprise membership is already configured.
 
 ### Done when
 
-- At least two human owners are assigned.
-- Billing, security, app management, and recovery responsibilities are known.
-- Enterprise policy ownership is known if applicable.
+- `M0nado` is documented as the GitHub organization / business-product owner.
+- `Heli0s-dynamics` is documented as the enterprise umbrella.
+- At least two trusted owners can recover access.
 
 ## 3. Repository visibility
 
-Goal: decide whether each repository should be public, private, or internal.
+Goal: decide whether each repository is public, private, or internal before secrets or production workflows are connected.
+
+### Recommended visibility
+
+| Repository | Recommended visibility | Reason |
+| --- | --- | --- |
+| `helios-platform` | Private or internal until owner baseline is complete | It is the source of truth and may reference architecture/security setup. |
+| `helios-control` | Private or internal | Control center UI can expose internal workflows, endpoints, and deployment assumptions. |
+| `hermes-fleet-production` | Private | Production automation should not expose fleet operations, secrets, schedules, or infrastructure names. |
 
 ### Click-by-click
 
 1. Open the repository.
 2. Click **Settings**.
-3. Click **General** in the left sidebar.
+3. Click **General**.
 4. Scroll to **Danger Zone**.
-5. Find **Change repository visibility**.
-6. Do not click it until the owner decision is documented.
-
-### Recommended visibility
-
-| Repository | Recommended starting visibility | Why |
-| --- | --- | --- |
-| `helios-platform` | Private or internal until scrubbed | It is the official source of truth and may contain deployment, Azure, or automation assumptions. |
-| `helios-control` | Private or internal | C# / WinUI / WPF control-center UI may expose operational workflows. |
-| `hermes-fleet-production` | Private or internal | Fleet production automation should be protected by default. |
-
-### If changing visibility
-
-1. Create an issue titled `Owner decision: repository visibility`.
-2. Record current visibility, requested visibility, reason, owner approval, risk, and rollback plan.
-3. Run secret scanning and remove sensitive data before making anything public.
-4. Confirm Pages, packages, forks, Actions, and environments still behave as expected after the change.
+5. Click **Change visibility** only if the owner intentionally approved the change.
+6. Pick **Private**, **Internal**, or **Public**.
+7. Type the required confirmation text.
+8. Save the decision in an issue or project item.
 
 ### Done when
 
-- Visibility is documented for every related repository.
-- Secret scanning and push protection are enabled where available.
-- Public exposure has a written approval and cleanup checklist.
+- Visibility is recorded for all three repos.
+- Public content has been checked for secrets, endpoints, customer data, and internal automation details.
 
 ## 4. Branch protection
 
-Goal: prevent accidental direct changes to the source-of-truth branch.
+Goal: protect source branches and stop accidental direct pushes, force pushes, deleted release branches, or unreviewed production automation changes.
 
-### Click-by-click using rulesets (preferred when available)
+### Preferred: repository rulesets
 
 1. Open the repository.
 2. Click **Settings**.
-3. In the left sidebar, click **Rules** → **Rulesets**.
-4. Click **New ruleset** → **New branch ruleset**.
-5. Name it `protect-main`.
-6. Set enforcement to **Active**.
-7. Add target branch pattern `main`.
-8. Enable rules:
-   - Require a pull request before merging.
-   - Require approvals.
-   - Require conversation resolution.
-   - Require status checks to pass.
-   - Block force pushes.
-   - Block deletions.
-   - Require linear history if the team uses squash/rebase merges.
-9. Add bypass only for emergency owners or release automation that has a documented reason.
-10. Click **Create** or **Save changes**.
+3. Click **Rules**.
+4. Click **Rulesets**.
+5. Click **New ruleset**.
+6. Choose **New branch ruleset**.
+7. Name it `protect-main-and-release`.
+8. Set **Enforcement status** to **Active** after testing.
+9. Under **Target branches**, add:
+   - `main`
+   - `release/*`
+   - `hotfix/*` if used
+10. Enable these rules:
+    - Restrict deletions.
+    - Require a pull request before merging.
+    - Require approvals.
+    - Dismiss stale pull request approvals when new commits are pushed.
+    - Require conversation resolution before merging.
+    - Require status checks to pass.
+    - Require branches to be up to date before merging when checks depend on current base.
+    - Block force pushes.
+11. Add bypass actors only for emergency owner accounts or release managers.
+12. Save the ruleset.
 
-### Click-by-click using classic branch protection
+### If rulesets are unavailable: classic branch protection
 
 1. Open the repository.
 2. Click **Settings**.
 3. Click **Branches**.
-4. Under **Branch protection rules**, click **Add rule**.
-5. Type `main` in **Branch name pattern**.
-6. Select the same protections listed above.
-7. Click **Create** or **Save changes**.
+4. Click **Add branch protection rule**.
+5. Branch name pattern: `main`.
+6. Enable pull request review, required checks, conversation resolution, signed commits if used, and force-push/deletion restrictions.
+7. Create another rule for `release/*`.
 
-### If merging many branches
+### Suggested required checks by repo
 
-1. Do not merge everything directly into `main`.
-2. Create an integration branch such as `integration/owner-baseline`.
-3. Merge one branch at a time.
-4. Run build, test, security, and documentation checks after each merge.
-5. Use the integration PR template and record rollback notes.
+| Repository | Required checks |
+| --- | --- |
+| `helios-platform` | .NET build/test, JavaScript tests if present, security scan, docs/link check when docs change |
+| `helios-control` | Windows build, C# compile, WinUI/WPF UI tests where available, installer/package validation |
+| `hermes-fleet-production` | Infrastructure validation, deployment dry run, secret scan, production approval gate |
 
 ### Done when
 
-- `main` cannot be pushed to directly by normal contributors.
-- Pull requests require review and passing checks.
-- Force pushes and deletions are blocked.
+- `main` and release branches cannot be pushed directly by normal contributors.
+- PR review is required before merge.
+- Force pushes and branch deletion are blocked.
 
 ## 5. GitHub Actions permissions
 
-Goal: make automation useful without giving every workflow broad write access.
+Goal: make workflow permissions safe by default and grant write/deploy access only where required.
 
-### Click-by-click for repository Actions settings
+### Organization-level settings
+
+1. Click your avatar.
+2. Click **Your organizations**.
+3. Click `M0nado`.
+4. Click **Settings**.
+5. Click **Actions** → **General**.
+6. Under **Actions permissions**, choose the allowed policy for the organization.
+7. Under **Workflow permissions**, choose **Read repository contents and packages permissions** by default.
+8. Leave **Allow GitHub Actions to create and approve pull requests** unchecked unless a specific automation is approved.
+9. Save.
+
+### Repository-level settings
 
 1. Open the repository.
 2. Click **Settings**.
-3. In the left sidebar, click **Actions** → **General**.
-4. Under **Actions permissions**, choose the most restrictive option that still allows approved workflows.
-5. If third-party actions are allowed, prefer pinned versions or pinned SHAs for security-sensitive workflows.
-6. Scroll to **Workflow permissions**.
-7. Select **Read repository contents and packages permissions** as the default.
-8. Turn off **Allow GitHub Actions to create and approve pull requests** unless a reviewed automation workflow requires it.
-9. Click **Save**.
-
-### Click-by-click for organization defaults
-
-1. Click your avatar → **Your organizations**.
-2. Click **Settings** next to `Heli0s-dynamics`.
 3. Click **Actions** → **General**.
-4. Set organization defaults first, then revisit repository settings.
-5. If a repository option is disabled, the organization or enterprise probably controls it.
+4. Confirm the repository does not override organization policy in an unsafe way.
+5. Set default workflow token permissions to read-only.
+6. Require approval for outside collaborators when available.
+7. Disable or restrict self-hosted runners unless you manage them.
+
+### Workflow file rule
+
+Any workflow that needs Azure OIDC must include explicit permissions:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+```
+
+Do not give every workflow broad write access. Put deploy workflows behind environments with reviewers.
 
 ### Done when
 
 - Default `GITHUB_TOKEN` permissions are read-only.
-- Write permissions are declared inside individual workflow files only when needed.
-- Fork PR workflow approval behavior is understood.
-- Azure deployments use environments and preferably OIDC instead of long-lived secrets.
+- Azure deployment workflows use OIDC, not long-lived secrets, unless an owner documents an exception.
+- Production workflows require environment approval.
 
 ## 6. Environments
 
-Goal: create safe gates for deployments, Azure resources, control-center releases, and Hermes fleet automation.
-
-### Recommended baseline
-
-| Environment | Purpose | Required protection |
-| --- | --- | --- |
-| `development` | Safe integration and preview deployments | Optional reviewer, short-lived secrets |
-| `staging` | Release-candidate validation | Required reviewers and branch restrictions |
-| `production` | Customer, fleet, or enterprise automation | Required reviewers, restricted branches, secret rotation plan |
+Goal: separate development, staging, and production secrets, variables, reviewers, and deployment branches.
 
 ### Click-by-click
 
 1. Open the repository.
 2. Click **Settings**.
-3. In the left sidebar, click **Environments**.
+3. Click **Environments**.
 4. Click **New environment**.
-5. Enter `development`, then click **Configure environment**.
-6. Add environment variables and secrets only for development.
-7. Repeat for `staging` and `production`.
-8. For `staging` and `production`, add **Required reviewers**.
-9. Add deployment branch restrictions so only `main`, `release/*`, or approved deployment branches can deploy.
-10. Save each environment.
+5. Create `development`.
+6. Add development-only variables and secrets.
+7. Create `staging`.
+8. Add required reviewers for `staging`.
+9. Add deployment branch restrictions for `staging`, such as `main` and `release/*`.
+10. Create `production`.
+11. Add required reviewers for `production`.
+12. Add deployment branch restrictions for `production`, such as `release/*` or protected `main` only.
+13. Add environment variables:
+    - `AZURE_CLIENT_ID`
+    - `AZURE_TENANT_ID`
+    - `AZURE_SUBSCRIPTION_ID`
+    - `AZURE_RESOURCE_GROUP`
+14. Add environment secrets only when there is no safer option.
 
-### Azure CLI and Azure setup notes
+### Environment recommendation
 
-1. Use local Azure CLI to confirm tenant/subscription only.
-2. For repeatable CI/CD, prefer GitHub Actions OpenID Connect federation.
-3. Create separate Azure resource groups for development, staging, and production.
-4. Store Azure IDs as GitHub environment variables:
-   - `AZURE_TENANT_ID`
-   - `AZURE_SUBSCRIPTION_ID`
-   - `AZURE_CLIENT_ID`
-   - `AZURE_RESOURCE_GROUP`
-5. Store secrets only when OIDC is not available, and rotate them.
+| Environment | Reviewers | Branches | Secrets |
+| --- | --- | --- | --- |
+| `development` | Optional | feature branches or `main` | Non-production only |
+| `staging` | Required | `main`, `release/*` | Staging only |
+| `production` | Required, owner/release manager | protected `main` or `release/*` | Production only, prefer Key Vault |
 
 ### Done when
 
 - `development`, `staging`, and `production` exist.
 - Production requires human approval.
-- Secrets are scoped to environments, not shared globally by default.
+- Production Azure details are not stored as broad repository-wide secrets.
 
 ## 7. Pages
 
-Goal: decide whether GitHub Pages publishes owner-facing setup notes, dashboards, or generated docs.
+Goal: make the owner guide visible without publishing sensitive information.
 
 ### Click-by-click
 
-1. Open the repository.
+1. Open `helios-platform`.
 2. Click **Settings**.
-3. In the left sidebar, click **Pages**.
-4. Under **Build and deployment**, choose the publishing source:
-   - **GitHub Actions** for generated docs and dashboards.
-   - A branch/folder only if the team intentionally maintains static files that way.
-5. Confirm the published URL.
-6. Open the URL in a private/incognito window and verify no secrets, internal endpoints, customer identifiers, or tokens are visible.
-7. Add a link back to `docs/setup/OWNER_START_HERE.md` or publish an owner checklist summary.
+3. Click **Pages**.
+4. Under **Build and deployment**, choose **GitHub Actions** if generated docs or dashboards will publish.
+5. Use branch/folder publishing only if the team intentionally maintains static files that way.
+6. Open the published URL in a private/incognito window.
+7. Confirm the page does not show secrets, private endpoints, customer identifiers, internal tokens, or production URLs.
+8. Keep the visible page limited to owner steps, links, dashboards, and safe status summaries.
 
 ### Done when
 
 - Pages is enabled or intentionally disabled.
-- Published content is safe for the selected repository visibility.
-- The owner setup guide is discoverable from the Pages dashboard.
+- The dashboard links to this guide.
+- Published content is safe for the repository visibility.
 
 ## 8. Wiki
 
-Goal: decide whether the GitHub Wiki is official documentation or just a scratch/reference area.
+Goal: decide whether the GitHub Wiki is official documentation or temporary notes.
 
 ### Click-by-click
 
@@ -329,32 +461,34 @@ Goal: decide whether the GitHub Wiki is official documentation or just a scratch
 3. Click **General**.
 4. Scroll to **Features**.
 5. Check or uncheck **Wikis**.
-6. If enabled, click the repository **Wiki** tab and create a landing page pointing back to versioned docs.
+6. If Wiki is enabled, click the repository **Wiki** tab.
+7. Create a landing page that says official procedures live in `docs/` and links back to this guide.
 
 ### Recommendation
 
-- Use `docs/` as the source of truth for architecture, setup, release, security, and owner procedures.
-- Use Wiki only for non-release notes, meeting summaries, or temporary references.
+- Use `docs/` as the source of truth for setup, architecture, release, security, and owner decisions.
+- Use Wiki only for meeting notes, scratch references, and temporary notes.
 - Move anything official from Wiki into `docs/` through a pull request.
 
 ### Done when
 
-- Wiki is enabled or disabled intentionally.
+- Wiki is intentionally enabled or disabled.
 - Contributors know whether Wiki content is official.
 
 ## 9. Projects
 
-Goal: make the owner setup and cross-repo work visible.
+Goal: track owner setup, Azure setup, branch merges, UI readiness, AIHub integration, and Hermes fleet production work across repositories.
 
-### Click-by-click for an organization project
+### Click-by-click for `M0nado` organization project
 
-1. Click your avatar → **Your organizations**.
-2. Open `Heli0s-dynamics`.
-3. Click **Projects**.
-4. Click **New project**.
-5. Choose a table or board layout.
-6. Name it `Helios Owner Readiness`.
-7. Add fields:
+1. Click your avatar.
+2. Click **Your organizations**.
+3. Click `M0nado`.
+4. Click **Projects**.
+5. Click **New project**.
+6. Choose table or board layout.
+7. Name it `Helios Owner Readiness`.
+8. Add fields:
    - `Priority`
    - `Phase`
    - `Repository`
@@ -363,29 +497,38 @@ Goal: make the owner setup and cross-repo work visible.
    - `Owner`
    - `Target milestone`
    - `Environment`
-8. Add views:
+   - `Azure subscription/resource group`
+9. Add views:
    - Owner baseline
    - GitHub security
    - Azure foundation
+   - Branch merge readiness
    - Control center readiness
    - Hermes fleet readiness
+   - AIHub integration
    - Release readiness
 
-### Click-by-click for a repository project
+### Suggested first project items
 
-1. Open the repository.
-2. Click **Projects**.
-3. Click **New project** or **Link a project**.
-4. Link issues and pull requests to the project before merging.
+1. `helios-platform`: owner baseline and branch protection.
+2. `helios-platform`: Azure OIDC setup.
+3. `helios-control`: C# / WinUI 3 / WPF build validation.
+4. `helios-platform`: C++ performance backend integration plan.
+5. `helios-platform`: F# analytics/predictions plan.
+6. `helios-platform`: Python AIHub integration plan.
+7. `hermes-fleet-production`: Hermes XCore production automation baseline.
+8. `hermes-fleet-production`: production secret and Key Vault review.
+9. All repos: combine/merge branch inventory and conflict plan.
 
 ### Done when
 
-- The owner baseline is tracked in a project.
-- `helios-platform`, `helios-control`, and `hermes-fleet-production` work can be filtered separately.
+- Owner work is tracked in a project.
+- Each repository can be filtered separately.
+- Branch merge work is visible before code is merged.
 
 ## 10. Labels and milestones
 
-Goal: make triage consistent across source-of-truth, control-center, and fleet-production work.
+Goal: make triage consistent across the source-of-truth, control center, and fleet production repos.
 
 ### Click-by-click for labels
 
@@ -393,16 +536,18 @@ Goal: make triage consistent across source-of-truth, control-center, and fleet-p
 2. Click **Issues**.
 3. Click **Labels**.
 4. Click **New label**.
-5. Add the label name, description, and color.
-6. Repeat for the baseline labels below.
+5. Enter the label name, description, and color.
+6. Repeat for the baseline labels.
 
-Suggested label groups:
+### Baseline labels
 
-- Areas: `area:github`, `area:azure`, `area:security`, `area:docs`, `area:control-center`, `area:hermes-fleet`, `area:aihub`
-- Stacks: `stack:csharp`, `stack:winui`, `stack:wpf`, `stack:cpp`, `stack:fsharp`, `stack:python`
-- Types: `type:bug`, `type:feature`, `type:task`, `type:release`, `type:owner-decision`
-- Priorities: `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3`
-- Status: `status:blocked`, `status:needs-owner`, `status:ready`, `status:in-review`
+| Group | Labels |
+| --- | --- |
+| Areas | `area:github`, `area:azure`, `area:security`, `area:docs`, `area:control-center`, `area:hermes-fleet`, `area:aihub`, `area:xcore` |
+| Stacks | `stack:csharp`, `stack:winui`, `stack:wpf`, `stack:cpp`, `stack:fsharp`, `stack:python`, `stack:powershell` |
+| Types | `type:bug`, `type:feature`, `type:task`, `type:release`, `type:owner-decision`, `type:branch-merge` |
+| Priorities | `priority:p0`, `priority:p1`, `priority:p2`, `priority:p3` |
+| Status | `status:blocked`, `status:needs-owner`, `status:ready`, `status:in-review`, `status:approved` |
 
 ### Click-by-click for milestones
 
@@ -410,30 +555,94 @@ Suggested label groups:
 2. Click **Issues**.
 3. Click **Milestones**.
 4. Click **New milestone**.
-5. Add a title, due date if known, and description.
+5. Add title, description, and due date if known.
 6. Create these first milestones:
    - `owner-baseline`
    - `azure-foundation`
+   - `branch-merge-readiness`
    - `control-center-readiness`
+   - `aihub-integration`
    - `hermes-fleet-readiness`
+   - `production-release-readiness`
 
 ### Done when
 
 - Issues and PRs can be filtered by area, stack, type, priority, and status.
-- Owner decisions are tracked in milestones.
+- Owner decisions and branch merge work are tracked in milestones.
+
+## Branch merge and optimization readiness
+
+Use this before combining branches. This repository currently has only the checked-out `work` branch locally, so fetch remote branches before planning a full merge.
+
+### Click-by-click
+
+1. Open the repository.
+2. Click **Branches**.
+3. Review active branches, stale branches, protected branches, and recently updated branches.
+4. Open each branch and read its latest commits.
+5. Create a project item for each branch that might be merged.
+6. Require a PR for each branch into `main`.
+7. Use the integration merge PR template.
+8. Merge smallest/safest branches first.
+9. Merge security and build fixes before feature branches.
+10. Do not merge production automation until `hermes-fleet-production` environments and Azure credentials are locked down.
+
+### Local command checklist
+
+```bash
+git fetch --all --prune
+git branch --all --verbose --no-abbrev
+git status --short
+git log --oneline --decorate --graph --all --max-count=50
+```
+
+For each branch:
+
+```bash
+git switch <branch-name>
+dotnet build HELIOS.Platform.slnx
+# Add repo-specific JavaScript, Python, C++, F#, or UI checks before merging.
+```
+
+### Optimization ownership by stack
+
+| Stack | Primary repo | Owner team | Gate before merge |
+| --- | --- | --- | --- |
+| C# platform services | `helios-platform` | `platform-engineering` | `dotnet build`, unit tests, security review |
+| C# / WinUI 3 / WPF front end | `helios-control` | `control-center-ui` | Windows UI build, packaging validation, accessibility review |
+| C++ performance backend | `helios-platform` or dedicated native repo | `cpp-performance` | Native build, benchmarks, memory/thread safety review |
+| F# analytics/predictions | `helios-platform` or analytics repo | `fsharp-analytics` | Math validation, deterministic test data, performance checks |
+| Python AIHub integration | `helios-platform` or AIHub repo | `python-aihub` | lint/test, model/provider safety, secret handling review |
+| Hermes XCore production automation | `hermes-fleet-production` | `hermes-xcore` and `security-ops` | staging dry run, owner approval, rollback plan |
 
 ## Final completion checklist
 
-- [ ] Repository account location identified: personal, organization, or enterprise.
+- [ ] `Heli0s-dynamics` is documented as the enterprise umbrella.
+- [ ] `M0nado` is documented as the GitHub organization / business-product owner.
+- [ ] Repository account location is identified for `helios-platform`, `helios-control`, and `hermes-fleet-production`.
 - [ ] Repository access reviewed and least privilege applied.
-- [ ] Organization or enterprise owner and recovery model documented.
-- [ ] Repository visibility confirmed for `helios-platform`, `helios-control`, and `hermes-fleet-production`.
+- [ ] Organization owners and recovery model documented.
+- [ ] Enterprise policy blockers reviewed.
+- [ ] Repository visibility confirmed.
 - [ ] Branch protection or rulesets enabled for source-of-truth branches.
 - [ ] GitHub Actions permissions reduced to least privilege.
-- [ ] Environments created with required reviewers and scoped secrets.
-- [ ] Azure CLI account and subscription verified.
+- [ ] `development`, `staging`, and `production` environments created with required reviewers and scoped secrets.
+- [ ] Azure CLI account, tenant, and subscription verified.
+- [ ] Azure resource groups created or intentionally deferred.
+- [ ] Azure OIDC identity created or intentionally deferred.
+- [ ] Key Vault and budget plan documented.
 - [ ] Pages setting documented and owner guide made discoverable.
 - [ ] Wiki setting documented.
 - [ ] Project board created or linked.
 - [ ] Labels and milestones standardized.
-- [ ] Integration merge process documented before combining branches.
+- [ ] Branch merge inventory created before combining branches.
+- [ ] Integration merge process documented before production-impacting merges.
+
+## Official references
+
+- GitHub rulesets: <https://docs.github.com/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets>
+- GitHub repository rulesets creation: <https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository>
+- Azure Login for GitHub Actions: <https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure>
+- Azure Bicep deployment with GitHub Actions and OIDC: <https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-github-actions>
+- Azure CLI federated credential commands: <https://learn.microsoft.com/en-us/cli/azure/identity/federated-credential?view=azure-cli-latest>
+- Azure Key Vault with GitHub Actions: <https://learn.microsoft.com/en-us/azure/developer/github/github-actions-key-vault>

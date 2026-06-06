@@ -30,16 +30,16 @@
 
     <section class="owner-panel" aria-labelledby="owner-start-title">
         <h2 id="owner-start-title">Owner Start Here</h2>
-        <p><a href="../../docs/setup/OWNER_START_HERE.md">Open the full Owner Start Here guide</a> for the detailed click-by-click setup. Use these numbered steps first when repositories are split across a personal user, business organization, or enterprise account.</p>
+        <p><a href="../../docs/setup/OWNER_START_HERE.md">Open the full Owner Start Here guide</a> for the detailed click-by-click setup. <strong>Heli0s-dynamics</strong> is the enterprise umbrella, <strong>M0nado</strong> is the GitHub organization / business-product owner, and these steps work even when GitHub Copilot is unavailable.</p>
         <ol class="owner-steps">
-            <li><strong>Find the repo owner.</strong><span class="owner-path">Open the repo URL and read the owner before the slash: personal user, organization, or enterprise-controlled org.</span></li>
-            <li><strong>Open repository settings.</strong><span class="owner-path">Repository → Settings. If Settings is missing, request Admin access or a transfer before changing production automation.</span></li>
-            <li><strong>Lock down access.</strong><span class="owner-path">Settings → Collaborators and teams / Manage access. Use least privilege and organization teams where possible.</span></li>
-            <li><strong>Protect the source branch.</strong><span class="owner-path">Settings → Rules → Rulesets or Settings → Branches. Require PRs, reviews, checks, and block force pushes.</span></li>
-            <li><strong>Reduce Actions permissions.</strong><span class="owner-path">Settings → Actions → General. Set default workflow token permissions to read-only and approve write access per workflow.</span></li>
-            <li><strong>Create environments.</strong><span class="owner-path">Settings → Environments. Add development, staging, and production with reviewers and scoped secrets.</span></li>
-            <li><strong>Publish safe docs only.</strong><span class="owner-path">Settings → Pages and Settings → General → Wikis. Keep secrets, internal endpoints, and customer data out of public pages.</span></li>
-            <li><strong>Track owner work.</strong><span class="owner-path">Projects, Issues → Labels, and Issues → Milestones. Track helios-platform, helios-control, and hermes-fleet-production separately.</span></li>
+            <li><strong>Start in M0nado.</strong><span class="owner-path">Avatar → Your organizations → M0nado → Repositories → helios-platform → Settings.</span></li>
+            <li><strong>Check enterprise policy.</strong><span class="owner-path">Avatar → Your enterprises → Heli0s-dynamics → Policies if any M0nado setting is locked.</span></li>
+            <li><strong>Lock down access.</strong><span class="owner-path">Settings → Collaborators and teams. Use M0nado teams and least privilege for all three repos.</span></li>
+            <li><strong>Protect source branches.</strong><span class="owner-path">Settings → Rules → Rulesets. Protect main/release branches, require PRs, checks, reviews, and block force pushes.</span></li>
+            <li><strong>Reduce Actions permissions.</strong><span class="owner-path">Settings → Actions → General. Default workflow token is read-only; grant id-token only to Azure deploy workflows.</span></li>
+            <li><strong>Create environments.</strong><span class="owner-path">Settings → Environments. Add development, staging, production, reviewers, branch restrictions, and scoped Azure variables.</span></li>
+            <li><strong>Set up Azure directly.</strong><span class="owner-path">Use Azure CLI/Portal for tenant, subscription, resource groups, OIDC app registration, Key Vault, budgets, and role assignments.</span></li>
+            <li><strong>Track branch merges.</strong><span class="owner-path">Projects, Issues, Labels, and Milestones. Separate helios-platform, helios-control, and hermes-fleet-production work.</span></li>
         </ol>
     </section>
     
