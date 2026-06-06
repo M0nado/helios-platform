@@ -71,6 +71,7 @@ var result = await deployment.DeployAsync(DeploymentTier.Enterprise);
 
 ### Full Documentation
 - **[START_HERE.md](START_HERE.md)** - Complete getting started guide (READ THIS FIRST)
+- **[OWNER_START_HERE.md](docs/setup/OWNER_START_HERE.md)** - Owner checklist for GitHub, Azure, and repository governance
 - **[NUGET_PACKAGE_COMPLETE_SETUP.md](NUGET_PACKAGE_COMPLETE_SETUP.md)** - Package setup details
 - **[NUGET_BUILD_PROCESS.md](NUGET_BUILD_PROCESS.md)** - Building and packaging locally
 - **[NUGET_INSTALLATION_GUIDES.md](NUGET_INSTALLATION_GUIDES.md)** - Installation methods and usage
@@ -225,6 +226,7 @@ Annual Savings:  $10,200+
 
 ## 📖 Documentation
 
+- **[OWNER_START_HERE.md](docs/setup/OWNER_START_HERE.md)** - Owner checklist for GitHub, Azure, and repository governance
 - **[DEPLOYMENT_COMPLETE_GUIDE.md](docs/DEPLOYMENT_COMPLETE_GUIDE.md)** - Comprehensive phase breakdown
 - **[COMPONENT_CATALOG/](docs/COMPONENT_CATALOG/)** - All components with 7 versions each
 - **[PHASE_PLANNER/](docs/PHASE_PLANNER/)** - 8 progressive phases (0-7)
