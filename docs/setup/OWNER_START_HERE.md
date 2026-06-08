@@ -139,33 +139,62 @@ az group create --name "rg-helios-platform-prod" --location $location
 az group create --name "rg-hermes-fleet-prod" --location $location
 ```
 
-### Create a deployment identity for GitHub Actions OIDC
+### Create deployment identities for GitHub Actions OIDC
 
-Prefer OpenID Connect over long-lived client secrets.
+Prefer OpenID Connect over long-lived client secrets. Create separate app registrations for non-production and production so development or staging workflows cannot inherit production Azure roles after login.
 
 ```powershell
 $subscriptionId = az account show --query id -o tsv
 $tenantId = az account show --query tenantId -o tsv
-$appName = "app-github-m0nado-helios-platform"
-$appId = az ad app create --display-name $appName --query appId -o tsv
-az ad sp create --id $appId
-az role assignment create --assignee $appId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-dev"
-az role assignment create --assignee $appId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-staging"
-az role assignment create --assignee $appId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-prod"
+
+$nonProdAppName = "app-github-m0nado-helios-platform-nonprod"
+$nonProdAppId = az ad app create --display-name $nonProdAppName --query appId -o tsv
+az ad sp create --id $nonProdAppId
+az role assignment create --assignee $nonProdAppId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-dev"
+az role assignment create --assignee $nonProdAppId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-staging"
+
+$prodAppName = "app-github-m0nado-helios-platform-prod"
+$prodAppId = az ad app create --display-name $prodAppName --query appId -o tsv
+az ad sp create --id $prodAppId
+az role assignment create --assignee $prodAppId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-prod"
 ```
 
-Create one federated credential per GitHub environment or branch pattern. The `subject` value must match the repository and environment/branch that will request the token.
+Do not add production resource group roles to the non-production app registration, and do not add development or staging federated credentials to the production app registration. GitHub environment approvals control when jobs can request tokens, but Azure roles are granted to the service principal after login; keep each identity scoped to only the resource groups that environment should manage.
+
+Create one federated credential per GitHub environment on the app registration for that environment. The `subject` value must match the repository and environment/branch that will request the token.
 
 ```powershell
-$parameters = @{
+$devParameters = @{
+  name = "github-helios-platform-development"
+  issuer = "https://token.actions.githubusercontent.com"
+  subject = "repo:M0nado/helios-platform:environment:development"
+  audiences = @("api://AzureADTokenExchange")
+} | ConvertTo-Json
+
+$devParameters | Out-File -FilePath federated-credential.json -Encoding utf8
+az ad app federated-credential create --id $nonProdAppId --parameters federated-credential.json
+Remove-Item federated-credential.json
+
+$stagingParameters = @{
+  name = "github-helios-platform-staging"
+  issuer = "https://token.actions.githubusercontent.com"
+  subject = "repo:M0nado/helios-platform:environment:staging"
+  audiences = @("api://AzureADTokenExchange")
+} | ConvertTo-Json
+
+$stagingParameters | Out-File -FilePath federated-credential.json -Encoding utf8
+az ad app federated-credential create --id $nonProdAppId --parameters federated-credential.json
+Remove-Item federated-credential.json
+
+$prodParameters = @{
   name = "github-helios-platform-production"
   issuer = "https://token.actions.githubusercontent.com"
   subject = "repo:M0nado/helios-platform:environment:production"
   audiences = @("api://AzureADTokenExchange")
 } | ConvertTo-Json
 
-$parameters | Out-File -FilePath federated-credential.json -Encoding utf8
-az ad app federated-credential create --id $appId --parameters federated-credential.json
+$prodParameters | Out-File -FilePath federated-credential.json -Encoding utf8
+az ad app federated-credential create --id $prodAppId --parameters federated-credential.json
 Remove-Item federated-credential.json
 ```
 
@@ -173,7 +202,7 @@ Store these as GitHub environment variables or secrets in `helios-platform` → 
 
 | Name | Store as | Value |
 | --- | --- | --- |
-| `AZURE_CLIENT_ID` | Environment variable or secret | App/client ID from `$appId` |
+| `AZURE_CLIENT_ID` | Environment variable or secret | `$nonProdAppId` for development/staging; `$prodAppId` for production |
 | `AZURE_TENANT_ID` | Environment variable or secret | Tenant ID from `$tenantId` |
 | `AZURE_SUBSCRIPTION_ID` | Environment variable or secret | Subscription ID from `$subscriptionId` |
 | `AZURE_RESOURCE_GROUP` | Environment variable | Environment-specific resource group |
@@ -184,7 +213,7 @@ For `hermes-fleet-production`, create a separate app registration or managed ide
 
 ```powershell
 az keyvault create --name "kv-helios-platform-prod" --resource-group "rg-helios-platform-prod" --location $location --enable-rbac-authorization true
-az role assignment create --assignee $appId --role "Key Vault Secrets User" --scope "$(az keyvault show --name kv-helios-platform-prod --query id -o tsv)"
+az role assignment create --assignee $prodAppId --role "Key Vault Secrets User" --scope "$(az keyvault show --name kv-helios-platform-prod --query id -o tsv)"
 ```
 
 Put only non-sensitive IDs in GitHub variables. Put production credentials, connection strings, certificates, and fleet secrets in Key Vault.
