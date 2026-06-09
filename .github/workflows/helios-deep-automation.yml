@@ -1,0 +1,247 @@
+name: HELIOS Deep AI and Workflow Automation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - work
+  push:
+    branches:
+      - main
+      - develop
+      - work
+  workflow_dispatch:
+    inputs:
+      runAzureReadiness:
+        description: 'Run Azure CLI readiness checks'
+        required: false
+        default: 'true'
+      runAiGovernance:
+        description: 'Run AI governance checks'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+  actions: read
+  id-token: write
+
+concurrency:
+  group: helios-deep-automation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Discover HELIOS/Hermes changes
+    runs-on: ubuntu-latest
+    outputs:
+      dotnet: ${{ steps.filters.outputs.dotnet }}
+      python: ${{ steps.filters.outputs.python }}
+      cpp: ${{ steps.filters.outputs.cpp }}
+      workflows: ${{ steps.filters.outputs.workflows }}
+      automation: ${{ steps.filters.outputs.automation }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changed-file inventory
+        id: filters
+        shell: pwsh
+        run: |
+          $base = if ('${{ github.event_name }}' -eq 'pull_request') { '${{ github.event.pull_request.base.sha }}' } else { 'HEAD~1' }
+          $changed = @(git diff --name-only $base HEAD 2>$null)
+          if ($LASTEXITCODE -ne 0 -or $changed.Count -eq 0) {
+            $changed = @(git ls-files)
+          }
+
+          $groups = [ordered]@{
+            dotnet = $changed | Where-Object { $_ -match '\.(cs|csproj|sln|fs|fsproj)$' }
+            python = $changed | Where-Object { $_ -match '\.py$' }
+            cpp = $changed | Where-Object { $_ -match '\.(c|cc|cpp|cxx|h|hpp|vcxproj|sln)$' }
+            workflows = $changed | Where-Object { $_ -match '^\.github/workflows/.*\.ya?ml$|azure-pipelines\.yml$' }
+            automation = $changed | Where-Object { $_ -match '(^scripts/|^ai-integration/|^microsoft-ecosystem/|^installer/hardware-integration/)' }
+          }
+
+          foreach ($group in $groups.GetEnumerator()) {
+            $hasChanges = @($group.Value).Count -gt 0
+            "{0}={1}" -f $group.Key, $hasChanges.ToString().ToLowerInvariant() | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "### $($group.Key)" >> $env:GITHUB_STEP_SUMMARY
+            if ($hasChanges) {
+              $group.Value | ForEach-Object { "- $_" } >> $env:GITHUB_STEP_SUMMARY
+            } else {
+              '- no matching changes' >> $env:GITHUB_STEP_SUMMARY
+            }
+          }
+
+      - name: Build deep automation manifest
+        shell: pwsh
+        run: pwsh ./scripts/setup/Initialize-HeliosDeepAutomation.ps1 -ManifestPath build/automation/helios-deep-automation-manifest.json
+
+      - name: Upload automation manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-deep-automation-manifest
+          path: build/automation/helios-deep-automation-manifest.json
+
+  dotnet-validation:
+    name: C#, WinUI 3, and F# validation
+    needs: discover
+    if: needs.discover.outputs.dotnet == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore root platform project
+        shell: pwsh
+        run: dotnet restore HELIOS.Platform.csproj
+      - name: Build root platform project
+        shell: pwsh
+        run: dotnet build HELIOS.Platform.csproj --configuration Release --no-restore
+      - name: Build test projects when present
+        shell: pwsh
+        run: |
+          $projects = @(Get-ChildItem -Path tests,src/tests -Filter *.csproj -Recurse -ErrorAction SilentlyContinue)
+          foreach ($project in $projects) {
+            dotnet build $project.FullName --configuration Release
+          }
+
+  python-validation:
+    name: Python AIHub validation
+    needs: discover
+    if: needs.discover.outputs.python == 'true' || needs.discover.outputs.automation == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python files
+        run: |
+          python - <<'PY'
+          import compileall
+          import pathlib
+          import sys
+          paths = ['ai-integration', 'scripts', 'src', 'tests']
+          ok = True
+          for path in paths:
+              if pathlib.Path(path).exists():
+                  ok = compileall.compile_dir(path, quiet=1, maxlevels=10) and ok
+          sys.exit(0 if ok else 1)
+          PY
+
+  cpp-validation:
+    name: C++ performance backend discovery
+    needs: discover
+    if: needs.discover.outputs.cpp == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+      - name: Validate C++ projects when present
+        shell: pwsh
+        run: |
+          $projects = @(Get-ChildItem -Path . -Filter *.vcxproj -Recurse -ErrorAction SilentlyContinue)
+          if ($projects.Count -eq 0) {
+            Write-Host 'No C++ project files found; discovery passed.'
+            exit 0
+          }
+          foreach ($project in $projects) {
+            msbuild $project.FullName /p:Configuration=Release /m
+          }
+
+  security-and-governance:
+    name: AI, workflow, and script governance
+    needs: discover
+    if: (github.event_name != 'workflow_dispatch' || inputs.runAiGovernance == 'true') && (needs.discover.outputs.workflows == 'true' || needs.discover.outputs.automation == 'true' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell syntax validation
+        shell: pwsh
+        run: |
+          $errors = 0
+          Get-ChildItem -Path scripts,ai-integration,microsoft-ecosystem -Filter *.ps1 -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$parseErrors) | Out-Null
+            if ($parseErrors) {
+              Write-Error "PowerShell parse error in $($_.FullName): $($parseErrors[0].Message)"
+              $errors++
+            }
+          }
+          if ($errors -gt 0) { exit 1 }
+      - name: Scan for obvious secret material
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -nE '(BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|api[_-]?key\s*=\s*['"'"'][A-Za-z0-9_\-]{20,}|password\s*=\s*['"'"'][^'"'"']{8,})' -- ':!*.md' ':!*.template.*'; then
+            echo 'Potential secret material found.' >&2
+            exit 1
+          fi
+      - name: Validate workflow YAML parses
+        run: |
+          ruby -e "require 'yaml'; Dir['.github/workflows/*.{yml,yaml}'].each { |p| YAML.load_file(p); puts \"parsed #{p}\" }"
+
+  azure-cli-readiness:
+    name: Azure CLI readiness
+    needs: discover
+    if: (github.event_name != 'workflow_dispatch' || inputs.runAzureReadiness == 'true') && (github.event_name == 'workflow_dispatch' || vars.HELIOS_AUTOMATION_MODE == 'deep')
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure CLI smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          az version --output table
+          echo 'Azure CLI installed. Login is intentionally environment-protected.'
+      - name: Optional OIDC login when configured
+        if: ${{ env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != '' && env.AZURE_SUBSCRIPTION_ID != '' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Show selected subscription when authenticated
+        if: ${{ env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != '' && env.AZURE_SUBSCRIPTION_ID != '' }}
+        run: az account show --query '{name:name,id:id,tenantId:tenantId}' --output table
+
+  automation-summary:
+    name: Deep automation summary
+    needs:
+      - discover
+      - dotnet-validation
+      - python-validation
+      - cpp-validation
+      - security-and-governance
+      - azure-cli-readiness
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize results
+        run: |
+          {
+            echo '## HELIOS Deep Automation Summary'
+            echo ''
+            echo '| Area | Result |'
+            echo '| --- | --- |'
+            echo '| Discover | ${{ needs.discover.result }} |'
+            echo '| C#/WinUI/F# | ${{ needs.dotnet-validation.result }} |'
+            echo '| Python AIHub | ${{ needs.python-validation.result }} |'
+            echo '| C++ backend | ${{ needs.cpp-validation.result }} |'
+            echo '| AI/workflow governance | ${{ needs.security-and-governance.result }} |'
+            echo '| Azure CLI readiness | ${{ needs.azure-cli-readiness.result }} |'
+          } >> "$GITHUB_STEP_SUMMARY"

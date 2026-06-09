@@ -4,7 +4,7 @@
 
 **Version**: 1.0  
 **Last Updated**: 2024  
-**Total Documents**: 10  
+**Total Documents**: 11  
 **Total Size**: ~120 KB
 
 ---
@@ -24,6 +24,7 @@
 | [WORKFLOWS_BEST_PRACTICES.md](#workflows-best-practices) | Security & optimization | 14 KB | 12 min |
 | [WORKFLOWS_TROUBLESHOOTING.md](#workflows-troubleshooting) | Issues & solutions | 12 KB | 10 min |
 | [WORKFLOW_CUSTOMIZATION.md](#workflow-customization) | Modification guide | 13 KB | 12 min |
+| [DEEP_GITHUB_AI_AUTOMATION_SETUP.md](DEEP_GITHUB_AI_AUTOMATION_SETUP.md) | Deep GitHub, AI, Azure, and Hermes workflow setup | 8 KB | 8 min |
 
 ---
 
@@ -656,5 +657,27 @@ docs/workflows/
 - [x] WORKFLOWS_TROUBLESHOOTING.md - Troubleshooting
 - [x] WORKFLOW_CUSTOMIZATION.md - Customization guide
 - [x] WORKFLOW_INDEX.md - This index (you are here)
+- [x] DEEP_GITHUB_AI_AUTOMATION_SETUP.md - Deep GitHub, AI, Azure, and Hermes setup
 
-**All 10 documents created and ready for use!** ✅
+**All 11 documents created and ready for use!** ✅
+---
+
+## DEEP_GITHUB_AI_AUTOMATION_SETUP
+
+**File**: `docs/workflows/DEEP_GITHUB_AI_AUTOMATION_SETUP.md`
+
+### Contents
+
+- HELIOS Control and Hermes Fleet Production automation lanes
+- GitHub CLI and Azure CLI bootstrap process
+- Required repository secrets and variables
+- Safe branch integration order for `helios-control` and `hermes-fleet-production`
+- AI governance, changed-file grouping, and workflow artifact expectations
+
+### Use Cases
+
+- Combining branch work through an auditable integration branch
+- Preparing GitHub repository variables and labels
+- Validating Azure CLI and OIDC readiness
+- Governing AIHub, Hermes XCore, workflow, and automation changes
+
