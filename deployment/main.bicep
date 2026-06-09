@@ -46,6 +46,10 @@ param slackChannel string = '#helios-alerts'
 @description('HubSpot API base URL exposed to runtime workloads.')
 param hubspotBaseUrl string = 'https://api.hubapi.com'
 
+@description('HubSpot private app token exposed to the HubSpot sync worker as an ACA secret when provided.')
+@secure()
+param hubspotToken string = ''
+
 @description('Tags applied to every provisioned resource.')
 param tags object = {}
 
@@ -122,6 +126,7 @@ module containerApps 'modules/container-apps.bicep' = if (deployContainerApps &&
     hubspotSyncImage: hubspotSyncImage
     serviceBusNamespace: serviceBusNamespaceName
     hubspotBaseUrl: hubspotBaseUrl
+    hubspotToken: hubspotToken
     tags: defaultTags
   }
 }

@@ -9,7 +9,66 @@ param controlPlaneImage string
 param hubspotSyncImage string
 param serviceBusNamespace string
 param hubspotBaseUrl string
+@secure()
+param hubspotToken string = ''
 param tags object = {}
+
+var hubspotQueueName = 'hubspot-sync'
+var hubspotWorkerServiceBusSecretName = 'hubspot-service-bus-connection'
+var hubspotTokenSecretName = 'hubspot-token'
+var hubspotWorkerBaseEnv = [
+  {
+    name: 'APPINSIGHTS_CONNECTION_STRING'
+    value: appInsightsConnectionString
+  }
+  {
+    name: 'SERVICEBUS_NAMESPACE'
+    value: serviceBusNamespace
+  }
+  {
+    name: 'SERVICEBUS_CONNECTION_STRING'
+    secretRef: hubspotWorkerServiceBusSecretName
+  }
+  {
+    name: 'HUBSPOT_BASE_URL'
+    value: hubspotBaseUrl
+  }
+  {
+    name: 'HUBSPOT_SYNC_QUEUE'
+    value: hubspotQueueName
+  }
+]
+var hubspotWorkerEnv = concat(hubspotWorkerBaseEnv, !empty(hubspotToken) ? [
+  {
+    name: 'HUBSPOT_TOKEN'
+    secretRef: hubspotTokenSecretName
+  }
+] : [])
+var hubspotWorkerSecrets = concat([
+  {
+    name: hubspotWorkerServiceBusSecretName
+    value: listKeys(hubspotWorkerAuthRule.id, '2024-01-01').primaryConnectionString
+  }
+], !empty(hubspotToken) ? [
+  {
+    name: hubspotTokenSecretName
+    value: hubspotToken
+  }
+] : [])
+
+resource serviceBus 'Microsoft.ServiceBus/namespaces@2024-01-01' existing = {
+  name: serviceBusNamespace
+}
+
+resource hubspotQueue 'Microsoft.ServiceBus/namespaces/queues@2024-01-01' existing = {
+  parent: serviceBus
+  name: hubspotQueueName
+}
+
+resource hubspotWorkerAuthRule 'Microsoft.ServiceBus/namespaces/queues/authorizationRules@2024-01-01' existing = {
+  parent: hubspotQueue
+  name: 'hubspot-sync-worker'
+}
 
 resource managedEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: containerEnvironmentName
@@ -71,7 +130,7 @@ resource controlPlaneApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'HUBSPOT_SYNC_QUEUE'
-              value: 'hubspot-sync'
+              value: hubspotQueueName
             }
           ]
           resources: {
@@ -103,34 +162,14 @@ resource hubspotWorkerApp 'Microsoft.App/containerApps@2024-03-01' = {
     workloadProfileName: 'Consumption'
     configuration: {
       activeRevisionsMode: 'Single'
+      secrets: hubspotWorkerSecrets
     }
     template: {
       containers: [
         {
           name: 'hubspot-sync'
           image: hubspotSyncImage
-          env: [
-            {
-              name: 'APPINSIGHTS_CONNECTION_STRING'
-              value: appInsightsConnectionString
-            }
-            {
-              name: 'SERVICEBUS_NAMESPACE'
-              value: serviceBusNamespace
-            }
-            {
-              name: 'HUBSPOT_BASE_URL'
-              value: hubspotBaseUrl
-            }
-            {
-              name: 'HUBSPOT_SYNC_QUEUE'
-              value: 'hubspot-sync'
-            }
-            {
-              name: 'HUBSPOT_TOKEN_SECRET_NAME'
-              value: 'hubspot-private-app-token'
-            }
-          ]
+          env: hubspotWorkerEnv
           resources: {
             cpu: json('0.5')
             memory: '1Gi'

@@ -47,6 +47,7 @@ Optional environment variables:
   DEPLOYMENT_OUTPUT_DIR=<artifact-directory>
   SLACK_WEBHOOK_URL=<incoming-webhook>
   DEPLOYMENT_STATUS_WEBHOOK=<generic-webhook>
+  HUBSPOT_TOKEN=<private-app-token>
 EOF
 }
 
@@ -351,6 +352,10 @@ run_deployment() {
     params+=("hubspotBaseUrl=$HUBSPOT_BASE_URL")
   fi
 
+  if [[ -n "${HUBSPOT_TOKEN:-}" ]]; then
+    params+=("hubspotToken=$HUBSPOT_TOKEN")
+  fi
+
   log "Running deployment '$deployment_name' against '$RESOURCE_GROUP'"
 
   if [[ "$WHAT_IF" == "true" ]]; then
@@ -511,13 +516,13 @@ main() {
     all)
       run_preflight
       run_deployment "helios-infrastructure-${ENVIRONMENT_NAME}" false false false
+      run_deployment "helios-integrations-${ENVIRONMENT_NAME}" false false true
       if [[ "$PLATFORM_TARGET" == "aca" || "$PLATFORM_TARGET" == "both" ]]; then
         run_deployment "helios-container-apps-${ENVIRONMENT_NAME}" true false false
       fi
       if [[ "$PLATFORM_TARGET" == "aks" || "$PLATFORM_TARGET" == "both" ]]; then
         run_deployment "helios-aks-${ENVIRONMENT_NAME}" false true false
       fi
-      run_deployment "helios-integrations-${ENVIRONMENT_NAME}" false false true
       run_verification
       ;;
   esac

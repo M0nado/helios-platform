@@ -83,6 +83,8 @@ variables:
     value: ''
   - name: deploymentStatusWebhook
     value: ''
+  - name: hubspotToken
+    value: ''
 
 pool:
   vmImage: ubuntu-latest
@@ -123,6 +125,7 @@ stages:
 
           - task: AzureCLI@2
             displayName: Run deployment script
+            condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
             inputs:
               azureSubscription: $(azureSubscriptionServiceConnection)
               scriptType: bash
@@ -146,6 +149,7 @@ stages:
                 export SLACK_WEBHOOK_URL="$(slackWebhookUrl)"
                 export DEPLOYMENT_STATUS_WEBHOOK="$(deploymentStatusWebhook)"
                 export HUBSPOT_BASE_URL="$(hubspotBaseUrl)"
+                export HUBSPOT_TOKEN="$(hubspotToken)"
                 ./scripts/deploy/deploy-platform.sh \
                   --resource-group "${{ parameters.resourceGroup }}" \
                   --phase "${{ parameters.phase }}" \
@@ -165,3 +169,4 @@ stages:
           - publish: deployment-artifacts
             artifact: helios-deployment-run
             displayName: Publish deployment run artifacts
+            condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))

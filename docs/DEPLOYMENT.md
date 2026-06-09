@@ -57,6 +57,7 @@ export HELIOS_PARAMETERS_FILE=""
 export DEPLOYMENT_OUTPUT_DIR="./deployment-artifacts"
 export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
 export DEPLOYMENT_STATUS_WEBHOOK="https://example.com/helios/deployments"
+export HUBSPOT_TOKEN="YOUR_HUBSPOT_PRIVATE_APP_TOKEN"
 ```
 
 Notes:
@@ -173,6 +174,7 @@ Useful GitHub variables:
 - `HELIOS_AKS_IMAGE`
 - `HELIOS_SLACK_CHANNEL`
 - `HUBSPOT_BASE_URL`
+- `HUBSPOT_TOKEN`
 
 ## Azure Pipelines deployment flow
 
@@ -202,6 +204,7 @@ Pipeline variables to set when posting is required:
 
 - `slackWebhookUrl`
 - `deploymentStatusWebhook`
+- `hubspotToken`
 
 ## Rollback and recovery
 

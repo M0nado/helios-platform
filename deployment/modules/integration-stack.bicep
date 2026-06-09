@@ -40,6 +40,17 @@ resource hubspotQueue 'Microsoft.ServiceBus/namespaces/queues@2024-01-01' = {
   }
 }
 
+resource hubspotWorkerAuthRule 'Microsoft.ServiceBus/namespaces/queues/authorizationRules@2024-01-01' = {
+  parent: hubspotQueue
+  name: 'hubspot-sync-worker'
+  properties: {
+    rights: [
+      'Listen'
+      'Send'
+    ]
+  }
+}
+
 resource githubEventsQueue 'Microsoft.ServiceBus/namespaces/queues@2024-01-01' = {
   parent: serviceBus
   name: 'github-control'
