@@ -70,6 +70,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Setup .NET for built-in build and test planning
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run automation orchestrator unit tests
+        run: python3 -m unittest tests.automation.test_deep_automation_orchestrator -v
+
       - name: Install Azure CLI for cloud readiness checks
         uses: azure/CLI@v2
         with:
@@ -92,7 +100,12 @@ jobs:
 
       - name: Print automation summary
         run: |
-          sed -n '1,220p' artifacts/automation/deep-automation-report.md
+          sed -n '1,260p' artifacts/automation/deep-automation-report.md
+
+      - name: Verify core .NET project restores and builds
+        run: |
+          dotnet restore src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj
+          dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj --configuration Release --no-restore
 
       - name: Upload automation readiness reports
         uses: actions/upload-artifact@v4

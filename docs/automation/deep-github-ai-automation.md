@@ -8,6 +8,8 @@ This runbook connects the existing HELIOS automation assets into one safe contro
 - **AI hub setup:** validates committed AI configuration files and required secret environment variable names without printing secret values.
 - **Azure CLI setup:** checks whether `az` is installed and whether a subscription context is authenticated.
 - **Workflow automation:** generates machine-readable JSON and operator-readable Markdown reports for PRs, scheduled audits, and local runs.
+- **Built-in test and build planning:** discovers .NET project candidates, records Linux-safe and Windows-full build commands, and runs orchestrator unit tests in CI.
+- **Automerge readiness policy:** reports whether protected workflow triggers, required readiness workflows, build candidates, and focus branches are present before auto-merge is considered safe.
 - **Multi-language awareness:** counts C#, XAML/WinUI/WPF, C++, F#, Python, PowerShell, JavaScript/TypeScript, and GitHub Actions assets.
 - **Branch consolidation guardrails:** detects whether focus branches/remotes such as `helios-control` and `hermes-fleet-production` are present before any merge plan proceeds.
 
@@ -24,9 +26,17 @@ Outputs are written to:
 
 Use `--mode inventory`, `--mode ci`, `--mode ai`, or `--mode azure` to narrow the report scope for operator workflows. The script intentionally does not mutate branches, remotes, Azure resources, GitHub settings, or AI configuration.
 
+Run the Python safety tests before changing branch-consolidation or automerge logic:
+
+```bash
+python3 -m unittest tests.automation.test_deep_automation_orchestrator -v
+```
+
 ## GitHub Actions usage
 
-The `Deep AI Automation Orchestrator` workflow runs this same script on pull requests, pushes to core automation paths, nightly schedules, and manual dispatches. It uploads the generated reports as workflow artifacts and includes optional Azure login validation when the required secrets are present.
+The `Deep AI Automation Orchestrator` workflow runs this same script on pull requests, pushes to core automation paths, nightly schedules, and manual dispatches. It now also sets up .NET 8, runs the orchestrator unit tests, attempts the Linux-safe core HELIOS restore/build, uploads the generated reports as workflow artifacts, and includes optional Azure login validation when the required secrets are present.
+
+Azure DevOps uses `azure-pipelines.yml` for the same core gate: full-history checkout, Python tests, automation readiness report generation, .NET 8 restore/build, and report artifact publishing.
 
 Recommended repository secrets for full cloud validation:
 
@@ -50,3 +60,4 @@ Recommended repository secrets for full cloud validation:
 - Reports never include secret values.
 - Azure checks are read-only (`az account show`) unless downstream deployment workflows are explicitly invoked.
 - The orchestrator does not auto-merge branches because branch consolidation should remain auditable and protected by PR review.
+- The `automerge_readiness.safe_automerge_enabled` report field is advisory; use it as an input to protected branch rules rather than as a bypass around reviews.

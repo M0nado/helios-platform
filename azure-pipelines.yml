@@ -1,19 +1,83 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- main
+  branches:
+    include:
+      - main
+      - develop
+      - work
+  paths:
+    include:
+      - .github/workflows/**
+      - scripts/automation/**
+      - scripts/ai-services/**
+      - cloud-integration/**
+      - src/**
+      - tests/**
+      - HELIOS.Platform*.csproj
+      - azure-pipelines.yml
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+      - work
+  paths:
+    include:
+      - .github/workflows/**
+      - scripts/automation/**
+      - scripts/ai-services/**
+      - cloud-integration/**
+      - src/**
+      - tests/**
+      - HELIOS.Platform*.csproj
+      - azure-pipelines.yml
+
+schedules:
+  - cron: '37 3 * * *'
+    displayName: Nightly automation readiness
+    branches:
+      include:
+        - main
+    always: true
 
 pool:
   vmImage: ubuntu-latest
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+variables:
+  buildConfiguration: Release
+  automationOutput: '$(Build.ArtifactStagingDirectory)/automation'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+steps:
+  - checkout: self
+    fetchDepth: 0
+
+  - task: UsePythonVersion@0
+    displayName: Use Python 3.12
+    inputs:
+      versionSpec: '3.12'
+
+  - task: UseDotNet@2
+    displayName: Use .NET SDK 8.x
+    inputs:
+      packageType: sdk
+      version: '8.x'
+
+  - script: python -m unittest tests.automation.test_deep_automation_orchestrator -v
+    displayName: Run automation orchestrator unit tests
+
+  - script: |
+      python scripts/automation/deep_automation_orchestrator.py \
+        --mode ci \
+        --output-dir "$(automationOutput)"
+    displayName: Generate HELIOS automation, merge, AI, and Azure readiness report
+
+  - script: |
+      dotnet restore src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj
+      dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj \
+        --configuration $(buildConfiguration) \
+        --no-restore
+    displayName: Restore and build core HELIOS project
+
+  - publish: $(automationOutput)
+    artifact: helios-automation-readiness
+    displayName: Publish automation readiness artifacts

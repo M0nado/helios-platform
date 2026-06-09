@@ -31,6 +31,7 @@ SKIP_DIRS = {
     "packages",
     ".pytest_cache",
     "__pycache__",
+    "artifacts",
 }
 LANGUAGE_EXTENSIONS = {
     "csharp": {".cs", ".csproj", ".sln", ".slnx"},
@@ -50,6 +51,19 @@ AI_CONFIG_FILES = [
     ROOT / "cloud-integration" / "configs" / "copilot.config.json",
 ]
 BRANCH_FOCUS_NAMES = ("helios-control", "hermes-fleet-production")
+AUTOMERGE_REQUIRED_TRIGGERS = ("pull_request", "workflow_dispatch")
+AUTOMERGE_REQUIRED_WORKFLOWS = (
+    "deep-ai-automation-orchestrator.yml",
+    "dotnet-build.yml",
+    "quality.yml",
+)
+DOTNET_BUILD_CANDIDATES = (
+    ROOT / "src" / "core" / "HELIOS.Platform.Minimal" / "HELIOS.Platform.csproj",
+    ROOT / "src" / "core" / "HELIOS.Platform" / "HELIOS.Platform.csproj",
+    ROOT / "src" / "tests" / "HELIOS.Platform.Tests.csproj",
+    ROOT / "tests" / "HELIOS.Platform.Tests" / "HELIOS.Platform.Tests.csproj",
+    ROOT / "HELIOS.Platform.SystemIntegration" / "HELIOS.Platform.SystemIntegration.csproj",
+)
 
 
 @dataclass(frozen=True)
@@ -202,17 +216,93 @@ def component_inventory(files: list[Path]) -> dict[str, object]:
     return {"top_level_file_counts": dict(directories.most_common()), "focus_term_samples": dict(focus_terms)}
 
 
+def is_repo_managed_file(path: Path) -> bool:
+    return not any(part in SKIP_DIRS for part in path.relative_to(ROOT).parts)
+
+
+def dotnet_inventory() -> dict[str, object]:
+    projects = sorted(
+        path.relative_to(ROOT).as_posix()
+        for path in ROOT.rglob("*.csproj")
+        if is_repo_managed_file(path)
+    )
+    candidates = [
+        path.relative_to(ROOT).as_posix()
+        for path in DOTNET_BUILD_CANDIDATES
+        if path.exists()
+    ]
+    slnx_files = sorted(
+        path.relative_to(ROOT).as_posix()
+        for path in ROOT.rglob("*.slnx")
+        if is_repo_managed_file(path)
+    )
+    return {
+        "project_count": len(projects),
+        "projects": projects,
+        "solution_files": slnx_files,
+        "recommended_restore_build_order": candidates,
+        "linux_safe_build_command": "dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj --configuration Release",
+        "linux_full_core_build_command": "dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj --configuration Release",
+        "windows_full_build_command": "dotnet build HELIOS.Platform.csproj --configuration Release -p:EnableWindowsTargeting=true",
+        "test_commands": [
+            "dotnet test src/tests/HELIOS.Platform.Tests.csproj --configuration Release --logger trx",
+            "dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --logger trx",
+        ],
+    }
+
+
+def automerge_readiness_inventory(
+    git: dict[str, object],
+    gha: dict[str, object],
+    dotnet: dict[str, object],
+) -> dict[str, object]:
+    workflow_names = {Path(workflow).name for workflow in gha["workflows"]}
+    missing_workflows = [name for name in AUTOMERGE_REQUIRED_WORKFLOWS if name not in workflow_names]
+    workflow_trigger_gaps: dict[str, list[str]] = {}
+    for workflow_name in AUTOMERGE_REQUIRED_WORKFLOWS:
+        triggers = set(gha["triggers"].get(workflow_name, []))
+        missing = [trigger for trigger in AUTOMERGE_REQUIRED_TRIGGERS if trigger not in triggers]
+        if missing:
+            workflow_trigger_gaps[workflow_name] = missing
+    blockers = []
+    if git["missing_focus_branches"]:
+        blockers.append("focus branches/remotes are missing")
+    if missing_workflows:
+        blockers.append("required readiness workflows are missing")
+    if workflow_trigger_gaps:
+        blockers.append("required workflows are missing protected triggers")
+    if not dotnet["recommended_restore_build_order"]:
+        blockers.append("no buildable .NET project candidates were discovered")
+    return {
+        "safe_automerge_enabled": not blockers,
+        "blockers": blockers,
+        "required_workflows": list(AUTOMERGE_REQUIRED_WORKFLOWS),
+        "missing_workflows": missing_workflows,
+        "workflow_trigger_gaps": workflow_trigger_gaps,
+        "policy": [
+            "Only auto-merge after PR review, full-history checkout, and all required CI jobs pass.",
+            "Never auto-merge directly from local dirty working trees or unauthenticated branch inventories.",
+            "Treat helios-control and hermes-fleet-production as protected consolidation inputs until explicitly present and tested.",
+        ],
+    }
+
+
 def build_report(args: argparse.Namespace) -> dict[str, object]:
     files = list(iter_repo_files())
+    git = git_inventory()
+    github_actions = github_actions_inventory()
+    dotnet = dotnet_inventory()
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "repository": ROOT.as_posix(),
         "mode": args.mode,
         "host": {"platform": platform.platform(), "python": platform.python_version()},
-        "git": git_inventory(),
+        "git": git,
         "languages": count_language_files(files),
         "components": component_inventory(files),
-        "github_actions": github_actions_inventory(),
+        "github_actions": github_actions,
+        "dotnet_build_test": dotnet,
+        "automerge_readiness": automerge_readiness_inventory(git, github_actions, dotnet),
         "ai_hub": ai_inventory(),
         "azure_github_cli": azure_github_cli_inventory(),
         "recommended_workflow": [
@@ -231,6 +321,8 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
     gha = report["github_actions"]
     ai = report["ai_hub"]
     azure = report["azure_github_cli"]
+    dotnet = report["dotnet_build_test"]
+    automerge = report["automerge_readiness"]
     lines = [
         "# HELIOS Deep Automation Readiness Report",
         "",
@@ -253,6 +345,18 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
         "## GitHub workflow automation",
         f"- Workflow files discovered: `{gha['workflow_count']}`",
         "- Added orchestration gate can run locally, on PRs, nightly, or on demand.",
+        f"- Safe automerge ready: `{automerge['safe_automerge_enabled']}`",
+        f"- Automerge blockers: `{', '.join(automerge['blockers']) or 'none'}`",
+        "",
+        "## .NET build and test plan",
+        f"- C# project files discovered: `{dotnet['project_count']}`",
+        f"- Linux-safe build command: `{dotnet['linux_safe_build_command']}`",
+        f"- Linux full core build command: `{dotnet['linux_full_core_build_command']}`",
+        f"- Windows full build command: `{dotnet['windows_full_build_command']}`",
+        "- Recommended project order:",
+    ])
+    lines.extend(f"  - `{project}`" for project in dotnet["recommended_restore_build_order"])
+    lines.extend([
         "",
         "## AI hub and workflow automation",
         "| Config | Valid | Notes |",
