@@ -1,0 +1,144 @@
+name: AI CI Code Review
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - work
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Base ref to compare against
+        required: false
+        default: origin/main
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
+  actions: read
+
+concurrency:
+  group: ai-ci-code-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ai-review-context:
+    name: Build AI review context
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate AI CI review report
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || inputs.base_ref }}
+        run: |
+          python3 scripts/automation/ai_review_report.py \
+            --base-ref "$BASE_REF" \
+            --output-dir artifacts/ai-review
+
+      - name: Add report to job summary
+        run: cat artifacts/ai-review/ai-review-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment review report on pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('artifacts/ai-review/ai-review-report.md', 'utf8');
+            const marker = '<!-- helios-ai-ci-code-review -->';
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const previous = comments.find(comment => comment.user.type === 'Bot' && comment.body.includes(marker));
+            const nextBody = `${marker}\n${body}`;
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body: nextBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: nextBody,
+              });
+            }
+
+      - name: Upload AI review artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-ci-code-review
+          path: artifacts/ai-review/
+          if-no-files-found: error
+          retention-days: 14
+
+  multi-language-ci:
+    name: Multi-language CI gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate Python automation syntax
+        run: python3 -m compileall scripts/automation
+
+      - name: Validate GitHub Actions workflows
+        run: scripts/automation/validate_workflows.sh .github/workflows/*.yml
+
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $errors = 0
+          Get-ChildItem -Path scripts -Include *.ps1,*.psm1 -Recurse -File | ForEach-Object {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors) | Out-Null
+            if ($parseErrors -and $parseErrors.Count -gt 0) {
+              Write-Error "PowerShell syntax failed for $($_.FullName): $($parseErrors[0].Message)"
+              $errors++
+            }
+          }
+          if ($errors -gt 0) { exit 1 }
+
+      - name: Restore .NET solution when populated
+        run: |
+          if grep -q '<Project' HELIOS.Platform.slnx; then
+            dotnet restore HELIOS.Platform.slnx
+          else
+            echo 'HELIOS.Platform.slnx contains no projects yet; skipping restore.'
+          fi
+
+      - name: Run deep automation readiness report
+        run: |
+          python3 scripts/automation/deep_automation_orchestrator.py \
+            --mode ci \
+            --output-dir artifacts/deep-automation-ci

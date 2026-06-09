@@ -1,0 +1,129 @@
+name: AI Old Bug Autofix and Optimization
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: Run HELIOS_AI_FIX_COMMAND and create PRs
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      enable_automerge:
+        description: Enable GitHub auto-merge for verified PRs
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      max_issues:
+        description: Maximum old bug/optimization issues to process
+        required: true
+        default: '3'
+      age_days:
+        description: Minimum issue age in days
+        required: true
+        default: '30'
+      base_branch:
+        description: Branch that receives verified fixes
+        required: true
+        default: main
+  schedule:
+    - cron: '31 4 * * 1'
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: write
+  checks: read
+  actions: read
+
+concurrency:
+  group: ai-old-bug-autofix-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backlog-and-fix:
+    name: Review old bugs and create verified fix PRs
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      HELIOS_AI_FIX_COMMAND: ${{ secrets.HELIOS_AI_FIX_COMMAND }}
+      AUTONOMOUS_ENABLED: ${{ secrets.HELIOS_AI_AUTONOMOUS_ENABLED == 'true' }}
+      EXECUTE_FIXES: ${{ (github.event_name == 'workflow_dispatch' && inputs.execute == 'true') || (github.event_name == 'schedule' && secrets.HELIOS_AI_AUTONOMOUS_ENABLED == 'true') }}
+      ENABLE_AUTOMERGE: ${{ (github.event_name == 'workflow_dispatch' && inputs.enable_automerge == 'true') || (github.event_name == 'schedule' && secrets.HELIOS_AI_AUTOMERGE_ENABLED == 'true') }}
+      MAX_ISSUES: ${{ github.event_name == 'workflow_dispatch' && inputs.max_issues || '1' }}
+      AGE_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.age_days || '30' }}
+      BASE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.base_branch || 'main' }}
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure automation git identity
+        run: |
+          git config user.name 'helios-ai-automation[bot]'
+          git config user.email 'helios-ai-automation[bot]@users.noreply.github.com'
+
+      - name: Plan submodule branch consolidation before fixing
+        run: |
+          python3 scripts/automation/submodule_consolidation.py \
+            --work-item "old-bug-autofix" \
+            --output-dir artifacts/submodule-consolidation
+
+      - name: Inventory old bug and optimization backlog
+        if: env.EXECUTE_FIXES != 'true'
+        run: |
+          python3 scripts/automation/ai_issue_fix_runner.py \
+            --age-days "$AGE_DAYS" \
+            --max-issues "$MAX_ISSUES" \
+            --base-branch "$BASE_BRANCH" \
+            --output-dir artifacts/ai-issue-automation
+
+      - name: Execute AI fix command and open PRs
+        if: env.EXECUTE_FIXES == 'true'
+        run: |
+          args=(
+            --execute
+            --age-days "$AGE_DAYS"
+            --max-issues "$MAX_ISSUES"
+            --base-branch "$BASE_BRANCH"
+            --output-dir artifacts/ai-issue-automation
+            --test-command "python3 -m compileall scripts/automation"
+          )
+          if [ "$ENABLE_AUTOMERGE" = 'true' ]; then
+            args+=(--enable-automerge)
+          fi
+          python3 scripts/automation/ai_issue_fix_runner.py "${args[@]}"
+
+      - name: Publish backlog and submodule reports to summary
+        if: always()
+        run: |
+          if [ -f artifacts/submodule-consolidation/submodule-consolidation-report.md ]; then
+            cat artifacts/submodule-consolidation/submodule-consolidation-report.md >> "$GITHUB_STEP_SUMMARY"
+            printf '\n---\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f artifacts/ai-issue-automation/ai-issue-backlog.md ]; then
+            cat artifacts/ai-issue-automation/ai-issue-backlog.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload AI issue automation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-issue-automation
+          path: |
+            artifacts/ai-issue-automation/
+            artifacts/submodule-consolidation/
+          if-no-files-found: warn
+          retention-days: 30

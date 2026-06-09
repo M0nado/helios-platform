@@ -1,0 +1,164 @@
+{
+  "policy": {
+    "single_focus_branch": true,
+    "focus_branch_pattern": "ai/submodule/{module_slug}/{work_item}",
+    "promotion_branch": "main",
+    "merge_strategy": "fetch -> checkout focus branch -> merge configured source branches -> run validation -> push branch -> PR -> auto-merge only after required checks",
+    "cleanup_strategy": "promote unique files to the owning submodule lane, remove redundant copies only after the promoted copy is verified, and rename files to the canonical lane naming pattern",
+    "computer_can_pull_merge_push": true,
+    "operation_order": [
+      "inventory",
+      "fetch",
+      "select-single-focus-branch",
+      "merge-newest-sources",
+      "classify-unique-code",
+      "promote-to-owner-lane",
+      "validate",
+      "push",
+      "open-pr",
+      "enable-automerge",
+      "archive-stale-history"
+    ],
+    "stale_branch_days": 120,
+    "history_merge_strategy": "merge stale branches into the focus branch with normal merge first; if there are no tree changes, record them as history-only candidates instead of blocking fresh optimized work",
+    "dashboard_strategy": "publish JSON/Markdown artifacts, GitHub step summaries, Pages dashboard data, milestones, labels, and project fields from the governance setup workflow"
+  },
+  "priority_repositories": [
+    {
+      "name": "helios-control",
+      "url_env": "HELIOS_CONTROL_REPO_URL",
+      "path": "modules/helios-control",
+      "target_branch": "main",
+      "source_branches": [
+        "main",
+        "develop",
+        "work"
+      ],
+      "lane": "csharp-winui-control",
+      "focus": "C# WinUI 3 front end, control dashboards, accessibility, UI-state cleanup",
+      "stale_branch_days": 120,
+      "automerge": true,
+      "create_pull_request": true,
+      "promotion_rules": [
+        "copy unique files into canonical lane paths before deleting old copies",
+        "preserve git history through branch merges before cleanup commits",
+        "skip destructive cleanup when validation fails"
+      ]
+    },
+    {
+      "name": "hermes-fleet-production",
+      "url_env": "HERMES_FLEET_PRODUCTION_REPO_URL",
+      "path": "modules/hermes-fleet-production",
+      "target_branch": "main",
+      "source_branches": [
+        "main",
+        "develop",
+        "production",
+        "work"
+      ],
+      "lane": "hermes-xcore-fleet",
+      "focus": "Hermes fleet production, XCore orchestration, performance back end, deployment hardening",
+      "stale_branch_days": 120,
+      "automerge": true,
+      "create_pull_request": true,
+      "promotion_rules": [
+        "copy unique files into canonical lane paths before deleting old copies",
+        "preserve git history through branch merges before cleanup commits",
+        "skip destructive cleanup when validation fails"
+      ]
+    }
+  ],
+  "submodule_lanes": [
+    {
+      "lane": "csharp-winui-control",
+      "canonical_paths": [
+        "src/gui",
+        "docs/WinUI3-Design",
+        "components/ai-dashboard"
+      ],
+      "languages": [
+        ".cs",
+        ".xaml",
+        ".csproj"
+      ],
+      "owner_branch": "submodules/csharp-winui-control"
+    },
+    {
+      "lane": "cpp-performance-backend",
+      "canonical_paths": [
+        "components/performance-ai",
+        "src/core"
+      ],
+      "languages": [
+        ".cpp",
+        ".cxx",
+        ".cc",
+        ".h",
+        ".hpp",
+        ".vcxproj"
+      ],
+      "owner_branch": "submodules/cpp-performance-backend"
+    },
+    {
+      "lane": "fsharp-analytics",
+      "canonical_paths": [
+        "components/analytics-core"
+      ],
+      "languages": [
+        ".fs",
+        ".fsi",
+        ".fsx",
+        ".fsproj"
+      ],
+      "owner_branch": "submodules/fsharp-analytics"
+    },
+    {
+      "lane": "python-aihub-integration",
+      "canonical_paths": [
+        "ai-integration",
+        "scripts/ai-integration",
+        "scripts/automation"
+      ],
+      "languages": [
+        ".py",
+        ".pyw"
+      ],
+      "owner_branch": "submodules/python-aihub-integration"
+    },
+    {
+      "lane": "security-azure-automation",
+      "canonical_paths": [
+        "src/Security",
+        "cloud-integration",
+        "microsoft-ecosystem/azure-integration",
+        ".github/workflows"
+      ],
+      "languages": [
+        ".ps1",
+        ".psm1",
+        ".yml",
+        ".yaml",
+        ".json"
+      ],
+      "owner_branch": "submodules/security-azure-automation"
+    }
+  ],
+  "github_control_plane": {
+    "pages_branch": "gh-pages",
+    "dashboard_path": ".github/pages/automation-dashboard.json",
+    "project_title": "HELIOS AI Automation Control Plane",
+    "milestones": [
+      "AI CI Stabilization",
+      "Submodule Consolidation",
+      "Hermes XCore Optimization",
+      "Azure Automation Readiness"
+    ],
+    "labels": {
+      "ai-autofix": "Automated AI candidate fix or optimization",
+      "submodule-consolidation": "Cross-repository submodule lane work",
+      "hermes-fleet-production": "Hermes fleet production priority",
+      "helios-control": "HELIOS control surface priority",
+      "stale-history": "Branch or module history cleanup candidate"
+    }
+  }
+}

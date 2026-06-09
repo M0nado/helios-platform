@@ -221,6 +221,9 @@ def build_report(args: argparse.Namespace) -> dict[str, object]:
             "3. Run CI matrix across C#, XAML/WinUI/WPF assets, C++, F#, Python, PowerShell, and GitHub Actions files.",
             "4. Require GitHub environment approvals before Azure deployment or AI-driven code changes.",
             "5. Store API keys only in GitHub Actions secrets or Azure Key Vault; never write secret values into reports.",
+            "6. Use AI CI Code Review for every pull request and AI Old Bug Autofix for old bug/performance issues through PR auto-merge only after checks pass.",
+            "7. Use the submodule consolidation workflow to focus on one branch at a time, merge configured external repositories into submodule lanes, and promote unique code while removing redundancy after validation.",
+            "8. Use the governance dashboard workflow to maintain labels, milestones, project views, Pages-ready dashboard data, and repository automation graphs.",
         ],
     }
 

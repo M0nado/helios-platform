@@ -1,0 +1,77 @@
+name: AI Governance Dashboard and Control Plane
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: Create/update labels, milestones, project, and dashboard data
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+  schedule:
+    - cron: '13 6 * * 1'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: read
+  actions: read
+  checks: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ai-governance-dashboard
+  cancel-in-progress: false
+
+jobs:
+  setup-control-plane:
+    name: Setup projects, wiki/pages data, milestones, and graphs
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EXECUTE_GOVERNANCE: ${{ (github.event_name == 'workflow_dispatch' && inputs.execute == 'true') || (github.event_name == 'schedule' && secrets.HELIOS_GOVERNANCE_AUTONOMOUS_ENABLED == 'true') }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate governance dashboard plan
+        if: env.EXECUTE_GOVERNANCE != 'true'
+        run: |
+          python3 scripts/automation/github_control_plane_setup.py \
+            --output-dir artifacts/github-control-plane
+
+      - name: Execute governance dashboard setup
+        if: env.EXECUTE_GOVERNANCE == 'true'
+        run: |
+          python3 scripts/automation/github_control_plane_setup.py \
+            --execute \
+            --output-dir artifacts/github-control-plane
+
+      - name: Publish dashboard to GitHub Pages artifact source
+        run: |
+          mkdir -p .github/pages
+          cp artifacts/github-control-plane/automation-dashboard.json .github/pages/automation-dashboard.json
+          cp artifacts/github-control-plane/automation-dashboard.md .github/pages/automation-dashboard.md
+
+      - name: Upload governance artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-control-plane
+          path: |
+            artifacts/github-control-plane/
+            .github/pages/automation-dashboard.json
+            .github/pages/automation-dashboard.md
+          if-no-files-found: error
+          retention-days: 30
