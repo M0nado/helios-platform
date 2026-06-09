@@ -1,0 +1,103 @@
+name: Deep AI Automation Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Automation scope to validate
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - inventory
+          - ci
+          - ai
+          - azure
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/automation/**'
+      - 'scripts/ai-services/**'
+      - 'cloud-integration/**'
+      - 'docs/automation/**'
+      - '**/*.cs'
+      - '**/*.csproj'
+      - '**/*.fs'
+      - '**/*.fsproj'
+      - '**/*.cpp'
+      - '**/*.hpp'
+      - '**/*.py'
+      - '**/*.ps1'
+  push:
+    branches:
+      - main
+      - develop
+      - work
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/automation/**'
+      - 'docs/automation/**'
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+concurrency:
+  group: deep-ai-automation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  orchestrate:
+    name: Repository, AI hub, GitHub, and Azure readiness
+    runs-on: ubuntu-latest
+    env:
+      HELIOS_AUTOMATION_MODE: ${{ inputs.mode || 'full' }}
+      AZURE_CLIENT_ID_PRESENT: ${{ secrets.AZURE_CLIENT_ID != '' }}
+      AZURE_TENANT_ID_PRESENT: ${{ secrets.AZURE_TENANT_ID != '' }}
+      AZURE_SUBSCRIPTION_ID_PRESENT: ${{ secrets.AZURE_SUBSCRIPTION_ID != '' }}
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Azure CLI for cloud readiness checks
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az version
+
+      - name: Optional Azure login validation
+        if: ${{ env.AZURE_CLIENT_ID_PRESENT == 'true' && env.AZURE_TENANT_ID_PRESENT == 'true' && env.AZURE_SUBSCRIPTION_ID_PRESENT == 'true' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run HELIOS deep automation orchestrator
+        run: |
+          python3 scripts/automation/deep_automation_orchestrator.py \
+            --mode "$HELIOS_AUTOMATION_MODE" \
+            --output-dir artifacts/automation
+
+      - name: Print automation summary
+        run: |
+          sed -n '1,220p' artifacts/automation/deep-automation-report.md
+
+      - name: Upload automation readiness reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: deep-ai-automation-readiness
+          path: artifacts/automation/
+          if-no-files-found: error
+          retention-days: 14
