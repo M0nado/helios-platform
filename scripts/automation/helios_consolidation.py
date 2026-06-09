@@ -279,7 +279,11 @@ def write_plan(repo: Path, sources: list[Source], output: Path) -> None:
         "- Keep `helios-build-agents` authoritative for Azure CLI, GitHub Actions, CI/CD, and cloud automation conflicts.",
     ])
     output.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"Wrote plan: {output.relative_to(repo)}")
+    try:
+        display_path = output.relative_to(repo)
+    except ValueError:
+        display_path = output
+    print(f"Wrote plan: {display_path}")
 
 
 def parse_args() -> argparse.Namespace:
@@ -293,7 +297,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scan", action="store_true", help="Scan available source directories for C#, C/C++, F#, Python, and automation assets.")
     parser.add_argument("--setup-azure-cli", action="store_true", help="Validate Azure CLI and Azure DevOps extension setup.")
     parser.add_argument("--install-azure-cli", action="store_true", help="Install Azure CLI when missing; requires --setup-azure-cli and --apply to execute.")
-    parser.add_argument("--write-plan", default="docs/integration/HELIOS_CONSOLIDATION_EXECUTION_PLAN.md", help="Generated markdown plan path.")
+    parser.add_argument(
+        "--write-plan",
+        nargs="?",
+        const="docs/integration/HELIOS_CONSOLIDATION_EXECUTION_PLAN.md",
+        default=None,
+        metavar="PATH",
+        help="Write a generated markdown plan to PATH, or to docs/integration/HELIOS_CONSOLIDATION_EXECUTION_PLAN.md when no PATH is provided.",
+    )
     return parser.parse_args()
 
 
@@ -318,7 +329,8 @@ def main() -> int:
     if current_branch != target_branch:
         print(f"WARNING: current branch is {current_branch!r}; target branch is {target_branch!r}.")
 
-    write_plan(repo, sources, repo / args.write_plan)
+    if args.write_plan:
+        write_plan(repo, sources, repo / args.write_plan)
 
     if args.include_current_branches:
         plan_current_repo_branch_merges(repo, target_branch, args.apply)

@@ -28,6 +28,13 @@ Run the automation in dry-run mode first:
 python3 scripts/automation/helios_consolidation.py --allow-untracked --include-current-branches --scan --setup-azure-cli
 ```
 
+When you intentionally want to refresh the generated execution plan, pass `--write-plan` during a dry run (or provide a custom output path):
+
+```bash
+python3 scripts/automation/helios_consolidation.py --allow-untracked --write-plan
+python3 scripts/automation/helios_consolidation.py --allow-untracked --write-plan /tmp/helios-plan.md
+```
+
 After reviewing the commands and confirming credentials/network access, execute only the source you want to integrate:
 
 ```bash
