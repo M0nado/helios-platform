@@ -157,11 +157,40 @@ $prodAppName = "app-github-m0nado-helios-platform-prod"
 $prodAppId = az ad app create --display-name $prodAppName --query appId -o tsv
 az ad sp create --id $prodAppId
 az role assignment create --assignee $prodAppId --role Contributor --scope "/subscriptions/$subscriptionId/resourceGroups/rg-helios-platform-prod"
-```
 
 Do not add production resource group roles to the non-production app registration, and do not add development or staging federated credentials to the production app registration. GitHub environment approvals control when jobs can request tokens, but Azure roles are granted to the service principal after login; keep each identity scoped to only the resource groups that environment should manage.
 
 Create one federated credential per GitHub environment on the app registration for that environment. The `subject` value must match the repository and environment/branch that will request the token.
+$devParameters = @{
+  name = "github-helios-platform-development"
+  issuer = "https://token.actions.githubusercontent.com"
+  subject = "repo:M0nado/helios-platform:environment:development"
+  audiences = @("api://AzureADTokenExchange")
+} | ConvertTo-Json
+
+$devParameters | Out-File -FilePath federated-credential.json -Encoding utf8
+az ad app federated-credential create --id $nonProdAppId --parameters federated-credential.json
+Remove-Item federated-credential.json
+
+$stagingParameters = @{
+  name = "github-helios-platform-staging"
+  issuer = "https://token.actions.githubusercontent.com"
+  subject = "repo:M0nado/helios-platform:environment:staging"
+  audiences = @("api://AzureADTokenExchange")
+} | ConvertTo-Json
+
+$stagingParameters | Out-File -FilePath federated-credential.json -Encoding utf8
+az ad app federated-credential create --id $nonProdAppId --parameters federated-credential.json
+Remove-Item federated-credential.json
+
+$prodParameters = @{
+$prodParameters | Out-File -FilePath federated-credential.json -Encoding utf8
+az ad app federated-credential create --id $prodAppId --parameters federated-credential.json
+```
+
+| `AZURE_CLIENT_ID` | Environment variable or secret | `$nonProdAppId` for development/staging; `$prodAppId` for production |
+
+az role assignment create --assignee $prodAppId --role "Key Vault Secrets User" --scope "$(az keyvault show --name kv-helios-platform-prod --query id -o tsv)"
 
 ```powershell
 $devParameters = @{
