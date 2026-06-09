@@ -1,19 +1,167 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- main
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - azure-pipelines.yml
+      - deployment/*
+      - deployment/**
+      - scripts/deploy/*
+      - scripts/deploy/**
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - azure-pipelines.yml
+      - deployment/*
+      - deployment/**
+      - scripts/deploy/*
+      - scripts/deploy/**
+
+parameters:
+  - name: phase
+    displayName: Deployment phase
+    type: string
+    default: all
+    values:
+      - preflight
+      - infrastructure
+      - container-apps
+      - aks
+      - integrations
+      - verification
+      - all
+  - name: target
+    displayName: Deployment target
+    type: string
+    default: both
+    values:
+      - aca
+      - aks
+      - both
+  - name: environmentName
+    displayName: Environment label
+    type: string
+    default: prod
+  - name: location
+    displayName: Azure region
+    type: string
+    default: eastus
+  - name: resourceGroup
+    displayName: Resource group
+    type: string
+    default: rg-helios
+  - name: baseName
+    displayName: Base resource name
+    type: string
+    default: helios
+  - name: deployObservability
+    displayName: Deploy observability resources
+    type: boolean
+    default: true
+  - name: parametersFile
+    displayName: Optional deployment parameters file
+    type: string
+    default: ''
+  - name: whatIf
+    displayName: Run what-if only
+    type: boolean
+    default: false
+
+variables:
+  - name: azureSubscriptionServiceConnection
+    value: HELIOS-Azure
+  - name: slackChannel
+    value: '#helios-alerts'
+  - name: hubspotBaseUrl
+    value: https://api.hubapi.com
+  - name: slackWebhookUrl
+    value: ''
+  - name: deploymentStatusWebhook
+    value: ''
 
 pool:
   vmImage: ubuntu-latest
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+stages:
+  - stage: DeployHelios
+    displayName: Deploy HELIOS control plane
+    jobs:
+      - job: Deploy
+        displayName: Deploy via shared shell entrypoint
+        steps:
+          - checkout: self
+            fetchDepth: 1
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+          - task: AzureCLI@2
+            displayName: Validate deployment assets
+            inputs:
+              azureSubscription: $(azureSubscriptionServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                bash -n ./scripts/deploy/deploy-platform.sh
+                python3 - <<'PY'
+                import json
+                from pathlib import Path
+
+                for path in [
+                    Path('deployment/logicapps/azure-monitor-to-slack.definition.json'),
+                    Path('deployment/parameters/platform.parameters.example.json'),
+                    Path('cloud-integration/configs/azure.config.json'),
+                    Path('cloud-integration/configs/github.config.json'),
+                ]:
+                    with path.open('r', encoding='utf-8') as handle:
+                        json.load(handle)
+                print('JSON validation complete')
+                PY
+                az bicep build --file ./deployment/main.bicep >/dev/null
+
+          - task: AzureCLI@2
+            displayName: Run deployment script
+            inputs:
+              azureSubscription: $(azureSubscriptionServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              addSpnToEnvironment: true
+              inlineScript: |
+                chmod +x ./scripts/deploy/deploy-platform.sh
+                export AZURE_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+                export LOCATION="${{ parameters.location }}"
+                export ENVIRONMENT_NAME="${{ parameters.environmentName }}"
+                export BASE_NAME="${{ parameters.baseName }}"
+                export RESOURCE_GROUP="${{ parameters.resourceGroup }}"
+                export DEPLOY_OBSERVABILITY="${{ lower(parameters.deployObservability) }}"
+                export PARAMETERS_FILE="${{ parameters.parametersFile }}"
+                export DEPLOYMENT_OUTPUT_DIR="$(Build.SourcesDirectory)/deployment-artifacts"
+                export RUN_ID="ado-$(Build.BuildId)"
+                export RUN_URL="$(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
+                export SOURCE_REF="$(Build.SourceBranchName)"
+                export COMMIT_SHA="$(Build.SourceVersion)"
+                export SLACK_CHANNEL="$(slackChannel)"
+                export SLACK_WEBHOOK_URL="$(slackWebhookUrl)"
+                export DEPLOYMENT_STATUS_WEBHOOK="$(deploymentStatusWebhook)"
+                export HUBSPOT_BASE_URL="$(hubspotBaseUrl)"
+                ./scripts/deploy/deploy-platform.sh \
+                  --resource-group "${{ parameters.resourceGroup }}" \
+                  --phase "${{ parameters.phase }}" \
+                  --target "${{ parameters.target }}" \
+                  --location "${{ parameters.location }}" \
+                  --environment "${{ parameters.environmentName }}" \
+                  --base-name "${{ parameters.baseName }}" \
+                  --what-if "${{ lower(parameters.whatIf) }}"
+                if [[ -f "$(Build.SourcesDirectory)/deployment-artifacts/latest-summary.md" ]]; then
+                  echo "##vso[task.uploadsummary]$(Build.SourcesDirectory)/deployment-artifacts/latest-summary.md"
+                fi
+
+          - publish: deployment
+            artifact: helios-deployment-assets
+            displayName: Publish deployment assets
+
+          - publish: deployment-artifacts
+            artifact: helios-deployment-run
+            displayName: Publish deployment run artifacts

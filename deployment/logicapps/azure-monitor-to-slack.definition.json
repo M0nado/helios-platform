@@ -1,0 +1,95 @@
+{
+  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "slackWebhookUrl": {
+      "type": "String"
+    },
+    "slackChannel": {
+      "type": "String"
+    },
+    "workflowName": {
+      "type": "String"
+    }
+  },
+  "triggers": {
+    "manual": {
+      "type": "Request",
+      "kind": "Http",
+      "inputs": {
+        "schema": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  "actions": {
+    "post_to_slack": {
+      "type": "Http",
+      "runAfter": {},
+      "inputs": {
+        "method": "POST",
+        "uri": "@parameters('slackWebhookUrl')",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "channel": "@parameters('slackChannel')",
+          "text": "@{concat('[', parameters('workflowName'), '] ', coalesce(triggerBody()?['data']?['essentials']?['severity'], 'Informational'), ' - ', coalesce(triggerBody()?['data']?['essentials']?['alertRule'], 'Unnamed alert'))}",
+          "blocks": [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "@{concat('*Alert rule:* ', coalesce(triggerBody()?['data']?['essentials']?['alertRule'], 'Unnamed alert'))}"
+              }
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text": "@{concat('*Severity:* ', coalesce(triggerBody()?['data']?['essentials']?['severity'], 'n/a'))}"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "@{concat('*Signal:* ', coalesce(triggerBody()?['data']?['essentials']?['signalType'], 'n/a'))}"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "@{concat('*Monitor condition:* ', coalesce(triggerBody()?['data']?['essentials']?['monitorCondition'], 'n/a'))}"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "@{concat('*Resource group:* ', coalesce(triggerBody()?['data']?['essentials']?['monitoringService'], 'n/a'))}"
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "@{concat('*Resources:* ', join(triggerBody()?['data']?['essentials']?['alertTargetIDs'], ', '))}"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "accepted": {
+      "type": "Response",
+      "runAfter": {
+        "post_to_slack": [
+          "Succeeded"
+        ]
+      },
+      "inputs": {
+        "statusCode": 202,
+        "body": {
+          "status": "accepted"
+        }
+      }
+    }
+  },
+  "outputs": {}
+}

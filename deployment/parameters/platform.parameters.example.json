@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "environmentName": {
+      "value": "prod"
+    },
+    "baseName": {
+      "value": "helios"
+    },
+    "deployContainerApps": {
+      "value": true
+    },
+    "deployAks": {
+      "value": true
+    },
+    "deployIntegrations": {
+      "value": true
+    },
+    "deployObservability": {
+      "value": true
+    },
+    "controlPlaneImage": {
+      "value": "ghcr.io/m0nado/helios-platform/control-plane:latest"
+    },
+    "hubspotSyncImage": {
+      "value": "ghcr.io/m0nado/helios-platform/hubspot-sync:latest"
+    },
+    "aksImage": {
+      "value": "ghcr.io/m0nado/helios-platform/control-plane:latest"
+    },
+    "slackChannel": {
+      "value": "#helios-alerts"
+    },
+    "hubspotBaseUrl": {
+      "value": "https://api.hubapi.com"
+    }
+  }
+}
