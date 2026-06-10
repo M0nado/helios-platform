@@ -85,44 +85,60 @@ namespace HELIOS.Platform.Caching
         {
             value = default;
 
-            _cacheLock.EnterReadLock();
+            _cacheLock.EnterUpgradeableReadLock();
             try
             {
                 if (!_cache.TryGetValue(key, out var entry))
                 {
-                    UpdateMetrics(key, false);
+                    _cacheLock.EnterWriteLock();
+                    try
+                    {
+                        UpdateMetrics(key, false);
+                    }
+                    finally
+                    {
+                        _cacheLock.ExitWriteLock();
+                    }
+
                     return false;
                 }
 
                 if (entry.IsExpired)
                 {
-                    _cacheLock.ExitReadLock();
                     _cacheLock.EnterWriteLock();
                     try
                     {
                         _currentSize -= entry.SizeInBytes;
                         _cache.Remove(key);
                         UpdateMetrics(key, false);
-                        return false;
                     }
                     finally
                     {
                         _cacheLock.ExitWriteLock();
-                        _cacheLock.EnterReadLock();
                     }
+
+                    return false;
                 }
 
-                entry.AccessCount++;
-                entry.LastAccessedAt = DateTime.UtcNow;
-                entry.PriorityScore = UpdatePriorityScore(entry);
+                _cacheLock.EnterWriteLock();
+                try
+                {
+                    entry.AccessCount++;
+                    entry.LastAccessedAt = DateTime.UtcNow;
+                    entry.PriorityScore = UpdatePriorityScore(entry);
+                    value = (T?)entry.Value;
+                    UpdateMetrics(key, true);
+                }
+                finally
+                {
+                    _cacheLock.ExitWriteLock();
+                }
 
-                value = (T?)entry.Value;
-                UpdateMetrics(key, true);
                 return true;
             }
             finally
             {
-                _cacheLock.ExitReadLock();
+                _cacheLock.ExitUpgradeableReadLock();
             }
         }
 
@@ -199,18 +215,40 @@ namespace HELIOS.Platform.Caching
 
         private void EvictLRU()
         {
+            var expired = _cache.Values
+                .Where(e => e.IsExpired)
+                .Select(e => e.Key)
+                .ToList();
+
+            foreach (var key in expired)
+            {
+                if (_cache.TryGetValue(key, out var entry))
+                {
+                    _currentSize -= entry.SizeInBytes;
+                    _cache.Remove(key);
+                }
+            }
+
+            if (_currentSize <= _maxSize || _cache.Count == 0)
+                return;
+
+            var targetSize = (long)(_maxSize * 0.90);
+            var minimumRemovalCount = Math.Max(1, (int)Math.Ceiling(_cache.Count * 0.2));
+            var removed = 0;
+
             var candidates = _cache.Values
-                .Where(e => !e.IsExpired)
                 .OrderBy(e => e.PriorityScore)
                 .ThenBy(e => e.LastAccessedAt)
                 .ToList();
 
-            var toRemove = (int)(_cache.Count * 0.2);
-
-            foreach (var entry in candidates.Take(toRemove))
+            foreach (var entry in candidates)
             {
                 _currentSize -= entry.SizeInBytes;
                 _cache.Remove(entry.Key);
+                removed++;
+
+                if (_currentSize <= targetSize && removed >= minimumRemovalCount)
+                    break;
             }
         }
 
