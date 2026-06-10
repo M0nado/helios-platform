@@ -85,7 +85,7 @@ namespace HELIOS.Platform.Caching
         {
             value = default;
 
-            _cacheLock.EnterReadLock();
+            _cacheLock.EnterWriteLock();
             try
             {
                 if (!_cache.TryGetValue(key, out var entry))
@@ -96,20 +96,10 @@ namespace HELIOS.Platform.Caching
 
                 if (entry.IsExpired)
                 {
-                    _cacheLock.ExitReadLock();
-                    _cacheLock.EnterWriteLock();
-                    try
-                    {
-                        _currentSize -= entry.SizeInBytes;
-                        _cache.Remove(key);
-                        UpdateMetrics(key, false);
-                        return false;
-                    }
-                    finally
-                    {
-                        _cacheLock.ExitWriteLock();
-                        _cacheLock.EnterReadLock();
-                    }
+                    _currentSize -= entry.SizeInBytes;
+                    _cache.Remove(key);
+                    UpdateMetrics(key, false);
+                    return false;
                 }
 
                 entry.AccessCount++;
@@ -122,7 +112,7 @@ namespace HELIOS.Platform.Caching
             }
             finally
             {
-                _cacheLock.ExitReadLock();
+                _cacheLock.ExitWriteLock();
             }
         }
 
