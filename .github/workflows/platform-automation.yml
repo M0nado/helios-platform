@@ -1,0 +1,84 @@
+name: Platform Automation Readiness
+
+on:
+  pull_request:
+    branches: [ main, develop, work ]
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/github/**'
+      - 'scripts/deploy/azure/**'
+      - 'MERGE_SOURCE_MANIFEST.yaml'
+      - '*.sln'
+      - '*.slnx'
+      - '**/*.csproj'
+  workflow_dispatch:
+    inputs:
+      apply_remotes:
+        description: 'Add/fetch manifest remotes after all sources are reachable'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: platform-automation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-hygiene:
+    name: Validate workflow hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate workflows
+        run: python3 scripts/github/validate-workflows.py
+      - name: Upload workflow validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-validation
+          path: artifacts/workflow-validation.json
+          if-no-files-found: warn
+
+  consolidation-readiness:
+    name: Check external source readiness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify manifest sources
+        run: |
+          args=(--fail-on-unreachable)
+          if [ "${{ github.event.inputs.apply_remotes || 'false' }}" = "true" ]; then
+            args+=(--apply-remotes)
+          fi
+          python3 scripts/github/prepare-consolidation.py "${args[@]}"
+      - name: Upload consolidation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidation-readiness
+          path: artifacts/consolidation/source-readiness.json
+          if-no-files-found: error
+
+  azure-cli-smoke:
+    name: Azure CLI setup smoke test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install or show Azure CLI
+        run: scripts/deploy/azure/setup-azure-cli.sh

@@ -11,7 +11,7 @@ jobs:
     name: ChatGPT Security Review
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -91,7 +91,7 @@ jobs:
     if: github.event.pull_request.draft == false
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -124,7 +124,7 @@ jobs:
     name: Code Quality Checks
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Check PowerShell Syntax
         shell: pwsh -Command "& '{0}'"
@@ -168,7 +168,7 @@ jobs:
     if: always()
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Identify AI-Generated Files
         shell: pwsh -Command "& '{0}'"
@@ -226,7 +226,7 @@ jobs:
     if: github.event_name == 'pull_request'
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Generate Review Comment
         uses: actions/github-script@v6

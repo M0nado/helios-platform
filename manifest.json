@@ -1,0 +1,9 @@
+{
+  "name": "HELIOS Platform",
+  "version": "1.0.0",
+  "automation": {
+    "manifest": "MERGE_SOURCE_MANIFEST.yaml",
+    "workflowValidation": "scripts/github/validate-workflows.py",
+    "consolidationReadiness": "scripts/github/prepare-consolidation.py"
+  }
+}

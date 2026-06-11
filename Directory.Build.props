@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <TreatWarningsAsErrors Condition="'$(CI_STRICT)' == 'true'">true</TreatWarningsAsErrors>
+    <AnalysisLevel Condition="'$(TargetFramework)' != ''">latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>
