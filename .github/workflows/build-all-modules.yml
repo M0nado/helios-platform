@@ -75,7 +75,7 @@ jobs:
 
       - name: Setup NPM Build Cache
         if: github.event.inputs.clean_build != 'true'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ${{ matrix.module }}/node_modules
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload Build Artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-${{ matrix.module }}
           path: |
@@ -149,7 +149,7 @@ jobs:
 
       - name: Upload Coverage Reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.module }}
           path: ${{ matrix.module }}/coverage/
@@ -163,7 +163,7 @@ jobs:
     if: always()
     steps:
       - name: Download All Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: build-results
 

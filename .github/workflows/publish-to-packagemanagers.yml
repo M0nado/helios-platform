@@ -59,43 +59,43 @@ jobs:
         
         # Create chocolateyinstall.ps1
         $installScript = @'
-$ErrorActionPreference = 'Stop'
-$toolsDir = "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)"
-
-$packageArgs = @{
-  packageName = 'helios-platform'
-  softwareName = 'HELIOS Platform*'
-  url = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v{0}/HELIOS-Setup.exe'
-  url64bit = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v{0}/HELIOS-Setup.exe'
-  checksum = '{1}'
-  checksumType = 'sha256'
-  silentArgs = '/S'
-  validExitCodes = @(0)
-}
-
-Install-ChocolateyPackage @packageArgs
-'@ -f '${{ steps.version.outputs.VERSION }}', (Get-FileHash "dist\executables\HELIOS-Setup.exe" -Algorithm SHA256).Hash
+        $ErrorActionPreference = 'Stop'
+        $toolsDir = "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)"
+        
+        $packageArgs = @{
+        packageName = 'helios-platform'
+        softwareName = 'HELIOS Platform*'
+        url = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v{0}/HELIOS-Setup.exe'
+        url64bit = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v{0}/HELIOS-Setup.exe'
+        checksum = '{1}'
+        checksumType = 'sha256'
+        silentArgs = '/S'
+        validExitCodes = @(0)
+        }
+        
+        Install-ChocolateyPackage @packageArgs
+        '@ -f '${{ steps.version.outputs.VERSION }}', (Get-FileHash "dist\executables\HELIOS-Setup.exe" -Algorithm SHA256).Hash
         
         Set-Content -Path "$chocoDir\tools\chocolateyinstall.ps1" -Value $installScript
         
         # Create nuspec
         $nuspec = @'
-<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-  <metadata>
-    <id>helios-platform</id>
-    <version>{0}</version>
-    <title>HELIOS Platform</title>
-    <authors>HELIOS Platform Team</authors>
-    <owners>HELIOS Platform</owners>
-    <description>HELIOS Platform - A comprehensive NuGet executable product</description>
-    <projectUrl>https://github.com/HELIOS-Platform/helios-platform</projectUrl>
-    <licenseUrl>https://github.com/HELIOS-Platform/helios-platform/blob/main/LICENSE</licenseUrl>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <tags>nuget executable platform enterprise</tags>
-  </metadata>
-</package>
-'@ -f '${{ steps.version.outputs.VERSION }}'
+        <?xml version="1.0" encoding="utf-8"?>
+        <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+        <metadata>
+        <id>helios-platform</id>
+        <version>{0}</version>
+        <title>HELIOS Platform</title>
+        <authors>HELIOS Platform Team</authors>
+        <owners>HELIOS Platform</owners>
+        <description>HELIOS Platform - A comprehensive NuGet executable product</description>
+        <projectUrl>https://github.com/HELIOS-Platform/helios-platform</projectUrl>
+        <licenseUrl>https://github.com/HELIOS-Platform/helios-platform/blob/main/LICENSE</licenseUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <tags>nuget executable platform enterprise</tags>
+        </metadata>
+        </package>
+        '@ -f '${{ steps.version.outputs.VERSION }}'
         
         Set-Content -Path "$chocoDir\HELIOS.Platform.nuspec" -Value $nuspec
         

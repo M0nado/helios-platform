@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\HELIOS.Platform.csproj" />
+    <ProjectReference Include="..\..\..\..\src\core\HELIOS.Platform\HELIOS.Platform.csproj" />
   </ItemGroup>
 
 </Project>

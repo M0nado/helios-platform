@@ -1,0 +1,10 @@
+{
+  "name": "helios-platform-automation",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Repository automation metadata for HELIOS Platform.",
+  "scripts": {
+    "validate:workflows": "python3 scripts/github/validate-workflows.py",
+    "consolidation:dry-run": "python3 scripts/github/prepare-consolidation.py --dry-run"
+  }
+}

@@ -18,28 +18,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
-      
       - name: Generate Documentation Indexes
         run: |
           Write-Host "Generating documentation indexes..." -ForegroundColor Cyan
           
           # Create main index
           $index = @"
-# Documentation Index
+          # Documentation Index
 
-## Getting Started
-- [README.md](../README.md)
-- [00-KICKOFF-START-HERE.md](../00-KICKOFF-START-HERE.md)
-- [GETTING_STARTED.md](../GETTING_STARTED.md)
+          ## Getting Started
+          - [README.md](../README.md)
+          - [00-KICKOFF-START-HERE.md](../00-KICKOFF-START-HERE.md)
+          - [GETTING_STARTED.md](../GETTING_STARTED.md)
 
-## Architecture
-- [MODULAR_ARCHITECTURE.md](../MODULAR_ARCHITECTURE.md)
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
+          ## Architecture
+          - [MODULAR_ARCHITECTURE.md](../MODULAR_ARCHITECTURE.md)
+          - [ARCHITECTURE.md](./ARCHITECTURE.md)
 
-## Phases
-"@
+          ## Phases
+          "@
           
           Get-ChildItem -Path "phases" -Directory | ForEach-Object {
             $index += "`n- [$($_.Name)](../$($_.FullName.Replace('\', '/')))"
@@ -81,9 +78,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
-      
       - name: Generate Wiki Pages
         run: |
           Write-Host "Generating wiki documentation..." -ForegroundColor Cyan
@@ -95,11 +89,11 @@ jobs:
           
           # Create wiki index
           $wikiIndex = @"
-# HELIOS Platform Wiki
+          # HELIOS Platform Wiki
 
-## Phases
+          ## Phases
 
-"@
+          "@
           
           $phases | ForEach-Object {
             $phaseNum = $_.Name.Split('-')[0]

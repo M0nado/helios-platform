@@ -1,0 +1,87 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Core", "src\core\HELIOS.Platform\HELIOS.Platform.csproj", "{F6C67A9D-264A-5ED8-9469-073B43897E27}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Minimal", "src\core\HELIOS.Platform.Minimal\HELIOS.Platform.csproj", "{BA1EB44E-25D4-54BF-B4F2-1A907E109141}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.SystemIntegration", "HELIOS.Platform.SystemIntegration\HELIOS.Platform.SystemIntegration.csproj", "{691285CA-1940-580C-B5AB-947166BBFCD3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecurityValidator", "src\Security\SecurityValidator.csproj", "{33A5D6A6-59D4-55DA-851F-FB38F012AB18}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Phase10.Users", "src\core\HELIOS.Platform\Phase10\Users\HELIOS.Platform.Phase10.Users.csproj", "{CCF9054B-8963-5761-A9FF-D396AC28FC21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Phase10.Users.Tests", "src\core\HELIOS.Platform\Phase10\Users\Tests\HELIOS.Platform.Phase10.Users.Tests.csproj", "{2150A951-874E-51E0-AE5F-1C66DC3BA452}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Phase10.Sandbox", "src\core\HELIOS.Platform\Phase10\Sandbox\HELIOS.Platform.Phase10.Sandbox.csproj", "{17572C65-A921-57BA-8E48-B945015BDE4E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Tests", "src\tests\HELIOS.Platform.Tests.csproj", "{D49A705E-5EB4-5FBD-A8F5-2C6A9EFCFB7A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecurityValidationTests", "tests\SecurityValidationTests.csproj", "{FD52661B-3812-5141-B959-885DF2B1F630}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Tests.Legacy", "tests\HELIOS.Platform.Tests\HELIOS.Platform.Tests.csproj", "{E01AFFFA-26A8-57AB-A48D-48E514F7859C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Tests.Phase10.Quarantine", "tests\HELIOS.Platform.Tests\Phase10\Quarantine\HELIOS.Platform.Tests.Phase10.Quarantine.csproj", "{4E520074-C187-5B0E-9E34-360B133B0AB7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeliosDemos", "demos\HeliosDemos.csproj", "{9C42DCE2-CEF0-5244-96D1-8766411E1B63}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F6C67A9D-264A-5ED8-9469-073B43897E27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6C67A9D-264A-5ED8-9469-073B43897E27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6C67A9D-264A-5ED8-9469-073B43897E27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6C67A9D-264A-5ED8-9469-073B43897E27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA1EB44E-25D4-54BF-B4F2-1A907E109141}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA1EB44E-25D4-54BF-B4F2-1A907E109141}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA1EB44E-25D4-54BF-B4F2-1A907E109141}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA1EB44E-25D4-54BF-B4F2-1A907E109141}.Release|Any CPU.Build.0 = Release|Any CPU
+		{691285CA-1940-580C-B5AB-947166BBFCD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{691285CA-1940-580C-B5AB-947166BBFCD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{691285CA-1940-580C-B5AB-947166BBFCD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{691285CA-1940-580C-B5AB-947166BBFCD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33A5D6A6-59D4-55DA-851F-FB38F012AB18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33A5D6A6-59D4-55DA-851F-FB38F012AB18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33A5D6A6-59D4-55DA-851F-FB38F012AB18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33A5D6A6-59D4-55DA-851F-FB38F012AB18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CCF9054B-8963-5761-A9FF-D396AC28FC21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCF9054B-8963-5761-A9FF-D396AC28FC21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCF9054B-8963-5761-A9FF-D396AC28FC21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCF9054B-8963-5761-A9FF-D396AC28FC21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2150A951-874E-51E0-AE5F-1C66DC3BA452}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2150A951-874E-51E0-AE5F-1C66DC3BA452}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2150A951-874E-51E0-AE5F-1C66DC3BA452}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2150A951-874E-51E0-AE5F-1C66DC3BA452}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17572C65-A921-57BA-8E48-B945015BDE4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17572C65-A921-57BA-8E48-B945015BDE4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17572C65-A921-57BA-8E48-B945015BDE4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17572C65-A921-57BA-8E48-B945015BDE4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D49A705E-5EB4-5FBD-A8F5-2C6A9EFCFB7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D49A705E-5EB4-5FBD-A8F5-2C6A9EFCFB7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D49A705E-5EB4-5FBD-A8F5-2C6A9EFCFB7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D49A705E-5EB4-5FBD-A8F5-2C6A9EFCFB7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD52661B-3812-5141-B959-885DF2B1F630}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD52661B-3812-5141-B959-885DF2B1F630}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD52661B-3812-5141-B959-885DF2B1F630}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD52661B-3812-5141-B959-885DF2B1F630}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E01AFFFA-26A8-57AB-A48D-48E514F7859C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E01AFFFA-26A8-57AB-A48D-48E514F7859C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E01AFFFA-26A8-57AB-A48D-48E514F7859C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E01AFFFA-26A8-57AB-A48D-48E514F7859C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E520074-C187-5B0E-9E34-360B133B0AB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E520074-C187-5B0E-9E34-360B133B0AB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E520074-C187-5B0E-9E34-360B133B0AB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E520074-C187-5B0E-9E34-360B133B0AB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C42DCE2-CEF0-5244-96D1-8766411E1B63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C42DCE2-CEF0-5244-96D1-8766411E1B63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C42DCE2-CEF0-5244-96D1-8766411E1B63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C42DCE2-CEF0-5244-96D1-8766411E1B63}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
