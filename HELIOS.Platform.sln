@@ -1,0 +1,57 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform", "src\core\HELIOS.Platform\HELIOS.Platform.csproj", "{D6BCE851-661E-43E1-9E1B-46A27469B901}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Tests", "tests\HELIOS.Platform.Tests\HELIOS.Platform.Tests.csproj", "{B11E4E46-3D3C-4661-8EA7-6157E37C352B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecurityValidator", "src\Security\SecurityValidator.csproj", "{0C7C5465-B447-4F35-8630-E402E7F28C4F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.SystemIntegration", "HELIOS.Platform.SystemIntegration\HELIOS.Platform.SystemIntegration.csproj", "{BA7423BA-017D-47E7-8746-C998DA7F7D66}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Tray", "HELIOS.Platform.Tray\HELIOS.Platform.Tray.csproj", "{45D1B877-0C57-4F54-8ED7-A53554D81D7E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.ShellExtension", "HELIOS.Platform.ShellExtension\HELIOS.Platform.ShellExtension.csproj", "{5B5242AA-B4D9-46E3-B402-F93EF2035661}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Installer", "HELIOS.Platform.Installer\HELIOS.Platform.Installer.csproj", "{E60580F8-6C78-47BE-9554-730B7AF9A9EA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D6BCE851-661E-43E1-9E1B-46A27469B901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6BCE851-661E-43E1-9E1B-46A27469B901}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6BCE851-661E-43E1-9E1B-46A27469B901}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6BCE851-661E-43E1-9E1B-46A27469B901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B11E4E46-3D3C-4661-8EA7-6157E37C352B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B11E4E46-3D3C-4661-8EA7-6157E37C352B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B11E4E46-3D3C-4661-8EA7-6157E37C352B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B11E4E46-3D3C-4661-8EA7-6157E37C352B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C7C5465-B447-4F35-8630-E402E7F28C4F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C7C5465-B447-4F35-8630-E402E7F28C4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C7C5465-B447-4F35-8630-E402E7F28C4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C7C5465-B447-4F35-8630-E402E7F28C4F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA7423BA-017D-47E7-8746-C998DA7F7D66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA7423BA-017D-47E7-8746-C998DA7F7D66}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA7423BA-017D-47E7-8746-C998DA7F7D66}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA7423BA-017D-47E7-8746-C998DA7F7D66}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45D1B877-0C57-4F54-8ED7-A53554D81D7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45D1B877-0C57-4F54-8ED7-A53554D81D7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45D1B877-0C57-4F54-8ED7-A53554D81D7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45D1B877-0C57-4F54-8ED7-A53554D81D7E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B5242AA-B4D9-46E3-B402-F93EF2035661}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B5242AA-B4D9-46E3-B402-F93EF2035661}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B5242AA-B4D9-46E3-B402-F93EF2035661}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B5242AA-B4D9-46E3-B402-F93EF2035661}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E60580F8-6C78-47BE-9554-730B7AF9A9EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E60580F8-6C78-47BE-9554-730B7AF9A9EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E60580F8-6C78-47BE-9554-730B7AF9A9EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E60580F8-6C78-47BE-9554-730B7AF9A9EA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
