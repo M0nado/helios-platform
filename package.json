@@ -1,0 +1,13 @@
+{
+  "name": "helios-platform-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repository-level automation manifest for HELIOS Platform GitHub workflows.",
+  "scripts": {
+    "validate:workflows": "python3 scripts/github/validate-workflows.py",
+    "consolidation:check": "python3 scripts/github/prepare-consolidation.py --fail-on-unreachable"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
