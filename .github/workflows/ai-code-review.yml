@@ -156,7 +156,9 @@ jobs:
             exit 0
           fi
 
-          pwsh -NoLogo -NoProfile -Command - <<'PWSH'
+          validator_script="$(mktemp -t validate-powershell-syntax.XXXXXX.ps1)"
+          trap 'rm -f "$validator_script"' EXIT
+          cat > "$validator_script" <<'PWSH'
           $ErrorActionPreference = 'Stop'
           $parseErrors = 0
           $files = Get-ChildItem -Recurse -File -Include '*.ps1' |
@@ -178,6 +180,7 @@ jobs:
             exit 1
           }
           PWSH
+          pwsh -NoLogo -NoProfile -File "$validator_script"
 
       - name: Verify Documentation
         shell: bash
