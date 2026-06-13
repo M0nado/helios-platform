@@ -11,8 +11,10 @@ import argparse
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
+from urllib.parse import urlsplit, urlunsplit
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -97,11 +99,31 @@ def count_language_files(files: Iterable[Path]) -> dict[str, int]:
     return counters
 
 
+def sanitize_remote_url(url: str) -> str:
+    """Redact user-info from a git remote URL while preserving non-secret parts."""
+    parsed = urlsplit(url)
+    if not parsed.scheme or "@" not in parsed.netloc:
+        return url
+
+    host = parsed.netloc.rsplit("@", 1)[1]
+    sanitized_netloc = f"[redacted]@{host}"
+    return urlunsplit((parsed.scheme, sanitized_netloc, parsed.path, parsed.query, parsed.fragment))
+
+
+def sanitize_remote_line(line: str) -> str:
+    """Redact credentials embedded in URLs returned by `git remote -v`."""
+    return re.sub(
+        r"(?P<url>[A-Za-z][A-Za-z0-9+.-]*://[^\s]+)",
+        lambda match: sanitize_remote_url(match.group("url")),
+        line,
+    )
+
+
 def git_inventory() -> dict[str, object]:
     branches_raw = run(["git", "branch", "-a", "--no-color"]).stdout.splitlines()
     branches = [line.replace("*", " ").strip() for line in branches_raw if line.strip()]
     status = run(["git", "status", "--short", "--branch"]).stdout
-    remotes = run(["git", "remote", "-v"]).stdout.splitlines()
+    remotes = [sanitize_remote_line(line) for line in run(["git", "remote", "-v"]).stdout.splitlines()]
     focus = {name: [branch for branch in branches if name in branch] for name in BRANCH_FOCUS_NAMES}
     missing_focus = [name for name, matches in focus.items() if not matches]
     return {
