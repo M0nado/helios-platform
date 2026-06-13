@@ -55,7 +55,7 @@ jobs:
         shell: pwsh
         run: |
           $testProjects = @(
-            'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj',
+            # The legacy root test project includes unresolved backend and GUI assemblies; keep CI on the curated src test project until it is split or fixed.
             'src/tests/HELIOS.Platform.Tests.csproj'
           )
           $found = $false

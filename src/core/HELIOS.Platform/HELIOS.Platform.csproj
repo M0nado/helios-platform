@@ -185,6 +185,10 @@
     <Compile Remove="Phase10/BuilderUI/ProfileSelector.cs" />
     <Compile Remove="Phase10/BuilderUI/ProgressMonitor.cs" />
     <Compile Remove="Phase10/BuilderUI/SummaryReview.cs" />
+    <!-- Windows-only integration sources require WinRT/Task Scheduler APIs that are unavailable in the portable Linux CI build. -->
+    <Compile Remove="SystemIntegration/DeviceController.cs" />
+    <Compile Remove="SystemIntegration/DynamicLightingController.cs" />
+    <Compile Remove="Phase10/Malware/MalwareScanScheduler.cs" />
     <!-- Unit tests (including Moq-based tests) belong in test projects, not the portable core application build. -->
     <Compile Remove="**/*Tests.cs" />
     <Compile Remove="**/Tests/**/*.cs" />

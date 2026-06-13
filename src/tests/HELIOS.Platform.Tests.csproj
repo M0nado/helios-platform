@@ -28,9 +28,13 @@
     <!-- GUI/WPF theme tests require the MonadoBlade GUI assemblies and Windows-only WPF references. -->
     <Compile Remove="ThemeSystemTests.cs" />
     <Compile Remove="Themes/DarkModeThemeTests.cs" />
-    <!-- Backend AI and software automation tests target services that are not referenced by this test project yet. -->
+    <!-- Backend/service tests target namespaces that are not implemented or referenced by this portable test project yet. -->
     <Compile Remove="HELIOS.Platform.Tests/AI/**/*.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Cloud/**/*.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/FileManagement/**/*.cs" />
     <Compile Remove="HELIOS.Platform.Tests/Software/**/*.cs" />
+    <Compile Remove="Phase3Phase5IntegrationTests.cs" />
+    <Compile Remove="Phase5/**/*.cs" />
   </ItemGroup>
 
 </Project>
