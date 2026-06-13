@@ -77,7 +77,7 @@ jobs:
             az version
 
       - name: Optional Azure login validation
-        if: ${{ env.AZURE_CLIENT_ID_PRESENT == 'true' && env.AZURE_TENANT_ID_PRESENT == 'true' && env.AZURE_SUBSCRIPTION_ID_PRESENT == 'true' }}
+        if: ${{ github.event_name != 'pull_request' && env.AZURE_CLIENT_ID_PRESENT == 'true' && env.AZURE_TENANT_ID_PRESENT == 'true' && env.AZURE_SUBSCRIPTION_ID_PRESENT == 'true' }}
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
