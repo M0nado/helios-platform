@@ -14,233 +14,258 @@ jobs:
   ai-security-review:
     runs-on: ubuntu-latest
     name: ChatGPT Security Review
-    
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up PowerShell
-        shell: pwsh -Command "& '{0}'"
+      - name: Set up Review Environment
+        shell: bash
         run: |
-          Write-Host "PowerShell version: $($PSVersionTable.PSVersion)"
+          set -euo pipefail
+          echo "Bash: $BASH_VERSION"
+          if command -v pwsh >/dev/null 2>&1; then
+            pwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+          else
+            echo "::notice::PowerShell is not installed; PowerShell-only syntax validation will be skipped."
+          fi
 
       - name: Check for AI-Generated Code
-        shell: pwsh -Command "& '{0}'"
+        shell: bash
         run: |
-          $aiFiles = Get-ChildItem -Recurse -Filter "*.ps1" | `
-            Where-Object { $_.Name -match "generated|codex" } | `
-            Select-Object -ExpandProperty FullName
-          
-          if ($aiFiles) {
-            Write-Host "AI-Generated files detected: $($aiFiles.Count)"
-            foreach ($file in $aiFiles) {
-              Write-Host "  - $file"
-            }
-            Write-Host "::notice::AI-Generated code detected. Flagging for review."
-          }
+          set -euo pipefail
+          mapfile -t ai_files < <(find . \
+            -path './.git' -prune -o \
+            -path './bin' -prune -o \
+            -path './obj' -prune -o \
+            -path './node_modules' -prune -o \
+            -type f -name '*.ps1' \
+            | sed 's#^./##' \
+            | grep -Ei '(generated|codex)' || true)
+
+          if [ "${#ai_files[@]}" -gt 0 ]; then
+            echo "AI-Generated files detected: ${#ai_files[@]}"
+            printf '  - %s\n' "${ai_files[@]}"
+            echo "::notice::AI-Generated code detected. Flagging for review."
+          fi
 
       - name: Scan for Credential Exposure
-        shell: pwsh -Command "& '{0}'"
+        shell: bash
         run: |
-          $credentialPatterns = @(
-            '(?i)(password|api[_-]?key|secret|token|credential)\s*=\s*[''"][^''"]{8,}[''"]',
-            '(?i)(password|api[_-]?key|secret|token|credential)\s*:\s*[''"][^''"]{8,}[''"]'
-          )
-          $files = Get-ChildItem -Recurse -File -Include "*.ps1", "*.py", "*.js" |
-            Where-Object {
-              $_.FullName -notmatch '[\\/](\.git|bin|obj|node_modules|artifacts|dist)[\\/]' -and
-              $_.Name -notmatch '(?i)test|example'
-            }
+          set -euo pipefail
+          patterns='(?i)(password|api[_-]?key|secret|token|credential)\s*[:=]\s*['"'"'\"][^'"'"'\"]{8,}['"'"'\"]'
+          files=$(find . \
+            -path './.git' -prune -o \
+            -path './bin' -prune -o \
+            -path './obj' -prune -o \
+            -path './node_modules' -prune -o \
+            -path './artifacts' -prune -o \
+            -path './dist' -prune -o \
+            -type f \( -name '*.ps1' -o -name '*.py' -o -name '*.js' \) \
+            ! -iname '*test*' ! -iname '*example*' -print)
 
-          $found = $false
-          foreach ($file in $files) {
-            $content = Get-Content $file.FullName -Raw
-            foreach ($pattern in $credentialPatterns) {
-              if ($content -match $pattern) {
-                Write-Host "::warning::Potential hardcoded credential in $($file.FullName)"
-                $found = $true
-              }
-            }
-          }
-
-          if ($found) {
-            Write-Host "::notice::Credential scan findings were reported as warnings for reviewer triage."
-          }
+          if [ -n "$files" ]; then
+            while IFS= read -r file; do
+              if grep -IPn "$patterns" "$file" >/tmp/credential-hit.txt 2>/dev/null; then
+                echo "::warning::Potential hardcoded credential in ${file#./}"
+              fi
+            done <<< "$files"
+          fi
+          echo "Credential scan completed with reviewer-triage warnings only."
 
       - name: Check Security Issues
-        shell: pwsh -Command "& '{0}'"
+        shell: bash
         run: |
-          $dangerPatterns = @(
-            "cmd\.exe",
-            "powershell.*-nop",
-            "bypass",
-            "Remove-Item.*recurse",
-            "del.*\/s"
-          )
-          
-          $files = Get-ChildItem -Recurse -File -Include "*.ps1" |
-            Where-Object { $_.FullName -notmatch '[\\/](\.git|bin|obj|node_modules|artifacts|dist)[\\/]' }
-          $issues = 0
-          
-          foreach ($file in $files) {
-            $content = Get-Content $file -Raw
-            foreach ($pattern in $dangerPatterns) {
-              if ($content -match $pattern) {
-                Write-Host "::warning::Potential security issue in $($file.Name)"
-                $issues++
-              }
-            }
-          }
-          
-          if ($issues -gt 0) {
-            Write-Host "::warning::Found $issues potential security issues"
-          }
+          set -euo pipefail
+          patterns='cmd\.exe|powershell.*-nop|bypass|Remove-Item.*recurse|del.*/s'
+          issue_count=0
+          while IFS= read -r file; do
+            if grep -Ein "$patterns" "$file" >/dev/null 2>&1; then
+              echo "::warning::Potential security issue in ${file#./}"
+              issue_count=$((issue_count + 1))
+            fi
+          done < <(find . \
+            -path './.git' -prune -o \
+            -path './bin' -prune -o \
+            -path './obj' -prune -o \
+            -path './node_modules' -prune -o \
+            -path './artifacts' -prune -o \
+            -path './dist' -prune -o \
+            -type f -name '*.ps1' -print)
+
+          if [ "$issue_count" -gt 0 ]; then
+            echo "::warning::Found $issue_count potential security issues"
+          fi
+          echo "Security issue scan completed."
 
   ai-codex-suggestions:
     runs-on: ubuntu-latest
     name: Codex Suggestions
-    if: github.event.pull_request.draft == false
-    
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Extract Changed Files
-        shell: pwsh -Command "& '{0}'"
+        shell: bash
         run: |
-          git diff --name-only HEAD~1 HEAD | Tee-Object -Variable changedFiles
-          Write-Host "Changed files:"
-          foreach ($file in $changedFiles) {
-            Write-Host "  - $file"
-          }
+          set -euo pipefail
+          if git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+            git diff --name-only HEAD~1 HEAD | tee changed-files.txt
+          else
+            git show --name-only --format='' HEAD | tee changed-files.txt
+          fi
+          echo "Changed files:"
+          sed 's/^/  - /' changed-files.txt
 
       - name: Check for Refactoring Opportunities
-        shell: pwsh -Command "& '{0}'"
+        shell: bash
         run: |
-          $files = Get-ChildItem -Include "*.ps1" -Recurse | 
-            Where-Object { $_.Length -gt 500 }
-          
-          Write-Host "::notice::Analyzing $(($files | Measure-Object).Count) files for optimization"
-          
-          foreach ($file in $files) {
-            $lines = (Get-Content $file | Measure-Object -Line).Lines
-            if ($lines -gt 200) {
-              Write-Host "::notice::File $($file.Name) has $lines lines - consider breaking into functions"
-            }
-          }
+          set -euo pipefail
+          count=0
+          while IFS= read -r file; do
+            count=$((count + 1))
+            lines=$(wc -l < "$file")
+            if [ "$lines" -gt 200 ]; then
+              echo "::notice::File ${file#./} has $lines lines - consider breaking into functions"
+            fi
+          done < <(find . \
+            -path './.git' -prune -o \
+            -path './bin' -prune -o \
+            -path './obj' -prune -o \
+            -path './node_modules' -prune -o \
+            -type f -name '*.ps1' -size +500c -print)
+          echo "::notice::Analyzed $count files for optimization"
 
   code-quality-check:
     runs-on: ubuntu-latest
     name: Code Quality Checks
-    
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Check PowerShell Syntax
-        shell: pwsh -Command "& '{0}'"
+        shell: bash
         run: |
-          $errors = 0
-          $files = Get-ChildItem -Recurse -Include "*.ps1"
-          
+          set -euo pipefail
+          if ! command -v pwsh >/dev/null 2>&1; then
+            echo "::notice::PowerShell is not installed; skipping parser validation."
+            exit 0
+          fi
+
+          validator_script="$(mktemp -t validate-powershell-syntax.XXXXXX.ps1)"
+          trap 'rm -f "$validator_script"' EXIT
+          cat > "$validator_script" <<'PWSH'
+          $ErrorActionPreference = 'Stop'
+          $parseErrors = 0
+          $files = Get-ChildItem -Recurse -File -Include '*.ps1' |
+            Where-Object { $_.FullName -notmatch '[\/](\.git|bin|obj|node_modules|artifacts|dist)[\/]' }
+
           foreach ($file in $files) {
-            try {
-              [System.Management.Automation.PSParser]::Tokenize(
-                (Get-Content $file -Raw), 
-                [ref]$null
-              ) | Out-Null
+            $errors = $null
+            [System.Management.Automation.PSParser]::Tokenize((Get-Content -LiteralPath $file.FullName -Raw), [ref]$errors) | Out-Null
+            if ($errors -and $errors.Count -gt 0) {
+              foreach ($errorRecord in $errors) {
+                Write-Host "::error file=$($file.FullName),line=$($errorRecord.Token.StartLine)::PowerShell parser error: $($errorRecord.Message)"
+              }
+              $parseErrors += $errors.Count
             }
-            catch {
-              Write-Host "::error::Syntax error in $($file.Name): $_"
-              $errors++
-            }
-          }
-          
-          if ($errors -gt 0) {
-            exit 1
           }
 
-      - name: Verify Documentation
-        shell: pwsh -Command "& '{0}'"
-        run: |
-          $files = Get-ChildItem -Recurse -Include "*.ps1" | 
-            Where-Object { $_.Name -notmatch "test" }
-          
-          foreach ($file in $files) {
-            $content = Get-Content $file -Raw
-            if ($content -notmatch "\.SYNOPSIS|\.DESCRIPTION") {
-              Write-Host "::warning::$($file.Name) lacks proper documentation"
-            }
+          if ($parseErrors -gt 0) {
+            Write-Host "::error::Found $parseErrors PowerShell parser errors."
+            exit 1
           }
+          PWSH
+          pwsh -NoLogo -NoProfile -File "$validator_script"
+
+      - name: Verify Documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            if ! grep -Eq '\.(SYNOPSIS|DESCRIPTION)' "$file"; then
+              echo "::warning::${file#./} lacks proper documentation"
+            fi
+          done < <(find . \
+            -path './.git' -prune -o \
+            -path './bin' -prune -o \
+            -path './obj' -prune -o \
+            -path './node_modules' -prune -o \
+            -type f -name '*.ps1' ! -iname '*test*' -print)
 
   flag-ai-code-for-review:
     runs-on: ubuntu-latest
     name: Flag AI-Generated Code
     if: always()
-    
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Identify AI-Generated Files
-        shell: pwsh -Command "& '{0}'"
+        shell: bash
         run: |
-          $aiFiles = @(
-            Get-ChildItem -Recurse -File -Include "*.ps1", "*.py" |
-              Where-Object {
-                if ($_.FullName -match '[\\/](\.git|bin|obj|node_modules|artifacts|dist)[\\/]') {
-                  return $false
-                }
+          set -euo pipefail
+          mapfile -t ai_files < <(find . \
+            -path './.git' -prune -o \
+            -path './bin' -prune -o \
+            -path './obj' -prune -o \
+            -path './node_modules' -prune -o \
+            -path './artifacts' -prune -o \
+            -path './dist' -prune -o \
+            -type f \( -name '*.ps1' -o -name '*.py' \) -print0 \
+            | xargs -0 grep -IlE 'AI-Generated|Codex|ChatGPT|Source:[[:space:]]*(GitHub Codex|ChatGPT)' 2>/dev/null \
+            | sed 's#^./##' || true)
 
-                $content = Get-Content $_.FullName -Raw
-                $content -match "AI-Generated|Codex|ChatGPT" -or `
-                  $content -match "Source:\s*(GitHub Codex|ChatGPT)"
-              }
-          )
-
-          if ($aiFiles) {
-            Write-Host "::notice::AI-Generated files require review:`n$($aiFiles.FullName -join "`n")"
-            
-            # Create review checklist
-            Write-Host "`n✓ Review Checklist for AI-Generated Code:"
-            Write-Host "  [ ] Security review passed"
-            Write-Host "  [ ] Performance acceptable"
-            Write-Host "  [ ] Compliance verified"
-            Write-Host "  [ ] Tests added"
-            Write-Host "  [ ] Documentation complete"
-            
-            Write-Host "::notice::AI-generated code was detected and flagged for reviewer attention."
-          }
+          if [ "${#ai_files[@]}" -gt 0 ]; then
+            printf '::notice::AI-Generated files require review:\n%s\n' "${ai_files[*]}"
+            echo ""
+            echo "✓ Review Checklist for AI-Generated Code:"
+            echo "  [ ] Security review passed"
+            echo "  [ ] Performance acceptable"
+            echo "  [ ] Compliance verified"
+            echo "  [ ] Tests added"
+            echo "  [ ] Documentation complete"
+            echo "::notice::AI-generated code was detected and flagged for reviewer attention."
+          else
+            echo "No AI-generated code markers detected."
+          fi
 
   approval-gate:
     runs-on: ubuntu-latest
     name: Approval Gate
-    needs: [ai-security-review, code-quality-check]
+    needs: [ai-security-review, code-quality-check, flag-ai-code-for-review]
     if: always()
-    
+
     steps:
       - name: Check Approval Status
+        shell: bash
         run: |
+          set -euo pipefail
           echo "AI review pipeline complete"
           echo "Status summary:"
           echo "  - Security Review: ${{ needs.ai-security-review.result }}"
           echo "  - Code Quality: ${{ needs.code-quality-check.result }}"
-          
-          if [ "${{ needs.ai-security-review.result }}" != "success" ]; then
-            echo "::error::Security review failed"
-            exit 1
-          fi
-          
-          if [ "${{ needs.code-quality-check.result }}" != "success" ]; then
-            echo "::error::Code quality checks failed"
-            exit 1
-          fi
+          echo "  - AI Code Flagging: ${{ needs.flag-ai-code-for-review.result }}"
+
+          for result in \
+            "${{ needs.ai-security-review.result }}" \
+            "${{ needs.code-quality-check.result }}" \
+            "${{ needs.flag-ai-code-for-review.result }}"; do
+            if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+              echo "::error::Required AI review job failed or was cancelled"
+              exit 1
+            fi
+          done
 
   comment-on-pr:
     runs-on: ubuntu-latest
     name: Add Review Comments
     if: github.event_name == 'pull_request'
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -251,29 +276,29 @@ jobs:
           script: |
             const comment = `
             ## 🤖 AI Integration Pipeline Results
-            
+
             **Pipeline Status**: ✅ Complete
-            
+
             ### Analysis Summary
             - ✅ Security scan completed
             - ✅ Code quality verified
             - ✅ Documentation checked
-            
+
             ### Recommendations
             For any AI-generated code detected:
             1. Review security implications
             2. Validate performance impact
             3. Check compliance requirements
             4. Verify test coverage
-            
-            **Next Steps**: 
+
+            **Next Steps**:
             - Review code changes above
             - Approve if all checks pass
             - Request changes if issues found
-            
+
             [AI Integration Docs](../../ai-integration/README.md)
             `;
-            
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

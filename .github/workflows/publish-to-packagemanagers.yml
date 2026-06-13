@@ -14,6 +14,9 @@ on:
         required: false
         default: 'chocolatey,winget'
 
+permissions:
+  contents: read
+
 jobs:
   publish-package-managers:
     runs-on: windows-latest
@@ -22,120 +25,113 @@ jobs:
         package-manager: [chocolatey, winget]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set version
-      id: version
-      shell: powershell
-      run: |
-        if ('${{ github.event.release.tag_name }}') {
-          $version = '${{ github.event.release.tag_name }}' -replace '^v', ''
-        } else {
-          $version = '${{ github.event.inputs.version }}'
-        }
-        Write-Output "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      - name: Set version
+        id: version
+        shell: pwsh
+        run: |
+          if ('${{ github.event.release.tag_name }}') {
+            $version = '${{ github.event.release.tag_name }}' -replace '^v', ''
+          } else {
+            $version = '${{ github.event.inputs.version }}'
+          }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-    - name: Download release artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: release-${{ steps.version.outputs.VERSION }}
-        path: dist
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-${{ steps.version.outputs.VERSION }}
+          path: dist
 
-    - name: Publish to Chocolatey
-      if: matrix.package-manager == 'chocolatey'
-      shell: powershell
-      env:
-        CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
-      run: |
-        Write-Host "Publishing to Chocolatey..."
-        
-        # Create Chocolatey package structure
-        $chocoDir = "choco-package"
-        New-Item -ItemType Directory -Force -Path "$chocoDir\tools" | Out-Null
-        
-        # Copy executables
-        Copy-Item "dist\executables\*.exe" "$chocoDir\tools\" -Force
-        
-        # Create chocolateyinstall.ps1
-        $installScript = @'
-$ErrorActionPreference = 'Stop'
-$toolsDir = "$(Split-Path -Parent $MyInvocation.MyCommand.Definition)"
+      - name: Publish to Chocolatey
+        if: matrix.package-manager == 'chocolatey'
+        shell: pwsh
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        run: |
+          Write-Host "Publishing to Chocolatey..."
 
-$packageArgs = @{
-  packageName = 'helios-platform'
-  softwareName = 'HELIOS Platform*'
-  url = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v{0}/HELIOS-Setup.exe'
-  url64bit = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v{0}/HELIOS-Setup.exe'
-  checksum = '{1}'
-  checksumType = 'sha256'
-  silentArgs = '/S'
-  validExitCodes = @(0)
-}
+          $chocoDir = 'choco-package'
+          New-Item -ItemType Directory -Force -Path "$chocoDir\tools" | Out-Null
+          Copy-Item 'dist\executables\*.exe' "$chocoDir\tools\" -Force
 
-Install-ChocolateyPackage @packageArgs
-'@ -f '${{ steps.version.outputs.VERSION }}', (Get-FileHash "dist\executables\HELIOS-Setup.exe" -Algorithm SHA256).Hash
-        
-        Set-Content -Path "$chocoDir\tools\chocolateyinstall.ps1" -Value $installScript
-        
-        # Create nuspec
-        $nuspec = @'
-<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
-  <metadata>
-    <id>helios-platform</id>
-    <version>{0}</version>
-    <title>HELIOS Platform</title>
-    <authors>HELIOS Platform Team</authors>
-    <owners>HELIOS Platform</owners>
-    <description>HELIOS Platform - A comprehensive NuGet executable product</description>
-    <projectUrl>https://github.com/HELIOS-Platform/helios-platform</projectUrl>
-    <licenseUrl>https://github.com/HELIOS-Platform/helios-platform/blob/main/LICENSE</licenseUrl>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <tags>nuget executable platform enterprise</tags>
-  </metadata>
-</package>
-'@ -f '${{ steps.version.outputs.VERSION }}'
-        
-        Set-Content -Path "$chocoDir\HELIOS.Platform.nuspec" -Value $nuspec
-        
-        Write-Host "Chocolatey package prepared"
-        Write-Host "[INFO] Chocolatey API key configured: $(if ($env:CHOCO_API_KEY) { 'Yes' } else { 'No' })"
+          $checksum = (Get-FileHash 'dist\executables\HELIOS-Setup.exe' -Algorithm SHA256).Hash
+          $installScript = @"
+          `$ErrorActionPreference = 'Stop'
+          `$toolsDir = "`$(Split-Path -Parent `$MyInvocation.MyCommand.Definition)"
 
-    - name: Publish to Winget
-      if: matrix.package-manager == 'winget'
-      shell: powershell
-      run: |
-        Write-Host "Publishing to Winget..."
-        
-        # Create Winget manifest
-        $wingetDir = "winget-manifest"
-        New-Item -ItemType Directory -Force -Path $wingetDir | Out-Null
-        
-        $manifest = @{
-          'PackageIdentifier' = 'HELIOS.Platform'
-          'PackageVersion' = '${{ steps.version.outputs.VERSION }}'
-          'PackageName' = 'HELIOS Platform'
-          'Publisher' = 'HELIOS Platform Team'
-          'PackageUrl' = 'https://github.com/HELIOS-Platform/helios-platform'
-          'License' = 'MIT'
-          'InstallerType' = 'exe'
-          'InstallerUrl' = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v${{ steps.version.outputs.VERSION }}/HELIOS-Setup.exe'
-          'InstallerSha256' = (Get-FileHash "dist\executables\HELIOS-Setup.exe" -Algorithm SHA256).Hash
-        } | ConvertTo-Json -Depth 10
-        
-        Set-Content -Path "$wingetDir\HELIOS.Platform.yaml" -Value $manifest
-        
-        Write-Host "Winget manifest prepared"
-        Write-Host "[INFO] Manifest file: $wingetDir\HELIOS.Platform.yaml"
+          `$packageArgs = @{
+            packageName = 'helios-platform'
+            softwareName = 'HELIOS Platform*'
+            url = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v${{ steps.version.outputs.VERSION }}/HELIOS-Setup.exe'
+            url64bit = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v${{ steps.version.outputs.VERSION }}/HELIOS-Setup.exe'
+            checksum = '$checksum'
+            checksumType = 'sha256'
+            silentArgs = '/S'
+            validExitCodes = @(0)
+          }
 
-    - name: Package summary
-      shell: powershell
-      run: |
-        Write-Host "================================================"
-        Write-Host "Package Manager Publishing Summary"
-        Write-Host "================================================"
-        Write-Host "Package Manager: ${{ matrix.package-manager }}"
-        Write-Host "Version: ${{ steps.version.outputs.VERSION }}"
-        Write-Host "Status: Prepared"
-        Write-Host "================================================"
+          Install-ChocolateyPackage @packageArgs
+          "@
+          Set-Content -Path "$chocoDir\tools\chocolateyinstall.ps1" -Value $installScript
+
+          $nuspec = @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+            <metadata>
+              <id>helios-platform</id>
+              <version>${{ steps.version.outputs.VERSION }}</version>
+              <title>HELIOS Platform</title>
+              <authors>HELIOS Platform Team</authors>
+              <owners>HELIOS Platform</owners>
+              <description>HELIOS Platform - A comprehensive NuGet executable product</description>
+              <projectUrl>https://github.com/HELIOS-Platform/helios-platform</projectUrl>
+              <license type="expression">MIT</license>
+              <requireLicenseAcceptance>false</requireLicenseAcceptance>
+              <tags>nuget executable platform enterprise</tags>
+            </metadata>
+          </package>
+          "@
+          Set-Content -Path "$chocoDir\HELIOS.Platform.nuspec" -Value $nuspec
+
+          Write-Host "Chocolatey package prepared"
+          Write-Host "[INFO] Chocolatey API key configured: $(if ($env:CHOCO_API_KEY) { 'Yes' } else { 'No' })"
+
+      - name: Publish to Winget
+        if: matrix.package-manager == 'winget'
+        shell: pwsh
+        run: |
+          Write-Host "Publishing to Winget..."
+
+          $wingetDir = 'winget-manifest'
+          New-Item -ItemType Directory -Force -Path $wingetDir | Out-Null
+          $checksum = (Get-FileHash 'dist\executables\HELIOS-Setup.exe' -Algorithm SHA256).Hash
+
+          $manifest = @{
+            PackageIdentifier = 'HELIOS.Platform'
+            PackageVersion = '${{ steps.version.outputs.VERSION }}'
+            PackageName = 'HELIOS Platform'
+            Publisher = 'HELIOS Platform Team'
+            PackageUrl = 'https://github.com/HELIOS-Platform/helios-platform'
+            License = 'MIT'
+            InstallerType = 'exe'
+            InstallerUrl = 'https://github.com/HELIOS-Platform/helios-platform/releases/download/v${{ steps.version.outputs.VERSION }}/HELIOS-Setup.exe'
+            InstallerSha256 = $checksum
+          } | ConvertTo-Json -Depth 10
+
+          Set-Content -Path "$wingetDir\HELIOS.Platform.yaml" -Value $manifest
+          Write-Host "Winget manifest prepared"
+          Write-Host "[INFO] Manifest file: $wingetDir\HELIOS.Platform.yaml"
+
+      - name: Package summary
+        shell: pwsh
+        run: |
+          Write-Host "================================================"
+          Write-Host "Package Manager Publishing Summary"
+          Write-Host "================================================"
+          Write-Host "Package Manager: ${{ matrix.package-manager }}"
+          Write-Host "Version: ${{ steps.version.outputs.VERSION }}"
+          Write-Host "Status: Prepared"
+          Write-Host "================================================"
