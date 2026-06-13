@@ -82,6 +82,8 @@
     <Compile Remove="HELIOS.Platform.ShellExtension/**/*.cs" />
     <Compile Remove="HELIOS.Platform.SystemIntegration/**/*.cs" />
     <Compile Remove="HELIOS.Platform.Installer/**/*.cs" />
+    <!-- Portable System.Windows.Input hotkey shim is for non-WPF core builds only; WPF uses framework Key/ModifierKeys. -->
+    <Compile Remove="src/core/HELIOS.Platform/SystemIntegration/PortableHotkeyInput.cs" />
   </ItemGroup>
 
 </Project>

@@ -185,6 +185,9 @@
     <Compile Remove="Phase10/BuilderUI/ProfileSelector.cs" />
     <Compile Remove="Phase10/BuilderUI/ProgressMonitor.cs" />
     <Compile Remove="Phase10/BuilderUI/SummaryReview.cs" />
+    <!-- Unit tests (including Moq-based tests) belong in test projects, not the portable core application build. -->
+    <Compile Remove="**/*Tests.cs" />
+    <Compile Remove="**/Tests/**/*.cs" />
     <Compile Remove="Phase10/BootEnvironment/MonadoUSBManagementGUI.cs" />
   </ItemGroup>
 
