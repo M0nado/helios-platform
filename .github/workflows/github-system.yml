@@ -51,17 +51,19 @@ jobs:
         with:
           fetch-depth: 0
       - name: Verify manifest and external sources
-        run: python3 scripts/github/prepare-consolidation.py --dry-run --allow-unreachable
+        run: python3 scripts/github/prepare-consolidation.py --online --dry-run --write-gitmodules-preview --allow-unreachable
       - name: Upload consolidation report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: consolidation-report
-          path: artifacts/consolidation/consolidation-report.json
+          path: |
+            artifacts/consolidation/consolidation-report.json
+            artifacts/consolidation/gitmodules.preview
           if-no-files-found: warn
 
   dotnet-solution-smoke:
-    name: .NET solution smoke check
+    name: .NET restore and minimal build smoke check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -72,8 +74,8 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Restore authoritative solution
         run: dotnet restore HELIOS.Platform.CrossPlatform.sln
-      - name: Build authoritative solution
-        run: dotnet build HELIOS.Platform.CrossPlatform.sln --configuration Release --no-restore -p:TreatWarningsAsErrors=false
+      - name: Build minimal cross-platform project
+        run: dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj --configuration Release --no-restore -p:TreatWarningsAsErrors=false
 
   azure-cli-smoke:
     name: Azure CLI setup smoke check

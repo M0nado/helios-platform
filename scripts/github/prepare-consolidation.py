@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Dry-run and optionally prepare HELIOS external repository consolidation."""
+"""Prepare HELIOS external repository consolidation safely.
+
+This script is intentionally conservative:
+- it never merges, subtrees, or writes .gitmodules directly;
+- it can perform offline manifest/report generation;
+- online reachability checks fail closed unless --allow-unreachable is supplied;
+- --apply only adds/fetches remotes after all requested pre-merge gates pass.
+"""
 from __future__ import annotations
 
 import argparse
@@ -7,11 +14,13 @@ import json
 import os
 import subprocess
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "MERGE_SOURCE_MANIFEST.yaml"
+ARTIFACT_DIR = ROOT / "artifacts" / "consolidation"
+
 
 @dataclass
 class Source:
@@ -27,8 +36,9 @@ class Source:
 
 
 def parse_manifest() -> list[Source]:
+    """Parse the manifest subset required for consolidation without PyYAML."""
     sources: list[Source] = []
-    current: dict[str, str] | None = None
+    current: dict[str, object] | None = None
     in_sources = False
 
     for raw in MANIFEST.read_text(encoding="utf-8").splitlines():
@@ -38,27 +48,34 @@ def parse_manifest() -> list[Source]:
             continue
         if not in_sources:
             continue
+
         stripped = line.strip()
         if stripped.startswith("- id:"):
             if current:
                 sources.append(Source(**{k: v for k, v in current.items() if k in Source.__dataclass_fields__}))
             current = {"id": stripped.split(":", 1)[1].strip().strip('"\'')}
             continue
+
         if current is None or not stripped or stripped.startswith("#") or ":" not in stripped:
             continue
+
         key, value = stripped.split(":", 1)
         key = key.strip()
-        if key in Source.__dataclass_fields__:
-            value = value.strip().strip('"\'')
-            if key == "merge_order":
-                try:
-                    current[key] = int(value)  # type: ignore[assignment]
-                except ValueError:
-                    current[key] = 999  # type: ignore[assignment]
-            else:
-                current[key] = value
+        if key not in Source.__dataclass_fields__:
+            continue
+
+        value = value.strip().strip('"\'')
+        if key == "merge_order":
+            try:
+                current[key] = int(value)
+            except ValueError:
+                current[key] = 999
+        else:
+            current[key] = value
+
     if current:
         sources.append(Source(**{k: v for k, v in current.items() if k in Source.__dataclass_fields__}))
+
     return sorted(sources, key=lambda source: source.merge_order)
 
 
@@ -68,72 +85,130 @@ def git(args: list[str], check: bool = False) -> subprocess.CompletedProcess[str
     return subprocess.run(["git", *args], cwd=ROOT, env=env, text=True, capture_output=True, check=check)
 
 
-def remote_head(source: Source) -> tuple[bool, str, str]:
+def remote_head(source: Source, *, online: bool) -> tuple[bool, str, str, str]:
+    """Return reachable, sha, error, and check mode for a source."""
     if source.kind == "current_repository":
         result = git(["rev-parse", "HEAD"])
-        return result.returncode == 0, result.stdout.strip(), result.stderr.strip()
+        return result.returncode == 0, result.stdout.strip(), result.stderr.strip(), "local"
+
+    if not online:
+        return False, "", "skipped: offline mode", "offline"
+
     if not source.git_remote_url_or_local_path:
-        return False, "", "missing remote url/path"
+        return False, "", "missing remote url/path", "online"
+
     result = git(["ls-remote", "--heads", source.git_remote_url_or_local_path, source.source_branch])
     if result.returncode != 0:
-        return False, "", result.stderr.strip()
+        return False, "", result.stderr.strip(), "online"
+
     parts = result.stdout.strip().split()
     if not parts:
-        return False, "", f"branch {source.source_branch!r} not found"
-    return True, parts[0], ""
+        return False, "", f"branch {source.source_branch!r} not found", "online"
+
+    return True, parts[0], "", "online"
 
 
 def configure_remote(source: Source) -> None:
     if source.kind == "current_repository" or not source.git_remote_name:
         return
+
     existing = git(["remote", "get-url", source.git_remote_name])
     if existing.returncode == 0:
         if existing.stdout.strip() != source.git_remote_url_or_local_path:
             git(["remote", "set-url", source.git_remote_name, source.git_remote_url_or_local_path], check=True)
     else:
         git(["remote", "add", source.git_remote_name, source.git_remote_url_or_local_path], check=True)
+
     git(["fetch", "--prune", source.git_remote_name, source.source_branch], check=True)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dry-run", action="store_true", help="validate only; do not change git remotes")
-    parser.add_argument("--apply", action="store_true", help="add/fetch configured remotes after reachability passes")
-    parser.add_argument("--allow-unreachable", action="store_true", help="write the report but return success when private/unreachable sources fail")
-    args = parser.parse_args()
-    if args.apply and args.dry_run:
-        parser.error("--apply and --dry-run are mutually exclusive")
+def write_gitmodules_preview(sources: list[Source]) -> Path:
+    lines = [
+        "# Preview only. Review and copy to .gitmodules only after every source is reachable.",
+        "# Generated by scripts/github/prepare-consolidation.py --write-gitmodules-preview.",
+        "",
+    ]
+    for source in sources:
+        if source.kind == "current_repository" or not source.submodule_path:
+            continue
+        lines.extend(
+            [
+                f'[submodule "{source.id}"]',
+                f"\tpath = {source.submodule_path}",
+                f"\turl = {source.git_remote_url_or_local_path}",
+                f"\tbranch = {source.source_branch}",
+                "",
+            ]
+        )
 
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    preview = ARTIFACT_DIR / "gitmodules.preview"
+    preview.write_text("\n".join(lines), encoding="utf-8")
+    return preview
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--dry-run", action="store_true", help="validate/report only; do not change git remotes")
+    mode.add_argument("--apply", action="store_true", help="add/fetch remotes after reachability gates pass")
+
+    network = parser.add_mutually_exclusive_group()
+    network.add_argument("--online", action="store_true", help="perform network reachability checks (default)")
+    network.add_argument("--offline", action="store_true", help="skip external network checks and generate manifest-derived reports only")
+
+    parser.add_argument("--allow-unreachable", action="store_true", help="return success after reporting unreachable/private sources")
+    parser.add_argument("--fail-on-unreachable", action="store_true", help="return non-zero if any requested source is unreachable")
+    parser.add_argument("--write-gitmodules-preview", action="store_true", help="write artifacts/consolidation/gitmodules.preview")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    online = not args.offline
     sources = parse_manifest()
     report = []
     failures = []
+
     for source in sources:
-        reachable, sha, error = remote_head(source)
+        reachable, sha, error, check_mode = remote_head(source, online=online)
         item = asdict(source)
-        item.update({"reachable": reachable, "head_sha": sha, "error": error})
+        item.update({"reachable": reachable, "head_sha": sha, "error": error, "check_mode": check_mode})
         report.append(item)
-        status = "OK" if reachable else "FAIL"
-        print(f"[{status}] {source.id} {source.git_remote_url_or_local_path or '(current)'} {source.source_branch} {sha or error}")
-        if not reachable:
+
+        status = "OK" if reachable else ("SKIP" if check_mode == "offline" else "FAIL")
+        detail = sha or error
+        print(f"[{status}] {source.id} {source.git_remote_url_or_local_path or '(current)'} {source.source_branch} {detail}")
+        if not reachable and check_mode != "offline":
             failures.append(source.id)
 
-    out_dir = ROOT / "artifacts" / "consolidation"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "consolidation-report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    report_path = ARTIFACT_DIR / "consolidation-report.json"
+    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    print(f"Wrote {report_path.relative_to(ROOT)}")
+
+    if args.write_gitmodules_preview:
+        preview = write_gitmodules_preview(sources)
+        print(f"Wrote {preview.relative_to(ROOT)}")
 
     if failures:
         print("Consolidation pre-merge gate failed for: " + ", ".join(failures))
-        if args.allow_unreachable:
+        if args.allow_unreachable and not args.fail_on_unreachable:
             print("Continuing because --allow-unreachable was supplied.")
         else:
             return 2
 
     if args.apply:
+        if args.offline:
+            parser.error("--apply requires online mode")
         for source in sources:
             configure_remote(source)
         print("Configured and fetched all reachable external remotes.")
     else:
-        print("Dry-run complete; no remotes, submodules, or merges were modified.")
+        print("Report complete; no remotes, submodules, subtree merges, or branch merges were modified.")
+
     return 0
 
 
