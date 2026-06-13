@@ -277,8 +277,8 @@ def execute_repository(repo: dict[str, object], pattern: str, work_item: str, va
         merged.append(branch)
 
     if validation_command:
-        validation = run(["bash", "-lc", validation_command], timeout=1200)
-        steps.append({"command": validation.command, "returncode": validation.returncode})
+        validation = run(["bash", "-lc", validation_command], cwd=module_path, timeout=1200)
+        steps.append({"command": validation.command, "cwd": module_path.as_posix(), "returncode": validation.returncode})
         if validation.returncode != 0:
             plan.update({"status": "failed", "stage": "validation", "steps": steps, "stderr": validation.stderr})
             return plan
