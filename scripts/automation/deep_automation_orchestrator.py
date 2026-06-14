@@ -14,8 +14,8 @@ import platform
 import re
 import shutil
 import subprocess
-from urllib.parse import urlsplit, urlunsplit
 from collections import Counter, defaultdict
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -99,15 +99,30 @@ def count_language_files(files: Iterable[Path]) -> dict[str, int]:
     return counters
 
 
+SENSITIVE_QUERY_KEYS = {"access_token", "api_key", "auth", "key", "password", "secret", "token"}
+
+
 def sanitize_remote_url(url: str) -> str:
-    """Redact user-info from a git remote URL while preserving non-secret parts."""
+    """Redact credential material from a git remote URL before reporting it."""
     parsed = urlsplit(url)
-    if not parsed.scheme or "@" not in parsed.netloc:
+    if not parsed.scheme:
         return url
 
-    host = parsed.netloc.rsplit("@", 1)[1]
-    sanitized_netloc = f"[redacted]@{host}"
-    return urlunsplit((parsed.scheme, sanitized_netloc, parsed.path, parsed.query, parsed.fragment))
+    sanitized_netloc = parsed.netloc
+    if "@" in parsed.netloc:
+        host = parsed.netloc.rsplit("@", 1)[1]
+        sanitized_netloc = f"[redacted]@{host}"
+
+    sanitized_query = parsed.query
+    if parsed.query:
+        query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+        sanitized_pairs = [
+            (key, "[redacted]" if key.lower() in SENSITIVE_QUERY_KEYS else value)
+            for key, value in query_pairs
+        ]
+        sanitized_query = urlencode(sanitized_pairs)
+
+    return urlunsplit((parsed.scheme, sanitized_netloc, parsed.path, sanitized_query, parsed.fragment))
 
 
 def sanitize_remote_line(line: str) -> str:
