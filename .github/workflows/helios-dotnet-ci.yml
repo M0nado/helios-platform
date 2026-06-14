@@ -71,8 +71,11 @@ jobs:
           foreach ($project in $testProjects) {
             if (Test-Path $project) {
               $projectDirectory = Split-Path -Parent $project
-              $projectReferences = Select-Xml -Path $project -XPath '//ProjectReference' |
-                ForEach-Object { $_.Node.Include }
+              $projectReferences = @(
+                Select-Xml -Path $project -XPath '//ProjectReference' |
+                  ForEach-Object { $_.Node.Include } |
+                  Where-Object { $_ }
+              )
               $missingReferences = $projectReferences | Where-Object {
                 -not (Test-Path (Join-Path $projectDirectory $_))
               }
