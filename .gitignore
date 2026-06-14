@@ -127,3 +127,4 @@ azure-pipelines.yml
 .git/
 .gitkeep
 .gitmodules
+.tools/

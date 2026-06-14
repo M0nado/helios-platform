@@ -1,0 +1,89 @@
+name: AI Submodule Branch Consolidation
+
+on:
+  workflow_dispatch:
+    inputs:
+      execute:
+        description: Fetch/merge configured submodule repositories and push focus branches
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      work_item:
+        description: Work item slug for the single focus branch pattern
+        required: true
+        default: continuous-consolidation
+  schedule:
+    - cron: '47 5 * * 1'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  checks: read
+
+concurrency:
+  group: ai-submodule-consolidation
+  cancel-in-progress: false
+
+jobs:
+  consolidate:
+    name: Plan or execute submodule consolidation
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      HELIOS_CONTROL_REPO_URL: ${{ secrets.HELIOS_CONTROL_REPO_URL }}
+      HERMES_FLEET_PRODUCTION_REPO_URL: ${{ secrets.HERMES_FLEET_PRODUCTION_REPO_URL }}
+      EXECUTE_CONSOLIDATION: ${{ (github.event_name == 'workflow_dispatch' && inputs.execute == 'true') || (github.event_name == 'schedule' && secrets.HELIOS_SUBMODULE_AUTONOMOUS_ENABLED == 'true') }}
+      WORK_ITEM: ${{ github.event_name == 'workflow_dispatch' && inputs.work_item || 'continuous-consolidation' }}
+    steps:
+      - name: Checkout full repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configure automation git identity
+        run: |
+          git config user.name 'helios-ai-automation[bot]'
+          git config user.email 'helios-ai-automation[bot]@users.noreply.github.com'
+
+      - name: Plan submodule branch consolidation
+        if: env.EXECUTE_CONSOLIDATION != 'true'
+        run: |
+          python3 scripts/automation/submodule_consolidation.py \
+            --work-item "$WORK_ITEM" \
+            --output-dir artifacts/submodule-consolidation
+
+      - name: Execute configured submodule consolidation
+        if: env.EXECUTE_CONSOLIDATION == 'true'
+        run: |
+          python3 scripts/automation/submodule_consolidation.py \
+            --execute \
+            --work-item "$WORK_ITEM" \
+            --output-dir artifacts/submodule-consolidation \
+            --validation-command "python3 -m compileall scripts/automation && scripts/automation/validate_workflows.sh .github/workflows/ai-ci-code-review.yml .github/workflows/ai-issue-autofix.yml .github/workflows/ai-submodule-consolidation.yml .github/workflows/ai-governance-dashboard.yml"
+
+      - name: Publish consolidation report to summary
+        if: always()
+        run: |
+          if [ -f artifacts/submodule-consolidation/submodule-consolidation-report.md ]; then
+            cat artifacts/submodule-consolidation/submodule-consolidation-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload consolidation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: submodule-consolidation
+          path: artifacts/submodule-consolidation/
+          if-no-files-found: warn
+          retention-days: 30
