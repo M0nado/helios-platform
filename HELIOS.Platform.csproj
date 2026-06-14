@@ -64,14 +64,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
   </ItemGroup>
 
-  <!-- Test Dependencies -->
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <PackageReference Include="xunit" Version="2.6.6" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.2" />
-    <PackageReference Include="Moq" Version="4.20.70" />
-  </ItemGroup>
-
   <!-- Exclude all non-core projects -->
   <ItemGroup>
     <Compile Remove="src/tests/**/*.cs" />

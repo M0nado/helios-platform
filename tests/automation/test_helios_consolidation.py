@@ -44,10 +44,11 @@ class ManifestValidationTests(unittest.TestCase):
     def test_build_test_commands_discovers_dotnet_projects(self):
         with TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir)
-            (repo / "app.csproj").write_text("<Project />", encoding="utf-8")
+            (repo / "HELIOS.Platform.csproj").write_text("<Project />", encoding="utf-8")
             commands = helios.build_test_commands(repo)
-        self.assertIn("dotnet build --no-restore -m --configuration Release", commands)
-        self.assertIn("dotnet test --no-build --configuration Release --collect:\"XPlat Code Coverage\"", commands)
+        self.assertIn("dotnet restore HELIOS.Platform.csproj -p:Configuration=Release", commands)
+        self.assertIn("dotnet build HELIOS.Platform.csproj --no-restore -m --configuration Release", commands)
+        self.assertIn("dotnet test HELIOS.Platform.csproj --no-build --configuration Release --verbosity normal", commands)
 
 
 if __name__ == "__main__":

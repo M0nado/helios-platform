@@ -18,9 +18,10 @@ Review conflicts before running commands with `--apply`.
 
 ## Optimized build and test gates
 
-- `dotnet restore --disable-parallel false`
-- `dotnet build --no-restore -m --configuration Release`
-- `dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage"`
+- `dotnet restore HELIOS.Platform.csproj -p:Configuration=Release`
+- `dotnet build HELIOS.Platform.csproj --no-restore -m --configuration Release`
+- `dotnet test HELIOS.Platform.csproj --no-build --configuration Release --verbosity normal`
+- `python3 -m unittest tests.automation.test_helios_consolidation -v`
 
 ## Safety gates
 

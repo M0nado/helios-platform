@@ -129,13 +129,21 @@ class CommandError(RuntimeError):
     pass
 
 
+def command_env() -> dict[str, str]:
+    """Return a subprocess environment that fails instead of prompting for credentials."""
+    env = os.environ.copy()
+    env.setdefault("GIT_TERMINAL_PROMPT", "0")
+    env.setdefault("DOTNET_CLI_TELEMETRY_OPTOUT", "1")
+    return env
+
+
 def run(cmd: Sequence[str], cwd: Path, apply: bool, check: bool = True) -> subprocess.CompletedProcess[str]:
     printable = " ".join(cmd)
     if not apply:
         print(f"DRY-RUN: {printable}")
         return subprocess.CompletedProcess(cmd, 0, "", "")
     print(f"RUN: {printable}")
-    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False)
+    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False, env=command_env())
     if result.stdout:
         print(result.stdout.rstrip())
     if result.stderr:
@@ -146,7 +154,7 @@ def run(cmd: Sequence[str], cwd: Path, apply: bool, check: bool = True) -> subpr
 
 
 def capture(cmd: Sequence[str], cwd: Path, check: bool = True) -> str:
-    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False)
+    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False, env=command_env())
     if check and result.returncode != 0:
         raise CommandError(result.stderr.strip() or f"Command failed: {' '.join(cmd)}")
     return result.stdout.strip()
@@ -326,19 +334,41 @@ def setup_azure_cli(repo: Path, apply: bool, install: bool) -> None:
 
 
 def build_test_commands(repo: Path) -> list[str]:
-    """Return discovered build/test commands in a deterministic, fast-first order."""
+    """Return discovered build/test commands in the same order CI should run them."""
     commands: list[str] = []
-    if any(repo.glob("*.sln")) or any(repo.rglob("*.csproj")):
+    root_project = repo / "HELIOS.Platform.csproj"
+
+    if root_project.exists():
         commands.extend([
-            "dotnet restore --disable-parallel false",
-            "dotnet build --no-restore -m --configuration Release",
-            "dotnet test --no-build --configuration Release --collect:\"XPlat Code Coverage\"",
+            "dotnet restore HELIOS.Platform.csproj -p:Configuration=Release",
+            "dotnet build HELIOS.Platform.csproj --no-restore -m --configuration Release",
+            "dotnet test HELIOS.Platform.csproj --no-build --configuration Release --verbosity normal",
         ])
-    if (repo / "package.json").exists():
+    elif any(repo.glob("*.sln")) or any(repo.rglob("*.csproj")):
+        commands.extend([
+            "dotnet restore -p:Configuration=Release",
+            "dotnet build --no-restore -m --configuration Release",
+            "dotnet test --no-build --configuration Release --verbosity normal",
+        ])
+
+    if (repo / "package-lock.json").exists():
         commands.extend(["npm ci", "npm test -- --runInBand=false"])
-    if (repo / "pyproject.toml").exists() or (repo / "requirements.txt").exists():
-        commands.extend(["python -m pytest -q"] if (repo / "tests").exists() else ["python -m compileall ."])
+    elif (repo / "package.json").exists():
+        commands.extend(["npm install", "npm test -- --runInBand=false"])
+
+    automation_tests = repo / "tests" / "automation" / "test_helios_consolidation.py"
+    if automation_tests.exists():
+        commands.append("python3 -m unittest tests.automation.test_helios_consolidation -v")
+    elif (repo / "pyproject.toml").exists() or (repo / "requirements.txt").exists():
+        commands.append("python3 -m pytest -q" if (repo / "tests").exists() else "python3 -m compileall .")
+
     return commands
+
+
+def execute_verification_commands(repo: Path, commands: Sequence[str]) -> None:
+    """Run generated verification commands through the shell for CI parity."""
+    for command in commands:
+        run(["bash", "-lc", command], repo, apply=True)
 
 
 def write_plan(repo: Path, sources: list[Source], output: Path) -> None:
@@ -385,6 +415,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include-current-branches", action="store_true", help="Print a plan for merging every other branch in the current repository.")
     parser.add_argument("--scan", action="store_true", help="Scan available source directories for C#, C/C++, F#, Python, and automation assets.")
     parser.add_argument("--setup-azure-cli", action="store_true", help="Validate Azure CLI and Azure DevOps extension setup.")
+    parser.add_argument("--verify-build", action="store_true", help="Run the discovered build/test verification commands after planning.")
     parser.add_argument("--install-azure-cli", action="store_true", help="Install Azure CLI when missing; requires --setup-azure-cli and --apply to execute.")
     parser.add_argument(
         "--write-plan",
@@ -437,6 +468,10 @@ def main() -> int:
 
     if args.setup_azure_cli:
         setup_azure_cli(repo, args.apply, args.install_azure_cli)
+
+    if args.verify_build:
+        print("\n== Build/test verification ==")
+        execute_verification_commands(repo, build_test_commands(repo))
 
     print("\nComplete. Review git status and resolve any conflicts before committing merge results.")
     return 0
