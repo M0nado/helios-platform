@@ -74,11 +74,16 @@ jobs:
               $projectReferences = @(
                 Select-Xml -Path $project -XPath '//ProjectReference' |
                   ForEach-Object { $_.Node.Include } |
-                  Where-Object { $_ }
+                  Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
               )
-              $missingReferences = $projectReferences | Where-Object {
-                -not (Test-Path (Join-Path $projectDirectory $_))
-              }
+              $missingReferences = @(
+                foreach ($reference in $projectReferences) {
+                  $referencePath = Join-Path -Path $projectDirectory -ChildPath $reference
+                  if (-not (Test-Path $referencePath)) {
+                    $reference
+                  }
+                }
+              )
 
               if ($missingReferences) {
                 Write-Warning "Skipping $project because it has missing ProjectReference target(s): $($missingReferences -join ', ')"
