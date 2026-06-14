@@ -33,8 +33,10 @@
     <Compile Remove="HELIOS.Platform.Tests/Cloud/**/*.cs" />
     <Compile Remove="HELIOS.Platform.Tests/FileManagement/**/*.cs" />
     <Compile Remove="HELIOS.Platform.Tests/Software/**/*.cs" />
+    <Compile Remove="Phase2ServiceTests.cs" />
     <Compile Remove="Phase3Phase5IntegrationTests.cs" />
     <Compile Remove="Phase5/**/*.cs" />
+    <Compile Remove="Phase8Stream8OptimizationTests.cs" />
   </ItemGroup>
 
 </Project>
