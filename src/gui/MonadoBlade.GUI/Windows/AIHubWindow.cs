@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -199,32 +201,111 @@ namespace MonadoBlade.GUI.Windows
     /// </summary>
     public class AIProviderManager
     {
-        private List<AIProvider> _providers = new List<AIProvider>();
-        private Random _random = new Random();
+        private readonly List<ProviderRegistration> _providers = new List<ProviderRegistration>();
 
-        public void RegisterProvider(string name, string endpoint, ProviderType type)
+        public void RegisterProvider(string name, string endpoint, AIHubWindow.ProviderType type)
         {
-            // Dynamically register new cloud providers
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Provider name is required.", nameof(name));
+
+            if (string.IsNullOrWhiteSpace(endpoint))
+                throw new ArgumentException("Provider endpoint is required.", nameof(endpoint));
+
+            var provider = new AIHubWindow.AIProvider
+            {
+                Name = name.Trim(),
+                Type = type,
+                Status = AIHubWindow.ProviderStatus.Idle,
+                AverageLatency = type == AIHubWindow.ProviderType.LocalHub ? 100 : 300,
+                SuccessRate = 99.0,
+                TokensUsed = 0,
+                CostPerMillion = type == AIHubWindow.ProviderType.LocalHub ? 0.0 : 10.0,
+                Description = $"Registered endpoint: {SanitizeEndpoint(endpoint)}"
+            };
+
+            var existing = _providers.FirstOrDefault(p =>
+                string.Equals(p.Provider.Name, provider.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+            {
+                existing.Endpoint = endpoint;
+                existing.Provider.Status = provider.Status;
+                existing.Provider.Description = provider.Description;
+                return;
+            }
+
+            _providers.Add(new ProviderRegistration(provider, endpoint));
         }
 
-        public AIProvider SelectOptimalProvider(AIRequestType requestType)
+        public AIHubWindow.AIProvider SelectOptimalProvider(AIRequestType requestType)
         {
-            // Smart routing based on:
-            // - Request type (code gen, reasoning, analysis)
-            // - Provider latency
-            // - Cost optimization
-            // - Success rate history
-            return _providers[0];
+            if (_providers.Count == 0)
+                throw new InvalidOperationException("No AI providers are registered.");
+
+            return _providers
+                .Where(p => p.Provider.Status != AIHubWindow.ProviderStatus.Offline)
+                .OrderByDescending(p => ScoreProvider(p.Provider, requestType))
+                .ThenBy(p => p.Provider.AverageLatency)
+                .Select(p => p.Provider)
+                .FirstOrDefault()
+                ?? throw new InvalidOperationException("No online or idle AI providers are available.");
         }
 
         public void MonitorProviderHealth()
         {
-            // Continuous health checks for all providers
+            foreach (var registration in _providers)
+            {
+                registration.Provider.Status = string.IsNullOrWhiteSpace(registration.Endpoint)
+                    ? AIHubWindow.ProviderStatus.Offline
+                    : AIHubWindow.ProviderStatus.Idle;
+            }
         }
 
         public void RebalanceLoad()
         {
-            // Distribute load based on capacity and latency
+            foreach (var registration in _providers.Where(p => p.Provider.Status == AIHubWindow.ProviderStatus.Busy))
+            {
+                registration.Provider.Status = AIHubWindow.ProviderStatus.Idle;
+            }
+        }
+
+        private static double ScoreProvider(AIHubWindow.AIProvider provider, AIRequestType requestType)
+        {
+            var latencyScore = 1.0 / Math.Max(1.0, provider.AverageLatency);
+            var reliabilityScore = provider.SuccessRate / 100.0;
+            var costScore = provider.CostPerMillion <= 0 ? 1.0 : 1.0 / provider.CostPerMillion;
+            var statusScore = provider.Status == AIHubWindow.ProviderStatus.Online ? 1.0 : 0.8;
+            var localBoost = provider.Type == AIHubWindow.ProviderType.LocalHub ? 0.15 : 0.0;
+            var reasoningBoost = requestType == AIRequestType.Reasoning && provider.Name.Contains("GPT", StringComparison.OrdinalIgnoreCase) ? 0.1 : 0.0;
+            var codeBoost = requestType == AIRequestType.CodeGeneration && provider.Name.Contains("Copilot", StringComparison.OrdinalIgnoreCase) ? 0.1 : 0.0;
+
+            return (reliabilityScore * 0.45)
+                + (latencyScore * 50 * 0.25)
+                + (costScore * 0.20)
+                + (statusScore * 0.10)
+                + localBoost
+                + reasoningBoost
+                + codeBoost;
+        }
+
+        private static string SanitizeEndpoint(string endpoint)
+        {
+            if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+                return "custom endpoint";
+
+            return uri.IsDefaultPort ? uri.Host : $"{uri.Host}:{uri.Port}";
+        }
+
+        private sealed class ProviderRegistration
+        {
+            public ProviderRegistration(AIHubWindow.AIProvider provider, string endpoint)
+            {
+                Provider = provider;
+                Endpoint = endpoint;
+            }
+
+            public AIHubWindow.AIProvider Provider { get; }
+            public string Endpoint { get; set; }
         }
     }
 
