@@ -13,7 +13,7 @@
 
         <StackPanel Grid.Row="0" Spacing="4">
             <TextBlock Text="AIHub Command Panel" FontSize="30" FontWeight="Bold" Foreground="#00D9FF" />
-            <TextBlock Text="JRPG-style Hermes, XCore, and Specialist fleet control for Azure, Docker, GitHub, and local AI work." Foreground="#A7B7C7" />
+            <TextBlock Text="JRPG-style Hermes, XCore, Atlas, and Aegis fleet control with C#, C++, F#, Python, Azure, Docker, and GitHub specialties." Foreground="#A7B7C7" />
         </StackPanel>
 
         <Grid Grid.Row="1" ColumnSpacing="12">
@@ -46,9 +46,9 @@
             </Border>
             <Border Grid.Column="3" Padding="16" Background="#132033" CornerRadius="10">
                 <StackPanel>
-                    <TextBlock Text="Specialist" Foreground="#6BE7FF" FontWeight="SemiBold" />
-                    <TextBlock Text="550 pts" Foreground="White" FontSize="24" FontWeight="Bold" />
-                    <TextBlock Text="Security, math, analytics, integration" Foreground="#91A4B7" />
+                    <TextBlock Text="Atlas / Aegis" Foreground="#6BE7FF" FontWeight="SemiBold" />
+                    <TextBlock Text="250 / 1500 pts" Foreground="White" FontSize="24" FontWeight="Bold" />
+                    <TextBlock Text="Python memory, F# planning, ultimate command" Foreground="#91A4B7" />
                 </StackPanel>
             </Border>
         </Grid>
@@ -64,8 +64,9 @@
                     <TextBlock Text="Fleet Roster" FontSize="22" FontWeight="Bold" Foreground="#FFFFFF" />
                     <TextBlock Text="☑ Hermes-Prime  Lv.4  XP 320  Idle — Local routing" Foreground="#DDE9F5" />
                     <TextBlock Text="☑ XCore-Alpha   Lv.5  XP 510  Idle — Parallel optimization" Foreground="#DDE9F5" />
-                    <TextBlock Text="☐ Specialist-Sec Lv.6 XP 740  Idle — Security hardening" Foreground="#DDE9F5" />
-                    <TextBlock Text="☐ Azure Docker Scout Lv.1 XP 0 Training — Cloud readiness" Foreground="#91A4B7" />
+                    <TextBlock Text="☐ Atlas-Memory Lv.3 XP 280 Idle — Python learned-state keeper" Foreground="#DDE9F5" />
+                    <TextBlock Text="☐ XCore-Quantum Lv.6 XP 740 Idle — F# prediction analytics" Foreground="#DDE9F5" />
+                    <TextBlock Text="☐ Aegis-Prime Lv.10 XP 0 Locked — ultimate synchronized command" Foreground="#91A4B7" />
                 </StackPanel>
             </Border>
 
@@ -82,7 +83,7 @@
         </Grid>
 
         <Border Grid.Row="3" Padding="14" Background="#132033" CornerRadius="10">
-            <TextBlock Text="Integration status: Azure CLI, Docker daemon, GitHub CLI, and local Hermes models are displayed here by the AIHub fleet service." Foreground="#A7B7C7" />
+            <TextBlock Text="Integration status: Azure CLI, Docker daemon, GitHub CLI, Python AIHub adapters, F# prediction workers, and local Hermes/XCore/Atlas/Aegis models are displayed here by the AIHub fleet service." Foreground="#A7B7C7" />
         </Border>
     </Grid>
 </Page>

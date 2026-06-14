@@ -78,3 +78,55 @@ public sealed class AIHubFleetServiceTests
         });
     }
 }
+
+public sealed class AIHubExpandedTaxonomyTests
+{
+    [Fact]
+    public async Task GetCatalogAsync_IncludesHermesXCoreAtlasAegisWithPythonAndFSharpSpecialties()
+    {
+        var service = new AIHubFleetService();
+        var catalog = await service.GetCatalogAsync();
+
+        Assert.Equal(4, catalog.Count(entry => entry.Family == AIHubModelFamily.Hermes));
+        Assert.Contains(catalog, entry => entry.Family == AIHubModelFamily.Atlas && entry.PreferredLanguage == AIHubImplementationLanguage.Python);
+        Assert.Contains(catalog, entry => entry.CatalogKey == "xcore-quantum" && entry.PrimarySpecialization == AIHubSpecialization.FSharpPrediction);
+        Assert.Contains(catalog, entry => entry.Family == AIHubModelFamily.Aegis && entry.SubagentSlots >= 4);
+    }
+
+    [Fact]
+    public async Task CreateUnitsAsync_WithCatalogKey_AssignsPortraitBalanceAndSubagentSlots()
+    {
+        var service = new AIHubFleetService(startingPoints: 2_000);
+
+        var created = await service.CreateUnitsAsync("hermes-relay", 1);
+        var unit = Assert.Single(created);
+
+        Assert.Equal(AIHubModelFamily.Hermes, unit.Family);
+        Assert.Equal("Relay", unit.Variant);
+        Assert.Equal(AIHubImplementationLanguage.Python, unit.PreferredLanguage);
+        Assert.Equal(3, unit.SubagentSlots);
+        Assert.Equal("hermes-relay", unit.PortraitKey);
+        Assert.Contains("subagent", unit.BalanceTip, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task TrainUnitsAsync_WithSpecialty_RecordsSelfLearnedPythonAndFSharpTopics()
+    {
+        var service = new AIHubFleetService();
+        var snapshot = await service.GetSnapshotAsync();
+        var unit = snapshot.Units.First(u => u.Family == AIHubModelFamily.Atlas);
+
+        var results = await service.TrainUnitsAsync(
+            new[] { unit.Id },
+            150,
+            AIHubSpecialization.PythonAIHubIntegration,
+            AIHubImplementationLanguage.Python,
+            "Python AIHub adapter automation");
+        var trained = (await service.GetSnapshotAsync()).Units.Single(u => u.Id == unit.Id);
+
+        Assert.Single(results);
+        Assert.Contains("Python AIHub adapter automation", trained.LearnedSummary);
+        Assert.Contains(trained.LearningRecords, record => record.Language == AIHubImplementationLanguage.Python);
+        Assert.Equal(AIHubSpecialization.PythonAIHubIntegration, trained.PrimarySpecialization);
+    }
+}
