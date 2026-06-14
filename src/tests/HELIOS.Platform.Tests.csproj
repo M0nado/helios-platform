@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../HELIOS.AIHub/HELIOS.AIHub.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Pull only the portable source files exercised by this curated test project.
          Avoid a ProjectReference because the full core application still contains generated, backend,
          and Windows-only sources that do not compile in Ubuntu CI. -->
