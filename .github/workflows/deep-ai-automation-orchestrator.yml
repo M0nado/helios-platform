@@ -41,6 +41,8 @@ on:
   schedule:
     - cron: '17 3 * * *'
 
+# Keep workflow-wide permissions free of OIDC so pull_request runs that execute
+# PR-controlled orchestrator code cannot mint repository OIDC tokens.
 permissions:
   contents: read
   actions: read
@@ -53,6 +55,9 @@ jobs:
   orchestrate:
     name: Repository, AI hub, GitHub, and Azure readiness
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     env:
       HELIOS_AUTOMATION_MODE: ${{ inputs.mode || 'full' }}
       AZURE_CLIENT_ID_PRESENT: ${{ secrets.AZURE_CLIENT_ID != '' }}
@@ -96,6 +101,7 @@ jobs:
   azure-login-validation:
     name: Trusted Azure OIDC login validation
     runs-on: ubuntu-latest
+    # OIDC is only granted to trusted non-PR events where no PR-controlled code runs.
     if: ${{ github.event_name != 'pull_request' }}
     permissions:
       contents: read
