@@ -16,6 +16,12 @@ Review conflicts before running commands with `--apply`.
 8. **helios-gui-framework** — mode `submodule`, branch `main`, path `modules/helios-gui-framework`, areas `csharp_winui, gui_framework, shared_ui_components`
 9. **helios-software-stack** — mode `submodule`, branch `main`, path `modules/helios-software-stack`, areas `toolchain, installer, azure_cli, developer_setup`
 
+## Optimized build and test gates
+
+- `dotnet restore --disable-parallel false`
+- `dotnet build --no-restore -m --configuration Release`
+- `dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage"`
+
 ## Safety gates
 
 - Keep `helios-control` authoritative for C#/WinUI 3 shell and control-plane conflicts.

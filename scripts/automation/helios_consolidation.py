@@ -56,6 +56,75 @@ class Source:
         )
 
 
+def validate_manifest(data: dict[str, object], sources: Sequence[Source]) -> None:
+    """Validate consolidation manifest consistency before any git operations run."""
+    ids: set[str] = set()
+    orders: set[int] = set()
+    paths: set[str] = set()
+    errors: list[str] = []
+
+    known_areas = set(LANGUAGE_EXTENSIONS) | {
+        "integration_baseline",
+        "documentation",
+        "control_plane",
+        "user_experience",
+        "fleet_production",
+        "prediction_models",
+        "parallel_analytics",
+        "performance",
+        "native_security",
+        "hermes_xcore",
+        "security",
+        "hardening",
+        "compliance",
+        "model_orchestration",
+        "ai_integration",
+        "development_ai_workflows",
+        "experimentation",
+        "azure_cli",
+        "github_actions",
+        "cicd",
+        "gui_framework",
+        "shared_ui_components",
+        "toolchain",
+        "installer",
+        "developer_setup",
+    }
+
+    for source in sources:
+        if source.id in ids:
+            errors.append(f"duplicate source id: {source.id}")
+        ids.add(source.id)
+
+        if source.order in orders:
+            errors.append(f"duplicate source order: {source.order}")
+        orders.add(source.order)
+
+        if source.path in paths and source.path != ".":
+            errors.append(f"duplicate source path: {source.path}")
+        paths.add(source.path)
+
+        if source.mode not in {"history", "subtree", "submodule"}:
+            errors.append(f"{source.id}: unsupported mode {source.mode!r}")
+        if source.kind not in {"current_repository", "external_repository"}:
+            errors.append(f"{source.id}: unsupported kind {source.kind!r}")
+        if source.kind == "current_repository" and source.path != ".":
+            errors.append(f"{source.id}: current repository source must use path '.'")
+        if not source.areas:
+            errors.append(f"{source.id}: at least one ownership area is required")
+        unknown_areas = sorted(set(source.areas).difference(known_areas))
+        if unknown_areas:
+            errors.append(f"{source.id}: unknown area(s): {', '.join(unknown_areas)}")
+
+    priority_sources = data.get("priority_sources", [])
+    for source_id in priority_sources if isinstance(priority_sources, list) else []:
+        if str(source_id) not in ids:
+            errors.append(f"priority source is not listed in sources: {source_id}")
+
+    if errors:
+        raise CommandError("Invalid consolidation manifest:\n" + "\n".join(f"- {error}" for error in errors))
+
+
 class CommandError(RuntimeError):
     pass
 
@@ -256,6 +325,22 @@ def setup_azure_cli(repo: Path, apply: bool, install: bool) -> None:
     run(["az", "account", "show", "--output", "table"], repo, apply and shutil.which("az") is not None, check=False)
 
 
+def build_test_commands(repo: Path) -> list[str]:
+    """Return discovered build/test commands in a deterministic, fast-first order."""
+    commands: list[str] = []
+    if any(repo.glob("*.sln")) or any(repo.rglob("*.csproj")):
+        commands.extend([
+            "dotnet restore --disable-parallel false",
+            "dotnet build --no-restore -m --configuration Release",
+            "dotnet test --no-build --configuration Release --collect:\"XPlat Code Coverage\"",
+        ])
+    if (repo / "package.json").exists():
+        commands.extend(["npm ci", "npm test -- --runInBand=false"])
+    if (repo / "pyproject.toml").exists() or (repo / "requirements.txt").exists():
+        commands.extend(["python -m pytest -q"] if (repo / "tests").exists() else ["python -m compileall ."])
+    return commands
+
+
 def write_plan(repo: Path, sources: list[Source], output: Path) -> None:
     lines = [
         "# HELIOS Consolidation Execution Plan",
@@ -269,6 +354,10 @@ def write_plan(repo: Path, sources: list[Source], output: Path) -> None:
     for source in sources:
         lines.append(f"{source.order}. **{source.id}** — mode `{source.mode}`, branch `{source.branch}`, path `{source.path}`, areas `{', '.join(source.areas)}`")
     lines.extend([
+        "",
+        "## Optimized build and test gates",
+        "",
+        *(f"- `{command}`" for command in build_test_commands(repo)),
         "",
         "## Safety gates",
         "",
@@ -313,6 +402,7 @@ def main() -> int:
     repo = Path.cwd()
     manifest_path = repo / args.manifest
     data, sources = load_sources(manifest_path)
+    validate_manifest(data, sources)
     target_branch = args.target_branch or str(data.get("default_target_branch", "work"))
 
     if args.source:
@@ -323,7 +413,10 @@ def main() -> int:
             raise CommandError(f"Unknown source id(s): {', '.join(sorted(missing))}")
 
     assert_git_repo(repo)
-    require_clean_tree(repo, allow_untracked=args.allow_untracked or not args.apply)
+    if args.apply:
+        require_clean_tree(repo, allow_untracked=args.allow_untracked)
+    else:
+        print("NOTICE: dry-run mode does not require a clean working tree.")
 
     current_branch = capture(["git", "branch", "--show-current"], repo)
     if current_branch != target_branch:
