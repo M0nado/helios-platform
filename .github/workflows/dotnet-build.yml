@@ -21,6 +21,7 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_MULTILEVEL_LOOKUP: false
+  SOLUTION_FILE: HELIOS.Platform.sln
 
 jobs:
   build:
@@ -61,13 +62,14 @@ jobs:
           echo "========================"
 
       - name: Restore Dependencies
-        run: dotnet restore
+        run: dotnet restore ${{ env.SOLUTION_FILE }} -p:EnableWindowsTargeting=true
 
       - name: Build Solution
         run: |
-          dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj \
+          dotnet build ${{ env.SOLUTION_FILE }} \
             --configuration Release \
             --no-restore \
+            -p:EnableWindowsTargeting=true \
             -p:ContinueOnError=true \
             -p:TreatWarningsAsErrors=false
 
@@ -114,9 +116,9 @@ jobs:
 
       - name: Run Unit Tests
         run: |
-          dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj \
+          dotnet test ${{ env.SOLUTION_FILE }} \
             --configuration Release \
-            --no-build \
+            -p:EnableWindowsTargeting=true \
             --logger "trx;LogFileName=unit-test-results.trx" \
             --logger "console;verbosity=minimal" \
             -v minimal \
@@ -159,9 +161,9 @@ jobs:
 
       - name: Run Integration Tests
         run: |
-          dotnet test src/tests/ \
+          dotnet test ${{ env.SOLUTION_FILE }} \
             --configuration Release \
-            --no-build \
+            -p:EnableWindowsTargeting=true \
             --logger "trx;LogFileName=integration-test-results.trx" \
             --logger "console;verbosity=minimal" \
             -v minimal \

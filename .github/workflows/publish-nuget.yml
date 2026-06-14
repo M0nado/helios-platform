@@ -1,5 +1,8 @@
 name: Publish to NuGet
 
+env:
+  SOLUTION_FILE: HELIOS.Platform.sln
+
 on:
   push:
     tags:
@@ -50,13 +53,13 @@ jobs:
           8.0.x
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore ${{ env.SOLUTION_FILE }} -p:EnableWindowsTargeting=true
 
     - name: Build projects
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release --no-restore -p:EnableWindowsTargeting=true
 
     - name: Run tests
-      run: dotnet test --configuration Release --no-build --logger trx
+      run: dotnet test ${{ env.SOLUTION_FILE }} --configuration Release --no-build -p:EnableWindowsTargeting=true --logger trx
 
     - name: Prepare distribution
       shell: powershell

@@ -1,5 +1,8 @@
 name: NuGet Build & Release
 
+env:
+  SOLUTION_FILE: HELIOS.Platform.sln
+
 on:
   push:
     branches: [main]
@@ -19,7 +22,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        dotnet-version: ['8.0', '7.0', '6.0']
+        dotnet-version: ['8.0.x']
       fail-fast: false
 
     steps:
@@ -34,13 +37,13 @@ jobs:
           dotnet-version: ${{ matrix.dotnet-version }}
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore ${{ env.SOLUTION_FILE }} -p:EnableWindowsTargeting=true
 
       - name: Build solution
-        run: dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj -c Release -f net${{ matrix.dotnet-version }} --no-restore -v minimal
+        run: dotnet build ${{ env.SOLUTION_FILE }} -c Release --no-restore -p:EnableWindowsTargeting=true -v minimal
 
       - name: Run tests
-        run: dotnet test src/tests/ -c Release --no-build --logger "trx;LogFileName=test-results.trx" --verbosity minimal
+        run: dotnet test ${{ env.SOLUTION_FILE }} -c Release --no-build -p:EnableWindowsTargeting=true --logger "trx;LogFileName=test-results.trx" --verbosity minimal
 
       - name: Upload test results
         if: always()
@@ -73,7 +76,7 @@ jobs:
 
       - name: Restore and Build
         run: |
-          dotnet restore
+          dotnet restore ${{ env.SOLUTION_FILE }} -p:EnableWindowsTargeting=true
           dotnet pack src/core/HELIOS.Platform/HELIOS.Platform.csproj -c Release -o artifacts/
 
       - name: Verify package
