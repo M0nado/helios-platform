@@ -56,8 +56,85 @@ class Source:
         )
 
 
+def validate_manifest(data: dict[str, object], sources: Sequence[Source]) -> None:
+    """Validate consolidation manifest consistency before any git operations run."""
+    ids: set[str] = set()
+    orders: set[int] = set()
+    paths: set[str] = set()
+    errors: list[str] = []
+
+    known_areas = set(LANGUAGE_EXTENSIONS) | {
+        "integration_baseline",
+        "documentation",
+        "control_plane",
+        "user_experience",
+        "fleet_production",
+        "prediction_models",
+        "parallel_analytics",
+        "performance",
+        "native_security",
+        "hermes_xcore",
+        "security",
+        "hardening",
+        "compliance",
+        "model_orchestration",
+        "ai_integration",
+        "development_ai_workflows",
+        "experimentation",
+        "azure_cli",
+        "github_actions",
+        "cicd",
+        "gui_framework",
+        "shared_ui_components",
+        "toolchain",
+        "installer",
+        "developer_setup",
+    }
+
+    for source in sources:
+        if source.id in ids:
+            errors.append(f"duplicate source id: {source.id}")
+        ids.add(source.id)
+
+        if source.order in orders:
+            errors.append(f"duplicate source order: {source.order}")
+        orders.add(source.order)
+
+        if source.path in paths and source.path != ".":
+            errors.append(f"duplicate source path: {source.path}")
+        paths.add(source.path)
+
+        if source.mode not in {"history", "subtree", "submodule"}:
+            errors.append(f"{source.id}: unsupported mode {source.mode!r}")
+        if source.kind not in {"current_repository", "external_repository"}:
+            errors.append(f"{source.id}: unsupported kind {source.kind!r}")
+        if source.kind == "current_repository" and source.path != ".":
+            errors.append(f"{source.id}: current repository source must use path '.'")
+        if not source.areas:
+            errors.append(f"{source.id}: at least one ownership area is required")
+        unknown_areas = sorted(set(source.areas).difference(known_areas))
+        if unknown_areas:
+            errors.append(f"{source.id}: unknown area(s): {', '.join(unknown_areas)}")
+
+    priority_sources = data.get("priority_sources", [])
+    for source_id in priority_sources if isinstance(priority_sources, list) else []:
+        if str(source_id) not in ids:
+            errors.append(f"priority source is not listed in sources: {source_id}")
+
+    if errors:
+        raise CommandError("Invalid consolidation manifest:\n" + "\n".join(f"- {error}" for error in errors))
+
+
 class CommandError(RuntimeError):
     pass
+
+
+def command_env() -> dict[str, str]:
+    """Return a subprocess environment that fails instead of prompting for credentials."""
+    env = os.environ.copy()
+    env.setdefault("GIT_TERMINAL_PROMPT", "0")
+    env.setdefault("DOTNET_CLI_TELEMETRY_OPTOUT", "1")
+    return env
 
 
 def run(cmd: Sequence[str], cwd: Path, apply: bool, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -66,7 +143,7 @@ def run(cmd: Sequence[str], cwd: Path, apply: bool, check: bool = True) -> subpr
         print(f"DRY-RUN: {printable}")
         return subprocess.CompletedProcess(cmd, 0, "", "")
     print(f"RUN: {printable}")
-    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False)
+    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False, env=command_env())
     if result.stdout:
         print(result.stdout.rstrip())
     if result.stderr:
@@ -77,7 +154,7 @@ def run(cmd: Sequence[str], cwd: Path, apply: bool, check: bool = True) -> subpr
 
 
 def capture(cmd: Sequence[str], cwd: Path, check: bool = True) -> str:
-    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False)
+    result = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False, env=command_env())
     if check and result.returncode != 0:
         raise CommandError(result.stderr.strip() or f"Command failed: {' '.join(cmd)}")
     return result.stdout.strip()
@@ -256,6 +333,44 @@ def setup_azure_cli(repo: Path, apply: bool, install: bool) -> None:
     run(["az", "account", "show", "--output", "table"], repo, apply and shutil.which("az") is not None, check=False)
 
 
+def build_test_commands(repo: Path) -> list[str]:
+    """Return discovered build/test commands in the same order CI should run them."""
+    commands: list[str] = []
+    root_project = repo / "HELIOS.Platform.csproj"
+
+    if root_project.exists():
+        commands.extend([
+            "dotnet restore HELIOS.Platform.csproj -p:Configuration=Release",
+            "dotnet build HELIOS.Platform.csproj --no-restore -m --configuration Release",
+            "dotnet test HELIOS.Platform.csproj --no-build --configuration Release --verbosity normal",
+        ])
+    elif any(repo.glob("*.sln")) or any(repo.rglob("*.csproj")):
+        commands.extend([
+            "dotnet restore -p:Configuration=Release",
+            "dotnet build --no-restore -m --configuration Release",
+            "dotnet test --no-build --configuration Release --verbosity normal",
+        ])
+
+    if (repo / "package-lock.json").exists():
+        commands.extend(["npm ci", "npm test -- --runInBand=false"])
+    elif (repo / "package.json").exists():
+        commands.extend(["npm install", "npm test -- --runInBand=false"])
+
+    automation_tests = repo / "tests" / "automation" / "test_helios_consolidation.py"
+    if automation_tests.exists():
+        commands.append("python3 -m unittest tests.automation.test_helios_consolidation -v")
+    elif (repo / "pyproject.toml").exists() or (repo / "requirements.txt").exists():
+        commands.append("python3 -m pytest -q" if (repo / "tests").exists() else "python3 -m compileall .")
+
+    return commands
+
+
+def execute_verification_commands(repo: Path, commands: Sequence[str]) -> None:
+    """Run generated verification commands through the shell for CI parity."""
+    for command in commands:
+        run(["bash", "-lc", command], repo, apply=True)
+
+
 def write_plan(repo: Path, sources: list[Source], output: Path) -> None:
     lines = [
         "# HELIOS Consolidation Execution Plan",
@@ -269,6 +384,10 @@ def write_plan(repo: Path, sources: list[Source], output: Path) -> None:
     for source in sources:
         lines.append(f"{source.order}. **{source.id}** — mode `{source.mode}`, branch `{source.branch}`, path `{source.path}`, areas `{', '.join(source.areas)}`")
     lines.extend([
+        "",
+        "## Optimized build and test gates",
+        "",
+        *(f"- `{command}`" for command in build_test_commands(repo)),
         "",
         "## Safety gates",
         "",
@@ -296,6 +415,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include-current-branches", action="store_true", help="Print a plan for merging every other branch in the current repository.")
     parser.add_argument("--scan", action="store_true", help="Scan available source directories for C#, C/C++, F#, Python, and automation assets.")
     parser.add_argument("--setup-azure-cli", action="store_true", help="Validate Azure CLI and Azure DevOps extension setup.")
+    parser.add_argument("--verify-build", action="store_true", help="Run the discovered build/test verification commands after planning.")
     parser.add_argument("--install-azure-cli", action="store_true", help="Install Azure CLI when missing; requires --setup-azure-cli and --apply to execute.")
     parser.add_argument(
         "--write-plan",
@@ -313,6 +433,7 @@ def main() -> int:
     repo = Path.cwd()
     manifest_path = repo / args.manifest
     data, sources = load_sources(manifest_path)
+    validate_manifest(data, sources)
     target_branch = args.target_branch or str(data.get("default_target_branch", "work"))
 
     if args.source:
@@ -323,7 +444,10 @@ def main() -> int:
             raise CommandError(f"Unknown source id(s): {', '.join(sorted(missing))}")
 
     assert_git_repo(repo)
-    require_clean_tree(repo, allow_untracked=args.allow_untracked or not args.apply)
+    if args.apply:
+        require_clean_tree(repo, allow_untracked=args.allow_untracked)
+    else:
+        print("NOTICE: dry-run mode does not require a clean working tree.")
 
     current_branch = capture(["git", "branch", "--show-current"], repo)
     if current_branch != target_branch:
@@ -344,6 +468,10 @@ def main() -> int:
 
     if args.setup_azure_cli:
         setup_azure_cli(repo, args.apply, args.install_azure_cli)
+
+    if args.verify_build:
+        print("\n== Build/test verification ==")
+        execute_verification_commands(repo, build_test_commands(repo))
 
     print("\nComplete. Review git status and resolve any conflicts before committing merge results.")
     return 0
