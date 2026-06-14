@@ -40,7 +40,7 @@ Recommended repository secrets for full cloud validation:
 ## Branch consolidation workflow
 
 1. Fetch all remotes with full history.
-2. Confirm that `helios-control` and `hermes-fleet-production` exist locally, as remote branches, or as external remotes/submodules.
+2. Confirm that `helios-control` and `hermes-fleet-production` exist locally, as remote branches, or as external remotes/submodules. Use `git for-each-ref --format='%(refname:short) %(objectname:short)' refs/heads refs/remotes` for portable local/remote ref inspection instead of `git show-ref --remotes`, which is not available in every Git build.
 3. Run the deep automation orchestrator and inspect the branch section of the report.
 4. Merge through pull requests only; require CI, security scans, and environment approvals.
 5. Use GitHub environments for Azure deployment and AI-driven code changes so privileged automation remains gated.

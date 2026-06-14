@@ -119,17 +119,46 @@ def sanitize_remote_line(line: str) -> str:
     )
 
 
+def git_ref_inventory() -> dict[str, object]:
+    """Return portable local/remote ref details without relying on git show-ref --remotes."""
+    result = run([
+        "git",
+        "for-each-ref",
+        "--format=%(refname:short)|%(objectname:short)|%(refname)",
+        "refs/heads",
+        "refs/remotes",
+    ])
+    refs: list[dict[str, str]] = []
+    if result.returncode == 0:
+        for line in result.stdout.splitlines():
+            parts = line.split("|", 2)
+            if len(parts) != 3:
+                continue
+            short_name, commit, full_name = parts
+            ref_type = "remote" if full_name.startswith("refs/remotes/") else "local"
+            refs.append({"name": short_name, "commit": commit, "type": ref_type})
+    return {
+        "command": result.command,
+        "returncode": result.returncode,
+        "refs": refs,
+        "local_count": sum(1 for ref in refs if ref["type"] == "local"),
+        "remote_count": sum(1 for ref in refs if ref["type"] == "remote"),
+    }
+
 def git_inventory() -> dict[str, object]:
     branches_raw = run(["git", "branch", "-a", "--no-color"]).stdout.splitlines()
     branches = [line.replace("*", " ").strip() for line in branches_raw if line.strip()]
+    refs = git_ref_inventory()
+    ref_names = [str(ref["name"]) for ref in refs["refs"]]
     status = run(["git", "status", "--short", "--branch"]).stdout
     remotes = [sanitize_remote_line(line) for line in run(["git", "remote", "-v"]).stdout.splitlines()]
-    focus = {name: [branch for branch in branches if name in branch] for name in BRANCH_FOCUS_NAMES}
+    focus = {name: sorted({candidate for candidate in branches + ref_names if name in candidate}) for name in BRANCH_FOCUS_NAMES}
     missing_focus = [name for name, matches in focus.items() if not matches]
     return {
         "current_branch": run(["git", "branch", "--show-current"]).stdout,
         "status_short": status,
         "branches": branches,
+        "refs": refs,
         "remotes": remotes,
         "focus_branch_matches": focus,
         "missing_focus_branches": missing_focus,
@@ -262,6 +291,8 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
         "## Branch and merge consolidation",
         f"- Current branch: `{git['current_branch']}`",
         f"- Branches discovered: `{len(git['branches'])}`",
+        f"- Portable refs discovered: `{git['refs']['local_count']}` local / `{git['refs']['remote_count']}` remote",
+        f"- Ref inventory command: `{git['refs']['command']}`",
         f"- Missing focus branches/remotes: `{', '.join(git['missing_focus_branches']) or 'none'}`",
         "",
         "## Language and component inventory",
