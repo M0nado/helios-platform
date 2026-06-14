@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   dotnet-core:
-    name: Restore HELIOS core
+    name: Restore full core and build portable core
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,6 +40,8 @@ jobs:
       # portable to the Ubuntu runner while the Windows GUI project split is still pending.
       # Keep this job as a dependency/restore guard rather than compiling WPF-adjacent
       # sources as plain net8.0 on Linux.
+      - name: Build portable core platform
+        run: dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj --configuration Release
 
   dotnet-tests:
     name: Restore and run available tests
@@ -77,6 +79,10 @@ jobs:
 
               $found = $true
               dotnet restore $project
+              if ($project -eq 'src/tests/HELIOS.Platform.Tests.csproj') {
+                Write-Warning "Restored $project, but skipping execution on ubuntu-latest until the full core project is split into portable and Windows-only assemblies."
+                continue
+              }
               dotnet test $project --configuration Release --no-restore --logger trx
             }
           }
