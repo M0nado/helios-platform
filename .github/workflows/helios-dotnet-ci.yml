@@ -79,10 +79,16 @@ jobs:
 
               $found = $true
               dotnet restore $project
-              if ($project -eq 'src/tests/HELIOS.Platform.Tests.csproj') {
-                Write-Warning "Restored $project, but skipping execution on ubuntu-latest until the full core project is split into portable and Windows-only assemblies."
+
+              $referencesFullCore = $projectReferences | Where-Object {
+                $normalizedReference = $_ -replace '\\', '/'
+                $normalizedReference -like '*src/core/HELIOS.Platform/HELIOS.Platform.csproj'
+              }
+              if ($referencesFullCore) {
+                Write-Warning "Restored $project, but skipping execution on ubuntu-latest because dotnet test would build the non-portable full core ProjectReference: $($referencesFullCore -join ', ')"
                 continue
               }
+
               dotnet test $project --configuration Release --no-restore --logger trx
             }
           }
