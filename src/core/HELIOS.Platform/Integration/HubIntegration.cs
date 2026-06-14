@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -78,9 +79,9 @@ namespace HELIOS.Platform.Integration
                     Encoding.UTF8,
                     "application/json");
 
-                var response = await _httpClient.PostAsync(
-                    $"{_hubBaseUrl}/api/v1/auth/authenticate",
-                    content);
+                using var request = CreateRequest(HttpMethod.Post, "/api/v1/auth/authenticate");
+                request.Content = content;
+                var response = await _httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -116,11 +117,9 @@ namespace HELIOS.Platform.Integration
                     Encoding.UTF8,
                     "application/json");
 
-                SetAuthHeaders();
-
-                var response = await _httpClient.PostAsync(
-                    $"{_hubBaseUrl}/api/v1/telemetry/record",
-                    content);
+                using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/telemetry/record");
+                request.Content = content;
+                var response = await _httpClient.SendAsync(request);
 
                 response.EnsureSuccessStatusCode();
             }
@@ -137,10 +136,9 @@ namespace HELIOS.Platform.Integration
 
             try
             {
-                SetAuthHeaders();
-
-                var response = await _httpClient.GetAsync(
-                    $"{_hubBaseUrl}/api/v1/features/sync?userId={userId}&deviceId={_deviceId}");
+                var path = $"/api/v1/features/sync?userId={Uri.EscapeDataString(userId)}&deviceId={Uri.EscapeDataString(_deviceId)}";
+                using var request = CreateAuthenticatedRequest(HttpMethod.Get, path);
+                var response = await _httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -187,11 +185,9 @@ namespace HELIOS.Platform.Integration
                     Encoding.UTF8,
                     "application/json");
 
-                SetAuthHeaders();
-
-                var response = await _httpClient.PostAsync(
-                    $"{_hubBaseUrl}/api/v1/preferences/sync",
-                    content);
+                using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/preferences/sync");
+                request.Content = content;
+                var response = await _httpClient.SendAsync(request);
 
                 var result = await ParseResponse<Dictionary<string, string>>(response);
                 return result?.Success == true;
@@ -209,10 +205,9 @@ namespace HELIOS.Platform.Integration
 
             try
             {
-                SetAuthHeaders();
-
-                var response = await _httpClient.GetAsync(
-                    $"{_hubBaseUrl}/api/v1/preferences/user?userId={userId}");
+                var path = $"/api/v1/preferences/user?userId={Uri.EscapeDataString(userId)}";
+                using var request = CreateAuthenticatedRequest(HttpMethod.Get, path);
+                var response = await _httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -251,11 +246,9 @@ namespace HELIOS.Platform.Integration
                     Encoding.UTF8,
                     "application/json");
 
-                SetAuthHeaders();
-
-                var response = await _httpClient.PostAsync(
-                    $"{_hubBaseUrl}/api/v1/sync/cross-device",
-                    content);
+                using var requestMessage = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/sync/cross-device");
+                requestMessage.Content = content;
+                var response = await _httpClient.SendAsync(requestMessage);
 
                 var result = await ParseResponse<Dictionary<string, object>>(response);
                 return result?.Success == true;
@@ -273,10 +266,9 @@ namespace HELIOS.Platform.Integration
 
             try
             {
-                SetAuthHeaders();
-
-                var response = await _httpClient.GetAsync(
-                    $"{_hubBaseUrl}/api/v1/sync/state?deviceId={_deviceId}");
+                var path = $"/api/v1/sync/state?deviceId={Uri.EscapeDataString(_deviceId)}";
+                using var request = CreateAuthenticatedRequest(HttpMethod.Get, path);
+                var response = await _httpClient.SendAsync(request);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -301,12 +293,19 @@ namespace HELIOS.Platform.Integration
 
         public string GetDeviceId() => _deviceId;
 
-        private void SetAuthHeaders()
+        private HttpRequestMessage CreateAuthenticatedRequest(HttpMethod method, string path)
         {
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
-            _httpClient.DefaultRequestHeaders.Add("X-Device-Id", _deviceId);
-            _httpClient.DefaultRequestHeaders.Add("X-Hub-Version", "1.0");
+            var request = CreateRequest(method, path);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            request.Headers.Add("X-Device-Id", _deviceId);
+            request.Headers.Add("X-Hub-Version", "1.0");
+            return request;
+        }
+
+        private HttpRequestMessage CreateRequest(HttpMethod method, string path)
+        {
+            var relativePath = path.StartsWith("/", StringComparison.Ordinal) ? path : $"/{path}";
+            return new HttpRequestMessage(method, $"{_hubBaseUrl}{relativePath}");
         }
 
         private async Task<HubResponse<T>?> ParseResponse<T>(HttpResponseMessage response)
@@ -329,8 +328,8 @@ namespace HELIOS.Platform.Integration
             {
                 try
                 {
-                    SetAuthHeaders();
-                    await _httpClient.PostAsync($"{_hubBaseUrl}/api/v1/auth/disconnect", null);
+                    using var request = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/auth/disconnect");
+                    await _httpClient.SendAsync(request);
                 }
                 catch
                 {
