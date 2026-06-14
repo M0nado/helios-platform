@@ -104,6 +104,9 @@ tmp/
 .dockerignore
 
 ## Generated files
+.tools/
+artifacts/
+/dotnet-install.sh
 .next/
 .nuxt/
 _nuxt/
