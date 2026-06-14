@@ -77,6 +77,9 @@ Seven production-ready GitHub Actions workflows have been created for the Helios
 
 ## 📚 Documentation Provided
 
+### Owner setup
+- **[OWNER_START_HERE.md](../docs/setup/OWNER_START_HERE.md)** - Click-by-click owner checklist for M0nado organization setup, Heli0s-dynamics enterprise policy, Azure CLI direct setup, repository access, branch protection, Actions permissions, environments, Pages, Wiki, Projects, labels, and milestones.
+
 ### 1. **WORKFLOWS.md** - Complete Guide (10+ KB)
 Comprehensive documentation covering:
 - Purpose and features of each workflow
@@ -244,6 +247,7 @@ C:\Users\ADMIN\helios-platform\.github\
 
 **For Complete Documentation:**
 - See `.github/WORKFLOWS.md`
+- Start owner governance setup with [`docs/setup/OWNER_START_HERE.md`](../docs/setup/OWNER_START_HERE.md)
 
 **For Quick Answers:**
 - See `.github/QUICK_REFERENCE.md`

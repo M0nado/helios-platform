@@ -14,11 +14,34 @@
         .status-good { color: #3fb950; }
         .status-warning { color: #d29922; }
         .status-critical { color: #f85149; }
+        .owner-panel { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 24px; margin: 0 0 24px; }
+        .owner-panel h2 { margin-top: 0; }
+        .owner-panel a { color: #58a6ff; }
+        .owner-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; padding-left: 0; counter-reset: owner-step; }
+        .owner-steps li { list-style: none; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 14px 14px 14px 46px; position: relative; }
+        .owner-steps li::before { counter-increment: owner-step; content: counter(owner-step); position: absolute; left: 14px; top: 14px; width: 22px; height: 22px; border-radius: 50%; background: #238636; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+        .owner-steps strong { display: block; margin-bottom: 6px; }
+        .owner-path { color: #8b949e; font-size: 13px; }
     </style>
 </head>
 <body>
     <h1>HELIOS Platform - Real-Time Metrics</h1>
     <p>Last updated: 2026-04-13T05:01:42.7145617-07:00</p>
+
+    <section class="owner-panel" aria-labelledby="owner-start-title">
+        <h2 id="owner-start-title">Owner Start Here</h2>
+        <p><a href="../../docs/setup/OWNER_START_HERE.md">Open the full Owner Start Here guide</a> for the detailed click-by-click setup. <strong>Heli0s-dynamics</strong> is the enterprise umbrella, <strong>M0nado</strong> is the GitHub organization / business-product owner, and these steps work even when GitHub Copilot is unavailable.</p>
+        <ol class="owner-steps">
+            <li><strong>Start in M0nado.</strong><span class="owner-path">Avatar → Your organizations → M0nado → Repositories → helios-platform → Settings.</span></li>
+            <li><strong>Check enterprise policy.</strong><span class="owner-path">Avatar → Your enterprises → Heli0s-dynamics → Policies if any M0nado setting is locked.</span></li>
+            <li><strong>Lock down access.</strong><span class="owner-path">Settings → Collaborators and teams. Use M0nado teams and least privilege for all three repos.</span></li>
+            <li><strong>Protect source branches.</strong><span class="owner-path">Settings → Rules → Rulesets. Protect main/release branches, require PRs, checks, reviews, and block force pushes.</span></li>
+            <li><strong>Reduce Actions permissions.</strong><span class="owner-path">Settings → Actions → General. Default workflow token is read-only; grant id-token only to Azure deploy workflows.</span></li>
+            <li><strong>Create environments.</strong><span class="owner-path">Settings → Environments. Add development, staging, production, reviewers, branch restrictions, and scoped Azure variables.</span></li>
+            <li><strong>Set up Azure directly.</strong><span class="owner-path">Use Azure CLI/Portal for tenant, subscription, resource groups, OIDC app registration, Key Vault, budgets, and role assignments.</span></li>
+            <li><strong>Track branch merges.</strong><span class="owner-path">Projects, Issues, Labels, and Milestones. Separate helios-platform, helios-control, and hermes-fleet-production work.</span></li>
+        </ol>
+    </section>
     
     <div class="dashboard">
         <div class="card">
