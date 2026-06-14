@@ -32,6 +32,7 @@ env:
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  HELIOS_AZURE_DRY_RUN: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
 jobs:
   preflight:
@@ -58,7 +59,7 @@ jobs:
         run: scripts/setup/setup-azure-cli.sh
 
       - name: Azure login (OIDC)
-        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != '' && env.AZURE_SUBSCRIPTION_ID != ''
+        if: env.HELIOS_AZURE_DRY_RUN != 'true' && env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != '' && env.AZURE_SUBSCRIPTION_ID != ''
         uses: azure/login@v2
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
