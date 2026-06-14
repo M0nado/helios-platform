@@ -1,6 +1,6 @@
 namespace HELIOS.Platform
 {
-    internal static class Program
+    public static class Program
     {
         private const string Version = "1.0.0";
 

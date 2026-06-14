@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="Smoke/PortableBuildSmokeTests.cs" />
     <ProjectReference Include="../../src/core/HELIOS.Platform/HELIOS.Platform.csproj" />
   </ItemGroup>
 
