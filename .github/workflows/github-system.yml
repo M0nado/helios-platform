@@ -1,0 +1,91 @@
+name: GitHub System Optimization
+
+on:
+  pull_request:
+    branches: [ main, develop, work ]
+  push:
+    branches: [ main, develop, work ]
+  workflow_dispatch:
+    inputs:
+      check_external_sources:
+        description: 'Check external consolidation source reachability'
+        required: false
+        default: 'true'
+        type: choice
+        options: ['true', 'false']
+
+concurrency:
+  group: github-system-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+  id-token: write
+
+jobs:
+  workflow-validation:
+    name: Validate workflow system
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Validate workflow references and action versions
+        run: python3 scripts/github/validate-workflows.py
+      - name: Upload workflow validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-validation-report
+          path: artifacts/github/workflow-validation-report.json
+          if-no-files-found: warn
+
+  consolidation-dry-run:
+    name: Consolidation source dry-run
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.check_external_sources == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify manifest and external sources
+        run: python3 scripts/github/prepare-consolidation.py --online --dry-run --write-gitmodules-preview --allow-unreachable
+      - name: Upload consolidation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidation-report
+          path: |
+            artifacts/consolidation/consolidation-report.json
+            artifacts/consolidation/gitmodules.preview
+          if-no-files-found: warn
+
+  dotnet-solution-smoke:
+    name: .NET restore and minimal build smoke check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore authoritative solution
+        run: dotnet restore HELIOS.Platform.CrossPlatform.sln
+      - name: Build minimal cross-platform project
+        run: dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj --configuration Release --no-restore -p:TreatWarningsAsErrors=false
+
+  azure-cli-smoke:
+    name: Azure CLI setup smoke check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Ensure Azure CLI is available
+        run: scripts/setup/setup-azure-cli.sh
+      - name: Azure CLI account check
+        run: |
+          az version --output table
+          echo "OIDC login is intentionally performed only by deployment workflows with configured Azure federated credentials."

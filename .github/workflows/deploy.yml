@@ -22,6 +22,10 @@ on:
           - verification
           - all
 
+permissions:
+  contents: read
+  id-token: write
+
 env:
   DEPLOYMENT_DIR: ./deployment
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -46,26 +50,29 @@ jobs:
     name: Deploy Infrastructure
     needs: preflight
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'infrastructure' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: github.event.inputs.phase == 'infrastructure' || github.event.inputs.phase == 'all' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Azure CLI
-        uses: azure/setup-azure-cli@v1
-      
+      - name: Ensure Azure CLI
+        run: scripts/setup/setup-azure-cli.sh
+
+      - name: Azure login (OIDC)
+        if: env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != '' && env.AZURE_SUBSCRIPTION_ID != ''
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
       - name: Prepare Infrastructure
-        run: |
-          echo "📦 Preparing infrastructure deployment..."
-          echo "  Resource Group: helios-platform-rg"
-          echo "  Location: eastus"
-          echo "  Environment: production"
-          echo "✅ Infrastructure prepared"
+        run: scripts/deploy/azure/deploy-infrastructure.sh
 
   agents:
     name: Deploy Agent Fleet
     needs: infrastructure
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'agents' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: github.event.inputs.phase == 'agents' || github.event.inputs.phase == 'all' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     strategy:
       matrix:
         agent: ['storage', 'security', 'software', 'gui', 'optimization', 'testing']
@@ -82,7 +89,7 @@ jobs:
     name: Initialize AI Services
     needs: agents
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'ai-services' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: github.event.inputs.phase == 'ai-services' || github.event.inputs.phase == 'all' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       
@@ -98,7 +105,7 @@ jobs:
     name: Deploy Security Layer
     needs: ai-services
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'security' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: github.event.inputs.phase == 'security' || github.event.inputs.phase == 'all' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       
@@ -114,7 +121,7 @@ jobs:
     name: Setup Monitoring
     needs: security
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'monitoring' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: github.event.inputs.phase == 'monitoring' || github.event.inputs.phase == 'all' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       
@@ -130,7 +137,7 @@ jobs:
     name: Verification & Go-Live
     needs: [agents, ai-services, security, monitoring]
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'verification' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: github.event.inputs.phase == 'verification' || github.event.inputs.phase == 'all' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     steps:
       - uses: actions/checkout@v4
       

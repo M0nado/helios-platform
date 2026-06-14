@@ -127,3 +127,6 @@ azure-pipelines.yml
 .git/
 .gitkeep
 .gitmodules
+
+## Automation reports
+artifacts/
