@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 
 namespace HELIOS.Platform.Core.Performance
@@ -108,13 +109,8 @@ namespace HELIOS.Platform.Core.Performance
         /// </summary>
         public void ClearUnusedMemory()
         {
-            // Trim working set to minimize memory footprint
-            try
-            {
-                // This is Windows-specific but has no effect on other platforms
-                System.Diagnostics.Process.GetCurrentProcess()?.MinimizeWorkingSet();
-            }
-            catch { /* Not available on all platforms */ }
+            // Compact managed heaps. Native working-set trimming is intentionally avoided here
+            // because Process.MinimizeWorkingSet is unavailable in portable net8.0 builds.
 
             // Compact large object heap
             GC.Collect(2, GCCollectionMode.Optimized);

@@ -56,16 +56,15 @@ jobs:
       - name: Run tests if primary test project exists
         shell: pwsh
         run: |
-          # Both checked-in primary test projects currently depend on source sets that are not portable on Ubuntu.
-          # Keep this list empty until those projects are split into independently compilable test suites.
-          $testProjects = @()
-          $skippedProjects = @(
-            'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj',
+          $testProjects = @(
             'src/tests/HELIOS.Platform.Tests.csproj'
+          )
+          $skippedProjects = @(
+            'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj'
           )
           foreach ($project in $skippedProjects) {
             if (Test-Path $project) {
-              Write-Warning "Skipping $project because it still depends on unresolved backend, GUI, or core sources in this portable CI job."
+              Write-Warning "Skipping $project because it still depends on unresolved backend and GUI sources in this portable CI job."
             }
           }
           $found = $false

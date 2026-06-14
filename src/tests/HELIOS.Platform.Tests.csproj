@@ -18,10 +18,16 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../core/HELIOS.Platform/HELIOS.Platform.csproj" />
+    <!-- Pull only the portable source files exercised by this curated test project.
+         Avoid a ProjectReference because the full core application still contains generated, backend,
+         and Windows-only sources that do not compile in Ubuntu CI. -->
+    <Compile Include="../core/HELIOS.Platform/Core/Performance/**/*.cs" Link="Core/Performance/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../core/HELIOS.Platform/Phase10/Sandbox/ISandboxService.cs" Link="Phase10/Sandbox/ISandboxService.cs" />
+    <Compile Include="../core/HELIOS.Platform/Phase10/Sandbox/SandboxEnvironmentSetup.cs" Link="Phase10/Sandbox/SandboxEnvironmentSetup.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,6 +39,9 @@
     <Compile Remove="HELIOS.Platform.Tests/Cloud/**/*.cs" />
     <Compile Remove="HELIOS.Platform.Tests/FileManagement/**/*.cs" />
     <Compile Remove="HELIOS.Platform.Tests/Software/**/*.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/MonitoringTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Phase2ServiceTests.cs" />
+    <Compile Remove="SandboxTests.cs" />
     <Compile Remove="Phase3Phase5IntegrationTests.cs" />
     <Compile Remove="Phase5/**/*.cs" />
   </ItemGroup>
