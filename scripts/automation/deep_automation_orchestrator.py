@@ -52,6 +52,29 @@ AI_CONFIG_FILES = [
     ROOT / "cloud-integration" / "configs" / "copilot.config.json",
 ]
 BRANCH_FOCUS_NAMES = ("helios-control", "hermes-fleet-production")
+ORCHESTRATION_FOCUS_TERMS = (
+    "helios",
+    "hermes",
+    "fleet",
+    "control",
+    "ai",
+    "aihub",
+    "automation",
+    "workflow",
+    "azure",
+    "github",
+    "xcore",
+    "winui",
+    "xaml",
+    "csharp",
+    "cpp",
+    "fsharp",
+    "analytics",
+    "prediction",
+    "parallel",
+    "security",
+    "performance",
+)
 
 
 @dataclass(frozen=True)
@@ -79,12 +102,12 @@ def run(command: list[str], cwd: Path = ROOT, timeout: int = 20) -> CommandResul
 
 
 def iter_repo_files() -> Iterable[Path]:
-    for path in ROOT.rglob("*"):
-        if path.is_dir():
-            continue
-        if any(part in SKIP_DIRS for part in path.relative_to(ROOT).parts):
-            continue
-        yield path
+    """Yield repository files while pruning generated/dependency trees early."""
+    for current_root, dirnames, filenames in os.walk(ROOT):
+        dirnames[:] = [dirname for dirname in dirnames if dirname not in SKIP_DIRS]
+        current_path = Path(current_root)
+        for filename in filenames:
+            yield current_path / filename
 
 
 def count_language_files(files: Iterable[Path]) -> dict[str, int]:
@@ -247,10 +270,14 @@ def component_inventory(files: list[Path]) -> dict[str, object]:
     for path in files:
         relative = path.relative_to(ROOT).as_posix()
         lowered = relative.lower()
-        for term in ("helios", "hermes", "fleet", "control", "ai", "automation", "workflow", "azure", "github", "xcore"):
-            if term in lowered and len(focus_terms[term]) < 40:
+        normalized = lowered.replace(".", "").replace("-", "").replace("_", "")
+        for term in ORCHESTRATION_FOCUS_TERMS:
+            if (term in lowered or term in normalized) and len(focus_terms[term]) < 40:
                 focus_terms[term].append(relative)
-    return {"top_level_file_counts": dict(directories.most_common()), "focus_term_samples": dict(focus_terms)}
+    return {
+        "top_level_file_counts": dict(directories.most_common()),
+        "focus_term_samples": dict(sorted(focus_terms.items())),
+    }
 
 
 def build_report(args: argparse.Namespace) -> dict[str, object]:
@@ -280,6 +307,7 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
     git = report["git"]
     languages = report["languages"]
     gha = report["github_actions"]
+    components = report["components"]
     ai = report["ai_hub"]
     azure = report["azure_github_cli"]
     lines = [
@@ -301,6 +329,16 @@ def write_markdown(report: dict[str, object], path: Path) -> None:
     ]
     for language, count in sorted(languages.items()):
         lines.append(f"| {language} | {count} |")
+    focus_samples = components.get("focus_term_samples", {})
+    lines.extend([
+        "",
+        "## HELIOS/Hermes specialization coverage",
+        f"- Focus terms sampled: `{len(focus_samples)}`",
+        "- Priority branch/remotes checked: `helios-control`, `hermes-fleet-production`",
+    ])
+    for term, samples in list(focus_samples.items())[:12]:
+        preview = ", ".join(f"`{sample}`" for sample in samples[:3])
+        lines.append(f"- `{term}` samples: {preview or 'none'}")
     lines.extend([
         "",
         "## GitHub workflow automation",
