@@ -86,6 +86,12 @@ jobs:
               }
               if ($referencesFullCore) {
                 Write-Warning "Restored $project, but skipping execution on ubuntu-latest because dotnet test would build the non-portable full core ProjectReference: $($referencesFullCore -join ', ')"
+
+                $normalizedReference = $_ -replace '\\', '/'
+                $normalizedReference -like '*src/core/HELIOS.Platform/HELIOS.Platform.csproj'
+              }
+              if ($referencesFullCore) {
+                Write-Warning "Restored $project, but skipping execution on ubuntu-latest because dotnet test would build the non-portable full core ProjectReference: $($referencesFullCore -join ', ')"
                 continue
               }
 
