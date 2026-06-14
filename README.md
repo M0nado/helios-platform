@@ -111,6 +111,36 @@ cd helios-platform
 dotnet add package HELIOS.Platform
 ```
 
+## Local AI Training Entrypoint (`ltrain`)
+
+HELIOS includes a cross-platform local training entrypoint at `scripts/ltrain.py`. The command validates all local inputs before launching a trainer so AIHub workflows can run safely on CPU-only developer machines or GPU workstations.
+
+```bash
+python scripts/ltrain.py \
+  --dataset ./data/train.jsonl \
+  --model ./models/base-model.gguf \
+  --output ./artifacts/ltrain/run-001 \
+  --device cpu \
+  --epochs 1 \
+  --batch-size 1 \
+  --learning-rate 0.0001 \
+  --dry-run
+```
+
+Required inputs:
+- `--dataset`: training data file or directory.
+- `--model`: base model file or directory.
+- `--output`: checkpoint and log output directory; it is created when validation succeeds.
+
+Resource and runtime options:
+- `--device`: `cpu`, `cuda`, `directml`, or `rocm`; defaults to `LTRAIN_DEVICE` or `cpu`.
+- `--min-disk-gb`: free-space guardrail for the output path; defaults to `LTRAIN_MIN_DISK_GB` or `10` GiB.
+- `--trainer`: optional external trainer executable or script. Without this value, `ltrain` performs validation/dry-run planning only.
+- `--epochs`, `--batch-size`, and `--learning-rate`: training hyperparameters; each can also be supplied through `LTRAIN_EPOCHS`, `LTRAIN_BATCH_SIZE`, and `LTRAIN_LEARNING_RATE`.
+
+Safety checks fail fast for missing datasets, missing model paths, invalid hyperparameters, insufficient output disk space, missing external trainer commands, and unavailable GPU dependencies (`nvidia-smi`/`torch` for CUDA, `torch-directml` for DirectML, and `rocminfo` for ROCm).
+
+
 ## 📊 Deployment Timeline
 
 ```
