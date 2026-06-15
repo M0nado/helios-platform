@@ -8,6 +8,12 @@ Seven production-ready GitHub Actions workflows have been created for the Helios
 
 ---
 
+## 🔐 Owner governance baseline
+
+Before changing workflow permissions, environments, Pages, or downstream integration behavior, review **[OWNER_START_HERE.md](../docs/setup/OWNER_START_HERE.md)**. Treat `helios-platform` as the canonical source before downstream changes to `helios-control` or `hermes-fleet-production`.
+
+---
+
 ## 🎯 The 7 Workflows
 
 ### 1. **multi-repo-sync.yml** (106 lines)

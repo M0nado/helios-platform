@@ -70,6 +70,7 @@ var result = await deployment.DeployAsync(DeploymentTier.Enterprise);
 ```
 
 ### Full Documentation
+- **[OWNER_START_HERE.md](docs/setup/OWNER_START_HERE.md)** - Owner-first governance baseline before downstream changes to helios-control or hermes-fleet-production
 - **[START_HERE.md](START_HERE.md)** - Complete getting started guide (READ THIS FIRST)
 - **[NUGET_PACKAGE_COMPLETE_SETUP.md](NUGET_PACKAGE_COMPLETE_SETUP.md)** - Package setup details
 - **[NUGET_BUILD_PROCESS.md](NUGET_BUILD_PROCESS.md)** - Building and packaging locally
