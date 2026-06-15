@@ -34,10 +34,10 @@ jobs:
           dotnet-version: ${{ matrix.dotnet-version }}
 
       - name: Restore dependencies
-        run: dotnet restore src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj
+        run: dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj
 
       - name: Build solution
-        run: dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj -c Release -f net${{ matrix.dotnet-version }} --no-restore -v minimal
+        run: dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj -c Release -f net${{ matrix.dotnet-version }} --no-restore -v minimal
 
       - name: Run tests
         run: |
@@ -72,7 +72,7 @@ jobs:
       - name: Get version
         id: version
         run: |
-          [xml]$csproj = Get-Content "src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj"
+          [xml]$csproj = Get-Content "src/core/HELIOS.Platform/HELIOS.Platform.csproj"
           $version = $csproj.Project.PropertyGroup.Version
           if (-not $version) { $version = "1.0.0" }
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
@@ -80,8 +80,8 @@ jobs:
 
       - name: Restore and Build
         run: |
-          dotnet restore src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj
-          dotnet pack src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj -c Release -o artifacts/
+          dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj
+          dotnet pack src/core/HELIOS.Platform/HELIOS.Platform.csproj -c Release -o artifacts/
 
       - name: Verify package
         run: |

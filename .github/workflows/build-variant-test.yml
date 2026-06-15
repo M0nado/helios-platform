@@ -108,6 +108,7 @@ jobs:
           else
             echo "No root package.json found; skipping Node variant dependency install"
           fi
+        shell: bash
 
       - name: Build for ${{ matrix.variant.name }}
         run: |
@@ -116,6 +117,7 @@ jobs:
           else
             echo "No build:${{ matrix.variant.name }} script found; skipping"
           fi
+        shell: bash
 
       - name: Run Tests
         run: |
@@ -124,6 +126,7 @@ jobs:
           else
             echo "No test script found; skipping"
           fi
+        shell: bash
 
       - name: Generate Coverage
         if: matrix.variant.name == 'test'
@@ -133,6 +136,7 @@ jobs:
           else
             echo "No test:coverage script found; skipping"
           fi
+        shell: bash
 
       - name: Validate Build Output
         run: |
