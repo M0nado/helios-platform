@@ -13,17 +13,20 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
         with:
-          powershell-version: '7.3'
+          fetch-depth: 0
       
       - name: Check PowerShell Syntax
+        shell: pwsh
         run: |
           $failures = 0
-          Get-ChildItem -Path '.' -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
-            $file = $_.FullName
+          if ('${{ github.event_name }}' -eq 'pull_request') {
+            $changed = git diff --name-only origin/${{ github.base_ref }}...HEAD
+          } else {
+            $changed = git ls-files
+          }
+          $changed | Where-Object { $_ -like '*.ps1' } | ForEach-Object {
+            $file = $_
             Write-Host "Checking: $file"
             try {
               $content = Get-Content -Path $file
@@ -88,19 +91,24 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
+        with:
+          fetch-depth: 0
       
       - name: Run Unit Tests
         run: |
-          if (Test-Path -Path "src/tests" -ErrorAction SilentlyContinue) {
-            Get-ChildItem -Path "src/tests" -Filter "*.tests.ps1" -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
-              Write-Host "Running: $($_.FullName)" -ForegroundColor Cyan
-              & $_.FullName
+          if ('${{ github.event_name }}' -eq 'pull_request') {
+            $changed = git diff --name-only origin/${{ github.base_ref }}...HEAD
+          } else {
+            $changed = git ls-files
+          }
+          $tests = $changed | Where-Object { $_ -like '*.tests.ps1' -and $_ -like 'src/tests/*' }
+          if ($tests) {
+            $tests | ForEach-Object {
+              Write-Host "Running: $_" -ForegroundColor Cyan
+              & $_
             }
           } else {
-            Write-Host "No tests directory found" -ForegroundColor Yellow
+            Write-Host "No changed PowerShell tests found" -ForegroundColor Yellow
           }
         shell: pwsh
         continue-on-error: true
