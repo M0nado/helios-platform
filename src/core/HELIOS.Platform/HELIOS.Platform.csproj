@@ -11,7 +11,7 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <BuildProfile Condition="'$(BuildProfile)' == ''">Portable</BuildProfile>
+    <BuildProfile Condition="'$(BuildProfile)' == ''">Full</BuildProfile>
     <EnableDefaultCompileItems Condition="'$(BuildProfile)' == 'Portable'">false</EnableDefaultCompileItems>
     <StartupObject Condition="'$(BuildProfile)' == 'Portable'">HELIOS.Platform.Program</StartupObject>
   </PropertyGroup>
