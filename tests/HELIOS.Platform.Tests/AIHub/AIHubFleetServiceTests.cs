@@ -130,3 +130,50 @@ public sealed class AIHubExpandedTaxonomyTests
         Assert.Equal(AIHubSpecialization.PythonAIHubIntegration, trained.PrimarySpecialization);
     }
 }
+
+public sealed class AIHubOptimizationRankingTests
+{
+    [Fact]
+    public async Task GetTopRankingsAsync_ReturnsTenRankedUnitsWithCapabilityScoresAndLoadouts()
+    {
+        var service = new AIHubFleetService();
+
+        var rankings = await service.GetTopRankingsAsync();
+
+        Assert.Equal(10, rankings.Count);
+        Assert.Equal(Enumerable.Range(1, 10), rankings.Select(ranking => ranking.Rank));
+        Assert.All(rankings, ranking =>
+        {
+            Assert.True(ranking.Score.WeightedTotal > 0);
+            Assert.Equal(10, new[]
+            {
+                ranking.Score.Speed,
+                ranking.Score.Reasoning,
+                ranking.Score.Compute,
+                ranking.Score.Security,
+                ranking.Score.Cloud,
+                ranking.Score.GitHub,
+                ranking.Score.Analytics,
+                ranking.Score.Prediction,
+                ranking.Score.Learning,
+                ranking.Score.Coordination
+            }.Length);
+            Assert.NotEmpty(ranking.RecommendedLoadout.Subagents);
+            Assert.NotEmpty(ranking.RecommendedLoadout.Specializations);
+            Assert.NotEmpty(ranking.RecommendedLoadout.Languages);
+        });
+    }
+
+    [Fact]
+    public async Task GetDeepLearningReferencesAsync_ConnectsDeepLearningAndLearningScripts()
+    {
+        var service = new AIHubFleetService();
+
+        var references = await service.GetDeepLearningReferencesAsync();
+
+        Assert.Contains(references, reference => reference.Path.EndsWith("DeepLearningPredictor.cs", StringComparison.Ordinal));
+        Assert.Contains(references, reference => reference.Path.Contains("scripts/learning/ComprehensiveLearningSystem.psm1", StringComparison.Ordinal));
+        Assert.Contains(references, reference => reference.Path.Contains("model-training.ps1", StringComparison.Ordinal));
+        Assert.All(references, reference => Assert.False(string.IsNullOrWhiteSpace(reference.IntegrationTip)));
+    }
+}

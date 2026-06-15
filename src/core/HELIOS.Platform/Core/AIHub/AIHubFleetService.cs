@@ -10,6 +10,8 @@ public interface IAIHubFleetService
 {
     Task<AIHubFleetSnapshot> GetSnapshotAsync();
     Task<IReadOnlyList<AIHubCatalogEntry>> GetCatalogAsync();
+    Task<IReadOnlyList<AIHubUnitRanking>> GetTopRankingsAsync(int take = 10);
+    Task<IReadOnlyList<AIHubDeepLearningReference>> GetDeepLearningReferencesAsync();
     Task<int> CalculateBulkCostAsync(AIHubUnitType type, int quantity);
     Task<int> CalculateBulkCostAsync(string catalogKey, int quantity);
     Task<IReadOnlyList<AIHubUnit>> CreateUnitsAsync(AIHubUnitType type, int quantity);
@@ -71,6 +73,12 @@ public sealed class AIHubFleetService : IAIHubFleetService
     });
 
     public Task<IReadOnlyList<AIHubCatalogEntry>> GetCatalogAsync() => Task.FromResult<IReadOnlyList<AIHubCatalogEntry>>(_catalog);
+
+    public Task<IReadOnlyList<AIHubUnitRanking>> GetTopRankingsAsync(int take = 10) =>
+        Task.FromResult(AIHubOptimizationCatalog.RankCatalog(_catalog, take));
+
+    public Task<IReadOnlyList<AIHubDeepLearningReference>> GetDeepLearningReferencesAsync() =>
+        Task.FromResult(AIHubOptimizationCatalog.GetDeepLearningReferences());
 
     public Task<int> CalculateBulkCostAsync(AIHubUnitType type, int quantity)
     {
