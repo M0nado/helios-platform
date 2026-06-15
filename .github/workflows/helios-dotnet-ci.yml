@@ -80,9 +80,10 @@ jobs:
               $found = $true
               dotnet restore $project
 
+              $fullCoreProject = [System.IO.Path]::GetFullPath((Join-Path $PWD 'src/core/HELIOS.Platform/HELIOS.Platform.csproj'))
               $referencesFullCore = $projectReferences | Where-Object {
-                $normalizedReference = $_ -replace '\\', '/'
-                $normalizedReference -like '*src/core/HELIOS.Platform/HELIOS.Platform.csproj'
+                $referencePath = [System.IO.Path]::GetFullPath((Join-Path $projectDirectory $_))
+                [System.StringComparer]::OrdinalIgnoreCase.Equals($referencePath, $fullCoreProject)
               }
               if ($referencesFullCore) {
                 Write-Warning "Restored $project, but skipping execution on ubuntu-latest because dotnet test would build the non-portable full core ProjectReference: $($referencesFullCore -join ', ')"
