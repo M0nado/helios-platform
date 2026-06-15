@@ -13,7 +13,7 @@ param location string = resourceGroup().location
 param workloadName string = 'helios'
 
 @description('App Service SKU for the Linux plan.')
-@minLength(3)
+@minLength(2)
 param appServicePlanSku string = environment == 'production' ? 'P1v3' : 'B1'
 
 @description('Runtime stack configured for the HELIOS App Service.')
