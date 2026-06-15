@@ -6,6 +6,10 @@
     <AssemblyName>HELIOS.Platform</AssemblyName>
     <RootNamespace>HELIOS.Platform</RootNamespace>
     <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
 
 </Project>

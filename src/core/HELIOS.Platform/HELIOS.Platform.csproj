@@ -7,9 +7,13 @@
     <RootNamespace>HELIOS.Platform</RootNamespace>
     <AssemblyName>HELIOS.Platform</AssemblyName>
     <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <BuildProfile Condition="'$(BuildProfile)' == ''">Full</BuildProfile>
+    <EnableDefaultCompileItems Condition="'$(BuildProfile)' == 'Portable'">false</EnableDefaultCompileItems>
+    <StartupObject Condition="'$(BuildProfile)' == 'Portable'">HELIOS.Platform.Program</StartupObject>
   </PropertyGroup>
 
   <!-- Package Information -->
@@ -171,12 +175,29 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup Condition="'$(BuildProfile)' == 'Portable'">
+    <Compile Include="../HELIOS.Platform.Minimal/Program.cs" Link="Program.cs" />
+  </ItemGroup>
+
   <!-- Exclude broken Phase 10 BootEnvironment files from compilation -->
   <!-- These files contain embedded PowerShell scripts with syntax errors that prevent compilation -->
   <!-- They will be refactored in a future phase to properly handle embedded scripts -->
-  <ItemGroup>
+  <ItemGroup Condition="'$(BuildProfile)' != 'Portable'">
     <Compile Remove="Phase10/BootEnvironment/Channel3USBBootInstallation.cs" />
     <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
+
+    <!-- Keep the Linux/non-Windows core build focused on production code that is portable today.
+         These folders contain separate test projects, WinUI/WPF/WinRT surfaces, or experimental
+         source drops that are not wired into the cross-platform core application yet. -->
+    <Compile Remove="**/*Tests.cs" />
+    <Compile Remove="**/Tests/**/*.cs" />
+    <Compile Remove="Phase10/**/*.cs" />
+    <Compile Remove="SystemIntegration/**/*.cs" />
+    <Compile Remove="CloudSync/**/*.cs" />
+    <Compile Remove="Core/Cloud/**/*.cs" />
+    <Compile Remove="Migrations/**/*.cs" />
+    <Compile Remove="AI/MLService/**/*.cs" />
+    <Compile Remove="AI/Models/MockMLModels.cs" />
   </ItemGroup>
 
 </Project>
