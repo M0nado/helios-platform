@@ -130,4 +130,4 @@ azure-pipelines.yml
 
 ## Local tool installers
 # Downloaded bootstrap scripts for local/CI setup; use package managers or CI setup actions instead.
-dotnet-install.sh
+/dotnet-install.sh
