@@ -12,7 +12,7 @@ $response = $client.SendPrompt("Analyze this code", $codeContent)
 #>
 
 param(
-    [string]$ApiKey = $env:OPENAI_API_KEY_CHATGPT_PRO,
+    [string]$ApiKey = $env:OPENAI_API_KEY,
     [string]$ConfigPath = "C:\Users\ADMIN\helios-platform\config\ai-services\ai-services-config.json"
 )
 
@@ -24,12 +24,12 @@ class ChatGPTProClient {
     [System.IO.StreamWriter]$Logger
     [hashtable]$RequestStats
     [hashtable]$RetryPolicy
-    
+
     ChatGPTProClient([string]$ApiKey, [hashtable]$Config) {
         if ([string]::IsNullOrEmpty($ApiKey)) {
             throw "API key is required for ChatGPT Pro client"
         }
-        
+
         $this.ApiKey = $ApiKey
         $this.Config = $Config
         $this.InitializeHttpClient()
@@ -43,15 +43,15 @@ class ChatGPTProClient {
             TotalCost = 0
         }
     }
-    
+
     [void]InitializeHttpClient() {
         $this.HttpClient = New-Object System.Net.Http.HttpClient
         $this.HttpClient.DefaultRequestHeaders.Add("Authorization", "Bearer $($this.ApiKey)")
         $this.HttpClient.DefaultRequestHeaders.Add("Content-Type", "application/json")
-        $timeout = $this.Config.services.'chatgpt-pro'.timeout
+        $timeout = $this.Config.services.gpt_5_4.timeout
         $this.HttpClient.Timeout = [TimeSpan]::FromSeconds($timeout)
     }
-    
+
     [void]InitializeLogger() {
         $logPath = $this.Config.logging.logPath
         if (-not (Test-Path $logPath)) {
@@ -61,44 +61,44 @@ class ChatGPTProClient {
         $this.Logger = [System.IO.StreamWriter]::new($logFile, $true)
         $this.Logger.AutoFlush = $true
     }
-    
+
     [void]InitializeRetryPolicy() {
         $this.RetryPolicy = @{
-            MaxRetries = $this.Config.services.'chatgpt-pro'.retries
-            RetryDelay = $this.Config.services.'chatgpt-pro'.retryDelay
+            MaxRetries = $this.Config.services.gpt_5_4.retries
+            RetryDelay = $this.Config.services.gpt_5_4.retryDelay
             BackoffMultiplier = 2
             MaxBackoffDelay = 60
         }
     }
-    
+
     [void]LogInfo([string]$Message) {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
         $this.Logger.WriteLine("[$timestamp] [INFO] $Message")
     }
-    
+
     [void]LogError([string]$Message) {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
         $this.Logger.WriteLine("[$timestamp] [ERROR] $Message")
     }
-    
+
     [void]LogWarning([string]$Message) {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
         $this.Logger.WriteLine("[$timestamp] [WARNING] $Message")
     }
-    
+
     [PSCustomObject]SendPrompt([string]$Prompt, [hashtable]$Options = @{}) {
         try {
             $this.LogInfo("Sending prompt to ChatGPT Pro (GPT-4)")
-            
+
             # Prepare request
             $requestBody = $this.PrepareRequestBody($Prompt, $Options)
-            
+
             # Attempt with retries
             $response = $this.InvokeWithRetry($requestBody)
-            
+
             $this.RequestStats.SuccessfulRequests++
             $this.LogInfo("Prompt processed successfully. Tokens used: $($response.usage.total_tokens)")
-            
+
             return @{
                 Success = $true
                 Content = $response.choices[0].message.content
@@ -121,20 +121,20 @@ class ChatGPTProClient {
             }
         }
     }
-    
+
     [PSCustomObject]SendPromptStreaming([string]$Prompt, [scriptblock]$OnChunk = $null, [hashtable]$Options = @{}) {
         try {
             $this.LogInfo("Sending streaming prompt to ChatGPT Pro (GPT-4)")
-            
+
             # Prepare request with streaming
             $requestBody = $this.PrepareRequestBody($Prompt, $Options + @{stream = $true})
-            
+
             # Invoke streaming request
             $response = $this.InvokeStreamingRequest($requestBody, $OnChunk)
-            
+
             $this.RequestStats.SuccessfulRequests++
             $this.LogInfo("Streaming prompt processed successfully")
-            
+
             return @{
                 Success = $true
                 Content = $response.FullContent
@@ -154,12 +154,12 @@ class ChatGPTProClient {
             }
         }
     }
-    
+
     [hashtable]PrepareRequestBody([string]$Prompt, [hashtable]$Options) {
         $systemPrompt = $Options['system'] ?? "You are a helpful AI assistant specialized in code analysis and technical strategy."
-        
+
         $requestBody = @{
-            model = $this.Config.services.'chatgpt-pro'.model
+            model = $this.Config.services.gpt_5_4.model
             messages = @(
                 @{
                     role = "system"
@@ -170,24 +170,24 @@ class ChatGPTProClient {
                     content = $Prompt
                 }
             )
-            temperature = $Options['temperature'] ?? $this.Config.services.'chatgpt-pro'.temperature
-            max_tokens = $Options['maxTokens'] ?? $this.Config.services.'chatgpt-pro'.maxTokens
+            temperature = $Options['temperature'] ?? $this.Config.services.gpt_5_4.temperature
+            max_tokens = $Options['maxTokens'] ?? $this.Config.services.gpt_5_4.maxTokens
             top_p = $Options['topP'] ?? 1.0
             frequency_penalty = $Options['frequencyPenalty'] ?? 0.0
             presence_penalty = $Options['presencePenalty'] ?? 0.0
         }
-        
+
         if ($Options.ContainsKey('stream') -and $Options['stream']) {
             $requestBody['stream'] = $true
         }
-        
+
         return $requestBody
     }
-    
+
     [PSCustomObject]InvokeWithRetry([hashtable]$RequestBody) {
         $attempt = 0
         $delay = $this.RetryPolicy.RetryDelay
-        
+
         while ($attempt -le $this.RetryPolicy.MaxRetries) {
             try {
                 $response = $this.MakeHttpRequest($RequestBody)
@@ -198,73 +198,73 @@ class ChatGPTProClient {
                 if ($attempt -gt $this.RetryPolicy.MaxRetries) {
                     throw
                 }
-                
+
                 $this.LogWarning("Request failed (attempt $attempt/$($this.RetryPolicy.MaxRetries + 1)). Retrying in ${delay}s: $_")
                 Start-Sleep -Seconds $delay
-                
+
                 # Exponential backoff
                 $delay = [Math]::Min($delay * $this.RetryPolicy.BackoffMultiplier, $this.RetryPolicy.MaxBackoffDelay)
             }
         }
     }
-    
+
     [PSCustomObject]MakeHttpRequest([hashtable]$RequestBody) {
         $jsonBody = $RequestBody | ConvertTo-Json -Depth 10
         $content = New-Object System.Net.Http.StringContent($jsonBody, [System.Text.Encoding]::UTF8, "application/json")
-        
+
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         $response = $this.HttpClient.PostAsync("$($this.BaseUrl)/chat/completions", $content).Result
         $stopwatch.Stop()
-        
+
         if (-not $response.IsSuccessStatusCode) {
             $errorContent = $response.Content.ReadAsStringAsync().Result
             throw "API request failed with status $($response.StatusCode): $errorContent"
         }
-        
+
         $responseContent = $response.Content.ReadAsStringAsync().Result
         $responseObject = $responseContent | ConvertFrom-Json
-        
+
         $this.RequestStats.TotalRequests++
         $this.RequestStats.TotalTokensUsed += $responseObject.usage.total_tokens
         $this.RequestStats.TotalCost += $this.CalculateCost($responseObject.usage)
-        
+
         $responseObject | Add-Member -NotePropertyName ResponseTime -NotePropertyValue $stopwatch.ElapsedMilliseconds
-        
+
         return $responseObject
     }
-    
+
     [PSCustomObject]InvokeStreamingRequest([hashtable]$RequestBody, [scriptblock]$OnChunk) {
         $jsonBody = $RequestBody | ConvertTo-Json -Depth 10
         $content = New-Object System.Net.Http.StringContent($jsonBody, [System.Text.Encoding]::UTF8, "application/json")
-        
+
         $fullContent = ""
         $chunkCount = 0
         $estimatedTokens = 0
-        
+
         try {
             $request = New-Object System.Net.Http.HttpRequestMessage -ArgumentList ([System.Net.Http.HttpMethod]::Post), "$($this.BaseUrl)/chat/completions"
             $request.Content = $content
-            
+
             $stream = $this.HttpClient.SendAsync($request, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result.Content.ReadAsStreamAsync().Result
             $reader = New-Object System.IO.StreamReader($stream)
-            
+
             while ($reader.Peek() -ge 0) {
                 $line = $reader.ReadLine()
-                
+
                 if ($line.StartsWith("data: ")) {
                     $json = $line.Substring(6)
-                    
+
                     if ($json -eq "[DONE]") {
                         break
                     }
-                    
+
                     try {
                         $chunk = $json | ConvertFrom-Json
                         if ($chunk.choices[0].delta.content) {
                             $content = $chunk.choices[0].delta.content
                             $fullContent += $content
                             $chunkCount++
-                            
+
                             if ($OnChunk) {
                                 & $OnChunk -Content $content
                             }
@@ -275,10 +275,10 @@ class ChatGPTProClient {
                     }
                 }
             }
-            
+
             $reader.Close()
             $estimatedTokens = [Math]::Ceiling($fullContent.Length / 4)
-            
+
             return @{
                 FullContent = $fullContent
                 EstimatedTokens = $estimatedTokens
@@ -290,19 +290,19 @@ class ChatGPTProClient {
             throw $_
         }
     }
-    
+
     [double]CalculateCost([PSCustomObject]$Usage) {
-        $config = $this.Config.services.'chatgpt-pro'
+        $config = $this.Config.services.gpt_5_4
         $inputCost = ($Usage.prompt_tokens / 1000) * $config.costPerThousandTokens.input
         $outputCost = ($Usage.completion_tokens / 1000) * $config.costPerThousandTokens.output
         return $inputCost + $outputCost
     }
-    
+
     [double]CalculateCostFromTokens([int]$TokenCount) {
-        $config = $this.Config.services.'chatgpt-pro'
+        $config = $this.Config.services.gpt_5_4
         return ($TokenCount / 1000) * $config.costPerThousandTokens.input
     }
-    
+
     [PSCustomObject]GetStatistics() {
         return [PSCustomObject]@{
             TotalRequests = $this.RequestStats.TotalRequests
@@ -318,7 +318,7 @@ class ChatGPTProClient {
             } else { 0 }
         }
     }
-    
+
     [void]ResetStatistics() {
         $this.RequestStats.TotalRequests = 0
         $this.RequestStats.SuccessfulRequests = 0
@@ -327,7 +327,7 @@ class ChatGPTProClient {
         $this.RequestStats.TotalCost = 0
         $this.LogInfo("Statistics reset")
     }
-    
+
     [void]Close() {
         $this.HttpClient.Dispose()
         $this.Logger.Close()
@@ -340,11 +340,11 @@ class ChatGPTProClient {
 
 function Load-Configuration {
     param([string]$Path)
-    
+
     if (-not (Test-Path $Path)) {
         throw "Configuration file not found: $Path"
     }
-    
+
     return Get-Content $Path -Raw | ConvertFrom-Json
 }
 
@@ -355,9 +355,9 @@ function Load-Configuration {
 try {
     $config = Load-Configuration -Path $ConfigPath
     $client = [ChatGPTProClient]::new($ApiKey, $config)
-    
+
     $script:ChatGPTProClient = $client
-    
+
     if ($PSBoundParameters.Count -eq 0 -and $MyInvocation.ScriptName -eq $PSCommandPath) {
         Write-Host "ChatGPT Pro Client initialized successfully"
         Write-Host "Usage: `$response = `$ChatGPTProClient.SendPrompt(`"Your prompt here`")"
