@@ -4,9 +4,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.ServiceProcess;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using HELIOS.Platform.Core.Logging;
+
+[assembly: InternalsVisibleTo("HELIOS.Platform.Tests")]
 
 namespace HELIOS.Platform.Phase10.BootEnvironment
 {
@@ -28,6 +34,8 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
     {
         private readonly ILogger _logger;
         private readonly SemaphoreSlim _orchestrationLock;
+        private const string SimulationFlagName = "HELIOS_BOOT_AUTOMATION_SIMULATION";
+        private const string RootPathFlagName = "HELIOS_BOOT_AUTOMATION_ROOT";
 
         public Channel3BootTimeAutomationOrchestrator(ILogger logger)
         {
@@ -286,7 +294,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                 var cachePartition = partitions.FirstOrDefault(p => p.Purpose == "Cache");
                 if (cachePartition != null)
                 {
-                    await EnableCompressionAsync(cachePartition.MountPoint);
+                    await EnableCompressionAsync(cachePartition.MountPoint, cancellationToken);
                     _logger.Info("    ✓ Compression enabled on Cache partition");
                     result.ItemsProcessed++;
                 }
@@ -370,7 +378,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                 var internetOK = await EstablishSecureInternetAsync(cancellationToken);
                 if (!internetOK)
                 {
-                    _logger.Warn("    ⚠ Internet not available - using local components only");
+                    _logger.Warning("    ⚠ Internet not available - using local components only");
                 }
                 else
                 {
@@ -473,16 +481,16 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
 
             try
             {
-                var services = new Dictionary<string, Func<Task>>
+                var services = new Dictionary<string, string>
                 {
-                    { "Windows Update", async () => await StartServiceAsync("wuauserv") },
-                    { "Windows Defender", async () => await StartServiceAsync("WinDefend") },
-                    { "Malwarebytes", async () => await StartServiceAsync("MBAMService") },
-                    { "Razer Synapse", async () => await StartServiceAsync("RazerService") },
-                    { "HELIOS Platform", async () => await StartServiceAsync("HELIOSPlatformService") },
-                    { "GPU Scheduler", async () => await StartServiceAsync("GPUScheduler") },
-                    { "AI Hub", async () => await StartServiceAsync("HermesAIHub") },
-                    { "Distributed Learning", async () => await StartServiceAsync("DistributedLearning") },
+                    { "Windows Update", "wuauserv" },
+                    { "Windows Defender", "WinDefend" },
+                    { "Malwarebytes", "MBAMService" },
+                    { "Razer Synapse", "RazerService" },
+                    { "HELIOS Platform", "HELIOSPlatformService" },
+                    { "GPU Scheduler", "GPUScheduler" },
+                    { "AI Hub", "HermesAIHub" },
+                    { "Distributed Learning", "DistributedLearning" },
                 };
 
                 _logger.Info("  • Starting system services...");
@@ -491,21 +499,21 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                     _logger.Info($"    • {service.Key}...");
                     try
                     {
-                        await service.Value();
+                        await StartServiceAsync(service.Value, cancellationToken);
                         _logger.Info($"      ✓ {service.Key} started");
-                        result.StartedServices.Add(service.Key);
+                        result.StartedServices.Add(service.Value);
                         result.ItemsProcessed++;
                     }
                     catch (Exception ex)
                     {
-                        _logger.Warn($"      ⚠ {service.Key}: {ex.Message}");
+                        _logger.Warning($"      ⚠ {service.Key}: {ex.Message}");
                     }
                 }
 
                 _logger.Info("  • Configuring service auto-start policies...");
                 foreach (var service in result.StartedServices)
                 {
-                    await SetServiceAutoStartAsync(service);
+                    await SetServiceAutoStartAsync(service, cancellationToken);
                 }
                 _logger.Info("    ✓ Auto-start policies applied");
 
@@ -529,7 +537,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             try
             {
                 _logger.Info("  • Enabling Secure Boot policies...");
-                await ApplySecureBootPolicyAsync();
+                await ApplySecureBootPolicyAsync(cancellationToken);
                 _logger.Info("    ✓ Secure Boot enabled");
                 result.ItemsProcessed++;
 
@@ -761,9 +769,38 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             await Task.Delay(200);
         }
 
-        private async Task EnableCompressionAsync(string path)
+        internal async Task EnableCompressionAsync(string path, CancellationToken ct)
         {
-            await Task.Delay(100);
+            ct.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("Compression path is required.", nameof(path));
+            }
+
+            if (IsSimulationMode())
+            {
+                await EnableCompressionSimulationAsync(path, ct);
+                return;
+            }
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new PlatformNotSupportedException("NTFS compression can only be enabled on Windows. Set HELIOS_BOOT_AUTOMATION_SIMULATION=true for development simulation.");
+            }
+
+            _logger.Info($"    [REAL] Enabling NTFS compression for '{path}' using compact.exe...");
+            Directory.CreateDirectory(path);
+            await RunProcessAsync("compact.exe", $"/C /S:\"{path}\" /I /Q", ct);
+        }
+
+        /// <summary>
+        /// Development-only simulation for NTFS compression. Guarded by HELIOS_BOOT_AUTOMATION_SIMULATION=true.
+        /// </summary>
+        private async Task EnableCompressionSimulationAsync(string path, CancellationToken ct)
+        {
+            _logger.Warning($"    [SIMULATION] NTFS compression skipped for '{path}'.");
+            Directory.CreateDirectory(path);
+            await File.WriteAllTextAsync(Path.Combine(path, ".compression.simulated"), DateTime.UtcNow.ToString("O"), ct);
         }
 
         private async Task<UserAccount> CreateUserAccountAsync(string username, string description, bool isAdmin, CancellationToken ct)
@@ -792,14 +829,40 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             await Task.Delay(500, ct);
         }
 
-        private async Task LoadAIProviderConfigAsync(CancellationToken ct)
+        internal async Task LoadAIProviderConfigAsync(CancellationToken ct)
         {
-            await Task.Delay(300, ct);
+            ct.ThrowIfCancellationRequested();
+            var configPath = Path.Combine(GetAutomationRoot(), "config", "ai-providers.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+            _logger.Info($"    [REAL] Writing AI provider configuration to '{configPath}'.");
+
+            var config = new
+            {
+                generatedAtUtc = DateTime.UtcNow,
+                providers = new[] { "Claude", "GPT-4", "Hermes", "Local", "Custom", "Copilot", "OnlineServices" },
+                aiHubEndpoint = "http://localhost:8765",
+                learningDatabase = Path.Combine(GetAutomationRoot(), "state", "learning", "learning-state.json")
+            };
+
+            await File.WriteAllTextAsync(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }), ct);
         }
 
-        private async Task InitializeAIHubAsync(CancellationToken ct)
+        internal async Task InitializeAIHubAsync(CancellationToken ct)
         {
-            await Task.Delay(400, ct);
+            ct.ThrowIfCancellationRequested();
+            var hubRoot = Path.Combine(GetAutomationRoot(), "aihub");
+            _logger.Info($"    [REAL] Initializing AI Hub workspace at '{hubRoot}'.");
+            Directory.CreateDirectory(Path.Combine(hubRoot, "models"));
+            Directory.CreateDirectory(Path.Combine(hubRoot, "queue"));
+            Directory.CreateDirectory(Path.Combine(hubRoot, "telemetry"));
+
+            var manifest = new
+            {
+                initializedAtUtc = DateTime.UtcNow,
+                virtualizationTargets = new[] { "Hyper-V", "WSL2" },
+                status = "Ready"
+            };
+            await File.WriteAllTextAsync(Path.Combine(hubRoot, "hub-manifest.json"), JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }), ct);
         }
 
         private async Task StartMonadoServicesAsync(CancellationToken ct)
@@ -812,9 +875,22 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             await Task.Delay(200, ct);
         }
 
-        private async Task InitializeLearningDatabaseAsync(CancellationToken ct)
+        internal async Task InitializeLearningDatabaseAsync(CancellationToken ct)
         {
-            await Task.Delay(300, ct);
+            ct.ThrowIfCancellationRequested();
+            var dbRoot = Path.Combine(GetAutomationRoot(), "state", "learning");
+            var dbPath = Path.Combine(dbRoot, "learning-state.json");
+            _logger.Info($"    [REAL] Initializing learning state repository at '{dbPath}'.");
+            Directory.CreateDirectory(dbRoot);
+
+            var state = new
+            {
+                schemaVersion = 1,
+                initializedAtUtc = DateTime.UtcNow,
+                observations = Array.Empty<object>(),
+                predictions = Array.Empty<object>()
+            };
+            await File.WriteAllTextAsync(dbPath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }), ct);
         }
 
         private async Task InitializeRazerEcosystemAsync(CancellationToken ct)
@@ -827,19 +903,101 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             await Task.Delay(100);
         }
 
-        private async Task StartServiceAsync(string serviceName)
+        internal async Task StartServiceAsync(string serviceName, CancellationToken ct)
         {
-            await Task.Delay(100);
+            ct.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(serviceName))
+            {
+                throw new ArgumentException("Service name is required.", nameof(serviceName));
+            }
+
+            if (IsSimulationMode())
+            {
+                await SimulateServiceOperationAsync(serviceName, "start", ct);
+                return;
+            }
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new PlatformNotSupportedException("Windows services can only be controlled on Windows. Set HELIOS_BOOT_AUTOMATION_SIMULATION=true for development simulation.");
+            }
+
+            _logger.Info($"      [REAL] Starting Windows service '{serviceName}'.");
+            using var service = new ServiceController(serviceName);
+            if (service.Status != ServiceControllerStatus.Running)
+            {
+                service.Start();
+                await WaitForServiceStatusAsync(service, ServiceControllerStatus.Running, TimeSpan.FromSeconds(30), ct);
+            }
         }
 
-        private async Task SetServiceAutoStartAsync(string serviceName)
+        internal async Task SetServiceAutoStartAsync(string serviceName, CancellationToken ct)
         {
-            await Task.Delay(50);
+            ct.ThrowIfCancellationRequested();
+            if (IsSimulationMode())
+            {
+                await SimulateServiceOperationAsync(serviceName, "autostart", ct);
+                return;
+            }
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new PlatformNotSupportedException("Windows service auto-start can only be configured on Windows. Set HELIOS_BOOT_AUTOMATION_SIMULATION=true for development simulation.");
+            }
+
+            _logger.Info($"    [REAL] Configuring Windows service '{serviceName}' for automatic start.");
+            await RunProcessAsync("sc.exe", $"config \"{serviceName}\" start= auto", ct);
         }
 
-        private async Task ApplySecureBootPolicyAsync()
+        internal async Task ApplySecureBootPolicyAsync(CancellationToken ct)
         {
-            await Task.Delay(100);
+            ct.ThrowIfCancellationRequested();
+            if (IsSimulationMode())
+            {
+                var policyPath = Path.Combine(GetAutomationRoot(), "security", "secure-boot-policy.simulated");
+                _logger.Warning($"    [SIMULATION] Secure Boot policy not applied; marker written to '{policyPath}'.");
+                Directory.CreateDirectory(Path.GetDirectoryName(policyPath)!);
+                await File.WriteAllTextAsync(policyPath, DateTime.UtcNow.ToString("O"), ct);
+                return;
+            }
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new PlatformNotSupportedException("Secure Boot policy application is only supported on Windows. Set HELIOS_BOOT_AUTOMATION_SIMULATION=true for development simulation.");
+            }
+
+            _logger.Info("    [REAL] Verifying Secure Boot state with PowerShell Confirm-SecureBootUEFI.");
+            await RunProcessAsync("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -Command \"if (-not (Confirm-SecureBootUEFI)) { throw 'Secure Boot is not enabled in UEFI firmware.' }\"", ct);
+        }
+
+        /// <summary>
+        /// Development-only simulation for service control. Guarded by HELIOS_BOOT_AUTOMATION_SIMULATION=true.
+        /// </summary>
+        private async Task SimulateServiceOperationAsync(string serviceName, string operation, CancellationToken ct)
+        {
+            var marker = Path.Combine(GetAutomationRoot(), "services", $"{serviceName}.{operation}.simulated");
+            _logger.Warning($"      [SIMULATION] Windows service {operation} skipped for '{serviceName}'.");
+            Directory.CreateDirectory(Path.GetDirectoryName(marker)!);
+            await File.WriteAllTextAsync(marker, DateTime.UtcNow.ToString("O"), ct);
+        }
+
+
+        private static async Task WaitForServiceStatusAsync(ServiceController service, ServiceControllerStatus desiredStatus, TimeSpan timeout, CancellationToken ct)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            while (DateTime.UtcNow < deadline)
+            {
+                ct.ThrowIfCancellationRequested();
+                service.Refresh();
+                if (service.Status == desiredStatus)
+                {
+                    return;
+                }
+
+                await Task.Delay(250, ct);
+            }
+
+            throw new TimeoutException($"Service '{service.ServiceName}' did not reach '{desiredStatus}' within {timeout.TotalSeconds:F0} seconds.");
         }
 
         private async Task ApplyFirewallRulesAsync()
@@ -875,6 +1033,45 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
         private async Task ApplyNetworkSecurityAsync()
         {
             await Task.Delay(100);
+        }
+
+
+        private bool IsSimulationMode()
+        {
+            return string.Equals(Environment.GetEnvironmentVariable(SimulationFlagName), "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetAutomationRoot()
+        {
+            var configuredRoot = Environment.GetEnvironmentVariable(RootPathFlagName);
+            return string.IsNullOrWhiteSpace(configuredRoot)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "HELIOS", "BootAutomation")
+                : configuredRoot;
+        }
+
+        private static async Task RunProcessAsync(string fileName, string arguments, CancellationToken ct)
+        {
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                },
+                EnableRaisingEvents = true
+            };
+
+            process.Start();
+            await process.WaitForExitAsync(ct);
+            if (process.ExitCode != 0)
+            {
+                var error = await process.StandardError.ReadToEndAsync(ct);
+                throw new InvalidOperationException($"{fileName} exited with code {process.ExitCode}: {error}");
+            }
         }
 
         private async Task DisplayWelcomeWizardAsync()
