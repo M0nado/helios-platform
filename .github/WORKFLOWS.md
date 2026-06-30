@@ -323,7 +323,7 @@ status-dashboard
 ## Configuration Requirements
 
 ### Secrets
-None required (uses GITHUB_TOKEN)
+- `WIKI_SYNC_TOKEN`: required by `documentation-update.yml` for syncing to the separate GitHub Wiki repository. Use a fine-grained personal access token scoped only to the `helios-platform.wiki` repository with Contents read/write access. Other workflow steps continue to use the read-only `GITHUB_TOKEN` where possible.
 
 ### Dependencies
 - Python 3.11+

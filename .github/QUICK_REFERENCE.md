@@ -133,7 +133,7 @@ Branch: main
 ```
 
 ### Recommended Secrets
-None required (uses GITHUB_TOKEN)
+- `WIKI_SYNC_TOKEN`: required for `documentation-update.yml` wiki synchronization. Configure it as a fine-grained PAT scoped only to the `helios-platform.wiki` repository with Contents read/write access; leave the default `GITHUB_TOKEN` at least privilege for normal checkout/read operations.
 
 ### File Permissions
 Workflows need write access to:

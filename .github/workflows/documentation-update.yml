@@ -27,19 +27,19 @@ jobs:
           
           # Create main index
           $index = @"
-# Documentation Index
+          # Documentation Index
 
-## Getting Started
-- [README.md](../README.md)
-- [00-KICKOFF-START-HERE.md](../00-KICKOFF-START-HERE.md)
-- [GETTING_STARTED.md](../GETTING_STARTED.md)
+          ## Getting Started
+          - [README.md](../README.md)
+          - [00-KICKOFF-START-HERE.md](../00-KICKOFF-START-HERE.md)
+          - [GETTING_STARTED.md](../GETTING_STARTED.md)
 
-## Architecture
-- [MODULAR_ARCHITECTURE.md](../MODULAR_ARCHITECTURE.md)
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
+          ## Architecture
+          - [MODULAR_ARCHITECTURE.md](../MODULAR_ARCHITECTURE.md)
+          - [ARCHITECTURE.md](./ARCHITECTURE.md)
 
-## Phases
-"@
+          ## Phases
+          "@
           
           Get-ChildItem -Path "phases" -Directory | ForEach-Object {
             $index += "`n- [$($_.Name)](../$($_.FullName.Replace('\', '/')))"
@@ -95,11 +95,11 @@ jobs:
           
           # Create wiki index
           $wikiIndex = @"
-# HELIOS Platform Wiki
+          # HELIOS Platform Wiki
 
-## Phases
+          ## Phases
 
-"@
+          "@
           
           $phases | ForEach-Object {
             $phaseNum = $_.Name.Split('-')[0]
@@ -130,36 +130,113 @@ jobs:
           echo "Updating status badges..."
           echo "✅ Documentation Up to Date"
 
-jobs:
   sync-to-wiki:
     runs-on: ubuntu-latest
     name: Sync Documentation to GitHub Wiki
-    
+    permissions:
+      contents: read
+
+    # Required repository secret:
+    # - WIKI_SYNC_TOKEN: fine-grained PAT with Contents: Read/Write access only to
+    #   the helios-platform wiki repository, used because GITHUB_TOKEN does not
+    #   provide least-privilege write access to the separate .wiki Git repository.
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+          persist-credentials: false
+
       - name: Setup Git
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-      
+
       - name: Checkout Wiki
-        run: |
-          git clone https://github.com/M0nado/helios-platform.wiki.git wiki
-      
-      - name: Copy Documentation to Wiki
-        run: |
-          cp docs/*.md wiki/ 2>/dev/null || true
-          cp phases/*/README.md wiki/ 2>/dev/null || true
-          cp components/*/README.md wiki/ 2>/dev/null || true
-      
-      - name: Commit Wiki Changes
-        run: |
-          cd wiki
-          git add -A
-          git commit -m "Auto-sync documentation from main repo" || true
-          git push origin master || true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WIKI_SYNC_TOKEN: ${{ secrets.WIKI_SYNC_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${WIKI_SYNC_TOKEN}@github.com/M0nado/helios-platform.wiki.git" wiki
+
+      - name: Detect Wiki Default Branch
+        id: wiki-branch
+        run: |
+          default_ref=$(git -C wiki symbolic-ref refs/remotes/origin/HEAD)
+          target_branch=${default_ref#refs/remotes/origin/}
+          echo "target_branch=$target_branch" >> "$GITHUB_OUTPUT"
+          echo "Wiki default branch: $target_branch"
+
+      - name: Copy Documentation to Wiki
+        id: copy-docs
+        shell: bash
+        run: |
+          set -euo pipefail
+          pages_copied=0
+
+          copy_page() {
+            local source=$1
+            local target=$2
+
+            mkdir -p "$(dirname "$target")"
+            cp "$source" "$target"
+            pages_copied=$((pages_copied + 1))
+          }
+
+          shopt -s nullglob
+          for page in docs/*.md; do
+            copy_page "$page" "wiki/$(basename "$page")"
+          done
+
+          for page in phases/*/README.md; do
+            phase_name=$(basename "$(dirname "$page")")
+            copy_page "$page" "wiki/phases/${phase_name}.md"
+          done
+
+          for page in components/*/README.md; do
+            component_name=$(basename "$(dirname "$page")")
+            copy_page "$page" "wiki/components/${component_name}.md"
+          done
+
+          echo "pages_copied=$pages_copied" >> "$GITHUB_OUTPUT"
+          echo "Copied $pages_copied pages to the wiki checkout"
+
+      - name: Commit and Push Wiki Changes
+        id: sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd wiki
+          git checkout "${{ steps.wiki-branch.outputs.target_branch }}"
+          git add -A
+
+          files_changed=$(git diff --name-only HEAD -- . && git diff --cached --name-only)
+          files_changed_count=$(printf '%s\n' "$files_changed" | sed '/^$/d' | sort -u | wc -l | tr -d ' ')
+          echo "files_changed=$files_changed_count" >> "$GITHUB_OUTPUT"
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No wiki changes"
+            echo "commit_sha=none" >> "$GITHUB_OUTPUT"
+            echo "sync_result=no changes" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "docs: sync documentation to wiki"
+          commit_sha=$(git rev-parse HEAD)
+          git push origin "${{ steps.wiki-branch.outputs.target_branch }}"
+
+          echo "commit_sha=$commit_sha" >> "$GITHUB_OUTPUT"
+          echo "sync_result=pushed" >> "$GITHUB_OUTPUT"
+
+      - name: Write Wiki Sync Summary
+        if: always()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          ## Wiki Sync Summary
+
+          | Metric | Value |
+          | --- | --- |
+          | Pages copied | ${{ steps.copy-docs.outputs.pages_copied || '0' }} |
+          | Files changed | ${{ steps.sync.outputs.files_changed || '0' }} |
+          | Target branch | ${{ steps.wiki-branch.outputs.target_branch || 'unknown' }} |
+          | Commit SHA | ${{ steps.sync.outputs.commit_sha || 'not created' }} |
+          | Sync result | ${{ steps.sync.outputs.sync_result || job.status }} |
+          EOF
