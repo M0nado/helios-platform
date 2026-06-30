@@ -1,0 +1,56 @@
+name: Helios Hermes Autosetup
+
+on:
+  workflow_dispatch:
+    inputs:
+      require_azure_login:
+        description: Require Azure CLI account validation after azure/login
+        required: true
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+      default_remote_branch:
+        description: Default remote branch to normalize from
+        required: true
+        default: main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  autosetup:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_PAT || secrets.GITHUB_TOKEN }}
+      REQUIRE_AZURE_LOGIN: ${{ inputs.require_azure_login }}
+      DEFAULT_REMOTE_BRANCH: ${{ inputs.default_remote_branch }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yq
+          gh --version
+          yq --version
+
+      - name: Azure Login (optional OIDC)
+        if: ${{ inputs.require_azure_login == 'true' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run autosetup
+        run: ./scripts/autosetup.sh
+
+      - name: Upload autosetup summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autosetup-summary
+          path: autosetup/summary.md
