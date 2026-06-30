@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\src\core\HELIOS.Platform.Windows\HELIOS.Platform.Windows.csproj" />
     <ProjectReference Include="..\HELIOS.Platform.ShellExtension\HELIOS.Platform.ShellExtension.csproj" />
   </ItemGroup>
 
