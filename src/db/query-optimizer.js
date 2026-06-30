@@ -4,7 +4,38 @@
  * Performance Target: <50ms query latency (from 100ms)
  */
 
-const NodeCache = require('node-cache');
+class SimpleNodeCache {
+  constructor(options = {}) {
+    this.defaultTtlMs = (options.stdTTL || 300) * 1000;
+    this.store = new Map();
+  }
+
+  get(key) {
+    const entry = this.store.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt <= Date.now()) {
+      this.store.delete(key);
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  set(key, value, ttlSeconds) {
+    const ttlMs = ttlSeconds ? ttlSeconds * 1000 : this.defaultTtlMs;
+    this.store.set(key, { value, expiresAt: Date.now() + ttlMs });
+    return true;
+  }
+
+  del(key) {
+    return this.store.delete(key) ? 1 : 0;
+  }
+
+  keys() {
+    return [...this.store.keys()];
+  }
+}
+
+const NodeCache = SimpleNodeCache;
 
 class DatabaseOptimizer {
   constructor(config = {}) {

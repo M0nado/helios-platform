@@ -37,7 +37,7 @@ class ResponseOptimizer {
 
     // Check if client accepts gzip
     const acceptEncoding = headers['accept-encoding'] || '';
-    const shouldCompress = acceptEncoding.includes('gzip') && buffer.length > this.config.gzipThreshold;
+    const shouldCompress = (!acceptEncoding || acceptEncoding.includes('gzip')) && buffer.length > this.config.gzipThreshold;
 
     if (!shouldCompress) {
       return {

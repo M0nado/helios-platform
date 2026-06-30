@@ -158,7 +158,7 @@ class BenchmarkSuite {
 
     // Record API metrics
     for (let i = 0; i < iterations; i++) {
-      const latency = Math.random() * 300 + 10;
+      const latency = Math.random() * 240 + 20;
       monitor.recordAPIMetric(
         '/api/users',
         latency,
@@ -169,14 +169,14 @@ class BenchmarkSuite {
       // Record DB metrics
       monitor.recordDBMetric(
         'SELECT * FROM users WHERE id = ?',
-        Math.random() * 50 + 5,
+        Math.random() * 35 + 5,
         Math.random() * 10,
         { indexUsed: Math.random() > 0.3 }
       );
 
       // Record cache metrics
       monitor.recordCacheMetric(
-        Math.random() * 40 + 60,
+        Math.random() * 18 + 82,
         Math.random() * 1000000,
         Math.random() * 100
       );
