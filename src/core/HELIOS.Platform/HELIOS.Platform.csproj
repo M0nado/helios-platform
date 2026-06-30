@@ -112,6 +112,9 @@
     <!-- NOTE: Microsoft.Extensions.Configuration.Binder 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
     
     <!-- Core Extensions -->
     <!-- NOTE: Microsoft.Extensions.* 8.0.0 → 10.0.7 are major version bumps - NOT updated -->
@@ -164,16 +167,7 @@
   <!-- Keep the shared core platform-neutral. Windows-only implementations live in ../HELIOS.Platform.Windows. -->
   <ItemGroup>
     <Compile Remove="AI/DataPipeline/DataPipeline.cs" />
-    <Compile Remove="Core/Monitoring/CpuMonitor.cs" />
-    <Compile Remove="Core/Monitoring/GpuMonitor.cs" />
-    <Compile Remove="Core/Monitoring/MemoryProfiler.cs" />
-    <Compile Remove="Core/Monitoring/PowerMonitor.cs" />
-    <Compile Remove="Core/Monitoring/SystemMonitoringService.cs" />
-    <Compile Remove="Core/Monitoring/ThermalMonitor.cs" />
-    <Compile Remove="Core/Performance/AsyncOptimizationService.cs" />
     <Compile Remove="Core/Security/LocalAccountManager.cs" />
-    <Compile Remove="Core/Server/ServerServiceManager.cs" />
-    <Compile Remove="Core/System/SystemManagementService.cs" />
     <Compile Remove="Phase10/BootEnvironment/Channel3BootTimeAutomationOrchestrator.cs" />
     <Compile Remove="Phase10/BootEnvironment/MonadoUSBManagementGUI.cs" />
     <Compile Remove="Phase10/Drivers/DriverDetector.cs" />

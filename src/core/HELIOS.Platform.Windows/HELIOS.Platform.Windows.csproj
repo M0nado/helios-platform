@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <RootNamespace>HELIOS.Platform</RootNamespace>
     <AssemblyName>HELIOS.Platform.Windows</AssemblyName>
     <LangVersion>latest</LangVersion>
@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <UseWindowsForms>true</UseWindowsForms>
     <PackageId>HELIOS.Platform.Windows</PackageId>
     <Title>HELIOS Platform Windows Integrations</Title>
     <Description>Windows-only HELIOS Platform implementations for WMI, Event Log, performance counters, ServiceController, registry, and drawing/UI integration.</Description>
@@ -24,6 +25,7 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
     <PackageReference Include="System.Management" Version="8.0.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
+    <PackageReference Include="TaskScheduler" Version="2.12.2" />
   </ItemGroup>
 
   <ItemGroup>
