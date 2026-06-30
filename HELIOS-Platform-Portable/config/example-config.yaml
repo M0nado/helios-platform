@@ -6,6 +6,10 @@ security:
   mfa_enabled: true
   min_password_length: 12
   session_timeout_minutes: 30
+  session_access_mode: full-read-write
+  read_enabled: true
+  write_enabled: true
+  merge_requires_review: true
 
 # Optimization Settings
 optimization:
@@ -14,5 +18,6 @@ optimization:
 
 # Cloud Settings
 cloud:
-  enable_azure: false
+  enable_azure: true
+  cli_required: true
   region: 'eastus'
