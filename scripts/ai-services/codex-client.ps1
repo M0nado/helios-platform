@@ -42,7 +42,7 @@ class CodexClient {
         $this.HttpClient = New-Object System.Net.Http.HttpClient
         $this.HttpClient.DefaultRequestHeaders.Add("Authorization", "Bearer $($this.ApiKey)")
         $this.HttpClient.DefaultRequestHeaders.Add("Content-Type", "application/json")
-        $timeout = $this.Config.services.gpt_5_4_mini.timeout
+        $timeout = $this.Config.services.gpt_5_4_mini.timeout_seconds ?? $this.Config.services.gpt_5_4_mini.timeout
         $this.HttpClient.Timeout = [TimeSpan]::FromSeconds($timeout)
     }
 
@@ -58,8 +58,8 @@ class CodexClient {
 
     [void]InitializeRetryPolicy() {
         $this.RetryPolicy = @{
-            MaxRetries = $this.Config.services.gpt_5_4_mini.retries
-            RetryDelay = $this.Config.services.gpt_5_4_mini.retryDelay
+            MaxRetries = $this.Config.services.gpt_5_4_mini.retries ?? 3
+            RetryDelay = $this.Config.services.gpt_5_4_mini.retryDelay ?? 2
             BackoffMultiplier = 2
             MaxBackoffDelay = 60
         }
@@ -110,7 +110,7 @@ class CodexClient {
             $this.RequestStats.SuccessfulRequests++
             $this.LogInfo("Code generated successfully. Tokens: $($response.usage.total_tokens)")
 
-            $generatedCode = $response.choices[0].text.Trim()
+            $generatedCode = $this.ExtractResponseText($response)
 
             return @{
                 Success = $true
@@ -151,7 +151,7 @@ class CodexClient {
             $this.RequestStats.SuccessfulRequests++
             $this.LogInfo("Code refactored successfully. Tokens: $($response.usage.total_tokens)")
 
-            $refactoredCode = $response.choices[0].text.Trim()
+            $refactoredCode = $this.ExtractResponseText($response)
 
             return @{
                 Success = $true
@@ -194,7 +194,7 @@ class CodexClient {
             return @{
                 Success = $true
                 Code = $Code
-                Analysis = $response.choices[0].text.Trim()
+                Analysis = $this.ExtractResponseText($response)
                 Language = $Language
                 TokensUsed = $response.usage.total_tokens
                 Cost = $this.CalculateCost($response.usage)
@@ -230,7 +230,7 @@ class CodexClient {
             return @{
                 Success = $true
                 SourceCode = $Code
-                TestCode = $response.choices[0].text.Trim()
+                TestCode = $this.ExtractResponseText($response)
                 Language = $Language
                 Framework = $Framework
                 TokensUsed = $response.usage.total_tokens
@@ -322,18 +322,36 @@ Test code:
     }
 
     [hashtable]PrepareRequestBody([string]$Prompt, [double]$Temperature, [hashtable]$Options) {
+        $serviceConfig = $this.Config.services.gpt_5_4_mini
         $requestBody = @{
-            model = $this.Config.services.gpt_5_4_mini.model
-            prompt = $Prompt
+            model = $serviceConfig.model
+            messages = @(
+                @{
+                    role = "system"
+                    content = "You are a precise coding assistant. Return only the requested code or analysis unless the user asks for explanation."
+                },
+                @{
+                    role = "user"
+                    content = $Prompt
+                }
+            )
             temperature = $Temperature
-            max_tokens = $Options['maxTokens'] ?? $this.Config.services.gpt_5_4_mini.maxTokens
+            max_tokens = $Options['maxTokens'] ?? $serviceConfig.max_tokens ?? $serviceConfig.maxTokens
             top_p = $Options['topP'] ?? 1.0
             frequency_penalty = $Options['frequencyPenalty'] ?? 0.0
             presence_penalty = $Options['presencePenalty'] ?? 0.0
-            stop = @("`n`n")
         }
 
         return $requestBody
+    }
+
+    [string]ExtractResponseText([PSCustomObject]$Response) {
+        $messageContent = $Response.choices[0].message.content
+        if ([string]::IsNullOrWhiteSpace($messageContent)) {
+            throw "Chat completion response did not include message content"
+        }
+
+        return $messageContent.Trim()
     }
 
     [PSCustomObject]InvokeWithRetry([hashtable]$RequestBody) {
@@ -363,7 +381,7 @@ Test code:
         $content = New-Object System.Net.Http.StringContent($jsonBody, [System.Text.Encoding]::UTF8, "application/json")
 
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        $response = $this.HttpClient.PostAsync("$($this.BaseUrl)/completions", $content).Result
+        $response = $this.HttpClient.PostAsync("$($this.BaseUrl)/chat/completions", $content).Result
         $stopwatch.Stop()
 
         if (-not $response.IsSuccessStatusCode) {
@@ -385,8 +403,8 @@ Test code:
 
     [double]CalculateCost([PSCustomObject]$Usage) {
         $config = $this.Config.services.gpt_5_4_mini
-        $inputCost = ($Usage.prompt_tokens / 1000) * $config.costPerThousandTokens.input
-        $outputCost = ($Usage.completion_tokens / 1000) * $config.costPerThousandTokens.output
+        $inputCost = ($Usage.prompt_tokens / 1000) * ($config.cost_per_1k_tokens_input ?? $config.costPerThousandTokens.input)
+        $outputCost = ($Usage.completion_tokens / 1000) * ($config.cost_per_1k_tokens_output ?? $config.costPerThousandTokens.output)
         return $inputCost + $outputCost
     }
 
