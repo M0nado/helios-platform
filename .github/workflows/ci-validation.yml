@@ -20,6 +20,7 @@ jobs:
           powershell-version: '7.3'
       
       - name: Check PowerShell Syntax
+        shell: pwsh
         run: |
           $failures = 0
           Get-ChildItem -Path '.' -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
@@ -51,11 +52,10 @@ jobs:
         with:
           files: .
           config_file: .markdownlint.json
-        continue-on-error: true
 
-  documentation-check:
+  advisory-documentation-check:
     runs-on: ubuntu-latest
-    name: Documentation Completeness
+    name: advisory-Documentation Completeness
     
     steps:
       - uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
           missing=0
           for doc in "${required_docs[@]}"; do
             if [ ! -f "$doc" ]; then
-              echo "❌ Missing required documentation: $doc"
+              echo "⚠️ Missing recommended documentation: $doc"
               missing=$((missing + 1))
             else
               echo "✅ Found: $doc"
@@ -77,9 +77,9 @@ jobs:
           done
           
           if [ $missing -eq 0 ]; then
-            echo "✅ All required documentation present!"
+            echo "✅ All recommended documentation present!"
           else
-            echo "⚠️  Some documentation missing (non-blocking)"
+            echo "⚠️ Some recommended documentation is missing (advisory only)"
           fi
 
   test-scripts:
@@ -103,7 +103,6 @@ jobs:
             Write-Host "No tests directory found" -ForegroundColor Yellow
           }
         shell: pwsh
-        continue-on-error: true
 
   security-scan:
     runs-on: ubuntu-latest
@@ -119,13 +118,11 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
-        continue-on-error: true
       
       - name: Upload Trivy Results
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
-        continue-on-error: true
 
   file-integrity:
     runs-on: ubuntu-latest
@@ -158,9 +155,9 @@ jobs:
           fi
 
   validation-summary:
-    name: Validation Summary
+    name: Validation Required Summary
     if: always()
-    needs: [syntax-check, markdown-check, documentation-check, test-scripts, security-scan, file-integrity]
+    needs: [syntax-check, markdown-check, advisory-documentation-check, test-scripts, security-scan, file-integrity]
     runs-on: ubuntu-latest
     steps:
       - name: Report Status
@@ -169,7 +166,27 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Syntax Check: ${{ needs.syntax-check.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Markdown Check: ${{ needs.markdown-check.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Documentation: ${{ needs.documentation-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation (advisory): ${{ needs.advisory-documentation-check.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Script Tests: ${{ needs.test-scripts.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- File Integrity: ${{ needs.file-integrity.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          failed=0
+          for result in \
+            "${{ needs.syntax-check.result }}" \
+            "${{ needs.markdown-check.result }}" \
+            "${{ needs.test-scripts.result }}" \
+            "${{ needs.security-scan.result }}" \
+            "${{ needs.file-integrity.result }}"; do
+            if [ "$result" != "success" ]; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "❌ One or more required validation checks failed"
+            exit 1
+          fi
+
+          echo "✅ All required validation checks passed"
