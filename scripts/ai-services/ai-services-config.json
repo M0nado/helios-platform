@@ -4,14 +4,13 @@
     "hub_version": "1.0.0",
     "default_service": "smart_route"
   },
-  
   "services": {
-    "chatgpt_pro": {
-      "name": "ChatGPT Pro (GPT-4)",
+    "gpt_5_4": {
+      "name": "gpt-5.4",
       "provider": "OpenAI",
-      "model": "gpt-4",
+      "model": "gpt-5.4",
       "enabled": true,
-      "api_key_env": "CHATGPT_API_KEY",
+      "api_key_env": "OPENAI_API_KEY",
       "base_url": "https://api.openai.com/v1",
       "timeout_seconds": 120,
       "best_for": [
@@ -28,13 +27,12 @@
       "cost_per_1k_tokens_input": 0.03,
       "cost_per_1k_tokens_output": 0.06
     },
-    
-    "codex": {
-      "name": "Codex",
+    "gpt_5_4_mini": {
+      "name": "gpt-5.4-mini",
       "provider": "OpenAI",
-      "model": "code-davinci-002",
+      "model": "gpt-5.4-mini",
       "enabled": true,
-      "api_key_env": "CODEX_API_KEY",
+      "api_key_env": "OPENAI_API_KEY",
       "base_url": "https://api.openai.com/v1",
       "timeout_seconds": 90,
       "best_for": [
@@ -48,15 +46,15 @@
       "max_tokens": 2048,
       "rate_limit_per_minute": 60,
       "rate_limit_per_day": 1000,
-      "cost_per_1k_tokens": 0.02
+      "cost_per_1k_tokens_input": 0.00075,
+      "cost_per_1k_tokens_output": 0.0045
     },
-    
-    "gpt_4_5": {
-      "name": "GPT-4.5 (Latest Model)",
+    "gpt_5_5": {
+      "name": "gpt-5.5",
       "provider": "OpenAI",
-      "model": "gpt-4-turbo-2024-04",
+      "model": "gpt-5.5",
       "enabled": true,
-      "api_key_env": "GPT45_API_KEY",
+      "api_key_env": "OPENAI_API_KEY",
       "base_url": "https://api.openai.com/v1",
       "timeout_seconds": 180,
       "best_for": [
@@ -70,98 +68,96 @@
       "max_tokens": 8192,
       "rate_limit_per_minute": 20,
       "rate_limit_per_day": 300,
-      "cost_per_1k_tokens_input": 0.01,
+      "cost_per_1k_tokens_input": 0.005,
       "cost_per_1k_tokens_output": 0.03
     }
   },
-  
   "service_router": {
     "enabled": true,
     "strategy": "confidence_weighted",
     "task_routing": {
       "code_generation": {
-        "primary": "codex",
+        "primary": "gpt_5_4_mini",
         "primary_weight": 0.9,
-        "secondary": "gpt_4_5",
+        "secondary": "gpt_5_5",
         "secondary_weight": 0.1
       },
       "code_refactoring": {
-        "primary": "codex",
+        "primary": "gpt_5_4_mini",
         "primary_weight": 0.85,
-        "secondary": "gpt_4_5",
+        "secondary": "gpt_5_5",
         "secondary_weight": 0.15
       },
       "test_creation": {
-        "primary": "codex",
+        "primary": "gpt_5_4_mini",
         "primary_weight": 0.8,
-        "secondary": "gpt_4_5",
+        "secondary": "gpt_5_5",
         "secondary_weight": 0.2
       },
       "code_review": {
-        "primary": "chatgpt_pro",
+        "primary": "gpt_5_4",
         "primary_weight": 0.7,
-        "secondary": "gpt_4_5",
+        "secondary": "gpt_5_5",
         "secondary_weight": 0.3
       },
       "documentation_generation": {
-        "primary": "chatgpt_pro",
+        "primary": "gpt_5_4",
         "primary_weight": 0.75,
-        "secondary": "codex",
+        "secondary": "gpt_5_4_mini",
         "secondary_weight": 0.25
       },
       "optimization_suggestions": {
-        "primary": "chatgpt_pro",
+        "primary": "gpt_5_4",
         "primary_weight": 0.6,
-        "secondary": "gpt_4_5",
+        "secondary": "gpt_5_5",
         "secondary_weight": 0.4
       },
       "bug_detection": {
-        "primary": "chatgpt_pro",
+        "primary": "gpt_5_4",
         "primary_weight": 0.65,
-        "secondary": "gpt_4_5",
+        "secondary": "gpt_5_5",
         "secondary_weight": 0.35
       },
       "security_analysis": {
-        "primary": "chatgpt_pro",
+        "primary": "gpt_5_4",
         "primary_weight": 0.7,
-        "secondary": "gpt_4_5",
+        "secondary": "gpt_5_5",
         "secondary_weight": 0.3
       },
       "architecture_design": {
-        "primary": "gpt_4_5",
+        "primary": "gpt_5_5",
         "primary_weight": 0.8,
-        "secondary": "chatgpt_pro",
+        "secondary": "gpt_5_4",
         "secondary_weight": 0.2
       },
       "component_analysis": {
-        "primary": "gpt_4_5",
+        "primary": "gpt_5_5",
         "primary_weight": 0.75,
-        "secondary": "chatgpt_pro",
+        "secondary": "gpt_5_4",
         "secondary_weight": 0.25
       },
       "conflict_resolution": {
-        "primary": "gpt_4_5",
+        "primary": "gpt_5_5",
         "primary_weight": 0.8,
-        "secondary": "chatgpt_pro",
+        "secondary": "gpt_5_4",
         "secondary_weight": 0.2
       },
       "build_optimization": {
-        "primary": "chatgpt_pro",
+        "primary": "gpt_5_4",
         "primary_weight": 0.6,
-        "secondary": "gpt_4_5",
+        "secondary": "gpt_5_5",
         "secondary_weight": 0.4
       }
     }
   },
-  
   "cost_management": {
     "enabled": true,
     "tracking_enabled": true,
     "cost_limits": {
       "total_monthly_usd": 300,
-      "chatgpt_pro_usd": 100,
-      "codex_usd": 50,
-      "gpt_4_5_usd": 150
+      "gpt_5_4_usd": 100,
+      "gpt_5_4_mini_usd": 50,
+      "gpt_5_5_usd": 150
     },
     "cost_warning_threshold_percent": 80,
     "cost_limit_action": "pause_requests",
@@ -169,7 +165,6 @@
     "track_by_task": true,
     "track_by_service": true
   },
-  
   "rate_limiting": {
     "enabled": true,
     "global_per_minute": 30,
@@ -180,7 +175,6 @@
     "retry_attempts": 3,
     "retry_backoff_seconds": 10
   },
-  
   "conflict_resolution": {
     "enabled": true,
     "strategy": "consensus",
@@ -190,7 +184,6 @@
     "auto_approve_threshold": 0.95,
     "log_conflicts": true
   },
-  
   "security": {
     "api_key_encryption": true,
     "sanitize_logs": true,
@@ -198,9 +191,9 @@
     "mask_sensitive_data": true,
     "require_approval_for_risky_tasks": true,
     "enable_rollback": true,
-    "audit_all_changes": true
+    "audit_all_changes": true,
+    "auditLogPath": "audit-logs/"
   },
-  
   "audit": {
     "enabled": true,
     "log_all_requests": true,
@@ -210,7 +203,6 @@
     "retention_days": 90,
     "storage_location": "audit-logs/"
   },
-  
   "fallback": {
     "enabled": true,
     "strategy": "sequential",
@@ -220,17 +212,18 @@
     "fallback_on_rate_limit": true,
     "fallback_on_cost_limit": true
   },
-  
   "notifications": {
     "enabled": true,
     "notify_on_approval_needed": true,
     "notify_on_error": true,
     "notify_on_cost_threshold": true,
     "notify_on_conflict": true,
-    "notification_methods": ["console", "file"],
+    "notification_methods": [
+      "console",
+      "file"
+    ],
     "log_file": "logs/ai-notifications.log"
   },
-  
   "features": {
     "enable_dry_run": true,
     "enable_preview_mode": true,
@@ -242,12 +235,35 @@
     "enable_change_tracking": true,
     "enable_automatic_rollback": true
   },
-  
   "debug": {
     "enabled": false,
     "verbose_logging": false,
     "log_api_calls": false,
     "log_responses": false,
     "log_file": "logs/debug.log"
+  },
+  "model_registry": {
+    "allowed_model_ids": [
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.4-mini"
+    ],
+    "deprecated_model_ids": [
+      "code-davinci-002",
+      "gpt-4",
+      "gpt-4-turbo",
+      "gpt-4-turbo-2024-04",
+      "gpt-4.5"
+    ],
+    "placeholder_patterns": [
+      "^gpt[-_]?4[-_]?5$",
+      "^codex$",
+      "^model[-_]?id$",
+      "^placeholder$"
+    ],
+    "validation_mode": "fail_closed"
+  },
+  "logging": {
+    "logPath": "logs/ai-services"
   }
 }
