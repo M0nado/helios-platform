@@ -9,33 +9,48 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'true']
+      install_azure_cli:
+        description: Attempt Azure CLI install if missing on Linux runners
+        required: true
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
       default_remote_branch:
         description: Default remote branch to normalize from
         required: true
         default: main
+      push_merge_branches:
+        description: Push generated hermes-merge branches back to each repo
+        required: true
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 permissions:
   contents: read
   id-token: write
 
+env:
+  REQUIRE_AZURE_LOGIN: ${{ inputs.require_azure_login }}
+  INSTALL_AZURE_CLI: ${{ inputs.install_azure_cli }}
+  DEFAULT_REMOTE_BRANCH: ${{ inputs.default_remote_branch }}
+  PUSH_MERGE_BRANCHES: ${{ inputs.push_merge_branches }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
 jobs:
   autosetup:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_PAT || secrets.GITHUB_TOKEN }}
-      REQUIRE_AZURE_LOGIN: ${{ inputs.require_azure_login }}
-      DEFAULT_REMOTE_BRANCH: ${{ inputs.default_remote_branch }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install yq
+      - name: Validate host tools
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_PAT || github.token }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y yq
+          git --version
           gh --version
-          yq --version
+          gh auth status --hostname github.com || true
 
       - name: Azure Login (optional OIDC)
         if: ${{ inputs.require_azure_login == 'true' }}
@@ -46,6 +61,8 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Run autosetup
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_PAT || github.token }}
         run: ./scripts/autosetup.sh
 
       - name: Upload autosetup summary

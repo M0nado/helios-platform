@@ -65,9 +65,11 @@ branches:
 setup:
   baseDirectory: repos
   defaultRemoteBranch: main
-  requireAzureLogin: false
-  requireGitHubToken: true
   mergeAllRemoteBranches: true
+  pushMergeBranches: false
+  requireGitHubToken: true
+  installAzureCliIfMissing: false
+  requireAzureLogin: false
   summaryPath: autosetup/summary.md
 
 focus:
@@ -81,6 +83,35 @@ focus:
     fsharp: math predictions, analytics, and parallel computation models
     python: AIHub integration and automation adapters
     xcore: Hermes specialist agent setup and fleet coordination
+
+repoProfiles:
+  helios-platform:
+    role: C# platform shell, installer orchestration, Azure/security integration
+    priority: high
+  helios-control:
+    role: C# and WinUI 3 control-plane frontend and operator setup flow
+    priority: critical
+  hermes-fleet-production:
+    role: production Hermes fleet coordination, security hardening, rollout gates
+    priority: critical
+  hermes-core:
+    role: Hermes core services and XCore specialist integration
+    priority: high
+  xcore-agent:
+    role: specialist agent runtime and cross-repo automation hooks
+    priority: high
+  hermes-fleet-public:
+    role: public fleet templates and examples
+    priority: normal
+  hermes-fleet-private:
+    role: private fleet configuration and sensitive deployment adapters
+    priority: high
+  usb-wizard:
+    role: Windows setup, boot media, and installer references
+    priority: normal
+  os-setup:
+    role: host provisioning, drivers, security baseline, and Azure CLI bootstrap
+    priority: normal
 """;
 
         private const string AutosetupScript = """
@@ -94,28 +125,81 @@ DEFAULT_REMOTE_BRANCH="${DEFAULT_REMOTE_BRANCH:-main}"
 CLEAN_BRANCH="${CLEAN_BRANCH:-hermes-clean}"
 MERGE_BRANCH="${MERGE_BRANCH:-hermes-merge}"
 REQUIRE_AZURE_LOGIN="${REQUIRE_AZURE_LOGIN:-false}"
+INSTALL_AZURE_CLI="${INSTALL_AZURE_CLI:-false}"
 MERGE_ALL_REMOTE_BRANCHES="${MERGE_ALL_REMOTE_BRANCHES:-true}"
+PUSH_MERGE_BRANCHES="${PUSH_MERGE_BRANCHES:-false}"
 
 mkdir -p "$BASE" "$(dirname "$SUMMARY")"
 printf '# Helios/Hermes autosetup summary\n\nStarted: %s\n\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$SUMMARY"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "Missing required command: $1" >&2; exit 1; }; }
+log_summary() { printf '%s\n' "$1" | tee -a "$SUMMARY"; }
 repo_target() {
   local repo="$1" owner name
   owner="${repo%%/*}"
   name="${repo##*/}"
   printf '%s/%s/%s' "$BASE" "$owner" "$name"
 }
-log_summary() { printf '%s\n' "$1" | tee -a "$SUMMARY"; }
+read_manifest_repos() {
+  awk '
+    /^repos:[[:space:]]*$/ { in_repos=1; next }
+    /^[^[:space:]-][^:]*:[[:space:]]*$/ { if (in_repos) exit }
+    in_repos && /^[[:space:]]*-[[:space:]]+/ {
+      sub(/^[[:space:]]*-[[:space:]]*/, "")
+      gsub(/["'"'"']/, "")
+      print
+    }
+  ' "$MANIFEST"
+}
+remote_default_branch() {
+  local target="$1" branch
+  if git -C "$target" show-ref --verify --quiet "refs/remotes/origin/$DEFAULT_REMOTE_BRANCH"; then
+    printf '%s' "$DEFAULT_REMOTE_BRANCH"
+    return 0
+  fi
+  branch="$(git -C "$target" remote show origin | awk '/HEAD branch/ {print $NF}')"
+  [[ -n "$branch" && "$branch" != "(unknown)" ]] || return 1
+  printf '%s' "$branch"
+}
+clone_or_fetch_repo() {
+  local repo="$1" target="$2"
+  mkdir -p "$(dirname "$target")"
+  if [[ -d "$target/.git" ]]; then
+    git -C "$target" remote set-url origin "https://github.com/$repo.git" || true
+    git -C "$target" fetch --all --prune --tags
+    log_summary "- [x] fetched existing clone at \`$target\`"
+  else
+    if command -v gh >/dev/null 2>&1; then
+      gh repo clone "$repo" "$target" -- --quiet
+    else
+      git clone --quiet "https://github.com/$repo.git" "$target"
+    fi
+    git -C "$target" fetch --all --prune --tags
+    log_summary "- [x] cloned to \`$target\`"
+  fi
+}
+merge_remote_branches() {
+  local target="$1" remote_branch="$2" branch
+  [[ "$MERGE_ALL_REMOTE_BRANCHES" == "true" ]] || return 0
+  while IFS= read -r branch; do
+    [[ -n "$branch" ]] || continue
+    [[ "$branch" == "$remote_branch" ]] && continue
+    log_summary "- [ ] merging remote branch \`origin/$branch\`"
+    git -C "$target" merge --no-edit -X theirs "origin/$branch"
+    log_summary "- [x] merged \`origin/$branch\`"
+  done < <(git -C "$target" for-each-ref --format='%(refname:short)' refs/remotes/origin \
+    | sed '/^origin\/HEAD$/d' \
+    | sed 's#^origin/##' \
+    | sort -u)
+}
 
 need git
-need gh
-need yq
+[[ -f "$MANIFEST" ]] || { echo "Manifest not found: $MANIFEST" >&2; exit 1; }
 
-export REQUIRE_AZURE_LOGIN
+export REQUIRE_AZURE_LOGIN INSTALL_AZURE_CLI
 ./scripts/azure-preflight.sh | tee -a "$SUMMARY"
 
-mapfile -t repos < <(yq -r '.repos[]' "$MANIFEST")
+mapfile -t repos < <(read_manifest_repos)
 if [[ "${#repos[@]}" -eq 0 ]]; then
   echo "No repositories listed in $MANIFEST" >&2
   exit 1
@@ -124,50 +208,36 @@ fi
 log_summary "\n## Repository synchronization"
 for repo in "${repos[@]}"; do
   target="$(repo_target "$repo")"
-  mkdir -p "$(dirname "$target")"
   log_summary "\n### $repo"
-  if [[ -d "$target/.git" ]]; then
-    git -C "$target" remote set-url origin "https://github.com/$repo.git" || true
-    git -C "$target" fetch --all --prune
-    log_summary "- [x] fetched existing clone at \`$target\`"
-  else
-    gh repo clone "$repo" "$target" -- --quiet
-    git -C "$target" fetch --all --prune
-    log_summary "- [x] cloned to \`$target\`"
-  fi
+  clone_or_fetch_repo "$repo" "$target"
 
-  if git -C "$target" show-ref --verify --quiet "refs/remotes/origin/$DEFAULT_REMOTE_BRANCH"; then
-    remote_branch="$DEFAULT_REMOTE_BRANCH"
-  else
-    remote_branch="$(git -C "$target" remote show origin | awk '/HEAD branch/ {print $NF}')"
-  fi
-  [[ -n "$remote_branch" ]] || { echo "Unable to determine remote branch for $repo" >&2; exit 1; }
+  remote_branch="$(remote_default_branch "$target")" || {
+    echo "Unable to determine remote branch for $repo" >&2
+    exit 1
+  }
 
   git -C "$target" checkout -B "$CLEAN_BRANCH" "origin/$remote_branch"
   log_summary "- [x] reset \`$CLEAN_BRANCH\` from \`origin/$remote_branch\`"
 
   git -C "$target" checkout -B "$MERGE_BRANCH"
   git -C "$target" merge --no-edit -X theirs "$CLEAN_BRANCH"
-
-  if [[ "$MERGE_ALL_REMOTE_BRANCHES" == "true" ]]; then
-    mapfile -t remote_branches < <(git -C "$target" for-each-ref --format='%(refname:short)' refs/remotes/origin       | sed '/^origin\/HEAD$/d'       | sed "s#^origin/##"       | sort -u)
-    for branch in "${remote_branches[@]}"; do
-      [[ "$branch" == "$remote_branch" ]] && continue
-      log_summary "- [ ] merging remote branch \`origin/$branch\`"
-      git -C "$target" merge --no-edit -X theirs "origin/$branch"
-      log_summary "- [x] merged \`origin/$branch\`"
-    done
-  fi
-
+  merge_remote_branches "$target" "$remote_branch"
   log_summary "- [x] prepared merge branch \`$MERGE_BRANCH\`"
+
+  if [[ "$PUSH_MERGE_BRANCHES" == "true" ]]; then
+    git -C "$target" push --set-upstream origin "$MERGE_BRANCH"
+    log_summary "- [x] pushed \`$MERGE_BRANCH\`"
+  else
+    log_summary "- [ ] push skipped; set PUSH_MERGE_BRANCHES=true to publish \`$MERGE_BRANCH\`"
+  fi
 done
 
 BASE="$BASE" SUMMARY_PATH="$SUMMARY" ./scripts/validate-consolidation.sh "$BASE"
 
-log_summary "\n## Next manual integration gates"
-log_summary "- Review helios-control and hermes-fleet-production first."
+log_summary "\n## Next integration gates"
+log_summary "- Review helios-control and hermes-fleet-production first; they are critical focus repos in autosetup/manifest.yaml."
 log_summary "- Wire C# frontend/install/security, WinUI 3 shell, C++ performance backend, F# analytics, Python AIHub, and Hermes XCore specialists by repo-specific PRs."
-log_summary "- Run build/test/security validation in each cloned repository before pushing merge branches."
+log_summary "- Run build/test/security validation in each cloned repository before setting PUSH_MERGE_BRANCHES=true."
 log_summary "\nCompleted: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 """;
 
@@ -176,6 +246,7 @@ log_summary "\nCompleted: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 set -Eeuo pipefail
 
 REQUIRE_AZURE_LOGIN="${REQUIRE_AZURE_LOGIN:-false}"
+INSTALL_AZURE_CLI="${INSTALL_AZURE_CLI:-false}"
 AZURE_SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-}"
 AZURE_TENANT_ID="${AZURE_TENANT_ID:-}"
 AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
@@ -183,10 +254,35 @@ AZURE_RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
 section() { printf '\n== %s ==\n' "$1"; }
 warn() { printf 'WARN: %s\n' "$1" >&2; }
 fail() { printf 'ERROR: %s\n' "$1" >&2; exit 1; }
+install_azure_cli_linux() {
+  if command -v apt-get >/dev/null 2>&1; then
+    local codename
+    codename="$(. /etc/os-release && printf '%s' "${VERSION_CODENAME:-${UBUNTU_CODENAME:-}}")"
+    [[ -n "$codename" ]] || fail "Unable to determine Debian/Ubuntu codename for Azure CLI apt repository."
+    sudo apt-get update
+    sudo apt-get install -y ca-certificates curl apt-transport-https lsb-release gnupg
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg
+    sudo chmod go+r /etc/apt/keyrings/microsoft.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $codename main"       | sudo tee /etc/apt/sources.list.d/azure-cli.list >/dev/null
+    sudo apt-get update
+    sudo apt-get install -y azure-cli
+  elif command -v rpm >/dev/null 2>&1; then
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    sudo dnf install -y https://packages.microsoft.com/config/rhel/9.0/packages-microsoft-prod.rpm || sudo yum install -y https://packages.microsoft.com/config/rhel/9.0/packages-microsoft-prod.rpm
+    sudo dnf install -y azure-cli || sudo yum install -y azure-cli
+  else
+    fail "Automatic Azure CLI install supports apt, dnf, or yum hosts only. Install Azure CLI manually."
+  fi
+}
 
 section "Azure CLI preflight"
 if ! command -v az >/dev/null 2>&1; then
-  fail "Azure CLI is not installed. Install it from https://learn.microsoft.com/cli/azure/install-azure-cli and rerun autosetup."
+  if [[ "$INSTALL_AZURE_CLI" == "true" ]]; then
+    install_azure_cli_linux
+  else
+    fail "Azure CLI is not installed. Set INSTALL_AZURE_CLI=true on Linux hosts, or install from https://learn.microsoft.com/cli/azure/install-azure-cli."
+  fi
 fi
 
 az --version | sed -n '1,8p'
@@ -232,26 +328,28 @@ SUMMARY="${SUMMARY_PATH:-autosetup/summary.md}"
 mkdir -p "$(dirname "$SUMMARY")"
 
 section() { printf '\n## %s\n' "$1" | tee -a "$SUMMARY"; }
-check_glob() {
-  local label="$1" pattern="$2"
-  if find "$BASE" -path "$pattern" -print -quit 2>/dev/null | grep -q .; then
-    printf -- '- [x] %s (%s)\n' "$label" "$pattern" | tee -a "$SUMMARY"
+check_find() {
+  local label="$1"; shift
+  local result
+  result="$(find "$BASE" "$@" -print -quit 2>/dev/null || true)"
+  if [[ -n "$result" ]]; then
+    printf -- '- [x] %s (`%s`)\n' "$label" "$result" | tee -a "$SUMMARY"
   else
-    printf -- '- [ ] %s missing (%s)\n' "$label" "$pattern" | tee -a "$SUMMARY"
+    printf -- '- [ ] %s missing\n' "$label" | tee -a "$SUMMARY"
   fi
 }
 
 section "Consolidation validation"
 printf 'Base directory: `%s`\n' "$BASE" | tee -a "$SUMMARY"
 
-check_glob 'C# core/platform projects' '*/**/*.csproj'
-check_glob 'WinUI/WPF desktop surface' '*/**/*.xaml'
-check_glob 'C++ performance backend candidates' '*/**/*.[ch]pp'
-check_glob 'F# analytics/math candidates' '*/**/*.fsproj'
-check_glob 'Python AIHub/automation candidates' '*/**/*.py'
-check_glob 'Azure IaC/config candidates' '*/**/*azure*'
-check_glob 'Hermes fleet assets' '*/**/*hermes*'
-check_glob 'XCore agent assets' '*/**/*xcore*'
+check_find 'C# core/platform projects' -type f -name '*.csproj'
+check_find 'WinUI/WPF desktop surface' -type f \( -name '*.xaml' -o -name '*.xaml.cs' \)
+check_find 'C++ performance backend candidates' -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.cc' -o -name '*.cxx' -o -name '*.h' \)
+check_find 'F# analytics/math candidates' -type f \( -name '*.fsproj' -o -name '*.fs' -o -name '*.fsi' \)
+check_find 'Python AIHub/automation candidates' -type f -name '*.py'
+check_find 'Azure IaC/config candidates' -type f \( -iname '*azure*' -o -name '*.bicep' -o -name 'main.tf' \)
+check_find 'Hermes fleet assets' \( -ipath '*hermes*' -o -ipath '*fleet*' \)
+check_find 'XCore agent assets' -ipath '*xcore*'
 
 printf '\nValidation complete. Missing optional language buckets should become follow-up tasks, not silent autosetup success.\n' | tee -a "$SUMMARY"
 """;
@@ -268,33 +366,48 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'true']
+      install_azure_cli:
+        description: Attempt Azure CLI install if missing on Linux runners
+        required: true
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
       default_remote_branch:
         description: Default remote branch to normalize from
         required: true
         default: main
+      push_merge_branches:
+        description: Push generated hermes-merge branches back to each repo
+        required: true
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 permissions:
   contents: read
   id-token: write
 
+env:
+  REQUIRE_AZURE_LOGIN: ${{ inputs.require_azure_login }}
+  INSTALL_AZURE_CLI: ${{ inputs.install_azure_cli }}
+  DEFAULT_REMOTE_BRANCH: ${{ inputs.default_remote_branch }}
+  PUSH_MERGE_BRANCHES: ${{ inputs.push_merge_branches }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
 jobs:
   autosetup:
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_PAT || secrets.GITHUB_TOKEN }}
-      REQUIRE_AZURE_LOGIN: ${{ inputs.require_azure_login }}
-      DEFAULT_REMOTE_BRANCH: ${{ inputs.default_remote_branch }}
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install yq
+      - name: Validate host tools
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_PAT || github.token }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y yq
+          git --version
           gh --version
-          yq --version
+          gh auth status --hostname github.com || true
 
       - name: Azure Login (optional OIDC)
         if: ${{ inputs.require_azure_login == 'true' }}
@@ -305,6 +418,8 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Run autosetup
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_PAT || github.token }}
         run: ./scripts/autosetup.sh
 
       - name: Upload autosetup summary
