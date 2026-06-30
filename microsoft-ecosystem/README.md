@@ -102,7 +102,7 @@ The Microsoft Ecosystem Integration provides comprehensive connectivity between 
 - **Entra ID Premium P1** (P2 recommended for advanced features)
 - **Local Prerequisites**:
   - PowerShell 7.0+
-  - Azure CLI 2.0+
+  - Azure CLI 2.0+ (use `./scripts/setup/setup-azure-cli.sh --login --install-bicep` or `./scripts/setup/setup-azure-cli.sh --service-principal --tenant "$HELIOS_AZURE_TENANT_ID" --install-bicep` and `./scripts/integration/helios_branch_integrator.py --repo . --search-root /Microsoft.NET` from the repository root for deployment and branch integration setup)
   - Microsoft Graph PowerShell SDK
   - Azure PowerShell Module
 
