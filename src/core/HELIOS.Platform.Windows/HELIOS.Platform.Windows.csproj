@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>HELIOS.Platform</RootNamespace>
+    <AssemblyName>HELIOS.Platform.Windows</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <PackageId>HELIOS.Platform.Windows</PackageId>
+    <Title>HELIOS Platform Windows Integrations</Title>
+    <Description>Windows-only HELIOS Platform implementations for WMI, Event Log, performance counters, ServiceController, registry, and drawing/UI integration.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../HELIOS.Platform/HELIOS.Platform.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../HELIOS.Platform/AI/DataPipeline/DataPipeline.cs" Link="AI/DataPipeline/DataPipeline.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Monitoring/CpuMonitor.cs" Link="Core/Monitoring/CpuMonitor.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Monitoring/GpuMonitor.cs" Link="Core/Monitoring/GpuMonitor.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Monitoring/MemoryProfiler.cs" Link="Core/Monitoring/MemoryProfiler.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Monitoring/PowerMonitor.cs" Link="Core/Monitoring/PowerMonitor.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Monitoring/SystemMonitoringService.cs" Link="Core/Monitoring/SystemMonitoringService.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Monitoring/ThermalMonitor.cs" Link="Core/Monitoring/ThermalMonitor.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Performance/AsyncOptimizationService.cs" Link="Core/Performance/AsyncOptimizationService.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Security/LocalAccountManager.cs" Link="Core/Security/LocalAccountManager.cs" />
+    <Compile Include="../HELIOS.Platform/Core/Server/ServerServiceManager.cs" Link="Core/Server/ServerServiceManager.cs" />
+    <Compile Include="../HELIOS.Platform/Core/System/SystemManagementService.cs" Link="Core/System/SystemManagementService.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/BootEnvironment/Channel3BootTimeAutomationOrchestrator.cs" Link="Phase10/BootEnvironment/Channel3BootTimeAutomationOrchestrator.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/BootEnvironment/MonadoUSBManagementGUI.cs" Link="Phase10/BootEnvironment/MonadoUSBManagementGUI.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Drivers/DriverDetector.cs" Link="Phase10/Drivers/DriverDetector.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Drivers/DriverHealthMonitor.cs" Link="Phase10/Drivers/DriverHealthMonitor.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Malware/MalwareDefinitionManager.cs" Link="Phase10/Malware/MalwareDefinitionManager.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Malware/MalwareScanScheduler.cs" Link="Phase10/Malware/MalwareScanScheduler.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Malware/MalwarebytesInstaller.cs" Link="Phase10/Malware/MalwarebytesInstaller.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Malware/MalwarebytesMonitor.cs" Link="Phase10/Malware/MalwarebytesMonitor.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Optimizer/GPUOptimizer.cs" Link="Phase10/Optimizer/GPUOptimizer.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Optimizer/MonitoringDashboard.cs" Link="Phase10/Optimizer/MonitoringDashboard.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Optimizer/NetworkOptimizer.cs" Link="Phase10/Optimizer/NetworkOptimizer.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Optimizer/PerformanceTuner.cs" Link="Phase10/Optimizer/PerformanceTuner.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Optimizer/PowerProfiler.cs" Link="Phase10/Optimizer/PowerProfiler.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Optimizer/SystemOptimizer.cs" Link="Phase10/Optimizer/SystemOptimizer.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Profiles/DevelopmentProfile.cs" Link="Phase10/Profiles/DevelopmentProfile.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Profiles/ProfileAnalyzer.cs" Link="Phase10/Profiles/ProfileAnalyzer.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Profiles/ProfileDetector.cs" Link="Phase10/Profiles/ProfileDetector.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Users/AccountActivityMonitor.cs" Link="Phase10/Users/AccountActivityMonitor.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Users/AccountPermissionManager.cs" Link="Phase10/Users/AccountPermissionManager.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Users/MultiProfileCoordinator.cs" Link="Phase10/Users/MultiProfileCoordinator.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Users/UserAccountProvisioner.cs" Link="Phase10/Users/UserAccountProvisioner.cs" />
+    <Compile Include="../HELIOS.Platform/Phase10/Users/UserSecurityInitializer.cs" Link="Phase10/Users/UserSecurityInitializer.cs" />
+    <Compile Include="../HELIOS.Platform/Presentation/Studio/Services/StudioDashboardService.cs" Link="Presentation/Studio/Services/StudioDashboardService.cs" />
+    <Compile Include="../HELIOS.Platform/SystemIntegration/DeviceController.cs" Link="SystemIntegration/DeviceController.cs" />
+    <Compile Include="../HELIOS.Platform/Themes/Services/ThemeManager.cs" Link="Themes/Services/ThemeManager.cs" />
+  </ItemGroup>
+
+</Project>

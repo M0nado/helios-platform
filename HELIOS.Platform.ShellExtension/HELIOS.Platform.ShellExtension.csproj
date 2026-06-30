@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\src\core\HELIOS.Platform.Windows\HELIOS.Platform.Windows.csproj" />
+  </ItemGroup>
+
 </Project>

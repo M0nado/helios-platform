@@ -107,16 +107,6 @@
     
     <!-- System & Windows Dependencies -->
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
-    <!-- NOTE: System.ServiceProcess.ServiceController 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
-    <!-- NOTE: System.Diagnostics.PerformanceCounter 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
-    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
-    <!-- NOTE: System.Diagnostics.EventLog 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
-    <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
-    <!-- NOTE: System.Management 4.7.0 → 10.0.7 is a major version bump - NOT updated -->
-    <PackageReference Include="System.Management" Version="4.7.0" />
-    <!-- NOTE: System.Drawing.Common 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
-    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
     <PackageReference Include="System.IO.Compression" Version="4.3.0" />
     <PackageReference Include="System.IO.Compression.ZipFile" Version="4.3.0" />
     <!-- NOTE: Microsoft.Extensions.Configuration.Binder 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
@@ -169,6 +159,46 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <!-- Keep the shared core platform-neutral. Windows-only implementations live in ../HELIOS.Platform.Windows. -->
+  <ItemGroup>
+    <Compile Remove="AI/DataPipeline/DataPipeline.cs" />
+    <Compile Remove="Core/Monitoring/CpuMonitor.cs" />
+    <Compile Remove="Core/Monitoring/GpuMonitor.cs" />
+    <Compile Remove="Core/Monitoring/MemoryProfiler.cs" />
+    <Compile Remove="Core/Monitoring/PowerMonitor.cs" />
+    <Compile Remove="Core/Monitoring/SystemMonitoringService.cs" />
+    <Compile Remove="Core/Monitoring/ThermalMonitor.cs" />
+    <Compile Remove="Core/Performance/AsyncOptimizationService.cs" />
+    <Compile Remove="Core/Security/LocalAccountManager.cs" />
+    <Compile Remove="Core/Server/ServerServiceManager.cs" />
+    <Compile Remove="Core/System/SystemManagementService.cs" />
+    <Compile Remove="Phase10/BootEnvironment/Channel3BootTimeAutomationOrchestrator.cs" />
+    <Compile Remove="Phase10/BootEnvironment/MonadoUSBManagementGUI.cs" />
+    <Compile Remove="Phase10/Drivers/DriverDetector.cs" />
+    <Compile Remove="Phase10/Drivers/DriverHealthMonitor.cs" />
+    <Compile Remove="Phase10/Malware/MalwareDefinitionManager.cs" />
+    <Compile Remove="Phase10/Malware/MalwareScanScheduler.cs" />
+    <Compile Remove="Phase10/Malware/MalwarebytesInstaller.cs" />
+    <Compile Remove="Phase10/Malware/MalwarebytesMonitor.cs" />
+    <Compile Remove="Phase10/Optimizer/GPUOptimizer.cs" />
+    <Compile Remove="Phase10/Optimizer/MonitoringDashboard.cs" />
+    <Compile Remove="Phase10/Optimizer/NetworkOptimizer.cs" />
+    <Compile Remove="Phase10/Optimizer/PerformanceTuner.cs" />
+    <Compile Remove="Phase10/Optimizer/PowerProfiler.cs" />
+    <Compile Remove="Phase10/Optimizer/SystemOptimizer.cs" />
+    <Compile Remove="Phase10/Profiles/DevelopmentProfile.cs" />
+    <Compile Remove="Phase10/Profiles/ProfileAnalyzer.cs" />
+    <Compile Remove="Phase10/Profiles/ProfileDetector.cs" />
+    <Compile Remove="Phase10/Users/AccountActivityMonitor.cs" />
+    <Compile Remove="Phase10/Users/AccountPermissionManager.cs" />
+    <Compile Remove="Phase10/Users/MultiProfileCoordinator.cs" />
+    <Compile Remove="Phase10/Users/UserAccountProvisioner.cs" />
+    <Compile Remove="Phase10/Users/UserSecurityInitializer.cs" />
+    <Compile Remove="Presentation/Studio/Services/StudioDashboardService.cs" />
+    <Compile Remove="SystemIntegration/DeviceController.cs" />
+    <Compile Remove="Themes/Services/ThemeManager.cs" />
   </ItemGroup>
 
   <!-- Exclude broken Phase 10 BootEnvironment files from compilation -->
