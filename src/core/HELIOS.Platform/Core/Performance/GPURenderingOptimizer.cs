@@ -232,15 +232,15 @@ namespace HELIOS.Platform.Core.Performance
         /// </summary>
         public RenderingMetrics GetMetrics()
         {
-            var avgFrameTime = _frameTimeHistory.Count > 0 
-                ? _frameTimeHistory.Average() 
+            var avgFrameTime = _frameTimeHistory.Count > 0
+                ? _frameTimeHistory.Average()
                 : 16.67; // Default ~60 FPS
 
             // Calculate percentile latency
             var sortedTimes = _frameTimeHistory.OrderBy(t => t).ToList();
             var p95Index = (int)(sortedTimes.Count * 0.95);
-            var p95Latency = p95Index >= 0 && p95Index < sortedTimes.Count 
-                ? sortedTimes[p95Index] 
+            var p95Latency = p95Index >= 0 && p95Index < sortedTimes.Count
+                ? sortedTimes[p95Index]
                 : avgFrameTime;
 
             var batchedCalls = Math.Min(_drawCalls.Count, Math.Max(1, _lastDrawCallCount / 3));
@@ -250,8 +250,8 @@ namespace HELIOS.Platform.Core.Performance
                 AverageFPS = 1000.0 / avgFrameTime,
                 DrawCallCount = _drawCalls.Count,
                 BatchedDrawCalls = batchedCalls,
-                DrawCallReduction = _lastDrawCallCount > 0 
-                    ? (double)(_lastDrawCallCount - _drawCalls.Count) / _lastDrawCallCount * 100 
+                DrawCallReduction = _lastDrawCallCount > 0
+                    ? Math.Max(0, (double)(_lastDrawCallCount - batchedCalls) / _lastDrawCallCount * 100)
                     : 0,
                 GPUUtilizationPercent = Math.Min(100, (avgFrameTime / (1000.0 / _targetFPS)) * 100),
                 FrameTimeMS = avgFrameTime,
@@ -275,9 +275,9 @@ namespace HELIOS.Platform.Core.Performance
         /// </summary>
         public void AddDrawCall(string material, int vertexCount, double priority = 1.0)
         {
-            _drawCalls.Add(new DrawCall 
-            { 
-                Material = material, 
+            _drawCalls.Add(new DrawCall
+            {
+                Material = material,
                 VertexCount = vertexCount,
                 Priority = priority
             });
