@@ -14,6 +14,12 @@ Use the Azure CLI bootstrap script to prepare an operator shell for full read/wr
 pwsh ./scripts/devops/setup-full-access-azure-cli.ps1 -UseDeviceCode -PersistToUserProfile
 ```
 
+On Linux/macOS or in environments without PowerShell, use the Bash equivalent:
+
+```bash
+./scripts/devops/setup-full-access-azure-cli.sh --use-device-code --persist-env
+```
+
 The script sets these session variables:
 
 - `HELIOS_SESSION_ACCESS_MODE=full-read-write`
@@ -25,18 +31,20 @@ The script sets these session variables:
 
 Do not blindly merge every branch at once. Use this sequence for every repository:
 
-1. Fetch all remotes: `git fetch --all --prune --tags`.
-2. Record the starting point: `git status --short` and `git branch --all --no-color`.
-3. Create an integration branch from the intended base branch.
-4. Merge one branch at a time with `--no-ff` so each integration point is auditable.
-5. Resolve conflicts in the smallest related file set possible.
-6. Run language-specific checks before continuing:
+1. Inventory repositories and branches: `python3 ./scripts/devops/helios_repo_integrator.py --workspace-root .. --mode inventory --output json`.
+2. Build a merge plan: `python3 ./scripts/devops/helios_repo_integrator.py --workspace-root .. --mode plan --output json`.
+3. Fetch all remotes: `git fetch --all --prune --tags`.
+4. Record the starting point: `git status --short` and `git branch --all --no-color`.
+5. Create an integration branch from the intended base branch.
+6. Merge one branch at a time with `--no-ff` so each integration point is auditable.
+7. Resolve conflicts in the smallest related file set possible.
+8. Run language-specific checks before continuing:
    - C# / WinUI 3: `dotnet build` and relevant test projects.
    - C++ performance backend: native build plus benchmarks where available.
    - F# analytics/math: `dotnet test` for F# projects.
    - Python AIHub integration: `python -m pytest` when tests are present.
-7. Commit each successful branch integration before merging the next branch.
-8. Push the integration branch and open a pull request for review.
+9. Commit each successful branch integration before merging the next branch.
+10. Push the integration branch and open a pull request for review.
 
 ## Priority review areas
 
