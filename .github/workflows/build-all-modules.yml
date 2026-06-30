@@ -45,10 +45,17 @@ jobs:
       - name: Setup Build Configuration
         id: setup
         run: |
-          # Define available modules
-          MODULES='["core", "modules", "registry", "cli", "ui"]'
-          echo "modules=$MODULES" >> $GITHUB_OUTPUT
-          echo "node-version=18" >> $GITHUB_OUTPUT
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          candidates = ["core", "modules", "registry", "cli", "ui"]
+          modules = [module for module in candidates if (Path(module) / "package.json").is_file()]
+          if not modules:
+              modules = ["."]
+          print(f"modules={json.dumps(modules)}")
+          print("node-version=18")
+          PY
           echo "Build matrix configured"
 
   build:
@@ -70,12 +77,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ needs.setup.outputs.node-version }}
-          cache: 'npm'
-          cache-dependency-path: '${{ matrix.module }}/package-lock.json'
 
       - name: Setup NPM Build Cache
-        if: github.event.inputs.clean_build != 'true'
-        uses: actions/cache@v3
+        if: github.event.inputs.clean_build != 'true' && hashFiles(format('{0}/package-lock.json', matrix.module)) != ''
+        uses: actions/cache@v4
         with:
           path: |
             ${{ matrix.module }}/node_modules
@@ -97,7 +102,13 @@ jobs:
       - name: Install Dependencies
         run: |
           cd ${{ matrix.module }}
-          npm ci --prefer-offline --no-audit
+          if [ -f "package-lock.json" ]; then
+            npm ci --prefer-offline --no-audit
+          elif [ -f "package.json" ]; then
+            npm install --no-audit
+          else
+            echo "No package.json found for ${{ matrix.module }}; skipping dependency install"
+          fi
 
       - name: Lint Code
         continue-on-error: true
@@ -138,7 +149,7 @@ jobs:
 
       - name: Upload Build Artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-${{ matrix.module }}
           path: |
@@ -149,7 +160,7 @@ jobs:
 
       - name: Upload Coverage Reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.module }}
           path: ${{ matrix.module }}/coverage/
@@ -159,11 +170,11 @@ jobs:
   verify-builds:
     name: Verify Build Integrity
     runs-on: ubuntu-latest
-    needs: build
+    needs: [setup, build]
     if: always()
     steps:
       - name: Download All Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: build-results
 
@@ -180,12 +191,8 @@ jobs:
           echo "**Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
           echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Modules Built" >> $GITHUB_STEP_SUMMARY
-          echo "- core" >> $GITHUB_STEP_SUMMARY
-          echo "- modules" >> $GITHUB_STEP_SUMMARY
-          echo "- registry" >> $GITHUB_STEP_SUMMARY
-          echo "- cli" >> $GITHUB_STEP_SUMMARY
-          echo "- ui" >> $GITHUB_STEP_SUMMARY
+          echo "### Modules Evaluated" >> $GITHUB_STEP_SUMMARY
+          echo '${{ needs.setup.outputs.modules }}' | python3 -c 'import json,sys; [print(f"- {m}") for m in json.load(sys.stdin)]' >> $GITHUB_STEP_SUMMARY
 
   report-status:
     name: Report Build Status

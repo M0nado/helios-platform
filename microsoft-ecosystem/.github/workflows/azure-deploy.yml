@@ -30,13 +30,35 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build deployment package
+        run: |
+          dotnet publish ./src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained false \
+            --output ./build/app
+          cd ./build/app
+          zip -r ../app.zip .
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-app-package
+          path: ./build/app.zip
+          if-no-files-found: error
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -44,7 +66,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -53,7 +75,7 @@ jobs:
             type=sha
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -66,7 +88,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up PowerShell
         run: |
@@ -88,22 +110,36 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload security scan results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
 
   deploy-staging:
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/main' || contains(github.ref, 'release/')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
     environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_DEPLOYMENT_ENVIRONMENT: staging
+      AZURE_RESOURCE_GROUP: helios-platform-staging
+      AZURE_WEBAPP_NAME: helios-app-staging
+      AZURE_HEALTH_BASE_URL: https://helios-app-staging.azurewebsites.net
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Download deployment package
+        uses: actions/download-artifact@v4
+        with:
+          name: helios-app-package
+          path: ./build
 
       - name: Login to Azure
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -112,20 +148,20 @@ jobs:
       - name: Deploy infrastructure
         run: |
           az deployment group create \
-            --resource-group helios-platform-staging \
+            --resource-group $AZURE_RESOURCE_GROUP \
             --template-file ./infrastructure/main.bicep \
-            --parameters environment=staging
+            --parameters environment=$AZURE_DEPLOYMENT_ENVIRONMENT
 
       - name: Deploy application
         run: |
           az webapp deployment source config-zip \
-            --resource-group helios-platform-staging \
-            --name helios-app-staging \
+            --resource-group $AZURE_RESOURCE_GROUP \
+            --name $AZURE_WEBAPP_NAME \
             --src-path ./build/app.zip
 
       - name: Run smoke tests
         run: |
-          curl -f https://helios-staging.azurewebsites.net/health || exit 1
+          curl -f "$AZURE_HEALTH_BASE_URL/health" || exit 1
 
       - name: Notify Teams
         if: success()
@@ -140,18 +176,32 @@ jobs:
   deploy-production:
     runs-on: ubuntu-latest
     needs: deploy-staging
-    if: github.ref == 'refs/heads/release/*'
+    if: startsWith(github.ref, 'refs/heads/release/')
     environment: production
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      AZURE_DEPLOYMENT_ENVIRONMENT: production
+      AZURE_RESOURCE_GROUP: helios-platform-prod
+      AZURE_WEBAPP_NAME: helios-app-prod
+      AZURE_HEALTH_BASE_URL: https://helios-app-prod.azurewebsites.net
     concurrency:
       group: production-deploy
       cancel-in-progress: false
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Download deployment package
+        uses: actions/download-artifact@v4
+        with:
+          name: helios-app-package
+          path: ./build
 
       - name: Login to Azure
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -167,28 +217,28 @@ jobs:
       - name: Deploy infrastructure
         run: |
           az deployment group create \
-            --resource-group helios-platform-prod \
+            --resource-group $AZURE_RESOURCE_GROUP \
             --template-file ./infrastructure/main.bicep \
-            --parameters environment=production
+            --parameters environment=$AZURE_DEPLOYMENT_ENVIRONMENT
 
       - name: Deploy application
         run: |
           az webapp deployment source config-zip \
-            --resource-group helios-platform-prod \
-            --name helios-app-prod \
+            --resource-group $AZURE_RESOURCE_GROUP \
+            --name $AZURE_WEBAPP_NAME \
             --src-path ./build/app.zip
 
       - name: Update Azure Monitor alerts
         run: |
           az monitor alert create \
-            --resource-group helios-platform-prod \
+            --resource-group $AZURE_RESOURCE_GROUP \
             --name helios-alerts \
             --description "HELIOS Platform production alerts"
 
       - name: Run health checks
         run: |
-          curl -f https://helios.azurewebsites.net/health || exit 1
-          curl -f https://helios.azurewebsites.net/api/status || exit 1
+          curl -f "$AZURE_HEALTH_BASE_URL/health" || exit 1
+          curl -f "$AZURE_HEALTH_BASE_URL/api/status" || exit 1
 
       - name: Update status dashboard
         run: |
@@ -251,7 +301,7 @@ jobs:
           # Run load testing, response time tests, etc.
 
       - name: Upload results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: performance-results
           path: ./perf-results/

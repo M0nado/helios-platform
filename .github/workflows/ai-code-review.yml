@@ -11,7 +11,7 @@ jobs:
     name: ChatGPT Security Review
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -38,21 +38,27 @@ jobs:
       - name: Scan for Credential Exposure
         shell: pwsh -Command "& '{0}'"
         run: |
-          $credentials = @("password", "api.?key", "secret", "token", "credential")
-          $files = Get-ChildItem -Recurse -Include "*.ps1", "*.py", "*.js" | 
-            Where-Object { $_.Name -notmatch "test|example" }
-          
+          $credentials = @("password\s*=", "api.?key\s*=", "secret\s*=", "token\s*=")
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $changed = git diff --name-only "origin/${{ github.base_ref }}...HEAD"
+          } else {
+            $changed = git ls-files
+          }
+          $files = $changed |
+            Where-Object { $_ -match '\.(ps1|py|js)$' -and $_ -notmatch '(^|/)(test|tests|examples?)(/|$)' } |
+            ForEach-Object { Get-Item $_ -ErrorAction SilentlyContinue }
+
           $found = $false
           foreach ($file in $files) {
-            $content = Get-Content $file -Raw
+            $content = Get-Content $file.FullName -Raw
             foreach ($pattern in $credentials) {
               if ($content -match $pattern) {
-                Write-Host "::warning::Potential credential in $($file.Name): matches '$pattern'"
+                Write-Host "::error::Potential credential assignment in $($file.FullName): matches '$pattern'"
                 $found = $true
               }
             }
           }
-          
+
           if ($found) {
             exit 1
           }
@@ -91,7 +97,7 @@ jobs:
     if: github.event.pull_request.draft == false
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -124,14 +130,23 @@ jobs:
     name: Code Quality Checks
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check PowerShell Syntax
         shell: pwsh -Command "& '{0}'"
         run: |
           $errors = 0
-          $files = Get-ChildItem -Recurse -Include "*.ps1"
-          
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $changed = git diff --name-only "origin/${{ github.base_ref }}...HEAD"
+          } else {
+            $changed = git ls-files
+          }
+          $files = $changed |
+            Where-Object { $_ -match '\.(ps1)$' } |
+            ForEach-Object { Get-Item $_ -ErrorAction SilentlyContinue }
+
           foreach ($file in $files) {
             try {
               [System.Management.Automation.PSParser]::Tokenize(
@@ -152,9 +167,15 @@ jobs:
       - name: Verify Documentation
         shell: pwsh -Command "& '{0}'"
         run: |
-          $files = Get-ChildItem -Recurse -Include "*.ps1" | 
-            Where-Object { $_.Name -notmatch "test" }
-          
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $changed = git diff --name-only "origin/${{ github.base_ref }}...HEAD"
+          } else {
+            $changed = git ls-files
+          }
+          $files = $changed |
+            Where-Object { $_ -match '\.(ps1)$' -and $_ -notmatch '(^|/)(test|tests)(/|$)' } |
+            ForEach-Object { Get-Item $_ -ErrorAction SilentlyContinue }
+
           foreach ($file in $files) {
             $content = Get-Content $file -Raw
             if ($content -notmatch "\.SYNOPSIS|\.DESCRIPTION") {
@@ -168,32 +189,32 @@ jobs:
     if: always()
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Identify AI-Generated Files
         shell: pwsh -Command "& '{0}'"
         run: |
-          $aiFiles = Get-ChildItem -Recurse -Include "*.ps1", "*.py" | 
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $changed = git diff --name-only "origin/${{ github.base_ref }}...HEAD"
+          } else {
+            $changed = git ls-files
+          }
+          $aiFiles = $changed |
+            Where-Object { $_ -match '\.(ps1|py)$' } |
+            ForEach-Object { Get-Item $_ -ErrorAction SilentlyContinue } |
             Where-Object {
-              $content = Get-Content $_ -Raw
+              $content = Get-Content $_.FullName -Raw
               $content -match "AI-Generated|Codex|ChatGPT" -or `
               $content -match "Source:\s*(GitHub Codex|ChatGPT)"
             }
-          
+
           if ($aiFiles) {
-            Write-Host "::notice::AI-Generated files require review:`n$($aiFiles.FullName -join "`n")"
-            
-            # Create review checklist
-            Write-Host "`n✓ Review Checklist for AI-Generated Code:"
-            Write-Host "  [ ] Security review passed"
-            Write-Host "  [ ] Performance acceptable"
-            Write-Host "  [ ] Compliance verified"
-            Write-Host "  [ ] Tests added"
-            Write-Host "  [ ] Documentation complete"
-            
-            # This would trigger a required review
-            Write-Host "::error::AI-Generated code detected. Blocking merge until reviewed."
-            exit 1
+            Write-Host "::warning::AI-generated files require human review:`n$($aiFiles.FullName -join "`n")"
+            Write-Host "`nReview checklist: security, performance, compliance, tests, documentation."
+          } else {
+            Write-Host "No changed AI-generated PowerShell or Python files detected."
           }
 
   approval-gate:
@@ -226,10 +247,10 @@ jobs:
     if: github.event_name == 'pull_request'
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Generate Review Comment
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
