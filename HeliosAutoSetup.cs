@@ -44,7 +44,7 @@ namespace Helios.Autosetup
             }
         }
 
-        private static void CreateWorkflow() => File.WriteAllText(Path.Combine(WorkflowsDir, "autosetup.yml"), Workflow);
+        private static void CreateWorkflow() => File.WriteAllText(Path.Combine(WorkflowsDir, Path.GetFileName("autosetup.yml")), Workflow);
 
         private const string Manifest = """
 repos:
