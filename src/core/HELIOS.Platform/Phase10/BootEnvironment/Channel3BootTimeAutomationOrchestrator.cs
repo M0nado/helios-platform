@@ -4,15 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
-using System.Runtime.CompilerServices;
+using Microsoft.Data.Sqlite;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using HELIOS.Platform.Core.Logging;
-
-[assembly: InternalsVisibleTo("HELIOS.Platform.Tests")]
 
 namespace HELIOS.Platform.Phase10.BootEnvironment
 {
@@ -536,9 +534,9 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
 
             try
             {
-                _logger.Info("  • Enabling Secure Boot policies...");
-                await ApplySecureBootPolicyAsync(cancellationToken);
-                _logger.Info("    ✓ Secure Boot enabled");
+                _logger.Info("  • Verifying Secure Boot policy compliance...");
+                await VerifySecureBootPolicyAsync(cancellationToken);
+                _logger.Info("    ✓ Secure Boot policy verified");
                 result.ItemsProcessed++;
 
                 _logger.Info("  • Applying firewall rules...");
@@ -834,14 +832,32 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             ct.ThrowIfCancellationRequested();
             var configPath = Path.Combine(GetAutomationRoot(), "config", "ai-providers.json");
             Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
-            _logger.Info($"    [REAL] Writing AI provider configuration to '{configPath}'.");
+
+            if (File.Exists(configPath))
+            {
+                _logger.Info($"    [REAL] Loading AI provider configuration from '{configPath}'.");
+                var existingConfig = await File.ReadAllTextAsync(configPath, ct);
+                if (string.IsNullOrWhiteSpace(existingConfig))
+                {
+                    throw new InvalidDataException($"AI provider configuration '{configPath}' is empty.");
+                }
+
+                using var document = JsonDocument.Parse(existingConfig);
+                return;
+            }
+
+            _logger.Info($"    [REAL] Creating AI provider configuration at '{configPath}' from environment and defaults.");
+            var configuredProviders = Environment.GetEnvironmentVariable("HELIOS_AI_PROVIDERS");
+            var providers = string.IsNullOrWhiteSpace(configuredProviders)
+                ? new[] { "Claude", "OpenAI", "Hermes", "Local", "Custom", "Copilot", "OnlineServices" }
+                : configuredProviders.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
             var config = new
             {
                 generatedAtUtc = DateTime.UtcNow,
-                providers = new[] { "Claude", "GPT-4", "Hermes", "Local", "Custom", "Copilot", "OnlineServices" },
-                aiHubEndpoint = "http://localhost:8765",
-                learningDatabase = Path.Combine(GetAutomationRoot(), "state", "learning", "learning-state.json")
+                providers,
+                aiHubEndpoint = Environment.GetEnvironmentVariable("HELIOS_AIHUB_ENDPOINT") ?? "http://localhost:8765",
+                learningDatabase = Path.Combine(GetAutomationRoot(), "state", "learning", "learning.db")
             };
 
             await File.WriteAllTextAsync(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }), ct);
@@ -879,18 +895,35 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
         {
             ct.ThrowIfCancellationRequested();
             var dbRoot = Path.Combine(GetAutomationRoot(), "state", "learning");
-            var dbPath = Path.Combine(dbRoot, "learning-state.json");
-            _logger.Info($"    [REAL] Initializing learning state repository at '{dbPath}'.");
+            var dbPath = Path.Combine(dbRoot, "learning.db");
+            _logger.Info($"    [REAL] Initializing SQLite learning database at '{dbPath}'.");
             Directory.CreateDirectory(dbRoot);
 
-            var state = new
-            {
-                schemaVersion = 1,
-                initializedAtUtc = DateTime.UtcNow,
-                observations = Array.Empty<object>(),
-                predictions = Array.Empty<object>()
-            };
-            await File.WriteAllTextAsync(dbPath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }), ct);
+            await using var connection = new SqliteConnection($"Data Source={dbPath}");
+            await connection.OpenAsync(ct);
+            await using var command = connection.CreateCommand();
+            command.CommandText = @"
+CREATE TABLE IF NOT EXISTS boot_learning_metadata (
+    key TEXT PRIMARY KEY NOT NULL,
+    value TEXT NOT NULL,
+    updated_utc TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS boot_observations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_utc TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS boot_predictions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_utc TEXT NOT NULL
+);
+INSERT INTO boot_learning_metadata (key, value, updated_utc)
+VALUES ('schemaVersion', '1', datetime('now'))
+ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_utc = excluded.updated_utc;";
+            await command.ExecuteNonQueryAsync(ct);
         }
 
         private async Task InitializeRazerEcosystemAsync(CancellationToken ct)
@@ -949,7 +982,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             await RunProcessAsync("sc.exe", $"config \"{serviceName}\" start= auto", ct);
         }
 
-        internal async Task ApplySecureBootPolicyAsync(CancellationToken ct)
+        internal async Task VerifySecureBootPolicyAsync(CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             if (IsSimulationMode())
@@ -963,10 +996,10 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new PlatformNotSupportedException("Secure Boot policy application is only supported on Windows. Set HELIOS_BOOT_AUTOMATION_SIMULATION=true for development simulation.");
+                throw new PlatformNotSupportedException("Secure Boot policy verification is only supported on Windows. Set HELIOS_BOOT_AUTOMATION_SIMULATION=true for development simulation.");
             }
 
-            _logger.Info("    [REAL] Verifying Secure Boot state with PowerShell Confirm-SecureBootUEFI.");
+            _logger.Info("    [REAL] Verifying Secure Boot state with PowerShell Confirm-SecureBootUEFI; firmware enrollment cannot be forced safely from this orchestrator.");
             await RunProcessAsync("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -Command \"if (-not (Confirm-SecureBootUEFI)) { throw 'Secure Boot is not enabled in UEFI firmware.' }\"", ct);
         }
 

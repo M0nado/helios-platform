@@ -36,7 +36,7 @@ namespace HELIOS.Platform.Tests.Phase10.BootEnvironment
             var configPath = Path.Combine(_root, "config", "ai-providers.json");
             var config = await File.ReadAllTextAsync(configPath);
             Assert.Contains("Claude", config, StringComparison.Ordinal);
-            Assert.Contains("GPT-4", config, StringComparison.Ordinal);
+            Assert.Contains("OpenAI", config, StringComparison.Ordinal);
             Assert.Contains("[REAL]", _logger.JoinedMessages, StringComparison.Ordinal);
             Assert.DoesNotContain("[SIMULATION]", _logger.JoinedMessages, StringComparison.Ordinal);
         }
@@ -69,7 +69,7 @@ namespace HELIOS.Platform.Tests.Phase10.BootEnvironment
 
             await orchestrator.StartServiceAsync("ExampleService", CancellationToken.None);
             await orchestrator.SetServiceAutoStartAsync("ExampleService", CancellationToken.None);
-            await orchestrator.ApplySecureBootPolicyAsync(CancellationToken.None);
+            await orchestrator.VerifySecureBootPolicyAsync(CancellationToken.None);
             await orchestrator.EnableCompressionAsync(Path.Combine(_root, "cache"), CancellationToken.None);
 
             Assert.True(File.Exists(Path.Combine(_root, "services", "ExampleService.start.simulated")));
