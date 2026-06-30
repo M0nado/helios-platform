@@ -23,6 +23,10 @@ class PerformanceMonitor {
       errors: [],
       recommendations: [],
     };
+    Object.defineProperties(this.metrics, {
+      requests: { get: () => this.metrics.apiMetrics.length },
+      responses: { get: () => this.metrics.apiMetrics.length },
+    });
 
     this.alerts = [];
   }
@@ -174,6 +178,27 @@ class PerformanceMonitor {
   }
 
   /**
+   * Compatibility helper for generic metric tests and simple automations.
+   */
+  recordMetric(type, value, context = {}) {
+    if (type === 'request') {
+      return this.recordAPIMetric(context.endpoint || '/generic', value, context.statusCode || 200, context.responseSize || 0, context);
+    }
+
+    if (type === 'response') {
+      return this.recordAPIMetric(context.endpoint || '/generic', context.latency || 0, context.statusCode || 200, value, context);
+    }
+
+    if (type === 'latency') {
+      return this.recordAPIMetric(context.endpoint || '/generic', value, context.statusCode || 200, context.responseSize || 0, context);
+    }
+
+    const metric = { timestamp: Date.now(), type, value, context };
+    this.metrics.bundleMetrics.push(metric);
+    return metric;
+  }
+
+  /**
    * Generate Performance Report
    */
   generateReport(timeWindow = 3600000) {
@@ -188,22 +213,24 @@ class PerformanceMonitor {
     const cacheMetrics = filterByTime(this.metrics.cacheMetrics);
     const webVitals = filterByTime(this.metrics.webVitals);
 
+    const summary = {
+      totalRequests: apiMetrics.length,
+      totalQueriesExecuted: dbMetrics.length,
+      averageAPILatency: this._calculatePercentile(apiMetrics, 'latency', 50),
+      p95APILatency: this._calculatePercentile(apiMetrics, 'latency', 95),
+      p99APILatency: this._calculatePercentile(apiMetrics, 'latency', 99),
+      averageDBLatency: this._calculatePercentile(dbMetrics, 'latency', 50),
+      p99DBLatency: this._calculatePercentile(dbMetrics, 'latency', 99),
+      averageCacheHitRate: cacheMetrics.length > 0
+        ? (cacheMetrics.reduce((sum, m) => sum + m.hitRate, 0) / cacheMetrics.length).toFixed(2)
+        : 0,
+      webVitalsStatus: this._assessWebVitals(webVitals),
+    };
+
     const report = {
       generatedAt: new Date().toISOString(),
       timeWindow: `${(timeWindow / 1000 / 60).toFixed(0)} minutes`,
-      summary: {
-        totalRequests: apiMetrics.length,
-        totalQueriesExecuted: dbMetrics.length,
-        averageAPILatency: this._calculatePercentile(apiMetrics, 'latency', 50),
-        p95APILatency: this._calculatePercentile(apiMetrics, 'latency', 95),
-        p99APILatency: this._calculatePercentile(apiMetrics, 'latency', 99),
-        averageDBLatency: this._calculatePercentile(dbMetrics, 'latency', 50),
-        p99DBLatency: this._calculatePercentile(dbMetrics, 'latency', 99),
-        averageCacheHitRate: cacheMetrics.length > 0 
-          ? (cacheMetrics.reduce((sum, m) => sum + m.hitRate, 0) / cacheMetrics.length).toFixed(2)
-          : 0,
-        webVitalsStatus: this._assessWebVitals(webVitals),
-      },
+      summary,
       performance: {
         api: this._analyzeAPIMetrics(apiMetrics),
         database: this._analyzeDBMetrics(dbMetrics),
@@ -211,9 +238,10 @@ class PerformanceMonitor {
         webVitals: this._analyzeWebVitals(webVitals),
       },
       alerts: this.alerts.slice(-50), // Last 50 alerts
-      recommendations: this._generateRecommendations(report),
+      recommendations: [],
     };
 
+    report.recommendations = this._generateRecommendations(report);
     return report;
   }
 

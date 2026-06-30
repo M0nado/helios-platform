@@ -8,7 +8,9 @@
     "test": "node tests/benchmark.test.js",
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "analyze": "ANALYZE=true webpack --mode production"
+    "analyze": "ANALYZE=true webpack --mode production",
+    "preflight": "node scripts/autonomous-workflow-check.js",
+    "bootstrap:azure": "bash scripts/bootstrap-azure-cli.sh"
   },
   "keywords": [
     "helios",
