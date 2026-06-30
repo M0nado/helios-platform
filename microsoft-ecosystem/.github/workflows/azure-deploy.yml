@@ -37,6 +37,21 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Test minimal deployment app
+        run: |
+          dotnet test ./tests/HELIOS.Platform.Minimal.Tests/HELIOS.Platform.Minimal.Tests.csproj \
+            --configuration Release \
+            --logger "trx;LogFileName=minimal-platform-tests.trx" \
+            --verbosity minimal
+
+      - name: Upload minimal app test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minimal-platform-test-results
+          path: '**/minimal-platform-tests.trx'
+          if-no-files-found: warn
+
       - name: Build deployment package
         run: |
           dotnet publish ./src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj \
