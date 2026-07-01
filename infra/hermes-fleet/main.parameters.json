@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workloadName": {
+      "value": "monadoblade"
+    },
+    "environmentName": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "addressSpace": {
+      "value": "10.40.0.0/16"
+    },
+    "appSubnetPrefix": {
+      "value": "10.40.1.0/24"
+    },
+    "dataSubnetPrefix": {
+      "value": "10.40.2.0/24"
+    },
+    "computeSubnetPrefix": {
+      "value": "10.40.3.0/24"
+    },
+    "vmAdminUsername": {
+      "value": "azureuser"
+    },
+    "vmAdminPassword": {
+      "value": "REPLACE_WITH_SECURE_VALUE"
+    },
+    "appServiceSkuName": {
+      "value": "P1v3"
+    },
+    "linuxFxVersion": {
+      "value": "DOTNETCORE|8.0"
+    },
+    "cosmosDbConsistency": {
+      "value": "Session"
+    },
+    "deployJumpboxVm": {
+      "value": false
+    },
+    "tags": {
+      "value": {
+        "owner": "platform-engineering",
+        "costCenter": "helios",
+        "service": "hermes-fleet-platforms"
+      }
+    }
+  }
+}

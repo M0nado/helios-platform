@@ -1,0 +1,27 @@
+name: Wiki Sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [work]
+    paths:
+      - 'docs/**'
+      - 'scripts/docs/**'
+      - '.github/workflows/wiki-sync.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate wiki
+        shell: pwsh
+        run: ./scripts/docs/generate-wiki.ps1
+      - name: Upload wiki artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-wiki
+          path: docs/wiki/generated

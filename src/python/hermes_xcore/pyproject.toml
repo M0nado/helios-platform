@@ -1,0 +1,12 @@
+[project]
+name = "hermes-xcore"
+version = "0.1.0"
+description = "Hermes and XCore specialist integration adapter"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

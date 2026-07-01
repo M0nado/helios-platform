@@ -1,0 +1,37 @@
+backlog:
+  - id: HELIOS-001
+    title: Configure external repository remotes
+    area: merge
+    priority: high
+    status: blocked
+  - id: HELIOS-002
+    title: Inspect helios-control WinUI implementation
+    area: frontend
+    priority: high
+    status: blocked
+  - id: HELIOS-003
+    title: Inspect hermes-fleet-production deployment and security posture
+    area: operations
+    priority: high
+    status: blocked
+  - id: HELIOS-004
+    title: Validate Azure Bicep what-if workflow
+    area: azure
+    priority: medium
+    status: pending
+
+  - id: HELIOS-005
+    title: Populate source repository manifest
+    area: merge
+    priority: high
+    status: blocked
+  - id: HELIOS-006
+    title: Complete helios-control inventory
+    area: frontend
+    priority: high
+    status: blocked
+  - id: HELIOS-007
+    title: Complete hermes-fleet-production inventory
+    area: operations
+    priority: high
+    status: blocked
