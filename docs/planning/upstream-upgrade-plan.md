@@ -44,3 +44,12 @@ RL upgrade priorities:
 ## RL promotion checkpoint
 
 The Python RL scaffold now includes offline replay, context adaptation, auditable policy decisions, and C# contract placeholders. The next checkpoint is to wire those contracts into orchestration and add integration tests that verify C# can consume policy decisions from the Python adapter.
+
+
+## Ranked import board
+
+Use `docs/planning/integration-ranked-issues.yaml` as the canonical backlog for choosing what to import, optimize, combine, or restore next. Each item captures source, target paths, value, risk, avoid-list, validation commands, and an agent task stub. The board is intentionally ranked so agents can make targeted improvements without bulk-merging upstream histories.
+
+Promotion rule: code may move from upstream or quarantine into `HELIOS.Platform.slnx` only after it builds, has tests or a documented test plan, and fits the documented architecture boundary.
+
+Agent handoff instructions live in `docs/planning/agent-integration-playbook.md`.

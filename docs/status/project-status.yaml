@@ -19,6 +19,8 @@ status:
   azure_iac: scaffolded
   security: scaffolded
   branch_integration: partial-hermes-fleet-import
+  ranked_integration_board: active
+  agent_playbook: active
 languages:
   csharp: existing-projects-detected
   winui3: target-boundary-created
@@ -32,6 +34,14 @@ blockers:
   - Existing repository contains many historical phase/status documents that need archival review before deletion or movement.
 next_actions:
   - Provide credentials or a local path for helios-control.
+  - Use docs/planning/integration-ranked-issues.yaml to choose the next targeted import or quarantine restoration.
   - Review imported Hermes/XCore assets and wire them into build/test workflows.
   - Complete docs/planning/helios-control-inventory.md when access is available.
   - Merge one source at a time into integration/helios-platform-overhaul.
+
+integration_controls:
+  stable_lane: HELIOS.Platform.slnx
+  quarantine_lane: HELIOS.Legacy.Quarantine.slnx
+  ranked_issue_board: docs/planning/integration-ranked-issues.yaml
+  agent_playbook: docs/planning/agent-integration-playbook.md
+  promotion_rule: Code must build, have tests or a test plan, and fit architecture boundaries before moving into the stable lane.

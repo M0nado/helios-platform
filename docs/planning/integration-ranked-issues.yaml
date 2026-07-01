@@ -1,0 +1,136 @@
+schema_version: 1
+generated_utc: 2026-07-01T00:00:00Z
+purpose: >-
+  Ranked integration board for targeted upstream imports, optimization work,
+  and AI-agent task handoff. Items are ordered by value, build risk, and
+  dependency position. Do not bulk merge an upstream branch from this board.
+selection_rules:
+  stable_lane: HELIOS.Platform.slnx
+  quarantine_lane: HELIOS.Legacy.Quarantine.slnx
+  promotion_gate:
+    - builds in quarantine or a focused staging project
+    - has tests or a documented test plan
+    - fits the documented architecture boundary
+    - does not import generated history, stale workflows, secrets, bin/obj output, or contradictory status docs
+  validation_baseline:
+    - dotnet restore HELIOS.Platform.slnx
+    - dotnet build HELIOS.Platform.slnx --configuration Release --no-restore
+    - dotnet build HELIOS.Legacy.Quarantine.slnx --configuration Release --no-restore
+    - python -m py_compile src/python/helios_aihub/src/helios_aihub/__init__.py $(find src/python/hermes_xcore/src/hermes_xcore -name '*.py' -print)
+    - PYTHONPATH=src/python/hermes_xcore/src python -m pytest tests/python/test_reinforcement_learning.py
+    - git diff --check
+ranked_issues:
+  - id: helios-control-access-and-inventory
+    rank: 1
+    source: helios-control
+    source_status: blocked-by-credentials
+    category: frontend
+    target_paths:
+      - docs/planning/helios-control-inventory.md
+      - src/frontend/HELIOS.Control.WinUI/
+      - src/core/HELIOS.Platform.Contracts/
+      - src/core/HELIOS.Platform.Orchestration/
+    value: Real WinUI 3 shell, app surface, pages, view models, and UI services.
+    risk: Access is blocked; upstream may contain direct backend coupling or generated artifacts.
+    action: Fetch once credentials or a local path are available, inventory before importing, then extract UI-only code behind contracts.
+    avoid:
+      - bulk merges
+      - old generated docs
+      - stale workflows
+      - direct Hermes/Azure/Python/C++ calls from WinUI
+    validation:
+      - git fetch helios-control --prune
+      - git branch --remote --verbose --no-abbrev | rg 'helios-control'
+      - dotnet restore HELIOS.Platform.slnx
+      - dotnet build HELIOS.Platform.slnx --configuration Release --no-restore
+    agent_stub: docs/planning/agent-integration-playbook.md#task-helios-control-winui-shell
+  - id: hermes-upstream-targeted-refresh
+    rank: 2
+    source: hermes-fleet-production
+    source_status: available
+    category: hermes-xcore
+    target_paths:
+      - src/integrations/Hermes/
+      - src/python/hermes_xcore/
+      - src/native/HELIOS.Performance/x-tier/
+      - infra/hermes-fleet/
+      - docs/integration/hermes-xcore/
+    value: Keep Hermes/XCore/RL/Azure assets naturally upgradeable while avoiding generated history.
+    risk: Upstream has large historical/generated content that can reintroduce stale docs, workflows, and conflicting status.
+    action: Run upstream inventory, diff by subsystem, and import only reviewed assets.
+    avoid:
+      - generated bulk artifacts
+      - contradictory status reports
+      - deploy scripts that bypass what-if
+      - checked-in secrets or credential fallbacks
+    validation:
+      - ./scripts/merge/update-upstreams.ps1
+      - dotnet build HELIOS.Platform.slnx --configuration Release --no-restore
+      - PYTHONPATH=src/python/hermes_xcore/src python -m pytest tests/python/test_reinforcement_learning.py
+    agent_stub: docs/planning/agent-integration-playbook.md#task-hermes-targeted-refresh
+  - id: rl-offline-replay-and-safe-routing
+    rank: 3
+    source: hermes-fleet-production
+    source_status: available
+    category: python-aihub-rl
+    target_paths:
+      - src/python/hermes_xcore/src/hermes_xcore/reinforcement_learning.py
+      - src/python/hermes_xcore/src/hermes_xcore/feature_pipeline.py
+      - src/python/hermes_xcore/src/hermes_xcore/routing_policy.py
+      - tests/python/
+      - tests/integration/
+      - src/core/HELIOS.Platform.Contracts/ReinforcementLearning/
+    value: Turn RL from scaffold into an auditable offline replay and routing subsystem.
+    risk: Unsafe RL could make destructive deployment/security choices if not bounded.
+    action: Convert fleet logs to state/action/reward events, feed feature context into RL, route decisions with safety guards, and add integration tests.
+    avoid:
+      - online destructive actions
+      - reward updates without audit trails
+      - policy decisions without deterministic fallback
+    validation:
+      - python -m py_compile src/python/helios_aihub/src/helios_aihub/__init__.py $(find src/python/hermes_xcore/src/hermes_xcore -name '*.py' -print)
+      - PYTHONPATH=src/python/hermes_xcore/src python -m pytest tests/python/test_reinforcement_learning.py
+    agent_stub: docs/planning/agent-integration-playbook.md#task-rl-offline-replay
+  - id: legacy-core-contracts-restoration
+    rank: 4
+    source: local-quarantine
+    source_status: available
+    category: build-graph
+    target_paths:
+      - src/core/HELIOS.Platform/
+      - src/core/HELIOS.Platform.Contracts/
+      - HELIOS.Legacy.Quarantine.slnx
+      - HELIOS.Platform.slnx
+    value: Restore quarantined code in small, testable chunks and promote stable contracts into the platform lane.
+    risk: Bulk unquarantine can reintroduce missing types, ambiguous interfaces, Windows-only APIs, and incomplete implementations.
+    action: Re-enable one subsystem at a time, starting with contracts/DTOs, configuration, security, and update system.
+    avoid:
+      - moving code to HELIOS.Platform.slnx before it builds
+      - mixing Windows-only APIs into cross-platform core
+      - compiling legacy tests before referenced subsystems exist
+    validation:
+      - dotnet build HELIOS.Legacy.Quarantine.slnx --configuration Release --no-restore
+      - dotnet build HELIOS.Platform.slnx --configuration Release --no-restore
+    agent_stub: docs/planning/agent-integration-playbook.md#task-restore-quarantined-subsystem
+  - id: azure-foundation-hardening
+    rank: 5
+    source: hermes-fleet-production
+    source_status: available
+    category: azure-security
+    target_paths:
+      - infra/
+      - infra/hermes-fleet/
+      - scripts/azure/
+      - docs/security/
+      - docs/operations/deployment.md
+    value: Move Azure from scaffold to gated deployable foundation with Key Vault, managed identity, OIDC, monitoring, and what-if.
+    risk: Premature deploy enablement could bypass what-if or introduce secrets.
+    action: Validate Bicep, add least-privilege identity boundaries, and keep production deployment disabled until what-if passes.
+    avoid:
+      - hard-coded credentials
+      - password fallbacks
+      - production deploy without what-if
+    validation:
+      - az bicep build --file infra/main.bicep
+      - az deployment group what-if --resource-group <rg> --template-file infra/main.bicep
+    agent_stub: docs/planning/agent-integration-playbook.md#task-azure-gated-foundation
