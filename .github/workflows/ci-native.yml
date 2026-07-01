@@ -1,0 +1,23 @@
+name: CI - Native
+
+on:
+  pull_request:
+    paths:
+      - 'src/native/**'
+      - '.github/workflows/ci-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cmake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S src/native/HELIOS.Performance -B build/native
+      - name: Build
+        run: cmake --build build/native --config Release
+      - name: Test
+        run: ctest --test-dir build/native --output-on-failure

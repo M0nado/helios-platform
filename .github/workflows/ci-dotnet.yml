@@ -1,0 +1,29 @@
+name: CI - .NET
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.csproj'
+      - 'src/**/*.cs'
+      - '*.slnx'
+      - 'Directory.*.props'
+      - '.github/workflows/ci-dotnet.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore HELIOS.Platform.slnx
+      - name: Build
+        run: dotnet build HELIOS.Platform.slnx --configuration Release --no-restore
+      - name: Test
+        run: dotnet test HELIOS.Platform.slnx --configuration Release --no-build --logger trx

@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Central package management is intentionally disabled until the existing
+    imported projects have their inline PackageReference versions normalized.
+    Keeping this file in place documents the intended migration point without
+    breaking restore for legacy/imported projects.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

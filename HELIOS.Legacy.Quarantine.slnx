@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/core/HELIOS.Platform/HELIOS.Platform.csproj" />
+  <Project Path="src/tests/HELIOS.Platform.Tests.csproj" />
+</Solution>

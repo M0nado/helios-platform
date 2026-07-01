@@ -1,0 +1,71 @@
+# Fill either `remote_url` or `local_path` before running scripts/merge/fetch-all-remotes.ps1.
+# Keep `priority` order aligned with docs/planning/merge-order.md.
+sources:
+  - name: helios-control
+    priority: 1
+    remote_name: helios-control
+    remote_url: https://github.com/M0nado/helios-control.git
+    local_path: null
+    focus:
+      - WinUI 3 frontend
+      - C# control surface
+      - App.xaml and MainWindow.xaml
+      - Pages, ViewModels, Services
+      - project files and package references
+    target_paths:
+      - src/frontend/HELIOS.Control.WinUI/
+      - src/core/HELIOS.Platform.Contracts/
+      - src/core/HELIOS.Platform.Orchestration/
+  - name: hermes-fleet-production
+    priority: 2
+    remote_name: hermes-fleet-production
+    remote_url: https://github.com/Yolkster64/hermes-fleet-platforms.git
+    local_path: null
+    focus:
+      - deployment workflows
+      - Azure assumptions
+      - secrets handling
+      - managed identity assumptions
+      - production scripts
+      - fleet orchestration logic
+      - Hermes service contracts
+      - security posture
+    target_paths:
+      - src/integrations/Hermes/
+      - src/python/hermes_xcore/
+      - infra/
+      - scripts/azure/
+      - docs/operations/
+      - docs/security/
+  - name: hermes-core
+    priority: 3
+    remote_name: hermes-core
+    remote_url: null
+    local_path: null
+    focus:
+      - Hermes APIs
+      - backend service contracts
+      - domain models
+      - orchestration logic
+      - shared protocol types
+    target_paths:
+      - src/integrations/Hermes/
+      - src/core/HELIOS.Platform.Contracts/
+      - src/core/HELIOS.Platform.Orchestration/
+  - name: xcore-agent
+    priority: 4
+    remote_name: xcore-agent
+    remote_url: null
+    local_path: null
+    focus:
+      - agent runtime
+      - specialist setup
+      - Python adapters
+      - native interop
+      - configuration
+      - security boundaries
+    target_paths:
+      - src/integrations/XCore/
+      - src/python/hermes_xcore/
+      - src/native/HELIOS.Performance/
+      - src/core/HELIOS.Platform.Contracts/
