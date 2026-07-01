@@ -179,4 +179,41 @@
     <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
   </ItemGroup>
 
+  <!-- Quarantine legacy tests and Windows-only UI/device adapters from the core production compile. -->
+  <ItemGroup>
+    <Compile Remove="**/*Tests.cs" />
+    <Compile Remove="**/Tests/**/*.cs" />
+    <Compile Remove="Phase10/**/*.cs" />
+    <Compile Remove="AI/Models/MockMLModels.cs" />
+    <Compile Remove="AI/MLService/**/*.cs" />
+    <Compile Remove="CloudSync/Engine/SqliteSyncStateStore.cs" />
+    <Compile Remove="Core/AdvancedML/**/*.cs" />
+    <Compile Remove="Core/AdvancedOptimization/**/*.cs" />
+    <Compile Remove="Core/API/**/*.cs" />
+    <Compile Remove="Core/AI/Router/**/*.cs" />
+    <Compile Remove="Core/Cloud/**/*.cs" />
+    <Compile Remove="Core/Intelligence/**/*.cs" />
+    <Compile Remove="Core/Monitoring/SystemMonitoringService.cs" />
+    <Compile Remove="Core/ML/**/*.cs" />
+    <Compile Remove="Core/Observability/**/*.cs" />
+    <Compile Remove="Core/Server/**/*.cs" />
+    <Compile Remove="GlobalUsings.cs" />
+    <Compile Remove="Interfaces/ServiceInterfaces.cs" />
+    <Compile Remove="Phase10/Quarantine/**/*.cs" />
+    <Compile Remove="Plugins/**/*.cs" />
+    <Compile Remove="Presentation/Studio/**/*.cs" />
+    <Compile Remove="Utilities/ErrorHandler.cs" />
+    <Compile Remove="Migrations/**/*.cs" />
+    <Compile Remove="Program.cs" />
+    <Compile Remove="SystemIntegration/DeviceController.cs" />
+    <Compile Remove="SystemIntegration/DynamicLightingController.cs" />
+    <Compile Remove="SystemIntegration/HotkeyManager.cs" />
+    <Compile Remove="AI/SmartResourceAllocator.cs" />
+    <Compile Remove="Core/Monitoring/StructuredLogger.cs" />
+    <Compile Remove="Core/Monitoring/PerformanceAggregator.cs" />
+    <Compile Remove="Core/Performance/MemoryOptimizationService.cs" />
+    <Compile Remove="Core/Performance/PerformanceOptimizationEngine.cs" />
+    <Compile Remove="Themes/**/*.cs" />
+  </ItemGroup>
+
 </Project>

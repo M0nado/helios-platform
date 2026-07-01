@@ -2325,7 +2325,7 @@ public class Phase2ServiceTests
         using var logger = new HELIOS.Platform.Core.Logging.ConsoleLogger();
         var orchestrator = new HELIOS.Platform.Core.Integration.Phase2OrchestrationService();
         
-        await orchestrator.RegisterWorkflowAsync("test-workflow", async (params) =>
+        await orchestrator.RegisterWorkflowAsync("test-workflow", async (parameters) =>
         {
             await Task.CompletedTask;
             return new HELIOS.Platform.Core.Integration.WorkflowResult

@@ -1,0 +1,19 @@
+wiki:
+  output: docs/wiki/generated
+  pages:
+    - title: Start Here
+      source: docs/START_HERE.md
+      output: Home.md
+      required: false
+    - title: Current Status
+      source: docs/status/current-status.md
+      output: Current-Status.md
+      required: true
+    - title: Modular Architecture
+      source: docs/architecture/MODULAR_ARCHITECTURE.md
+      output: Modular-Architecture.md
+      required: true
+    - title: Component Matrix
+      source: docs/architecture/COMPONENT_MATRIX.md
+      output: Component-Matrix.md
+      required: true

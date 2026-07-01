@@ -1,2 +1,6 @@
 <Solution>
+  <Project Path="src/Security/SecurityValidator.csproj" />
+  <Project Path="HELIOS.Platform.Installer/HELIOS.Platform.Installer.csproj" />
+  <Project Path="HELIOS.Platform.ShellExtension/HELIOS.Platform.ShellExtension.csproj" />
+  <Project Path="src/integrations/Hermes/PolyglotXTier/PolyglotXTier.csproj" />
 </Solution>
