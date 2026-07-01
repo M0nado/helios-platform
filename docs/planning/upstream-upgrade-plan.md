@@ -40,3 +40,7 @@ RL upgrade priorities:
 4. Safe exploration controls.
 5. Audit trail for policy updates.
 6. Integration contract for C# orchestration.
+
+## RL promotion checkpoint
+
+The Python RL scaffold now includes offline replay, context adaptation, auditable policy decisions, and C# contract placeholders. The next checkpoint is to wire those contracts into orchestration and add integration tests that verify C# can consume policy decisions from the Python adapter.
