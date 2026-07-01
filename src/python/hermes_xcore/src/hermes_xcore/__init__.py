@@ -13,6 +13,8 @@ __all__ = [
     "HermesOrchestrator",
     "HermesTask",
     "HermesVectorStore",
+    "RewardEvent",
+    "EpsilonGreedyPolicy",
     "SearchResult",
     "describe",
 ]
@@ -35,6 +37,10 @@ def __getattr__(name: str):
         from .routing_policy import ContextualBanditRouter, Experience
 
         return {"ContextualBanditRouter": ContextualBanditRouter, "Experience": Experience}[name]
+    if name in {"EpsilonGreedyPolicy", "RewardEvent"}:
+        from .reinforcement_learning import EpsilonGreedyPolicy, RewardEvent
+
+        return {"EpsilonGreedyPolicy": EpsilonGreedyPolicy, "RewardEvent": RewardEvent}[name]
     if name in {"HermesVectorStore", "SearchResult"}:
         from .vector_store import HermesVectorStore, SearchResult
 

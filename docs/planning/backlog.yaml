@@ -35,3 +35,14 @@ backlog:
     area: operations
     priority: high
     status: blocked
+
+  - id: HELIOS-008
+    title: Keep Hermes and control upstreams upgradeable
+    area: merge
+    priority: high
+    status: in_progress
+  - id: HELIOS-009
+    title: Promote Hermes/XCore RL policy from Python experiment to platform contract
+    area: analytics
+    priority: high
+    status: pending

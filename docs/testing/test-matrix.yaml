@@ -14,3 +14,7 @@ test_matrix:
   docs:
     paths: [docs]
     workflow: .github/workflows/ci-docs.yml
+
+  rl:
+    paths: [src/python/hermes_xcore/src/hermes_xcore/reinforcement_learning.py, docs/integration/hermes-xcore/RL_UPGRADE_PLAN.md]
+    workflow: .github/workflows/ci-python.yml
