@@ -1,0 +1,30 @@
+name: Azure What-If
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - 'scripts/azure/**'
+      - '.github/workflows/azure-what-if.yml'
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: Azure resource group for what-if
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bicep build
+        uses: azure/cli@v2
+        with:
+          inlineScript: az bicep build --file infra/main.bicep
+      - name: What-if placeholder
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "Configure federated Azure credentials before enabling what-if execution."

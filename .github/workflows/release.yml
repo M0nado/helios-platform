@@ -1,0 +1,15 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release readiness
+        run: echo "Release packaging is gated on CI, security, docs, native, Python, and Azure validation workflows."

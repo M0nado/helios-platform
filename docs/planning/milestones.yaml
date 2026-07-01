@@ -1,0 +1,25 @@
+milestones:
+  - id: M1
+    name: Inventory complete
+    exit_criteria:
+      - All remotes configured or explicitly marked unavailable.
+      - Branch inventory generated.
+      - Merge order approved.
+  - id: M2
+    name: Build graph stable
+    exit_criteria:
+      - Solution restore/build succeeds for included projects.
+      - Central package management is active.
+  - id: M3
+    name: Multi-language foundation
+    exit_criteria:
+      - C#, WinUI, C++, F#, Python project boundaries exist.
+      - Component matrix maps every subsystem.
+  - id: M4
+    name: Azure foundation
+    exit_criteria:
+      - Bicep validation and what-if pass for dev parameters.
+  - id: M5
+    name: Release automation
+    exit_criteria:
+      - CI, security, docs, wiki, and release workflows pass.

@@ -1,0 +1,27 @@
+name: Upstream Inventory
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 12 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Show configured upstream manifest
+        run: sed -n '1,140p' docs/planning/source-repositories.yaml
+      - name: Inventory current repository branches
+        shell: pwsh
+        run: ./scripts/merge/analyze-branches.ps1
+      - name: Upload inventory artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-inventory
+          path: docs/planning/branch-inventory.md

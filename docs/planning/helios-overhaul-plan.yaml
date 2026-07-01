@@ -1,0 +1,33 @@
+plan: helios-platform-overhaul
+version: 0.1.0
+phases:
+  - id: A
+    name: Inventory and source-of-truth cleanup
+    status: in_progress
+    deliverables:
+      - docs/status/project-status.yaml
+      - docs/planning/helios-overhaul-plan.yaml
+      - docs/architecture/COMPONENT_MATRIX.md
+      - docs/architecture/BUILD_VARIANTS.md
+      - docs/architecture/MODULAR_ARCHITECTURE.md
+  - id: B
+    name: Build graph stabilization
+    status: in_progress
+    deliverables:
+      - HELIOS.Platform.slnx
+      - Directory.Build.props
+      - Directory.Packages.props
+      - .github/workflows/ci-dotnet.yml
+  - id: C
+    name: Merge/repo integration
+    status: blocked
+    blocker: Missing remotes or local repository paths for helios-control, hermes-fleet-production, hermes-core, xcore-agent.
+  - id: D
+    name: Multi-language architecture
+    status: scaffolded
+  - id: E
+    name: Azure foundation
+    status: scaffolded
+  - id: F
+    name: Wiki and project automation
+    status: scaffolded
