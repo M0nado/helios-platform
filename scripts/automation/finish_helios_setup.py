@@ -27,7 +27,8 @@ VERIFY_COMMANDS = [
     "python3 -m json.tool config/helios-mass-integration.json",
     "python3 -m json.tool config/helios-auto-upgrade.json",
     "python3 -m py_compile scripts/github/mass_integration.py scripts/github/setup_repository.py scripts/integrations/helios_capability_setup.py scripts/automation/helios_auto_upgrade.py scripts/automation/finish_helios_setup.py",
-    "git diff --check"
+    "git diff --check",
+    "python3 scripts/automation/final_gate.py --report-only"
 ]
 
 APPLY_COMMANDS = [

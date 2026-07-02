@@ -165,3 +165,7 @@ Use `./tools/helios.ps1 ideas specialties` to render specialized and sub-special
 ## 16. Multi-LLM cross-optimization router
 
 Use `./tools/helios.ps1 llm plan` to generate the configurable multi-LLM router plan for cloud, local, Codex/code, Hermes, and XCore agent roles. The router registry is `config/helios-llm-router.json`; it defines provider families, agent model profiles, parallelism levels, routing objectives, cheap-first/privacy-first/parallel-consensus policies, and learning rules for cost, latency, quality, safety, and token optimization. Reports are written under `reports/llm-router`.
+
+## 17. Blocking final gate and Azure Bicep commands
+
+Use `./tools/helios.ps1 gate final` to run the blocking merge-readiness gate implemented by `scripts/automation/final_gate.py`. The gate validates workspace hygiene, JSON configs, Python entrypoints, Bicep build, C# builds, F# analytics tests, native C++ build, security tests, main tests, and mass integration scoring. Azure infrastructure commands are available as `./tools/helios.ps1 azure bicep-build`, `./tools/helios.ps1 azure validate`, `./tools/helios.ps1 azure what-if`, and `./tools/helios.ps1 azure deploy --apply`.

@@ -137,7 +137,8 @@ Usage:
 Commands in integration order:
   setup verify|all               Verify or run deep capability setup order.
   status                         Read-only readiness report.
-  azure setup|verify             Bootstrap or verify Azure CLI for Hermes XCore.
+  azure setup|verify|bicep-build|validate|what-if|deploy
+                                  Bootstrap Azure CLI and run Bicep validation/deploy.
   branches fetch|list|integrate  Fetch, inspect, and integrate HELIOS/Hermes branches.
   github mass-score|mass-plan|mass-branch|mass-pr|mass-merge|mass-all
                                   Score, branch, PR, and auto-merge mass integration.
@@ -250,8 +251,32 @@ function Invoke-AzureCommand {
         return
     }
 
+    if ($SubAction -in @('bicep-build', 'validate', 'what-if', 'deploy')) {
+        $TemplateFile = 'infra/azure/main.bicep'
+        $ResourceGroup = if ($env:HELIOS_RESOURCE_GROUP) { $env:HELIOS_RESOURCE_GROUP } else { 'helios-hermes-xcore-rg' }
+        $ParametersPath = 'infra/azure/parameters/dev.json'
+        if ($SubAction -eq 'bicep-build') {
+            Invoke-ExternalCommand az @('bicep', 'build', '--file', $TemplateFile)
+            New-HeliosReport -Name 'azure-bicep-build' -Status 'completed' -Checks @([ordered]@{ name = 'azure:bicep-build'; status = 'ok'; message = $TemplateFile }) -Commands @("az bicep build --file $TemplateFile")
+            return
+        }
+        $DeploymentArgs = @('deployment', 'group', $SubAction, '--resource-group', $ResourceGroup, '--template-file', $TemplateFile)
+        if (Test-Path (Join-Path $RepoRoot $ParametersPath)) {
+            $DeploymentArgs += @('--parameters', "@$ParametersPath")
+        }
+        if ($SubAction -eq 'deploy') {
+            if ($RemainingArgs -notcontains '--apply') {
+                throw 'azure deploy requires --apply to prevent accidental cloud changes.'
+            }
+            $DeploymentArgs[2] = 'create'
+        }
+        Invoke-ExternalCommand az $DeploymentArgs
+        New-HeliosReport -Name "azure-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "azure:$SubAction"; status = 'ok'; message = $TemplateFile }) -Commands @("az $($DeploymentArgs -join ' ')")
+        return
+    }
+
     if ($SubAction -ne 'verify') {
-        throw "Unknown azure action '$SubAction'. Use setup or verify."
+        throw "Unknown azure action '$SubAction'. Use setup, verify, bicep-build, validate, what-if, or deploy."
     }
 
     $Checks = New-Object System.Collections.Generic.List[object]
@@ -606,13 +631,9 @@ function Invoke-GateCommand {
         throw "Unknown gate action '$SubAction'. Use final."
     }
     Write-HeliosHeader 'gate final'
-    Assert-CleanGitTree
-    Invoke-ExternalCommand git @('diff', '--check')
-    Invoke-Status
-    Invoke-AzureCommand 'verify'
-    Invoke-BuildCommand 'all'
-    Invoke-TestCommand 'all'
-    New-HeliosReport -Name 'gate-final' -Status 'completed' -Checks @([ordered]@{ name = 'gate:final'; status = 'ok'; message = 'final gate completed' }) -Commands @('git diff --check', './tools/helios.ps1 status', './tools/helios.ps1 azure verify', './tools/helios.ps1 build all', './tools/helios.ps1 test all')
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/final_gate.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'gate-final' -Status 'completed' -Checks @([ordered]@{ name = 'gate:final'; status = 'ok'; message = 'blocking final gate completed' }) -Commands @("python3 $ScriptPath")
 }
 
 switch ($Command) {
