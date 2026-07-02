@@ -141,6 +141,7 @@ Commands in integration order:
   branches fetch|list|integrate  Fetch, inspect, and integrate HELIOS/Hermes branches.
   github mass-score|mass-plan|mass-branch|mass-pr|mass-merge|mass-all
                                   Score, branch, PR, and auto-merge mass integration.
+  github repo-verify|repo-setup      Verify or apply GitHub repository automation setup.
   agents list|validate|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
   test csharp|security|fsharp|native|python-aihub|all
@@ -369,6 +370,17 @@ function Invoke-GitHubCommand {
     if (-not (Test-Path $ScriptPath)) {
         throw "Mass integration script not found: $ScriptPath"
     }
+    if ($SubAction -eq 'repo-verify' -or $SubAction -eq 'repo-setup') {
+        $RepoSetupPath = Join-Path $RepoRoot 'scripts/github/setup_repository.py'
+        if (-not (Test-Path $RepoSetupPath)) {
+            throw "GitHub repository setup script not found: $RepoSetupPath"
+        }
+        $RepoMode = if ($SubAction -eq 'repo-setup') { 'setup' } else { 'verify' }
+        $RepoArgs = @($RepoSetupPath, $RepoMode) + $RemainingArgs
+        Invoke-ExternalCommand python3 $RepoArgs
+        New-HeliosReport -Name "github-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "github:$SubAction"; status = 'ok'; message = 'repository setup command completed' }) -Commands @("python3 $($RepoArgs -join ' ')")
+        return
+    }
     $ModeMap = @{
         'mass-score' = 'score'
         'mass-plan' = 'plan'
@@ -378,7 +390,7 @@ function Invoke-GitHubCommand {
         'mass-all' = 'all'
     }
     if (-not $ModeMap.ContainsKey($SubAction)) {
-        throw "Unknown github action '$SubAction'. Use mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
+        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
     }
     $Mode = $ModeMap[$SubAction]
     $Args = @($ScriptPath, $Mode) + $RemainingArgs

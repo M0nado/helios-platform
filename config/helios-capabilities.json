@@ -16,23 +16,50 @@
     {
       "id": "github-cli",
       "title": "GitHub CLI and repository automation",
-      "requiredCommands": ["git", "gh"],
-      "requiredEnvironment": ["GITHUB_TOKEN"],
-      "optionalEnvironment": ["HELIOS_AUTOMATION_TOKEN"],
-      "ownedPaths": [".github/workflows", "scripts/github", "config/github-control.example.json"],
+      "requiredCommands": [
+        "git",
+        "gh"
+      ],
+      "requiredEnvironment": [
+        "GITHUB_TOKEN"
+      ],
+      "optionalEnvironment": [
+        "HELIOS_AUTOMATION_TOKEN"
+      ],
+      "ownedPaths": [
+        ".github/workflows",
+        "scripts/github",
+        "config/github-control.example.json",
+        "config/helios-github-setup.json"
+      ],
       "setupCommands": [
         "gh auth status",
-        "python3 scripts/github/mass_integration.py score --no-fetch"
+        "python3 scripts/github/mass_integration.py score --no-fetch",
+        "python3 scripts/github/setup_repository.py verify"
       ],
       "automationRole": "Fetch branches, score mass integration candidates, open pull requests, and request auto-merge."
     },
     {
       "id": "azure-cli",
       "title": "Azure CLI Hermes XCore bootstrap",
-      "requiredCommands": ["az", "pwsh"],
-      "requiredEnvironment": ["AZURE_SUBSCRIPTION_ID", "AZURE_TENANT_ID", "HELIOS_RESOURCE_GROUP", "HELIOS_AZURE_LOCATION"],
-      "optionalEnvironment": ["HELIOS_ENVIRONMENT"],
-      "ownedPaths": ["tools/azure", "scripts/azure", "config/azure-control.example.json"],
+      "requiredCommands": [
+        "az",
+        "pwsh"
+      ],
+      "requiredEnvironment": [
+        "AZURE_SUBSCRIPTION_ID",
+        "AZURE_TENANT_ID",
+        "HELIOS_RESOURCE_GROUP",
+        "HELIOS_AZURE_LOCATION"
+      ],
+      "optionalEnvironment": [
+        "HELIOS_ENVIRONMENT"
+      ],
+      "ownedPaths": [
+        "tools/azure",
+        "scripts/azure",
+        "config/azure-control.example.json"
+      ],
       "setupCommands": [
         "./tools/helios.ps1 azure setup -SkipLogin",
         "./tools/helios.ps1 azure verify"
@@ -42,10 +69,20 @@
     {
       "id": "microsoft-365-copilot",
       "title": "Microsoft 365 and Copilot readiness",
-      "requiredCommands": ["pwsh"],
+      "requiredCommands": [
+        "pwsh"
+      ],
       "requiredEnvironment": [],
-      "optionalEnvironment": ["M365_TENANT_ID", "COPILOT_WORKSPACE_ID", "GRAPH_CLIENT_ID"],
-      "ownedPaths": ["docs/microsoft-365", "scripts/microsoft-enterprise", "scripts/cloud-orchestration"],
+      "optionalEnvironment": [
+        "M365_TENANT_ID",
+        "COPILOT_WORKSPACE_ID",
+        "GRAPH_CLIENT_ID"
+      ],
+      "ownedPaths": [
+        "docs/microsoft-365",
+        "scripts/microsoft-enterprise",
+        "scripts/cloud-orchestration"
+      ],
       "setupCommands": [
         "./tools/helios.ps1 setup verify"
       ],
@@ -54,10 +91,19 @@
     {
       "id": "cloud-shell",
       "title": "Cloud Shell and cloud CLI launch path",
-      "requiredCommands": ["bash", "git"],
+      "requiredCommands": [
+        "bash",
+        "git"
+      ],
       "requiredEnvironment": [],
-      "optionalEnvironment": ["CLOUD_SHELL", "AZURE_HTTP_USER_AGENT"],
-      "ownedPaths": ["scripts/cloudshell", "docs/integration/CLOUDSHELL_GITHUB_AZURE_SETUP.md"],
+      "optionalEnvironment": [
+        "CLOUD_SHELL",
+        "AZURE_HTTP_USER_AGENT"
+      ],
+      "ownedPaths": [
+        "scripts/cloudshell",
+        "docs/integration/CLOUDSHELL_GITHUB_AZURE_SETUP.md"
+      ],
       "setupCommands": [
         "bash scripts/cloudshell/helios-cloudshell.sh --help"
       ],
@@ -66,10 +112,22 @@
     {
       "id": "openai-codex",
       "title": "OpenAI/Codex AIHub integration readiness",
-      "requiredCommands": ["python3"],
+      "requiredCommands": [
+        "python3"
+      ],
       "requiredEnvironment": [],
-      "optionalEnvironment": ["OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "CODEX_HOME"],
-      "ownedPaths": ["scripts/ai", "scripts/ai-integration", "scripts/ai-services", "config/ai-services"],
+      "optionalEnvironment": [
+        "OPENAI_API_KEY",
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_OPENAI_API_KEY",
+        "CODEX_HOME"
+      ],
+      "ownedPaths": [
+        "scripts/ai",
+        "scripts/ai-integration",
+        "scripts/ai-services",
+        "config/ai-services"
+      ],
       "setupCommands": [
         "python3 -m py_compile scripts/ai/enrich-ideas.py"
       ],
@@ -78,10 +136,19 @@
     {
       "id": "mcp-server",
       "title": "MCP server and remote tool bridge readiness",
-      "requiredCommands": ["python3"],
+      "requiredCommands": [
+        "python3"
+      ],
       "requiredEnvironment": [],
-      "optionalEnvironment": ["MCP_SERVER_URL", "MCP_GITHUB_TOKEN", "MCP_OPENAI_TOKEN"],
-      "ownedPaths": ["config/github-mcp.example.json", "docs/integration/GITHUB_ECOSYSTEM_INTEGRATION.md"],
+      "optionalEnvironment": [
+        "MCP_SERVER_URL",
+        "MCP_GITHUB_TOKEN",
+        "MCP_OPENAI_TOKEN"
+      ],
+      "ownedPaths": [
+        "config/github-mcp.example.json",
+        "docs/integration/GITHUB_ECOSYSTEM_INTEGRATION.md"
+      ],
       "setupCommands": [
         "python3 scripts/integrations/check-connections.py"
       ],
@@ -90,10 +157,22 @@
     {
       "id": "hermes-xcore",
       "title": "Hermes XCore native/cloud integration",
-      "requiredCommands": ["cmake", "dotnet"],
-      "requiredEnvironment": ["HELIOS_HERMES_XCORE_ENABLED"],
-      "optionalEnvironment": ["HELIOS_XCORE_NODE_POOL", "HELIOS_XCORE_ACCELERATION_PROFILE"],
-      "ownedPaths": ["src/native/HELIOS.Native.Performance", "src/analytics/HELIOS.Analytics.FSharp", "tools/azure"],
+      "requiredCommands": [
+        "cmake",
+        "dotnet"
+      ],
+      "requiredEnvironment": [
+        "HELIOS_HERMES_XCORE_ENABLED"
+      ],
+      "optionalEnvironment": [
+        "HELIOS_XCORE_NODE_POOL",
+        "HELIOS_XCORE_ACCELERATION_PROFILE"
+      ],
+      "ownedPaths": [
+        "src/native/HELIOS.Native.Performance",
+        "src/analytics/HELIOS.Analytics.FSharp",
+        "tools/azure"
+      ],
       "setupCommands": [
         "./tools/helios.ps1 build native",
         "./tools/helios.ps1 test fsharp"
@@ -103,10 +182,20 @@
     {
       "id": "agent-skills",
       "title": "HELIOS agent skill registry",
-      "requiredCommands": ["pwsh", "python3"],
+      "requiredCommands": [
+        "pwsh",
+        "python3"
+      ],
       "requiredEnvironment": [],
-      "optionalEnvironment": ["CODEX_HOME", "HELIOS_AGENT_PROFILE"],
-      "ownedPaths": ["config/helios-agents.json", "scripts/agents", "scripts/build-agents"],
+      "optionalEnvironment": [
+        "CODEX_HOME",
+        "HELIOS_AGENT_PROFILE"
+      ],
+      "ownedPaths": [
+        "config/helios-agents.json",
+        "scripts/agents",
+        "scripts/build-agents"
+      ],
       "setupCommands": [
         "./tools/helios.ps1 agents validate"
       ],
@@ -115,10 +204,23 @@
     {
       "id": "mass-integration",
       "title": "No-review GitHub mass integration runner",
-      "requiredCommands": ["git", "python3", "gh"],
-      "requiredEnvironment": ["GITHUB_TOKEN"],
-      "optionalEnvironment": ["HELIOS_AUTOMATION_TOKEN"],
-      "ownedPaths": [".github/workflows/helios-mass-integration.yml", "scripts/github/mass_integration.py", "config/helios-mass-integration.json"],
+      "requiredCommands": [
+        "git",
+        "python3",
+        "gh"
+      ],
+      "requiredEnvironment": [
+        "GITHUB_TOKEN"
+      ],
+      "optionalEnvironment": [
+        "HELIOS_AUTOMATION_TOKEN"
+      ],
+      "ownedPaths": [
+        ".github/workflows/helios-mass-integration.yml",
+        "scripts/github/mass_integration.py",
+        "config/helios-mass-integration.json",
+        ".github/workflows/helios-repository-setup.yml"
+      ],
       "setupCommands": [
         "python3 scripts/github/mass_integration.py score --no-fetch"
       ],

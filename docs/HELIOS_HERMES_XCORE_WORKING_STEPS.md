@@ -141,3 +141,7 @@ The mass integration defaults live in `config/helios-mass-integration.json`. The
 Use `./tools/helios.ps1 setup verify` to generate a readiness map for every deep integration capability before running mutating automation. Use `./tools/helios.ps1 setup all` only when the shell has the required local tools and non-secret environment variables for the declared setup commands.
 
 The deep capability registry lives in `config/helios-capabilities.json` and orders setup across GitHub CLI automation, Azure CLI, Microsoft 365/Copilot readiness, Cloud Shell, OpenAI/Codex AIHub readiness, MCP server bridge checks, Hermes XCore, agent skills, and mass integration. Reports are written to `reports/capabilities/capability-readiness.json` and `.md`.
+
+## 11. GitHub repository setup completion
+
+Use `./tools/helios.ps1 github repo-verify` to verify labels, workflows, token environment, and repository setup readiness. Use `./tools/helios.ps1 github repo-setup --apply` or the `HELIOS Repository Setup` workflow with `apply=true` when the automation token has repository administration permission. This applies the GitHub-side setup needed by the no-review automation path: auto-merge-capable repository settings, integration labels, optional branch protection, and setup reports under `reports/github-setup`.
