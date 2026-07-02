@@ -60,8 +60,22 @@
   ],
   "pullRequest": {
     "title": "Automated HELIOS Hermes XCore mass integration",
-    "labels": ["automation", "helios", "hermes-xcore", "mass-integration"],
+    "labels": [
+      "automation",
+      "helios",
+      "hermes-xcore",
+      "mass-integration"
+    ],
     "autoMergeMethod": "squash",
     "deleteBranch": false
+  },
+  "conflictForecast": {
+    "maxRiskScore": 120,
+    "blockHighRisk": true,
+    "overrideFlag": "--override-conflict-risk",
+    "priorityBranches": [
+      "helios-control",
+      "hermes-fleet-production"
+    ]
   }
 }

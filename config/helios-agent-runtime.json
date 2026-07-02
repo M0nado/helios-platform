@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "defaults": {"timeoutSeconds": 900, "parallelism": 2, "maxTokens": 8000, "canApply": false},
+  "agents": [
+    {"agentId": "csharp-core", "preferredModel": "gpt-5.5", "fallbackModel": "gpt-5.4", "riskLevel": "medium", "allowedPaths": ["src", "tests"], "requiredTools": ["dotnet"], "requiredSecrets": [], "reportOutputs": ["reports/final-gate/final-gate.json"]},
+    {"agentId": "azure-infra", "preferredModel": "gpt-5.5", "fallbackModel": "gpt-5.4", "riskLevel": "high", "allowedPaths": ["infra", "tools/azure"], "requiredTools": ["az"], "requiredSecrets": ["AZURE_CREDENTIALS"], "reportOutputs": ["reports/azure"]},
+    {"agentId": "mass-integration", "preferredModel": "gpt-5.5", "fallbackModel": "gpt-5.4", "riskLevel": "high", "allowedPaths": ["scripts/github", ".github/workflows"], "requiredTools": ["git", "python3"], "requiredSecrets": ["HELIOS_AUTOMATION_TOKEN"], "reportOutputs": ["reports/mass-integration"]}
+  ]
+}

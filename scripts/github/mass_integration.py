@@ -254,6 +254,22 @@ def create_integration_branch(config: dict[str, Any], scored: dict[str, Any], re
     return result
 
 
+
+def conflict_forecast_blocked(config: dict[str, Any], report_dir: Path, override: bool) -> list[dict[str, Any]]:
+    forecast_cfg = config.get("conflictForecast", {})
+    if override or not forecast_cfg.get("blockHighRisk", False):
+        return []
+    run([sys.executable, "scripts/github/conflict_forecast.py"])
+    forecast_path = report_dir / "conflict-forecast.json"
+    if not forecast_path.exists():
+        return []
+    forecast = json.loads(forecast_path.read_text(encoding="utf-8"))
+    max_risk = int(forecast_cfg.get("maxRiskScore", 999999))
+    blocked = [branch for branch in forecast.get("branches", []) if int(branch.get("riskScore", 0)) > max_risk]
+    if blocked:
+        write_json(report_dir / "blocked-candidates.json", {"generatedUtc": timestamp(), "maxRiskScore": max_risk, "blocked": blocked})
+    return blocked
+
 def gh_available() -> bool:
     return shutil.which("gh") is not None
 
@@ -313,6 +329,7 @@ def main() -> int:
     parser.add_argument("--report-dir", default=str(DEFAULT_REPORT_DIR))
     parser.add_argument("--apply", action="store_true", help="execute mutating git/gh actions")
     parser.add_argument("--no-fetch", action="store_true", help="skip git fetch")
+    parser.add_argument("--override-conflict-risk", action="store_true", help="allow branch apply even when conflict forecast is high risk")
     args = parser.parse_args()
 
     config = load_config(Path(args.config))
@@ -321,6 +338,10 @@ def main() -> int:
 
     scored = score_all(config, report_dir, fetch=not args.no_fetch)
     if args.mode in {"branch", "all"}:
+        blocked = conflict_forecast_blocked(config, report_dir, override=args.override_conflict_risk) if args.apply else []
+        if blocked:
+            print(f"Blocked by conflict forecast: {len(blocked)} high-risk candidate(s). Use --override-conflict-risk to bypass.", file=sys.stderr)
+            return 2
         create_integration_branch(config, scored, report_dir, apply=args.apply)
     if args.mode in {"pr", "all"}:
         open_pr(config, report_dir, apply=args.apply)

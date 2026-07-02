@@ -50,7 +50,13 @@ def run_step(step: dict[str, Any], report_only: bool) -> dict[str, Any]:
 def write_reports(payload: dict[str, Any]) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "final-gate.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    lines = ["# HELIOS Final Gate", "", f"Generated: {payload['generatedUtc']}", f"Report only: {payload['reportOnly']}", "", "| Step | Status | Command |", "| --- | --- | --- |"]
+    lines = ["# HELIOS Final Gate", "", f"Generated: {payload['generatedUtc']}", f"Report only: {payload['reportOnly']}", "", "## First Blocker", ""]
+    if payload.get("firstBlocker"):
+        blocker = payload["firstBlocker"]
+        lines.extend([f"- Step: `{blocker['id']}`", f"- Rerun: `{blocker['rerun']}`", f"- Fixer: `{blocker['recommendedFixer']}`", ""])
+    else:
+        lines.extend(["- None", ""])
+    lines.extend(["| Step | Status | Command |", "| --- | --- | --- |"])
     for result in payload["results"]:
         lines.append(f"| `{result['id']}` | {result['status']} | `{result['command']}` |")
     (OUT / "final-gate.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -62,11 +68,23 @@ def main() -> int:
     args = parser.parse_args()
     results = [run_step(step, report_only=args.report_only) for step in COMMANDS]
     failed = [result for result in results if result["status"] == "failed"]
+    first_failed = failed[0] if failed else None
+    first_blocker = None
+    if first_failed:
+        first_blocker = {
+            "id": first_failed["id"],
+            "command": first_failed["command"],
+            "category": first_failed["id"].split("-")[0],
+            "recommendedFixer": "scripts/automation/autofix_loop.py plan",
+            "rerun": first_failed["command"],
+            "blocksMassIntegration": True,
+        }
     payload = {
         "generatedUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "reportOnly": args.report_only,
         "results": results,
         "failed": failed,
+        "firstBlocker": first_blocker,
     }
     write_reports(payload)
     print(f"Wrote {(OUT / 'final-gate.md').relative_to(ROOT)}")

@@ -201,3 +201,23 @@ Before enabling broad `--apply` flows, run the three guard rails that make autom
    Reports are written to `reports/autofix/autofix-plan.json`, `reports/autofix/autofix-plan.md`, and `reports/autofix/csharp-compile.md`.
 
 The `HELIOS Autofix` workflow runs these checks in GitHub Actions and can be manually dispatched in `plan` mode first, then `apply` mode when `HELIOS_AUTOMATION_TOKEN` has the right repository permissions.
+
+## Full automatic upgrade order
+
+Run these in the requested order when turning the automation into a full local/cloud control plane:
+
+1. Operator dashboard from reports: `python3 scripts/automation/render_operator_dashboard.py` or `./tools/helios.ps1 dashboard render`.
+2. GitHub auto-connect wizard: `python3 scripts/github/connect_github.py verify` or `./tools/helios.ps1 github connect-verify`.
+3. Structured Azure Bicep reports: `python3 scripts/azure/bicep_report.py build` and the `validate`, `what-if`, `deploy`, and `outputs` modes.
+4. Gated autofix lifecycle: `python3 scripts/automation/autofix_loop.py plan` before any apply.
+5. C# project-aware compile fixer: `python3 scripts/automation/fix_csharp_compile.py`.
+6. Conflict forecast blocking: mass integration apply reads `reports/mass-integration/conflict-forecast.json` and writes `blocked-candidates.json` when risk exceeds config.
+7. Agent runtime matrix: `python3 scripts/automation/agent_runtime_matrix.py` or `./tools/helios.ps1 agents runtime`.
+8. One-command autoconnect setup: `python3 scripts/automation/autoconnect_setup.py verify` or `./tools/helios.ps1 connect verify`.
+9. LLM learning/cost feedback: `python3 scripts/learning/record_event.py` and `python3 scripts/learning/summarize_learning.py`.
+10. Vault readiness: `python3 scripts/security/vault_readiness.py verify` or `./tools/helios.ps1 security vault`.
+11. GUI command buttons are included in the generated operator dashboard and copy safe commands by default.
+12. First-blocker final-gate summary is emitted in `reports/final-gate/final-gate.json` and `.md`.
+13. Native benchmark baseline: `python3 scripts/native/benchmark_native.py` or `./tools/helios.ps1 test native-benchmark`.
+14. F# analytics test categorization: `python3 scripts/analytics/fsharp_test_report.py` or `./tools/helios.ps1 test fsharp-report`.
+15. Python AIHub smoke harness: `python3 tools/aihub/smoke-test.py` or `./tools/helios.ps1 test python-aihub`.

@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'security', 'dashboard', 'connect', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -137,13 +137,17 @@ Usage:
 Commands in integration order:
   setup verify|all               Verify or run deep capability setup order.
   status                         Read-only readiness report.
-  azure setup|verify|bicep-build|validate|what-if|deploy
-                                  Bootstrap Azure CLI and run Bicep validation/deploy.
+  azure setup|verify|bicep-build|validate|what-if|deploy|report-build|report-validate|report-what-if|report-deploy|outputs
+                                  Bootstrap Azure CLI and run Bicep validation/deploy/reporting.
   branches fetch|list|integrate  Fetch, inspect, and integrate HELIOS/Hermes branches.
   github mass-score|mass-plan|mass-branch|mass-pr|mass-merge|mass-all
                                   Score, branch, PR, and auto-merge mass integration.
   github conflict-forecast           Forecast merge conflict risk before branch apply.
-  github repo-verify|repo-setup      Verify or apply GitHub repository automation setup.
+  github repo-verify|repo-setup|connect-plan|connect-verify|connect-apply
+                                  Verify/apply GitHub repository automation setup and connection.
+  dashboard render                Render local/hybrid HTML operator dashboard.
+  connect plan|verify|apply       Run one-command local/cloud autoconnect setup.
+  security vault                  Verify vault/secrets readiness without printing secrets.
   fix plan|apply|csharp              Plan/apply autofix tasks or parse C# build blockers.
   policy check                       Run safety policy checks before apply/deploy/merge.
   upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
@@ -151,9 +155,9 @@ Commands in integration order:
   start plan|verify|apply            Run the shortest ASAP start/merge sequence.
   ideas super|specialties          Rank next additions or render specialization matrix.
   llm plan                         Render multi-LLM cross-optimization routing plan.
-  agents list|validate|run       Inspect and run registered HELIOS agents.
+  agents list|validate|runtime|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
-  test csharp|security|fsharp|native|python-aihub|all
+  test csharp|security|fsharp|fsharp-report|native|native-benchmark|python-aihub|all
   reports latest                 Show latest generated report.
   gate final                     Run final quality gate.
 
@@ -255,6 +259,16 @@ function Invoke-AzureCommand {
         return
     }
 
+    if ($SubAction -in @('report-build', 'report-validate', 'report-what-if', 'report-deploy', 'outputs')) {
+        $ReportScript = Join-Path $RepoRoot 'scripts/azure/bicep_report.py'
+        $ModeMap = @{ 'report-build' = 'build'; 'report-validate' = 'validate'; 'report-what-if' = 'what-if'; 'report-deploy' = 'deploy'; 'outputs' = 'outputs' }
+        $ReportMode = $ModeMap[$SubAction]
+        $ReportArgs = @($ReportScript, $ReportMode) + $RemainingArgs
+        Invoke-ExternalCommand python3 $ReportArgs
+        New-HeliosReport -Name "azure-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "azure:$SubAction"; status = 'ok'; message = 'structured Azure Bicep report completed' }) -Commands @("python3 $($ReportArgs -join ' ')")
+        return
+    }
+
     if ($SubAction -in @('bicep-build', 'validate', 'what-if', 'deploy')) {
         $TemplateFile = 'infra/azure/main.bicep'
         $ResourceGroup = if ($env:HELIOS_RESOURCE_GROUP) { $env:HELIOS_RESOURCE_GROUP } else { 'helios-hermes-xcore-rg' }
@@ -280,7 +294,7 @@ function Invoke-AzureCommand {
     }
 
     if ($SubAction -ne 'verify') {
-        throw "Unknown azure action '$SubAction'. Use setup, verify, bicep-build, validate, what-if, or deploy."
+        throw "Unknown azure action '$SubAction'. Use setup, verify, bicep-build, validate, what-if, deploy, report-build, report-validate, report-what-if, report-deploy, or outputs."
     }
 
     $Checks = New-Object System.Collections.Generic.List[object]
@@ -403,6 +417,14 @@ function Invoke-GitHubCommand {
     if (-not (Test-Path $ScriptPath)) {
         throw "Mass integration script not found: $ScriptPath"
     }
+    if ($SubAction -in @('connect-plan', 'connect-verify', 'connect-apply')) {
+        $ConnectPath = Join-Path $RepoRoot 'scripts/github/connect_github.py'
+        $ConnectModeMap = @{ 'connect-plan' = 'plan'; 'connect-verify' = 'verify'; 'connect-apply' = 'apply' }
+        $ConnectMode = $ConnectModeMap[$SubAction]
+        Invoke-ExternalCommand python3 @($ConnectPath, $ConnectMode)
+        New-HeliosReport -Name "github-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "github:$SubAction"; status = 'ok'; message = 'GitHub connect completed' }) -Commands @("python3 $ConnectPath $ConnectMode")
+        return
+    }
     if ($SubAction -eq 'conflict-forecast') {
         $ForecastPath = Join-Path $RepoRoot 'scripts/github/conflict_forecast.py'
         Invoke-ExternalCommand python3 @($ForecastPath)
@@ -429,7 +451,7 @@ function Invoke-GitHubCommand {
         'mass-all' = 'all'
     }
     if (-not $ModeMap.ContainsKey($SubAction)) {
-        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, conflict-forecast, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
+        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, connect-plan, connect-verify, connect-apply, conflict-forecast, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
     }
     $Mode = $ModeMap[$SubAction]
     $Args = @($ScriptPath, $Mode) + $RemainingArgs
@@ -466,6 +488,34 @@ function Invoke-PolicyCommand {
     $Args = @($ScriptPath) + $RemainingArgs
     Invoke-ExternalCommand python3 $Args
     New-HeliosReport -Name 'policy-check' -Status 'completed' -Checks @([ordered]@{ name = 'policy:check'; status = 'ok'; message = 'policy gate completed' }) -Commands @("python3 $($Args -join ' ')")
+}
+
+function Invoke-DashboardCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "dashboard $SubAction"
+    if ($SubAction -ne 'render' -and $SubAction -ne 'default') { throw "Unknown dashboard action '$SubAction'. Use render." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/render_operator_dashboard.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'dashboard-render' -Status 'completed' -Checks @([ordered]@{ name = 'dashboard:render'; status = 'ok'; message = 'operator dashboard rendered' }) -Commands @("python3 $ScriptPath")
+}
+
+function Invoke-ConnectCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "connect $SubAction"
+    $Mode = if ($SubAction -eq 'default') { 'plan' } else { $SubAction }
+    if ($Mode -notin @('plan', 'verify', 'apply')) { throw "Unknown connect action '$SubAction'. Use plan, verify, or apply." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/autoconnect_setup.py'
+    Invoke-ExternalCommand python3 @($ScriptPath, $Mode)
+    New-HeliosReport -Name "connect-$Mode" -Status 'completed' -Checks @([ordered]@{ name = "connect:$Mode"; status = 'ok'; message = 'autoconnect setup completed' }) -Commands @("python3 $ScriptPath $Mode")
+}
+
+function Invoke-SecurityCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "security $SubAction"
+    if ($SubAction -ne 'vault' -and $SubAction -ne 'default') { throw "Unknown security action '$SubAction'. Use vault." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/security/vault_readiness.py'
+    Invoke-ExternalCommand python3 @($ScriptPath, 'verify')
+    New-HeliosReport -Name 'security-vault' -Status 'completed' -Checks @([ordered]@{ name = 'security:vault'; status = 'ok'; message = 'vault readiness completed' }) -Commands @("python3 $ScriptPath verify")
 }
 
 function Invoke-UpgradeCommand {
@@ -558,6 +608,11 @@ function Invoke-AgentsCommand {
             $Registry.agents | ForEach-Object { Write-Host "$($_.name) :: $($_.responsibility)" }
             New-HeliosReport -Name 'agents-list' -Status 'completed' -Checks @([ordered]@{ name = 'agents:list'; status = 'ok'; message = "agents=$($Registry.agents.Count)" })
         }
+        'runtime' {
+            $ScriptPath = Join-Path $RepoRoot 'scripts/automation/agent_runtime_matrix.py'
+            Invoke-ExternalCommand python3 @($ScriptPath)
+            New-HeliosReport -Name 'agents-runtime' -Status 'completed' -Checks @([ordered]@{ name = 'agents:runtime'; status = 'ok'; message = 'runtime matrix generated' }) -Commands @("python3 $ScriptPath")
+        }
         'validate' {
             $Checks = New-Object System.Collections.Generic.List[object]
             foreach ($Agent in $Registry.agents) {
@@ -584,7 +639,7 @@ function Invoke-AgentsCommand {
             New-HeliosReport -Name "agent-$AgentName" -Status 'completed' -Checks @([ordered]@{ name = "agent:$AgentName"; status = 'ok'; message = 'agent command completed' }) -Commands @($Agent.command)
         }
         default {
-            throw "Unknown agents action '$SubAction'. Use list, validate, or run."
+            throw "Unknown agents action '$SubAction'. Use list, validate, runtime, or run."
         }
     }
 }
@@ -637,6 +692,8 @@ function Invoke-TestCommand {
         'csharp' { Invoke-TestStep 'csharp' 'dotnet' @('test', 'src/tests/HELIOS.Platform.Tests.csproj', '--configuration', 'Release') }
         'security' { Invoke-TestStep 'security' 'dotnet' @('test', 'tests/SecurityValidationTests.csproj', '--configuration', 'Release') }
         'fsharp' { Invoke-TestStep 'fsharp' 'dotnet' @('test', 'tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj', '--configuration', 'Release') }
+        'native-benchmark' { Invoke-TestStep 'native-benchmark' 'python3' @('scripts/native/benchmark_native.py') }
+        'fsharp-report' { Invoke-TestStep 'fsharp-report' 'python3' @('scripts/analytics/fsharp_test_report.py') }
         'native' {
             Invoke-BuildCommand 'native'
             $Commands.Add('native benchmark placeholder')
@@ -653,7 +710,7 @@ function Invoke-TestCommand {
             }
         }
         'all' {
-            foreach ($Domain in @('csharp', 'security', 'fsharp', 'native', 'python-aihub')) {
+            foreach ($Domain in @('csharp', 'security', 'fsharp', 'fsharp-report', 'native', 'native-benchmark', 'python-aihub')) {
                 Invoke-TestCommand $Domain
             }
             return
@@ -702,6 +759,9 @@ switch ($Command) {
     'github' { Invoke-GitHubCommand $Action }
     'fix' { Invoke-FixCommand $Action }
     'policy' { Invoke-PolicyCommand $Action }
+    'security' { Invoke-SecurityCommand $Action }
+    'dashboard' { Invoke-DashboardCommand $Action }
+    'connect' { Invoke-ConnectCommand $Action }
     'upgrade' { Invoke-UpgradeCommand $Action }
     'finish' { Invoke-FinishCommand $Action }
     'start' { Invoke-StartCommand $Action }
