@@ -1,6 +1,15 @@
 {
   "nodes": [
     {
+      "id": "workflow-validation",
+      "title": "GitHub workflow validation without PyYAML",
+      "command": "python3 scripts/control/validate_workflows.py",
+      "paths": [
+        ".github/workflows/**",
+        "scripts/control/validate_workflows.py"
+      ]
+    },
+    {
       "id": "pr-update-body",
       "title": "Generated PR update body",
       "command": "python3 scripts/github/update-pr-from-reports.py --dry-run",
@@ -65,7 +74,7 @@
     {
       "id": "python-static",
       "title": "Python static compile checks",
-      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py",
+      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py",
       "paths": [
         "scripts/**/*.py"
       ]
@@ -163,6 +172,12 @@
       "outputs": [
         "reports/integrations/app-automation-readiness.json",
         "reports/integrations/app-automation-readiness.md"
+      ],
+      "title": "App automation readiness",
+      "paths": [
+        "scripts/integrations/app_automation.py",
+        "config/integrations.example.json",
+        "config/secrets-map.example.json"
       ]
     }
   ]

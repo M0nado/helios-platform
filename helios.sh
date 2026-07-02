@@ -20,6 +20,7 @@ case "$cmd" in
   readiness) exec python3 scripts/integrations/readiness_score.py "$@" ;;
   apps) exec python3 scripts/integrations/app_automation.py "$@" ;;
   doctor) exec python3 scripts/control/doctor.py "$@" ;;
+  validate) exec python3 scripts/control/validate_workflows.py "$@" ;;
   pr-update) exec python3 scripts/github/update-pr-from-reports.py "$@" ;;
   gui)
     python3 scripts/control/doctor.py
@@ -41,6 +42,7 @@ case "$cmd" in
     python3 scripts/integrations/cross_access_profiles.py
     python3 scripts/integrations/readiness_score.py
     python3 scripts/integrations/app_automation.py
+    python3 scripts/control/validate_workflows.py
     printf '3/15 GitHub inventory\n'
     python3 scripts/github/github-inventory.py
     printf '4/15 Azure inventory\n'
@@ -97,6 +99,7 @@ Commands:
   readiness         Local/repo readiness score
   apps              App automation readiness for GitHub MCP, Slack, Linear, Copilot, ChatGPT, Claude, Azure
   doctor            Setup doctor and fix hints
+  validate          Validate GitHub workflow structure without requiring PyYAML
   pr-update         Generate or apply PR body from reports
   gui               Generate HTML GUI dashboard
   actions           Dashboard actions page

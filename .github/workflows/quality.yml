@@ -13,10 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up PowerShell
-        uses: actions/setup-powershell@v4
-        with:
-          pwsh-version: latest
+      - name: Verify PowerShell
+        run: $PSVersionTable.PSVersion
+        shell: pwsh
       
       - name: Install PSScriptAnalyzer
         run: |

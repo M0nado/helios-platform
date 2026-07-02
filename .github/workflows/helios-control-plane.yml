@@ -59,6 +59,7 @@ jobs:
           python3 scripts/integrations/cross_access_profiles.py
           python3 scripts/integrations/readiness_score.py
           python3 scripts/integrations/app_automation.py
+          python3 scripts/control/validate_workflows.py
       - name: 03 GitHub inventory
         run: python3 scripts/github/github-inventory.py
       - name: 04 Azure inventory
