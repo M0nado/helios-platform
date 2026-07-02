@@ -1,5 +1,10 @@
 {
   "azureOpenAIConfigured": false,
+  "azureReadiness": {
+    "available": false,
+    "score": 0,
+    "summary": "az not found"
+  },
   "checks": [
     {
       "authenticated": true,
@@ -38,5 +43,5 @@
   ],
   "notes": "This check never prints secret values. Configure credentials in the shell or CI secrets.",
   "openaiApiKeyConfigured": false,
-  "timestamp": "2026-07-02T17:35:24Z"
+  "timestamp": "2026-07-02T17:43:40Z"
 }

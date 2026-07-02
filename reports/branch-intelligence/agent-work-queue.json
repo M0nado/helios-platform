@@ -1,0 +1,820 @@
+[
+  {
+    "allowedPaths": [
+      ".github/workflows/branch-intelligence.yml"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": ".github/workflows",
+    "priorityScore": 87,
+    "taskType": "extract-ideas"
+  },
+  {
+    "allowedPaths": [
+      "scripts/analysis/branch_intelligence.py"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": "scripts",
+    "priorityScore": 85,
+    "taskType": "extract-ideas"
+  },
+  {
+    "allowedPaths": [
+      "docs/integration/BRANCH_INTELLIGENCE.md",
+      "docs/integration/remote-manifest.json"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": "docs/integration",
+    "priorityScore": 77,
+    "taskType": "extract-ideas"
+  },
+  {
+    "allowedPaths": [
+      "reports/branch-intelligence/branch-ranking.json",
+      "reports/branch-intelligence/branch-ranking.md",
+      "reports/branch-intelligence/connectivity.json",
+      "reports/branch-intelligence/connectivity.md",
+      "reports/branch-intelligence/dashboard.md",
+      "reports/branch-intelligence/idea-impact.json",
+      "reports/branch-intelligence/idea-impact.md",
+      "reports/branch-intelligence/remote-actions.json"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": "reports",
+    "priorityScore": 69,
+    "taskType": "extract-ideas"
+  },
+  {
+    "allowedPaths": [
+      ".github/COMPLETE_GITHUB_SETUP.md:325"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": ".github",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".github/COMPLETE_GITHUB_SETUP.md:327"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": ".github",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".github/ISSUE_TEMPLATE/feature-request.md:21"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Creates a native performance path for C++/XCore acceleration without blocking managed code.",
+    "module": ".github",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".github/ISSUE_TEMPLATE/feature_request.md:40"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": ".github",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".github/README.md:152"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": ".github",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".github/SUMMARY.txt:96"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": ".github",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".github/WORKFLOWS.md:151"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": ".github",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".github/WORKFLOWS.md:210"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": ".github",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".nuget/HELIOS.Platform.nuspec.md:6"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": ".nuget",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".nuget/HELIOS.Platform.nuspec.md:76"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": ".nuget",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      ".nuget/HELIOS.Platform.nuspec.md:93"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": ".nuget",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "ACCESSIBILITY_COMPLIANCE_REPORT.md:23"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Creates a native performance path for C++/XCore acceleration without blocking managed code.",
+    "module": "ACCESSIBILITY_COMPLIANCE_REPORT.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "ACCESSIBILITY_COMPLIANCE_REPORT.md:233"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Creates a native performance path for C++/XCore acceleration without blocking managed code.",
+    "module": "ACCESSIBILITY_COMPLIANCE_REPORT.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "ACTUAL_PROJECT_STATUS.md:104"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "ACTUAL_PROJECT_STATUS.md:164"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "ACTUAL_PROJECT_STATUS.md:205"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "ACTUAL_PROJECT_STATUS.md:231"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_CODE_QUALITY_TRAINER_COMPLETION.md:430"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "AI_CODE_QUALITY_TRAINER_COMPLETION.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:1"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:47"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:49"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:58"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:69"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:89"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:109"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:129"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:149"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:171"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:180"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:186"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:195"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:308"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:333"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:365"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:401"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AI_TRAINING_FLEET.md:402"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "AI_TRAINING_FLEET.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AUDIO_SYSTEM_INDEX.md:90"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "AUDIO_SYSTEM_INDEX.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "AUDIO_SYSTEM_INDEX.md:148"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "AUDIO_SYSTEM_INDEX.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "BENCHMARK_VERIFICATION_COMPLETE.md:181"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "BENCHMARK_VERIFICATION_COMPLETE.md:187"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "BENCHMARK_VERIFICATION_COMPLETE.md:199"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "BENCHMARK_VERIFICATION_COMPLETE.md:207"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "BENCHMARK_VERIFICATION_COMPLETE.md:237"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "BENCHMARK_VERIFICATION_COMPLETE.md:259"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "CHANGELOG.md:90"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "CHANGELOG.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "CHANGELOG.md:122"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "CHANGELOG.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md:236"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md:153"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md:290"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  },
+  {
+    "allowedPaths": [
+      "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md:341"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "knowledge-base",
+    "expectedOutput": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "priorityScore": 23,
+    "taskType": "idea-review"
+  }
+]

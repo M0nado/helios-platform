@@ -5,6 +5,7 @@
     {
       "name": "origin",
       "url": "",
+      "urlEnv": "HELIOS_PLATFORM_REMOTE_URL",
       "role": "primary-helios-platform",
       "enabled": false,
       "defaultBranch": "main",
@@ -13,6 +14,7 @@
     {
       "name": "helios-control",
       "url": "",
+      "urlEnv": "HELIOS_CONTROL_REMOTE_URL",
       "role": "control-plane",
       "enabled": false,
       "defaultBranch": "main",
@@ -21,6 +23,7 @@
     {
       "name": "hermes-fleet-production",
       "url": "",
+      "urlEnv": "HERMES_FLEET_REMOTE_URL",
       "role": "fleet-learning-and-agents",
       "enabled": false,
       "defaultBranch": "main",
@@ -29,6 +32,7 @@
     {
       "name": "xcore",
       "url": "",
+      "urlEnv": "XCORE_REMOTE_URL",
       "role": "native-performance-backend",
       "enabled": false,
       "defaultBranch": "main",
@@ -47,6 +51,7 @@
     "cloud-integration": 14,
     "ai-integration": 14,
     "docs/integration": 12,
+    "src/native": 20,
     "docs": 5
   },
   "ideaKeywords": {
@@ -55,6 +60,7 @@
     "fsharp-analytics": ["f#", "fsharp", "analytics", "prediction", "statistics"],
     "azure-automation": ["azure", "az cli", "deployment", "pipeline"],
     "github-automation": ["github", "workflow", "pull request", "branch", "prune"],
-    "aihub-openai": ["openai", "chatgpt", "ai hub", "aihub", "learning"]
+    "aihub-openai": ["openai", "chatgpt", "ai hub", "aihub", "learning"],
+    "cmake-native": ["cmake", "simd", "vectorization", "gpu", "native performance"]
   }
 }

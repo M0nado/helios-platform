@@ -2,4 +2,4 @@
 
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 75 | compare-selectively | 11 | src/analytics, src/core, tests |
+| work | 65 | extract-ideas | 12 | .github/workflows, docs/integration, reports, scripts |

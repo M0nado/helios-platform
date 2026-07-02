@@ -1,6 +1,6 @@
 # HELIOS Branch Intelligence Dashboard
 
-Generated: 2026-07-02T17:35:24Z
+Generated: 2026-07-02T17:43:40Z
 
 ## Remote setup
 | Remote | Enabled | URL configured | Action | Result |
@@ -13,31 +13,55 @@ Generated: 2026-07-02T17:35:24Z
 ## Branch ranking
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 75 | compare-selectively | 11 | src/analytics, src/core, tests |
+| work | 65 | extract-ideas | 12 | .github/workflows, docs/integration, reports, scripts |
 
 ## Idea impact
-| Category | Module | Source | Action | How it affects us |
+| Category | Module | Key | Occurrences | Action | How it affects us |
+|---|---|---|---|---|---|
+| fsharp-analytics | .github | 582288adaa3a910d | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| fsharp-analytics | .github | 6b80daeb8100108a | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| xcore | .github | 7a8915613075f6c7 | 1 | save-and-score | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
+| hermes | .github | 3a6e8388339a494a | 1 | merge-or-rewrite | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
+| fsharp-analytics | .github | 00eecbe3da0824da | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| fsharp-analytics | .github | 57db5630449e9e84 | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| fsharp-analytics | .github | f18d63ca5d900b77 | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| fsharp-analytics | .github | 5d86c99c96b80727 | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| hermes | .nuget | 594e8637c8fb9c5f | 1 | merge-or-rewrite | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
+| hermes | .nuget | 65c26a5cbf928694 | 1 | merge-or-rewrite | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
+| fsharp-analytics | .nuget | 0a1e5f693a9b69fa | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| xcore | ACCESSIBILITY_COMPLIANCE_REPORT.md | 1090834786ed53f8 | 1 | save-and-score | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
+| xcore | ACCESSIBILITY_COMPLIANCE_REPORT.md | cafb13cc9ac5defa | 1 | save-and-score | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
+| fsharp-analytics | ACTUAL_PROJECT_STATUS.md | c224714e45e3ae36 | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| fsharp-analytics | ACTUAL_PROJECT_STATUS.md | 7b05cb926080e629 | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| fsharp-analytics | ACTUAL_PROJECT_STATUS.md | 72ee79091868a6b3 | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| fsharp-analytics | ACTUAL_PROJECT_STATUS.md | 52e9ee693da9f033 | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| fsharp-analytics | AI_CODE_QUALITY_TRAINER_COMPLETION.md | 68dd5fddd0ac85f9 | 1 | merge-or-rewrite | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| hermes | AI_TRAINING_FLEET.md | e0f3464809b9f37c | 1 | merge-or-rewrite | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
+| hermes | AI_TRAINING_FLEET.md | 9094941a9942b25f | 1 | merge-or-rewrite | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
+
+## Agent work queue
+| Task | Branch | Module | Priority | Expected output |
 |---|---|---|---|---|
-| github-automation | .devcontainer | .devcontainer/README.md:11 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| azure-automation | .devcontainer | .devcontainer/README.md:19 | save-and-score | Improves deployment repeatability and environment verification through Azure CLI automation. |
-| github-automation | .devcontainer | .devcontainer/README.md:87 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .devcontainer | .devcontainer/README.md:100 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .devcontainer | .devcontainer/README.md:142 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .devcontainer | .devcontainer/README.md:355 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:1 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:12 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:30 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:35 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| azure-automation | .github | .github/CODESPACES_GUIDE.md:37 | save-and-score | Improves deployment repeatability and environment verification through Azure CLI automation. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:82 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:101 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:152 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:177 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:208 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:212 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:216 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:257 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
-| github-automation | .github | .github/CODESPACES_GUIDE.md:263 | merge-or-rewrite | Improves branch pruning, PR selection, and dashboard freshness. |
+| extract-ideas | work | .github/workflows | 87 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | scripts | 85 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | docs/integration | 77 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | reports | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | .github | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
+| idea-review | knowledge-base | .github | 23 | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
+| idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | .nuget | 23 | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
+| idea-review | knowledge-base | .nuget | 23 | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
+| idea-review | knowledge-base | .nuget | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | ACCESSIBILITY_COMPLIANCE_REPORT.md | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
+| idea-review | knowledge-base | ACCESSIBILITY_COMPLIANCE_REPORT.md | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
+| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
+| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 
 ## Connectivity
 | Tool | Available | Authenticated | Detail |

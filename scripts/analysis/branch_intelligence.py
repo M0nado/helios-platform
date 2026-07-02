@@ -11,8 +11,10 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import hashlib
 import os
 import shutil
+import urllib.request
 import subprocess
 import sys
 from pathlib import Path
@@ -51,7 +53,7 @@ def configure_remotes(manifest: dict[str, Any], apply: bool) -> list[dict[str, A
     actions: list[dict[str, Any]] = []
     for remote in manifest.get("remotes", []):
         name = remote.get("name", "")
-        url = remote.get("url", "")
+        url = remote.get("url", "") or os.environ.get(remote.get("urlEnv", ""), "")
         enabled = bool(remote.get("enabled"))
         action = "skip"
         reason = "disabled" if not enabled else "missing url" if not url else "already exists" if name in existing else "add"
@@ -108,6 +110,39 @@ def module_for(path: str, weights: dict[str, int]) -> str:
     return path.split("/", 1)[0] if "/" in path else "root"
 
 
+
+def github_ci_status(branch: str) -> dict[str, Any]:
+    """Best-effort GitHub Actions status lookup using gh when available."""
+    if shutil.which("gh") is None:
+        return {"available": False, "score": 0, "summary": "gh not found"}
+    cmd = [
+        "gh", "run", "list",
+        "--branch", branch.split("/", 1)[-1],
+        "--limit", "10",
+        "--json", "conclusion,status,workflowName,createdAt,updatedAt",
+    ]
+    code, out, err = run(cmd)
+    if code != 0 or not out:
+        return {"available": True, "score": 0, "summary": err or "no runs"}
+    try:
+        runs = json.loads(out)
+    except json.JSONDecodeError:
+        return {"available": True, "score": 0, "summary": "unparseable gh output"}
+    if not runs:
+        return {"available": True, "score": 0, "summary": "no runs"}
+    completed = [r for r in runs if r.get("status") == "completed"]
+    successes = [r for r in completed if r.get("conclusion") == "success"]
+    score = min(20, int((len(successes) / max(1, len(completed))) * 20)) if completed else 5
+    latest = runs[0]
+    return {
+        "available": True,
+        "score": score,
+        "summary": f"{len(successes)}/{len(completed)} completed runs succeeded" if completed else "runs are not completed",
+        "latestWorkflow": latest.get("workflowName"),
+        "latestStatus": latest.get("status"),
+        "latestConclusion": latest.get("conclusion"),
+    }
+
 def score_branch(ref: dict[str, Any], files: list[str], manifest: dict[str, Any]) -> dict[str, Any]:
     weights: dict[str, int] = manifest.get("moduleWeights", {})
     modules: dict[str, dict[str, Any]] = {}
@@ -121,7 +156,9 @@ def score_branch(ref: dict[str, Any], files: list[str], manifest: dict[str, Any]
     test_value = 12 if any(path.startswith("tests/") or "/Tests/" in path or path.endswith("Tests.fs") for path in files) else 0
     workflow_value = 10 if any(path.startswith(".github/workflows/") or path.endswith("azure-pipelines.yml") for path in files) else 0
     analytics_value = 8 if any(path.startswith("src/analytics") or "Analytics" in path for path in files) else 0
-    ci_closeness = 15 if len(files) <= 50 else 8 if len(files) <= 150 else 3
+    heuristic_ci_closeness = 15 if len(files) <= 50 else 8 if len(files) <= 150 else 3
+    live_ci = github_ci_status(ref["name"])
+    ci_closeness = max(heuristic_ci_closeness, live_ci.get("score", 0))
     conflict_risk = min(20, len(files) // 25)
     total = max(0, min(100, module_impact + test_value + workflow_value + analytics_value + ci_closeness - conflict_risk))
     if total >= 85:
@@ -134,7 +171,7 @@ def score_branch(ref: dict[str, Any], files: list[str], manifest: dict[str, Any]
         action = "archive-review"
     else:
         action = "prune-candidate-after-review"
-    return {**ref, "score": total, "recommendedAction": action, "fileCount": len(files), "modules": modules}
+    return {**ref, "score": total, "recommendedAction": action, "fileCount": len(files), "modules": modules, "ci": live_ci, "heuristicCiCloseness": heuristic_ci_closeness}
 
 
 def rank_branches(manifest: dict[str, Any]) -> list[dict[str, Any]]:
@@ -192,6 +229,127 @@ def impact_for_category(category: str) -> str:
     return impacts.get(category, "Potential platform capability improvement after review.")
 
 
+
+def dedupe_ideas(ideas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for idea in ideas:
+        normalized = " ".join(idea["idea"].lower().split())[:120]
+        key = hashlib.sha256(f"{idea['category']}|{idea['module']}|{normalized}".encode("utf-8")).hexdigest()[:16]
+        entry = grouped.setdefault(key, {**idea, "dedupeKey": key, "occurrences": 0, "sources": []})
+        entry["occurrences"] += 1
+        if len(entry["sources"]) < 8:
+            entry["sources"].append(f"{idea['path']}:{idea['line']}")
+    def score(item: dict[str, Any]) -> int:
+        category_bonus = 20 if item["category"] in {"hermes", "xcore", "fsharp-analytics"} else 12
+        return category_bonus + min(30, item["occurrences"] * 3)
+    summary = sorted(grouped.values(), key=score, reverse=True)
+    for item in summary:
+        item["impactScore"] = score(item)
+    return summary
+
+
+def enrich_ideas(ideas: list[dict[str, Any]], enabled: bool) -> list[dict[str, Any]]:
+    """Optional AI enrichment placeholder.
+
+    The implementation is intentionally conservative: when enabled and credentials
+    are present, it marks records as ready for enrichment but avoids sending repo
+    content by default. This creates the stable schema before any external calls
+    are allowed by policy.
+    """
+    configured = bool(os.environ.get("OPENAI_API_KEY") or (os.environ.get("AZURE_OPENAI_ENDPOINT") and os.environ.get("AZURE_OPENAI_API_KEY")))
+    for idea in ideas:
+        idea["aiEnrichment"] = {
+            "requested": enabled,
+            "configured": configured,
+            "status": "ready-not-sent" if enabled and configured else "not-configured" if enabled else "disabled",
+        }
+    return ideas
+
+
+def read_hermes_jsonl(paths: list[Path]) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for path in paths:
+        if not path.exists():
+            continue
+        for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+            if not line.strip():
+                continue
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            events.append({"path": str(path), "line": line_no, "event": data})
+    return events
+
+
+def hermes_ideas(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ideas = []
+    for item in events:
+        event = item["event"]
+        status = str(event.get("status", "unknown"))
+        agent_type = str(event.get("agentType", event.get("type", "agent")))
+        ideas.append({
+            "category": "hermes",
+            "module": "hermes-fleet",
+            "path": item["path"],
+            "line": item["line"],
+            "idea": f"Hermes {agent_type} event recorded with status {status}",
+            "recommendedAction": "merge-or-rewrite",
+            "bonusImpact": impact_for_category("hermes"),
+        })
+    return ideas
+
+
+def azure_readiness() -> dict[str, Any]:
+    if shutil.which("az") is None:
+        return {"available": False, "score": 0, "summary": "az not found"}
+    code, out, err = run(["az", "account", "show"])
+    if code != 0:
+        return {"available": True, "authenticated": False, "score": 10, "summary": err.splitlines()[:3]}
+    try:
+        account = json.loads(out)
+    except json.JSONDecodeError:
+        return {"available": True, "authenticated": True, "score": 25, "summary": "account output not JSON"}
+    score = 70
+    if os.environ.get("AZURE_OPENAI_ENDPOINT") and os.environ.get("AZURE_OPENAI_API_KEY"):
+        score += 20
+    return {"available": True, "authenticated": True, "score": min(100, score), "subscription": account.get("name"), "tenantId": account.get("tenantId")}
+
+
+def build_agent_queue(ranked: list[dict[str, Any]], ideas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    queue: list[dict[str, Any]] = []
+    for branch in ranked:
+        for module, details in branch.get("modules", {}).items():
+            queue.append({
+                "taskType": branch["recommendedAction"],
+                "branch": branch["name"],
+                "module": module,
+                "priorityScore": branch["score"] + details.get("weight", 0),
+                "allowedPaths": details.get("paths", []),
+                "blockedPaths": [".git", "bin", "obj"],
+                "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+            })
+    for idea in ideas[:50]:
+        queue.append({
+            "taskType": "idea-review",
+            "branch": "knowledge-base",
+            "module": idea.get("module"),
+            "priorityScore": idea.get("impactScore", 10),
+            "allowedPaths": idea.get("sources", [f"{idea.get('path')}:{idea.get('line')}"]),
+            "blockedPaths": [".git", "bin", "obj"],
+            "expectedOutput": idea.get("bonusImpact"),
+        })
+    return sorted(queue, key=lambda item: item["priorityScore"], reverse=True)
+
+
+def analytics_metrics(ranked: list[dict[str, Any]], ideas: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "schema": "HELIOS.BranchIntelligence.AnalyticsMetrics.v1",
+        "branchScores": [{"name": b["name"], "score": b["score"], "fileCount": b["fileCount"]} for b in ranked],
+        "ideaScores": [{"key": i.get("dedupeKey"), "category": i["category"], "score": i.get("impactScore", 0), "occurrences": i.get("occurrences", 1)} for i in ideas],
+        "intendedConsumer": "src/analytics/HELIOS.Analytics.FSharp via future HELIOS.RepositoryAnalytics tool",
+    }
+
 def check_tool(name: str, command: list[str]) -> dict[str, Any]:
     exists = shutil.which(command[0]) is not None
     if not exists:
@@ -215,6 +373,7 @@ def connectivity() -> dict[str, Any]:
         "checks": checks,
         "openaiApiKeyConfigured": openai_key,
         "azureOpenAIConfigured": azure_openai,
+        "azureReadiness": azure_readiness(),
         "notes": "This check never prints secret values. Configure credentials in the shell or CI secrets.",
     }
 
@@ -226,19 +385,26 @@ def markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
     return "\n".join(out)
 
 
-def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[str, Any]], conn: dict[str, Any], remote_actions: list[dict[str, Any]], fetch_result: dict[str, Any]) -> None:
+def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[str, Any]], idea_summary: list[dict[str, Any]], agent_queue: list[dict[str, Any]], conn: dict[str, Any], remote_actions: list[dict[str, Any]], fetch_result: dict[str, Any]) -> None:
     save_json(out_dir / "branch-ranking.json", ranked)
     save_json(out_dir / "idea-impact.json", ideas)
+    save_json(out_dir / "idea-impact-summary.json", idea_summary)
+    save_json(out_dir / "agent-work-queue.json", agent_queue)
+    save_json(out_dir / "analytics-metrics.json", analytics_metrics(ranked, idea_summary))
     save_json(out_dir / "connectivity.json", conn)
     save_json(out_dir / "remote-actions.json", {"remoteActions": remote_actions, "fetch": fetch_result})
 
     branch_rows = [[b["name"], b["score"], b["recommendedAction"], b["fileCount"], ", ".join(list(b["modules"].keys())[:6])] for b in ranked]
-    idea_rows = [[i["category"], i["module"], f"{i['path']}:{i['line']}", i["recommendedAction"], i["bonusImpact"]] for i in ideas[:50]]
+    idea_rows = [[i["category"], i["module"], i.get("dedupeKey", ""), i.get("occurrences", 1), i["recommendedAction"], i["bonusImpact"]] for i in idea_summary[:50]]
+    queue_rows = [[q["taskType"], q["branch"], q["module"], q["priorityScore"], q["expectedOutput"]] for q in agent_queue[:30]]
     conn_rows = [[c["name"], c["available"], c["authenticated"], c["detail"]] for c in conn["checks"]]
     remote_rows = [[r["name"], r["enabled"], r["urlConfigured"], r["action"], r["result"]] for r in remote_actions]
 
+    full_idea_rows = [[i["category"], i["module"], f"{i['path']}:{i['line']}", i["recommendedAction"], i["bonusImpact"]] for i in ideas[:50]]
     write_text(out_dir / "branch-ranking.md", "# Branch Ranking\n\n" + markdown_table(["Branch", "Score", "Action", "Files", "Modules"], branch_rows) + "\n")
-    write_text(out_dir / "idea-impact.md", "# Idea Impact\n\n" + markdown_table(["Category", "Module", "Source", "Action", "How it affects us"], idea_rows) + "\n")
+    write_text(out_dir / "idea-impact.md", "# Idea Impact\n\n" + markdown_table(["Category", "Module", "Source", "Action", "How it affects us"], full_idea_rows) + "\n")
+    write_text(out_dir / "idea-impact-summary.md", "# Idea Impact Summary\n\n" + markdown_table(["Category", "Module", "Key", "Occurrences", "Action", "How it affects us"], idea_rows) + "\n")
+    write_text(out_dir / "agent-work-queue.md", "# Agent Work Queue\n\n" + markdown_table(["Task", "Branch", "Module", "Priority", "Expected output"], queue_rows) + "\n")
     write_text(out_dir / "connectivity.md", "# Local/CI Connectivity\n\n" + markdown_table(["Tool", "Available", "Authenticated", "Detail"], conn_rows) + "\n")
     dashboard = "\n".join([
         "# HELIOS Branch Intelligence Dashboard",
@@ -252,7 +418,10 @@ def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[
         markdown_table(["Branch", "Score", "Action", "Files", "Modules"], branch_rows[:20]),
         "",
         "## Idea impact",
-        markdown_table(["Category", "Module", "Source", "Action", "How it affects us"], idea_rows[:20]),
+        markdown_table(["Category", "Module", "Key", "Occurrences", "Action", "How it affects us"], idea_rows[:20]),
+        "",
+        "## Agent work queue",
+        markdown_table(["Task", "Branch", "Module", "Priority", "Expected output"], queue_rows[:20]),
         "",
         "## Connectivity",
         markdown_table(["Tool", "Available", "Authenticated", "Detail"], conn_rows),
@@ -274,6 +443,8 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--configure-remotes", action="store_true", help="Add enabled remotes with configured URLs.")
     parser.add_argument("--fetch", action="store_true", help="Run git fetch --all --prune --tags.")
+    parser.add_argument("--enrich-ideas", action="store_true", help="Mark ideas for optional AI enrichment when credentials are configured.")
+    parser.add_argument("--hermes-jsonl", action="append", type=Path, default=[], help="Optional Hermes fleet JSONL event input.")
     args = parser.parse_args()
 
     manifest = load_manifest(args.manifest)
@@ -281,8 +452,13 @@ def main() -> int:
     fetch_result = fetch_remotes(apply=args.fetch)
     ranked = rank_branches(manifest)
     ideas = extract_ideas(manifest)
+    hermes_events = read_hermes_jsonl(args.hermes_jsonl)
+    ideas.extend(hermes_ideas(hermes_events))
+    ideas = enrich_ideas(ideas, args.enrich_ideas)
+    idea_summary = dedupe_ideas(ideas)
+    agent_queue = build_agent_queue(ranked, idea_summary)
     conn = connectivity()
-    write_reports(args.out, ranked, ideas, conn, remote_actions, fetch_result)
+    write_reports(args.out, ranked, ideas, idea_summary, agent_queue, conn, remote_actions, fetch_result)
     print(f"Wrote branch intelligence reports to {args.out.relative_to(ROOT)}")
     return 0
 

@@ -1,43 +1,56 @@
 [
   {
     "author": "Codex",
-    "commit": "f6e09d8",
-    "date": "2026-07-02 17:32:54 +0000",
-    "fileCount": 11,
+    "ci": {
+      "available": false,
+      "score": 0,
+      "summary": "gh not found"
+    },
+    "commit": "8236f14",
+    "date": "2026-07-02 17:35:41 +0000",
+    "fileCount": 12,
+    "heuristicCiCloseness": 15,
     "modules": {
-      "src/analytics": {
-        "files": 7,
+      ".github/workflows": {
+        "files": 1,
         "paths": [
-          "src/analytics/HELIOS.Analytics.FSharp/HELIOS.Analytics.FSharp.fsproj",
-          "src/analytics/HELIOS.Analytics.FSharp/Models/AnalyticsModels.fs",
-          "src/analytics/HELIOS.Analytics.FSharp/ParallelWorkloads.fs",
-          "src/analytics/HELIOS.Analytics.FSharp/Prediction/PredictionWorkloads.fs",
-          "src/analytics/HELIOS.Analytics.FSharp/PublicApi.fs",
-          "src/analytics/HELIOS.Analytics.FSharp/Statistics/AnalyticsWorkloads.fs",
-          "src/analytics/HELIOS.Analytics.FSharp/Statistics/MathWorkloads.fs"
+          ".github/workflows/branch-intelligence.yml"
         ],
-        "weight": 28
+        "weight": 22
       },
-      "src/core": {
+      "docs/integration": {
         "files": 2,
         "paths": [
-          "src/core/HELIOS.Platform.Contracts/AnalyticsContracts.cs",
-          "src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj"
+          "docs/integration/BRANCH_INTELLIGENCE.md",
+          "docs/integration/remote-manifest.json"
         ],
-        "weight": 30
+        "weight": 12
       },
-      "tests": {
-        "files": 2,
+      "reports": {
+        "files": 8,
         "paths": [
-          "tests/analytics/HELIOS.Analytics.FSharp.Tests/AnalyticsEngineTests.fs",
-          "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
+          "reports/branch-intelligence/branch-ranking.json",
+          "reports/branch-intelligence/branch-ranking.md",
+          "reports/branch-intelligence/connectivity.json",
+          "reports/branch-intelligence/connectivity.md",
+          "reports/branch-intelligence/dashboard.md",
+          "reports/branch-intelligence/idea-impact.json",
+          "reports/branch-intelligence/idea-impact.md",
+          "reports/branch-intelligence/remote-actions.json"
         ],
-        "weight": 24
+        "weight": 4
+      },
+      "scripts": {
+        "files": 1,
+        "paths": [
+          "scripts/analysis/branch_intelligence.py"
+        ],
+        "weight": 20
       }
     },
     "name": "work",
-    "recommendedAction": "compare-selectively",
-    "score": 75,
-    "subject": "Add HELIOS.Analytics.FSharp library, platform contracts, and unit tests"
+    "recommendedAction": "extract-ideas",
+    "score": 65,
+    "subject": "Add branch intelligence automation"
   }
 ]

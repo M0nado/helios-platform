@@ -33,6 +33,16 @@ To fetch branches after remotes are configured:
 python3 scripts/analysis/branch_intelligence.py --fetch
 ```
 
+To include optional Hermes fleet JSONL events and AI enrichment markers:
+
+```bash
+python3 scripts/analysis/branch_intelligence.py \
+  --hermes-jsonl reports/fleet-learning/hermes-events.jsonl \
+  --enrich-ideas
+```
+
+`--enrich-ideas` only marks records for enrichment unless OpenAI or Azure OpenAI credentials are present. The runner does not print secret values.
+
 ## Credentials and CLIs
 
 The script checks local/CI availability for Git, GitHub CLI, Azure CLI, .NET, Python, and OpenAI/Azure OpenAI environment variables. It never prints secret values.
@@ -53,6 +63,9 @@ Generated reports are written to `reports/branch-intelligence/`:
 
 - `branch-ranking.json` / `.md`
 - `idea-impact.json` / `.md`
+- `idea-impact-summary.json` / `.md`
+- `agent-work-queue.json` / `.md`
+- `analytics-metrics.json`
 - `connectivity.json` / `.md`
 - `remote-actions.json`
 - `dashboard.md`
