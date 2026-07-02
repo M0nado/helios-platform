@@ -121,3 +121,17 @@ The HELIOS command shell is the preferred automation surface once the repository
 8. `./tools/helios.ps1 reports latest` prints the newest generated Markdown report from `reports/generated/helios-shell`.
 9. `./tools/helios.ps1 gate final` runs the final integrated quality gate.
 10. `.github/workflows/helios-shell.yml` reuses the same shell commands in CI so local automation and hosted validation stay aligned.
+
+## 9. Mass GitHub integration automation
+
+For fully automated GitHub runner integration, use the mass integration scorer and orchestrator. It fetches branches and submodules, scores HELIOS/Hermes candidates, prioritizes `helios-control` and `hermes-fleet-production`, creates an integration branch, opens a pull request, and can request GitHub auto-merge when the runner token has permission.
+
+Recommended automation order:
+
+1. `./tools/helios.ps1 github mass-score` writes `reports/mass-integration/mass-integration-score.json` and `.md`.
+2. `./tools/helios.ps1 github mass-branch --apply` creates or resets the configured integration branch and merges scored candidates in order.
+3. `./tools/helios.ps1 github mass-pr --apply` pushes the integration branch and opens the GitHub pull request.
+4. `./tools/helios.ps1 github mass-merge --apply` requests GitHub auto-merge for the integration pull request.
+5. `./tools/helios.ps1 github mass-all --apply` runs score, branch, pull request, and auto-merge as one runner command.
+
+The mass integration defaults live in `config/helios-mass-integration.json`. The GitHub runner workflow is `.github/workflows/helios-mass-integration.yml`; run it with `apply=true` only when the repository token is allowed to push branches, open pull requests, and enable auto-merge.

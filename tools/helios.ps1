@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -138,6 +138,8 @@ Commands in integration order:
   status                         Read-only readiness report.
   azure setup|verify             Bootstrap or verify Azure CLI for Hermes XCore.
   branches fetch|list|integrate  Fetch, inspect, and integrate HELIOS/Hermes branches.
+  github mass-score|mass-plan|mass-branch|mass-pr|mass-merge|mass-all
+                                  Score, branch, PR, and auto-merge mass integration.
   agents list|validate|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
   test csharp|security|fsharp|native|python-aihub|all
@@ -341,6 +343,31 @@ function Get-HeliosAgentRegistry {
     return Get-Content $AgentRegistryPath -Raw | ConvertFrom-Json
 }
 
+
+function Invoke-GitHubCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "github $SubAction"
+    $ScriptPath = Join-Path $RepoRoot 'scripts/github/mass_integration.py'
+    if (-not (Test-Path $ScriptPath)) {
+        throw "Mass integration script not found: $ScriptPath"
+    }
+    $ModeMap = @{
+        'mass-score' = 'score'
+        'mass-plan' = 'plan'
+        'mass-branch' = 'branch'
+        'mass-pr' = 'pr'
+        'mass-merge' = 'merge'
+        'mass-all' = 'all'
+    }
+    if (-not $ModeMap.ContainsKey($SubAction)) {
+        throw "Unknown github action '$SubAction'. Use mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
+    }
+    $Mode = $ModeMap[$SubAction]
+    $Args = @($ScriptPath, $Mode) + $RemainingArgs
+    Invoke-ExternalCommand python3 $Args
+    New-HeliosReport -Name "github-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "github:$SubAction"; status = 'ok'; message = 'mass integration command completed' }) -Commands @("python3 $($Args -join ' ')")
+}
+
 function Invoke-AgentsCommand {
     param([string]$SubAction)
     Write-HeliosHeader "agents $SubAction"
@@ -496,6 +523,7 @@ switch ($Command) {
     'status' { Invoke-Status }
     'azure' { Invoke-AzureCommand $Action }
     'branches' { Invoke-BranchesCommand $Action }
+    'github' { Invoke-GitHubCommand $Action }
     'agents' { Invoke-AgentsCommand $Action }
     'build' { Invoke-BuildCommand $Action }
     'test' { Invoke-TestCommand $Action }
