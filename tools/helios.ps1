@@ -135,6 +135,7 @@ Usage:
   ./tools/helios.ps1 <command> [action] [options]
 
 Commands in integration order:
+  setup verify|all               Verify or run deep capability setup order.
   status                         Read-only readiness report.
   azure setup|verify             Bootstrap or verify Azure CLI for Hermes XCore.
   branches fetch|list|integrate  Fetch, inspect, and integrate HELIOS/Hermes branches.
@@ -151,6 +152,23 @@ Safe defaults:
   - Azure verification does not print secrets.
   - Generated reports are written under reports/generated/helios-shell.
 '@ | Write-Host
+}
+
+
+function Invoke-SetupCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "setup $SubAction"
+    $ScriptPath = Join-Path $RepoRoot 'scripts/integrations/helios_capability_setup.py'
+    if (-not (Test-Path $ScriptPath)) {
+        throw "Capability setup script not found: $ScriptPath"
+    }
+    switch ($SubAction) {
+        'default' { Invoke-ExternalCommand python3 @($ScriptPath, 'verify') }
+        'verify' { Invoke-ExternalCommand python3 @($ScriptPath, 'verify') }
+        'all' { Invoke-ExternalCommand python3 @($ScriptPath, 'setup', '--apply') }
+        default { throw "Unknown setup action '$SubAction'. Use verify or all." }
+    }
+    New-HeliosReport -Name "setup-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "setup:$SubAction"; status = 'ok'; message = 'capability setup command completed' }) -Commands @("python3 $ScriptPath $SubAction")
 }
 
 function Invoke-Status {
@@ -519,7 +537,7 @@ function Invoke-GateCommand {
 
 switch ($Command) {
     'help' { Show-Help }
-    'setup' { Invoke-Status }
+    'setup' { Invoke-SetupCommand $Action }
     'status' { Invoke-Status }
     'azure' { Invoke-AzureCommand $Action }
     'branches' { Invoke-BranchesCommand $Action }

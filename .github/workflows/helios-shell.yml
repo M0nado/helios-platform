@@ -19,6 +19,9 @@ jobs:
       - name: Validate HELIOS agents
         shell: pwsh
         run: ./tools/helios.ps1 agents validate
+      - name: Verify deep HELIOS capabilities
+        shell: pwsh
+        run: ./tools/helios.ps1 setup verify
       - name: Upload HELIOS reports
         if: always()
         uses: actions/upload-artifact@v4

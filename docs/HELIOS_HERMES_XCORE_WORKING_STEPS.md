@@ -135,3 +135,9 @@ Recommended automation order:
 5. `./tools/helios.ps1 github mass-all --apply` runs score, branch, pull request, and auto-merge as one runner command.
 
 The mass integration defaults live in `config/helios-mass-integration.json`. The GitHub runner workflow is `.github/workflows/helios-mass-integration.yml`; run it with `apply=true` only when the repository token is allowed to push branches, open pull requests, and enable auto-merge.
+
+## 10. Deep capability setup order
+
+Use `./tools/helios.ps1 setup verify` to generate a readiness map for every deep integration capability before running mutating automation. Use `./tools/helios.ps1 setup all` only when the shell has the required local tools and non-secret environment variables for the declared setup commands.
+
+The deep capability registry lives in `config/helios-capabilities.json` and orders setup across GitHub CLI automation, Azure CLI, Microsoft 365/Copilot readiness, Cloud Shell, OpenAI/Codex AIHub readiness, MCP server bridge checks, Hermes XCore, agent skills, and mass integration. Reports are written to `reports/capabilities/capability-readiness.json` and `.md`.
