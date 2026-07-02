@@ -21,7 +21,11 @@ curl -X POST http://127.0.0.1:8787/rebuild
 - [Idea Impact](reports/idea-impact-summary.md)
 - [Agent Work Queue](reports/agent-work-queue.md)
 - [Module Ranking](reports/branch-ranking.md)
+- [Actions](actions.md)
 - [Control Plane Summary](reports/control-summary.md)
+- [Build Graph](reports/build-graph.md)
+- [Codex Tasks](reports/task-index.md)
+- [Merge / Prune Recommendations](reports/merge-prune-recommendations.md)
 - [Wiki Export](wiki-export/Branch-Intelligence.md)
 
 ## Cloud hooks

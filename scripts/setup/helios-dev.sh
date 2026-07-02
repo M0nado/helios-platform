@@ -46,6 +46,12 @@ python3 scripts/graphs/generate_graphs.py
 python3 scripts/github/update-wiki-from-reports.py
 python3 scripts/ai/enrich-ideas.py
 python3 scripts/control/helios-control.py
+python3 scripts/github/github-inventory.py
+python3 scripts/azure/azure-inventory.py
+python3 scripts/analysis/merge_prune_recommendations.py
+python3 scripts/build/build-graph.py
+python3 scripts/codex/generate-codex-tasks.py
+python3 scripts/dashboard/generate-actions.py
 
 if [[ "$SERVE_DASHBOARD" == "true" ]]; then
   exec python3 scripts/web/helios-web.py --no-rebuild

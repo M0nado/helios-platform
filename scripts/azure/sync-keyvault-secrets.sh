@@ -46,9 +46,22 @@ sync_secret() {
   fi
 }
 
-sync_secret OPENAI_API_KEY OPENAI-API-KEY
-sync_secret AZURE_OPENAI_ENDPOINT AZURE-OPENAI-ENDPOINT
-sync_secret AZURE_OPENAI_API_KEY AZURE-OPENAI-API-KEY
-sync_secret SLACK_WEBHOOK_URL SLACK-WEBHOOK-URL
-sync_secret M365_TENANT_ID M365-TENANT-ID
-sync_secret M365_CLIENT_ID M365-CLIENT-ID
+if command -v python3 >/dev/null 2>&1 && [[ -f config/secrets-map.example.json ]]; then
+  while IFS=$'\t' read -r env_name secret_name; do
+    sync_secret "$env_name" "$secret_name"
+  done < <(python3 - <<'PY'
+import json
+from pathlib import Path
+data=json.loads(Path('config/secrets-map.example.json').read_text())
+for item in data.get('secrets',[]):
+    print(f"{item['localEnv']}\t{item['keyVaultSecret']}")
+PY
+)
+else
+  sync_secret OPENAI_API_KEY OPENAI-API-KEY
+  sync_secret AZURE_OPENAI_ENDPOINT AZURE-OPENAI-ENDPOINT
+  sync_secret AZURE_OPENAI_API_KEY AZURE-OPENAI-API-KEY
+  sync_secret SLACK_WEBHOOK_URL SLACK-WEBHOOK-URL
+  sync_secret M365_TENANT_ID M365-TENANT-ID
+  sync_secret M365_CLIENT_ID M365-CLIENT-ID
+fi

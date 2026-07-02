@@ -1,6 +1,6 @@
 # HELIOS Branch Intelligence Dashboard
 
-Generated: 2026-07-02T18:22:23Z
+Generated: 2026-07-02T18:34:43Z
 
 ## Remote setup
 | Remote | Enabled | URL configured | Action | Result |
@@ -13,7 +13,7 @@ Generated: 2026-07-02T18:22:23Z
 ## Branch ranking
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 64 | extract-ideas | 25 | .github/workflows, config, docs/integration, reports, scripts, status-site |
+| work | 65 | extract-ideas | 22 | .github/workflows, config, docs/integration, reports, scripts, status-site |
 
 ## Idea impact
 | Category | Module | Key | Occurrences | Action | How it affects us |
@@ -42,12 +42,12 @@ Generated: 2026-07-02T18:22:23Z
 ## Agent work queue
 | Task | Branch | Module | Priority | Expected output |
 |---|---|---|---|---|
-| extract-ideas | work | .github/workflows | 86 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | scripts | 84 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | docs/integration | 76 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | config | 68 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | reports | 68 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | status-site | 68 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | .github/workflows | 87 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | scripts | 85 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | docs/integration | 77 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | config | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | reports | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | status-site | 69 | comparison notes, merge risk, tests to run, and idea extraction |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |

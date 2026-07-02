@@ -2,12 +2,12 @@
 
 | Task | Branch | Module | Priority | Expected output |
 |---|---|---|---|---|
-| extract-ideas | work | .github/workflows | 86 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | scripts | 84 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | docs/integration | 76 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | config | 68 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | reports | 68 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | status-site | 68 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | .github/workflows | 87 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | scripts | 85 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | docs/integration | 77 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | config | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | reports | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | status-site | 69 | comparison notes, merge risk, tests to run, and idea extraction |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |

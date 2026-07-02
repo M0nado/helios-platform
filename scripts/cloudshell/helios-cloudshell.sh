@@ -37,5 +37,12 @@ mkdir -p reports/cloudshell
 } | tee reports/cloudshell/readiness.md
 
 python3 scripts/integrations/check-connections.py
+python3 scripts/control/helios-control.py
+python3 scripts/github/github-inventory.py
+python3 scripts/azure/azure-inventory.py
 python3 scripts/analysis/branch_intelligence.py
+python3 scripts/analysis/merge_prune_recommendations.py
+python3 scripts/build/build-graph.py
+python3 scripts/codex/generate-codex-tasks.py
+python3 scripts/dashboard/generate-actions.py
 python3 scripts/graphs/generate_graphs.py

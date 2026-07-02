@@ -4,7 +4,7 @@
 
 ```mermaid
 graph TD
-  work["work (64)"]
+  work["work (65)"]
   work --> _github_workflows[".github/workflows"]
   work --> config["config"]
   work --> docs_integration["docs/integration"]
@@ -48,12 +48,12 @@ graph LR
 
 ```mermaid
 graph TD
-  Q1["extract-ideas 86"] --> M1[".github/workflows"]
-  Q2["extract-ideas 84"] --> M2["scripts"]
-  Q3["extract-ideas 76"] --> M3["docs/integration"]
-  Q4["extract-ideas 68"] --> M4["config"]
-  Q5["extract-ideas 68"] --> M5["reports"]
-  Q6["extract-ideas 68"] --> M6["status-site"]
+  Q1["extract-ideas 87"] --> M1[".github/workflows"]
+  Q2["extract-ideas 85"] --> M2["scripts"]
+  Q3["extract-ideas 77"] --> M3["docs/integration"]
+  Q4["extract-ideas 69"] --> M4["config"]
+  Q5["extract-ideas 69"] --> M5["reports"]
+  Q6["extract-ideas 69"] --> M6["status-site"]
   Q7["idea-review 23"] --> M7[".github"]
   Q8["idea-review 23"] --> M8[".github"]
   Q9["idea-review 23"] --> M9[".github"]

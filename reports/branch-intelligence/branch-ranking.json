@@ -6,9 +6,9 @@
       "score": 0,
       "summary": "gh not found"
     },
-    "commit": "ff24276",
-    "date": "2026-07-02 18:15:39 +0000",
-    "fileCount": 25,
+    "commit": "a625af7",
+    "date": "2026-07-02 18:22:56 +0000",
+    "fileCount": 22,
     "heuristicCiCloseness": 15,
     "modules": {
       ".github/workflows": {
@@ -28,33 +28,31 @@
       "docs/integration": {
         "files": 2,
         "paths": [
-          "docs/integration/CLOUDSHELL_GITHUB_AZURE_SETUP.md",
+          "docs/integration/CONTROL_PLANE_COMMANDS.md",
           "docs/integration/WEB_CONTROL_PLANE.md"
         ],
         "weight": 12
       },
       "reports": {
-        "files": 11,
+        "files": 10,
         "paths": [
           "reports/branch-intelligence/agent-work-queue.json",
           "reports/branch-intelligence/agent-work-queue.md",
-          "reports/branch-intelligence/ai-enrichment.json",
           "reports/branch-intelligence/analytics-metrics.json",
           "reports/branch-intelligence/branch-ranking.json",
           "reports/branch-intelligence/branch-ranking.md",
           "reports/branch-intelligence/connectivity.json",
-          "reports/branch-intelligence/connectivity.md",
           "reports/branch-intelligence/dashboard.md",
-          "reports/branch-intelligence/graphs.md"
+          "reports/branch-intelligence/graphs.md",
+          "reports/control-plane/control-summary.json",
+          "reports/control-plane/control-summary.md"
         ],
         "weight": 4
       },
       "scripts": {
-        "files": 5,
+        "files": 3,
         "paths": [
-          "scripts/ai/enrich-ideas.py",
-          "scripts/azure/sync-keyvault-secrets.sh",
-          "scripts/integrations/check-connections.py",
+          "scripts/control/helios-control.py",
           "scripts/setup/helios-dev.sh",
           "scripts/web/helios-web.py"
         ],
@@ -74,7 +72,7 @@
     },
     "name": "work",
     "recommendedAction": "extract-ideas",
-    "score": 64,
-    "subject": "Add web control plane and Azure secret sync"
+    "score": 65,
+    "subject": "Add unified control plane command summary"
   }
 ]

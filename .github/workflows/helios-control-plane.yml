@@ -58,6 +58,18 @@ jobs:
         run: python3 scripts/ai/enrich-ideas.py
       - name: GitHub Azure AI Codex control summary
         run: python3 scripts/control/helios-control.py
+      - name: GitHub inventory
+        run: python3 scripts/github/github-inventory.py
+      - name: Azure inventory
+        run: python3 scripts/azure/azure-inventory.py
+      - name: Merge prune recommendations
+        run: python3 scripts/analysis/merge_prune_recommendations.py
+      - name: Build graph report
+        run: python3 scripts/build/build-graph.py
+      - name: Codex task packets
+        run: python3 scripts/codex/generate-codex-tasks.py
+      - name: Dashboard actions page
+        run: python3 scripts/dashboard/generate-actions.py
       - name: Wiki export
         if: ${{ github.event.inputs.update_wiki == 'true' }}
         run: python3 scripts/github/update-wiki-from-reports.py
@@ -76,6 +88,8 @@ jobs:
           cp reports/branch-intelligence/*.md status-site/reports/
           cp reports/integrations/*.json status-site/reports/ || true
           cp reports/control-plane/*.md status-site/reports/ || true
+          cp reports/build-graph/*.md status-site/reports/ || true
+          cp reports/codex/*.md status-site/reports/ || true
       - uses: actions/upload-artifact@v4
         with:
           name: helios-control-plane
@@ -83,6 +97,8 @@ jobs:
             reports/branch-intelligence/
             reports/integrations/
             reports/control-plane/
+            reports/build-graph/
+            reports/codex/
             status-site/
           retention-days: 30
       - name: Upload Pages artifact

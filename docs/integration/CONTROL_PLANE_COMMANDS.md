@@ -50,3 +50,19 @@ python3 scripts/control/helios-control.py ai
 ```
 
 The current AI/Codex path is safe-by-default: it checks local CLI/env readiness and writes report metadata, but it does not send branch ideas, code, prompts, or secrets to external providers.
+
+## Unified command center
+
+```bash
+./helios.sh setup
+./helios.sh dashboard
+./helios.sh status
+./helios.sh github
+./helios.sh azure
+./helios.sh build
+./helios.sh codex
+./helios.sh recommendations
+./helios.sh all
+```
+
+See `COMMAND_CENTER.md` for the full entry-point map.

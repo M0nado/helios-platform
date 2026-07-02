@@ -45,6 +45,18 @@
       "Python 3.12.13"
     ]
   },
+  "secretsMap": {
+    "AZURE_OPENAI_API_KEY": false,
+    "AZURE_OPENAI_ENDPOINT": false,
+    "HELIOS_CONTROL_REMOTE_URL": false,
+    "HELIOS_PLATFORM_REMOTE_URL": false,
+    "HERMES_FLEET_REMOTE_URL": false,
+    "M365_CLIENT_ID": false,
+    "M365_TENANT_ID": false,
+    "OPENAI_API_KEY": false,
+    "SLACK_WEBHOOK_URL": false,
+    "XCORE_REMOTE_URL": false
+  },
   "slack": {
     "SLACK_WEBHOOK_URL": false
   }

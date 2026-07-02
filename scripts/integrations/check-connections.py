@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "integrations.example.json"
+SECRETS_MAP = ROOT / "config" / "secrets-map.example.json"
 OUT = ROOT / "reports" / "integrations" / "connection-readiness.json"
 
 def run(cmd):
@@ -26,6 +27,8 @@ def path_status(paths):
     return {path: (ROOT / path).exists() for path in paths}
 
 cfg = json.loads(CONFIG.read_text())
+secrets_map = json.loads(SECRETS_MAP.read_text()) if SECRETS_MAP.exists() else {"secrets": []}
+secret_env_names = [item["localEnv"] for item in secrets_map.get("secrets", [])]
 report = {
     "github": tool("github", ["gh", "auth", "status"]),
     "azure": tool("azure", ["az", "account", "show"]),
@@ -35,6 +38,7 @@ report = {
     "azureOpenAI": env_status(cfg["azureOpenAI"]["env"]),
     "slack": env_status(cfg["slack"]["env"]),
     "microsoft365Copilot": env_status(cfg["microsoft365Copilot"]["env"]),
+    "secretsMap": env_status(secret_env_names),
     "localWeb": cfg.get("localWeb", {}),
     "automationPaths": path_status([
         "scripts/web/helios-web.py",
