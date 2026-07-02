@@ -19,6 +19,7 @@ case "$cmd" in
   profiles) exec python3 scripts/integrations/cross_access_profiles.py "$@" ;;
   readiness) exec python3 scripts/integrations/readiness_score.py "$@" ;;
   apps) exec python3 scripts/integrations/app_automation.py "$@" ;;
+  local-app) exec scripts/local-app/helios-local-app.sh "$@" ;;
   doctor) exec python3 scripts/control/doctor.py "$@" ;;
   validate) exec python3 scripts/control/validate_workflows.py "$@" ;;
   pr-update) exec python3 scripts/github/update-pr-from-reports.py "$@" ;;
@@ -98,6 +99,7 @@ Commands:
   profiles          Cross-access profile readiness
   readiness         Local/repo readiness score
   apps              App automation readiness for GitHub MCP, Slack, Linear, Copilot, ChatGPT, Claude, Azure
+  local-app         Open the combined local app shell for HELIOS GUI, Copilot, ChatGPT, Claude, GitHub, Azure, Slack, Linear
   doctor            Setup doctor and fix hints
   validate          Validate GitHub workflow structure without requiring PyYAML
   pr-update         Generate or apply PR body from reports

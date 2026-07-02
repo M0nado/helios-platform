@@ -139,3 +139,6 @@ status-site/wiki-export/**
 
 # Local bootstrap downloads
 /dotnet-install.sh
+
+# Local HELIOS app shell/private workspace
+.helios/

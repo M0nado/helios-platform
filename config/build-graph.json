@@ -179,6 +179,15 @@
         "config/integrations.example.json",
         "config/secrets-map.example.json"
       ]
+    },
+    {
+      "id": "local-app-shell",
+      "title": "Local app shell launcher",
+      "command": "bash -n scripts/local-app/helios-local-app.sh",
+      "paths": [
+        "scripts/local-app/**",
+        "docs/integration/LOCAL_APP_SHELL.md"
+      ]
     }
   ]
 }
