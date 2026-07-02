@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -142,7 +142,10 @@ Commands in integration order:
   branches fetch|list|integrate  Fetch, inspect, and integrate HELIOS/Hermes branches.
   github mass-score|mass-plan|mass-branch|mass-pr|mass-merge|mass-all
                                   Score, branch, PR, and auto-merge mass integration.
+  github conflict-forecast           Forecast merge conflict risk before branch apply.
   github repo-verify|repo-setup      Verify or apply GitHub repository automation setup.
+  fix plan|apply|csharp              Plan/apply autofix tasks or parse C# build blockers.
+  policy check                       Run safety policy checks before apply/deploy/merge.
   upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
   finish plan|verify|apply           Run the full setup finisher and final reports.
   start plan|verify|apply            Run the shortest ASAP start/merge sequence.
@@ -400,6 +403,12 @@ function Invoke-GitHubCommand {
     if (-not (Test-Path $ScriptPath)) {
         throw "Mass integration script not found: $ScriptPath"
     }
+    if ($SubAction -eq 'conflict-forecast') {
+        $ForecastPath = Join-Path $RepoRoot 'scripts/github/conflict_forecast.py'
+        Invoke-ExternalCommand python3 @($ForecastPath)
+        New-HeliosReport -Name 'github-conflict-forecast' -Status 'completed' -Checks @([ordered]@{ name = 'github:conflict-forecast'; status = 'ok'; message = 'conflict forecast completed' }) -Commands @("python3 $ForecastPath")
+        return
+    }
     if ($SubAction -eq 'repo-verify' -or $SubAction -eq 'repo-setup') {
         $RepoSetupPath = Join-Path $RepoRoot 'scripts/github/setup_repository.py'
         if (-not (Test-Path $RepoSetupPath)) {
@@ -420,7 +429,7 @@ function Invoke-GitHubCommand {
         'mass-all' = 'all'
     }
     if (-not $ModeMap.ContainsKey($SubAction)) {
-        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
+        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, conflict-forecast, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
     }
     $Mode = $ModeMap[$SubAction]
     $Args = @($ScriptPath, $Mode) + $RemainingArgs
@@ -428,6 +437,36 @@ function Invoke-GitHubCommand {
     New-HeliosReport -Name "github-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "github:$SubAction"; status = 'ok'; message = 'mass integration command completed' }) -Commands @("python3 $($Args -join ' ')")
 }
 
+
+function Invoke-FixCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "fix $SubAction"
+    $Mode = if ($SubAction -eq 'default') { 'plan' } else { $SubAction }
+    if ($Mode -eq 'csharp') {
+        $ScriptPath = Join-Path $RepoRoot 'scripts/automation/fix_csharp_compile.py'
+        Invoke-ExternalCommand python3 @($ScriptPath)
+        New-HeliosReport -Name 'fix-csharp' -Status 'completed' -Checks @([ordered]@{ name = 'fix:csharp'; status = 'ok'; message = 'C# compile classifier completed' }) -Commands @("python3 $ScriptPath")
+        return
+    }
+    if ($Mode -notin @('plan', 'apply')) {
+        throw "Unknown fix action '$SubAction'. Use plan, apply, or csharp."
+    }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/autofix_loop.py'
+    Invoke-ExternalCommand python3 @($ScriptPath, $Mode)
+    New-HeliosReport -Name "fix-$Mode" -Status 'completed' -Checks @([ordered]@{ name = "fix:$Mode"; status = 'ok'; message = 'autofix loop completed' }) -Commands @("python3 $ScriptPath $Mode")
+}
+
+function Invoke-PolicyCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "policy $SubAction"
+    if ($SubAction -ne 'check' -and $SubAction -ne 'default') {
+        throw "Unknown policy action '$SubAction'. Use check."
+    }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/security/policy_gate.py'
+    $Args = @($ScriptPath) + $RemainingArgs
+    Invoke-ExternalCommand python3 $Args
+    New-HeliosReport -Name 'policy-check' -Status 'completed' -Checks @([ordered]@{ name = 'policy:check'; status = 'ok'; message = 'policy gate completed' }) -Commands @("python3 $($Args -join ' ')")
+}
 
 function Invoke-UpgradeCommand {
     param([string]$SubAction)
@@ -661,6 +700,8 @@ switch ($Command) {
     'azure' { Invoke-AzureCommand $Action }
     'branches' { Invoke-BranchesCommand $Action }
     'github' { Invoke-GitHubCommand $Action }
+    'fix' { Invoke-FixCommand $Action }
+    'policy' { Invoke-PolicyCommand $Action }
     'upgrade' { Invoke-UpgradeCommand $Action }
     'finish' { Invoke-FinishCommand $Action }
     'start' { Invoke-StartCommand $Action }

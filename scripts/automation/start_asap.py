@@ -24,6 +24,8 @@ PLAN = [
     {"id": "azure-validate", "command": "./tools/helios.ps1 azure validate", "mode": "verify"},
     {"id": "azure-what-if", "command": "./tools/helios.ps1 azure what-if", "mode": "verify"},
     {"id": "mass-score", "command": "python3 scripts/github/mass_integration.py score", "mode": "verify"},
+    {"id": "conflict-forecast", "command": "python3 scripts/github/conflict_forecast.py", "mode": "verify"},
+    {"id": "policy-gate", "command": "python3 scripts/security/policy_gate.py", "mode": "verify"},
     {"id": "github-repo-setup", "command": "python3 scripts/github/setup_repository.py setup --apply", "mode": "apply"},
     {"id": "mass-branch-apply", "command": "python3 scripts/github/mass_integration.py branch --apply", "mode": "apply"},
     {"id": "mass-pr-apply", "command": "python3 scripts/github/mass_integration.py pr --apply", "mode": "apply"},

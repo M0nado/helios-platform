@@ -173,3 +173,31 @@ Use `./tools/helios.ps1 gate final` to run the blocking merge-readiness gate imp
 ## 18. Start ASAP command
 
 Use `./tools/helios.ps1 start plan` to print the shortest safe start sequence without executing it. Use `./tools/helios.ps1 start verify` to run the non-mutating half: final gate, Azure Bicep build/validate/what-if, and mass integration scoring. Use `./tools/helios.ps1 start apply` only on a fully provisioned runner with remotes, Azure login, and `HELIOS_AUTOMATION_TOKEN`; it stops at the first failed command before repository setup, branch apply, PR creation, or auto-merge.
+
+## Fast-path automation hardening additions
+
+Before enabling broad `--apply` flows, run the three guard rails that make automated merging safer:
+
+1. **Conflict forecasting** predicts risky branches before mass merge attempts:
+   ```bash
+   python3 scripts/github/conflict_forecast.py
+   ./tools/helios.ps1 github conflict-forecast
+   ```
+   Reports are written to `reports/mass-integration/conflict-forecast.json` and `.md`.
+
+2. **Policy gate** blocks unsafe automation patterns such as deploy without `--apply`, mass merge without a passing final gate, and secret markers in generated reports:
+   ```bash
+   python3 scripts/security/policy_gate.py
+   ./tools/helios.ps1 policy check
+   ```
+   Reports are written to `reports/policy/policy-gate.json` and `.md`.
+
+3. **Autofix planning** converts final-gate failures into narrow repair tasks. Apply mode only invokes specialized fixers and should run after policy/conflict checks:
+   ```bash
+   python3 scripts/automation/autofix_loop.py plan
+   ./tools/helios.ps1 fix plan
+   ./tools/helios.ps1 fix csharp
+   ```
+   Reports are written to `reports/autofix/autofix-plan.json`, `reports/autofix/autofix-plan.md`, and `reports/autofix/csharp-compile.md`.
+
+The `HELIOS Autofix` workflow runs these checks in GitHub Actions and can be manually dispatched in `plan` mode first, then `apply` mode when `HELIOS_AUTOMATION_TOKEN` has the right repository permissions.

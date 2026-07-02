@@ -22,8 +22,8 @@ OUT = ROOT / "reports" / "final-gate"
 
 COMMANDS: list[dict[str, Any]] = [
     {"id": "workspace-whitespace", "requiredTool": "git", "command": "git diff --check"},
-    {"id": "json-configs", "requiredTool": "python3", "command": "python3 -m json.tool config/helios-agents.json && python3 -m json.tool config/helios-capabilities.json && python3 -m json.tool config/helios-auto-upgrade.json && python3 -m json.tool config/helios-github-setup.json && python3 -m json.tool config/helios-llm-router.json && python3 -m json.tool config/helios-mass-integration.json && python3 -m json.tool config/helios-specializations.json && python3 -m json.tool config/helios-super-automation-backlog.json"},
-    {"id": "python-entrypoints", "requiredTool": "python3", "command": "python3 -m py_compile scripts/github/mass_integration.py scripts/github/setup_repository.py scripts/integrations/helios_capability_setup.py scripts/automation/helios_auto_upgrade.py scripts/automation/finish_helios_setup.py scripts/automation/llm_router_plan.py scripts/automation/specialization_matrix.py scripts/automation/super_automation_backlog.py scripts/automation/final_gate.py"},
+    {"id": "json-configs", "requiredTool": "python3", "command": "python3 -m json.tool config/helios-agents.json && python3 -m json.tool config/helios-capabilities.json && python3 -m json.tool config/helios-auto-upgrade.json && python3 -m json.tool config/helios-github-setup.json && python3 -m json.tool config/helios-llm-router.json && python3 -m json.tool config/helios-mass-integration.json && python3 -m json.tool config/helios-specializations.json && python3 -m json.tool config/helios-super-automation-backlog.json && python3 -m json.tool config/helios-policy.json"},
+    {"id": "python-entrypoints", "requiredTool": "python3", "command": "python3 -m py_compile scripts/github/mass_integration.py scripts/github/setup_repository.py scripts/integrations/helios_capability_setup.py scripts/automation/helios_auto_upgrade.py scripts/automation/finish_helios_setup.py scripts/automation/llm_router_plan.py scripts/automation/specialization_matrix.py scripts/automation/super_automation_backlog.py scripts/automation/final_gate.py scripts/security/policy_gate.py scripts/github/conflict_forecast.py scripts/automation/autofix_loop.py scripts/automation/fix_csharp_compile.py"},
     {"id": "azure-bicep-build", "requiredTool": "az", "command": "az bicep build --file infra/azure/main.bicep"},
     {"id": "csharp-contracts-build", "requiredTool": "dotnet", "command": "dotnet build src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj --configuration Release"},
     {"id": "csharp-core-build", "requiredTool": "dotnet", "command": "dotnet build HELIOS.Platform.csproj --configuration Release"},
@@ -31,7 +31,10 @@ COMMANDS: list[dict[str, Any]] = [
     {"id": "native-cpp-build", "requiredTool": "cmake", "command": "cmake -S src/native/HELIOS.Native.Performance -B build/native-performance && cmake --build build/native-performance --config Release"},
     {"id": "security-tests", "requiredTool": "dotnet", "command": "dotnet test tests/SecurityValidationTests.csproj --configuration Release"},
     {"id": "main-tests", "requiredTool": "dotnet", "command": "dotnet test src/tests/HELIOS.Platform.Tests.csproj --configuration Release"},
-    {"id": "mass-integration-score", "requiredTool": "python3", "command": "python3 scripts/github/mass_integration.py score --no-fetch"}
+    {"id": "mass-integration-score", "requiredTool": "python3", "command": "python3 scripts/github/mass_integration.py score --no-fetch"},
+    {"id": "conflict-forecast", "requiredTool": "python3", "command": "python3 scripts/github/conflict_forecast.py"},
+    {"id": "policy-gate", "requiredTool": "python3", "command": "python3 scripts/security/policy_gate.py"},
+    {"id": "autofix-plan", "requiredTool": "python3", "command": "python3 scripts/automation/autofix_loop.py plan"}
 ]
 
 
