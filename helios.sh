@@ -6,7 +6,8 @@ usage() {
 Usage: ./helios.sh <command>
 
 Commands:
-  prune-generated   Remove local generated artifacts that should not be committed.
+  prune-generated    Remove local generated artifacts that should not be committed.
+  specialist-check   Validate Git, Azure CLI, .NET, Python, PowerShell, and CMake readiness.
 USAGE
 }
 
@@ -30,6 +31,10 @@ prune_generated() {
 case "${1:-}" in
   prune-generated)
     prune_generated
+    ;;
+  specialist-check)
+    shift
+    python3 scripts/setup/setup_specialist_environment.py "$@"
     ;;
   -h|--help|help)
     usage

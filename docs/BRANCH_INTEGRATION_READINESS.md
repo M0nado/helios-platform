@@ -20,7 +20,7 @@ This note records the current repository integration state for the requested HEL
 
 ## Specialist setup coverage
 
-Use `scripts/setup/setup-specialist-environment.ps1` to validate the local specialist workstation for:
+Use the testable cross-platform checker `./helios.sh specialist-check` (or `python3 scripts/setup/setup_specialist_environment.py`) to validate the local specialist workstation for:
 
 - Git branch/remote readiness for HELIOS/HERMES integration.
 - Azure CLI sign-in and optional default subscription/location setup.
@@ -29,4 +29,4 @@ Use `scripts/setup/setup-specialist-environment.ps1` to validate the local speci
 - PowerShell automation support.
 - CMake availability for C++ performance backend work.
 
-The script is intentionally safe by default: it reports missing prerequisites and only runs Azure login or default configuration when explicit switches are provided.
+The checker is intentionally safe by default: it reports missing prerequisites and only runs Azure login or default configuration when explicit switches are provided. A PowerShell wrapper with matching intent is also available at `scripts/setup/setup-specialist-environment.ps1` for Windows-oriented operators.
