@@ -3,7 +3,8 @@
 
 The checker is intentionally non-destructive by default. It reports Git branch and
 remote state plus tool availability for Azure, .NET/WinUI, Python AIHub,
-PowerShell automation, and C++/CMake work. Azure login/default mutation is only
+PowerShell automation, and C++/CMake work. Remote inference checks explicit
+environment/config, GitHub CLI, and historical GitHub merge subjects. Azure login/default mutation is only
 performed when explicit flags are supplied.
 """
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -60,6 +62,22 @@ def infer_remote_url() -> str | None:
     if repository:
         server = os.environ.get("GITHUB_SERVER_URL", "https://github.com").rstrip("/")
         return f"{server}/{repository}.git"
+
+    code, configured_repo = run_text(["git", "config", "--get", "github.repository"])
+    if code == 0 and configured_repo:
+        return f"https://github.com/{configured_repo}.git"
+
+    if shutil.which("gh") is not None:
+        code, gh_url = run_text(["gh", "repo", "view", "--json", "url", "--jq", ".url"])
+        if code == 0 and gh_url:
+            return f"{gh_url.rstrip('/')}.git"
+
+    code, subjects = run_text(["git", "log", "--format=%s", "--max-count=200"])
+    if code == 0:
+        for subject in subjects.splitlines():
+            match = re.search(r"from\s+([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)(?::|$)", subject)
+            if match:
+                return f"https://github.com/{match.group(1)}.git"
 
     return None
 
