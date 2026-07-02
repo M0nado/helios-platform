@@ -106,3 +106,18 @@ dotnet test src/tests/HELIOS.Platform.Tests.csproj --configuration Release
 ```
 
 Only push the integration branch after the working tree is clean and the required checks either pass or have documented environment limitations.
+
+## 8. Single-shell automation order
+
+The HELIOS command shell is the preferred automation surface once the repository is ready for integrated execution. Use it in this order so local runs, agents, and CI all share the same orchestration path:
+
+1. `./tools/helios.ps1 help` confirms the single shell entry point.
+2. `./tools/helios.ps1 status` checks tools, Git, expected files, Azure variables, and generated-report readiness.
+3. `./tools/helios.ps1 azure setup` bootstraps Azure CLI through the existing Hermes XCore setup script; `./tools/helios.ps1 azure verify` validates CLI login state, required extensions, and HELIOS environment variables.
+4. `./tools/helios.ps1 branches fetch`, `./tools/helios.ps1 branches list`, and `./tools/helios.ps1 branches integrate` fetch, inspect, and merge `helios-control` before `hermes-fleet-production`.
+5. `./tools/helios.ps1 agents list`, `./tools/helios.ps1 agents validate`, and `./tools/helios.ps1 agents run <name>` drive the agent registry in `config/helios-agents.json`.
+6. `./tools/helios.ps1 build contracts|csharp|fsharp|native|frontend|all` runs layered builds from stable contracts toward user-facing shells.
+7. `./tools/helios.ps1 test csharp|security|fsharp|native|python-aihub|all` runs domain tests and readiness checks.
+8. `./tools/helios.ps1 reports latest` prints the newest generated Markdown report from `reports/generated/helios-shell`.
+9. `./tools/helios.ps1 gate final` runs the final integrated quality gate.
+10. `.github/workflows/helios-shell.yml` reuses the same shell commands in CI so local automation and hosted validation stay aligned.
