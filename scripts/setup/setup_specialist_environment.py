@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -48,6 +49,59 @@ def command_version(command: str) -> str:
         return f"{command} found, but --version did not return cleanly."
     return output.splitlines()[0]
 
+
+
+def infer_remote_url() -> str | None:
+    explicit = os.environ.get("HELIOS_REMOTE_URL") or os.environ.get("REMOTE_URL")
+    if explicit:
+        return explicit
+
+    repository = os.environ.get("GITHUB_REPOSITORY")
+    if repository:
+        server = os.environ.get("GITHUB_SERVER_URL", "https://github.com").rstrip("/")
+        return f"{server}/{repository}.git"
+
+    return None
+
+
+def ensure_remote(remote_name: str, remote_url: str | None, *, auto_setup: bool) -> CheckResult:
+    if not auto_setup:
+        return CheckResult(
+            "Remote setup",
+            "Warn",
+            "Automatic remote setup not requested.",
+            "Pass --auto-setup-remote with --remote-url, HELIOS_REMOTE_URL, REMOTE_URL, or GITHUB_REPOSITORY.",
+        )
+
+    resolved_url = remote_url or infer_remote_url()
+    if not resolved_url:
+        return CheckResult(
+            "Remote setup",
+            "Warn",
+            "No remote URL could be inferred.",
+            "Set HELIOS_REMOTE_URL or pass --remote-url before pushing.",
+        )
+
+    existing_code, existing_url = run_text(["git", "remote", "get-url", remote_name])
+    if existing_code == 0 and existing_url:
+        if existing_url == resolved_url:
+            return CheckResult("Remote setup", "Pass", f"{remote_name} already points to {resolved_url}.")
+        run_text(["git", "remote", "set-url", remote_name, resolved_url], check=True)
+        return CheckResult("Remote setup", "Pass", f"Updated {remote_name} to {resolved_url}.")
+
+    run_text(["git", "remote", "add", remote_name, resolved_url], check=True)
+    return CheckResult("Remote setup", "Pass", f"Added {remote_name}: {resolved_url}.")
+
+
+def push_current_branch(remote_name: str, *, push: bool) -> CheckResult:
+    if not push:
+        return CheckResult("Git push", "Warn", "Push not requested.", "Pass --push-current to push the current branch after remote setup.")
+
+    _, current_branch = run_text(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True)
+    code, output = run_text(["git", "push", "-u", remote_name, current_branch])
+    if code == 0:
+        return CheckResult("Git push", "Pass", output or f"Pushed {current_branch} to {remote_name}.")
+    return CheckResult("Git push", "Fail", output, "Verify remote URL, credentials, and branch permissions.")
 
 def check_git(focus_branches: Iterable[str]) -> list[CheckResult]:
     if shutil.which("git") is None:
@@ -157,6 +211,10 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--azure-subscription", help="Azure subscription name or id to set when --configure-defaults is used.")
     parser.add_argument("--azure-location", default="eastus", help="Azure default location to set when --configure-defaults is used.")
     parser.add_argument("--json", action="store_true", help="Emit check results as JSON.")
+    parser.add_argument("--remote-name", default="origin", help="Git remote name to create/update when automatic remote setup is requested.")
+    parser.add_argument("--remote-url", help="Git remote URL to create/update. Defaults to HELIOS_REMOTE_URL, REMOTE_URL, or GITHUB_REPOSITORY inference.")
+    parser.add_argument("--auto-setup-remote", action="store_true", help="Create or update the configured Git remote before pushing.")
+    parser.add_argument("--push-current", action="store_true", help="Push the current branch with upstream tracking after remote setup.")
     return parser.parse_args(argv)
 
 
@@ -164,6 +222,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
     focus_branches = tuple(args.focus_branches or DEFAULT_FOCUS_BRANCHES)
     results = [*check_git(focus_branches), *check_tools(), *configure_azure(args)]
+    if args.auto_setup_remote or args.push_current:
+        results.append(ensure_remote(args.remote_name, args.remote_url, auto_setup=args.auto_setup_remote or args.push_current))
+        if results[-1].status == "Pass":
+            results.append(push_current_branch(args.remote_name, push=args.push_current))
 
     if args.json:
         print(json.dumps([asdict(item) for item in results], indent=2))
