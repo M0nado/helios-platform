@@ -2,6 +2,11 @@
 
 This site is the lightweight web control surface for Branch Intelligence, integration readiness, Azure readiness, and agent work queues.
 
+## GUI
+
+- [Open HTML Command Center](index.html)
+- [Cross-Access Profiles](reports/cross-access-profiles.md)
+
 ## Fast start
 
 ```bash

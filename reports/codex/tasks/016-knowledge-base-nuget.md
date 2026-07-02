@@ -1,10 +1,10 @@
-# Codex Task: .github from knowledge-base
+# Codex Task: .nuget from knowledge-base
 
 - Priority: 23
 - Task type: idea-review
-- Allowed paths: `['.github/WORKFLOWS.md:210']`
+- Allowed paths: `['.nuget/HELIOS.Platform.nuspec.md:6']`
 - Blocked paths: `['.git', 'bin', 'obj']`
-- Expected output: Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.
+- Expected output: Adds fleet agent telemetry and learning sources for distributed workload optimization.
 - Network required: no, unless explicitly needed by the task
 - Secrets allowed: no
 

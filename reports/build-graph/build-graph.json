@@ -1,6 +1,25 @@
 {
-  "generatedUtc": "2026-07-02T19:06:47.078058+00:00",
+  "generatedUtc": "2026-07-02T19:13:19.751711+00:00",
   "nodes": [
+    {
+      "id": "gui-dashboard",
+      "title": "HTML command center GUI",
+      "command": "python3 scripts/dashboard/generate-gui.py",
+      "paths": [
+        "scripts/dashboard/generate-gui.py",
+        "status-site/**",
+        "reports/**"
+      ]
+    },
+    {
+      "id": "cross-access-profiles",
+      "title": "Cross-access profile readiness",
+      "command": "python3 scripts/integrations/cross_access_profiles.py",
+      "paths": [
+        "config/cross-access-profiles.example.json",
+        "config/secrets-map.example.json"
+      ]
+    },
     {
       "id": "hybrid-gap-analysis",
       "title": "Hybrid integration gap analysis",

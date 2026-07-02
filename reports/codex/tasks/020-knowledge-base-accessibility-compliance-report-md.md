@@ -1,10 +1,10 @@
-# Codex Task: .github from knowledge-base
+# Codex Task: ACCESSIBILITY_COMPLIANCE_REPORT.md from knowledge-base
 
 - Priority: 23
 - Task type: idea-review
-- Allowed paths: `['.github/WORKFLOWS.md:210']`
+- Allowed paths: `['ACCESSIBILITY_COMPLIANCE_REPORT.md:233']`
 - Blocked paths: `['.git', 'bin', 'obj']`
-- Expected output: Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.
+- Expected output: Creates a native performance path for C++/XCore acceleration without blocking managed code.
 - Network required: no, unless explicitly needed by the task
 - Secrets allowed: no
 

@@ -1,8 +1,8 @@
-# Codex Task: src/native from work
+# Codex Task: docs from work
 
-- Priority: 94
-- Task type: compare-selectively
-- Allowed paths: `['src/native/HELIOS.Native.Performance/CMakeLists.txt', 'src/native/HELIOS.Native.Performance/README.md']`
+- Priority: 61
+- Task type: extract-ideas
+- Allowed paths: `['docs/architecture/HYBRID_INTEGRATION_EXPANSION_PLAN.md', 'docs/architecture/WHOLE_PROJECT_NEXT_STEPS.md']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

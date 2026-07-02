@@ -22,9 +22,12 @@ def run(cmd: list[str]) -> tuple[int, str]:
 def rebuild() -> None:
     commands = [
         ["python3", "scripts/integrations/check-connections.py"],
+        ["python3", "scripts/integrations/cross_access_profiles.py"],
         ["python3", "scripts/analysis/branch_intelligence.py"],
         ["python3", "scripts/graphs/generate_graphs.py"],
         ["python3", "scripts/github/update-wiki-from-reports.py"],
+        ["python3", "scripts/dashboard/generate-actions.py"],
+        ["python3", "scripts/dashboard/generate-gui.py"],
     ]
     results = []
     for cmd in commands:
@@ -37,7 +40,7 @@ def rebuild() -> None:
     if branch_dir.exists():
         for path in branch_dir.glob("*.md"):
             shutil.copy2(path, STATUS / "reports" / path.name)
-    for report_dir_name in ["control-plane", "project-inventory", "build-graph", "codex"]:
+    for report_dir_name in ["control-plane", "project-inventory", "build-graph", "codex", "integrations"]:
         report_dir = REPORTS / report_dir_name
         if report_dir.exists():
             for path in report_dir.glob("*.md"):

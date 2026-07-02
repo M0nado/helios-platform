@@ -1,8 +1,8 @@
-# Codex Task: tests from work
+# Codex Task: config from work
 
-- Priority: 98
-- Task type: compare-selectively
-- Allowed paths: `['tests/analytics/HELIOS.Analytics.FSharp.Tests/AnalyticsEngineTests.fs', 'tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj']`
+- Priority: 60
+- Task type: extract-ideas
+- Allowed paths: `['config/build-graph.json', 'config/hybrid-integration-roadmap.json']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

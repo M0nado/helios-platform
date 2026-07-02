@@ -15,7 +15,12 @@ case "$cmd" in
   build) exec python3 scripts/build_graph/build_graph.py "$@" ;;
   codex) exec python3 scripts/codex/generate-codex-tasks.py "$@" ;;
   recommendations) exec python3 scripts/analysis/merge_prune_recommendations.py "$@" ;;
-  actions) exec python3 scripts/dashboard/generate-actions.py "$@" ;;
+  profiles) exec python3 scripts/integrations/cross_access_profiles.py "$@" ;;
+  gui) exec python3 scripts/dashboard/generate-gui.py "$@" ;;
+  actions)
+    python3 scripts/dashboard/generate-actions.py "$@"
+    exec python3 scripts/dashboard/generate-gui.py "$@"
+    ;;
   all)
     # Execution order is defined in config/execution-order.json.
     printf '1/15 HELIOS Command Center single entry point\n'
@@ -24,6 +29,7 @@ case "$cmd" in
     python3 scripts/analysis/hybrid_gap_analysis.py
     printf '2/15 Unified secrets map\n'
     python3 scripts/integrations/check-connections.py
+    python3 scripts/integrations/cross_access_profiles.py
     printf '3/15 GitHub inventory\n'
     python3 scripts/github/github-inventory.py
     printf '4/15 Azure inventory\n'
@@ -37,6 +43,7 @@ case "$cmd" in
     python3 scripts/analysis/merge_prune_recommendations.py
     printf '8/15 Dashboard actions page\n'
     python3 scripts/dashboard/generate-actions.py
+    python3 scripts/dashboard/generate-gui.py
     printf '9/15 Codex task packet generation\n'
     python3 scripts/codex/generate-codex-tasks.py
     printf '10/15 Opt-in AI enrichment\n'
@@ -72,6 +79,8 @@ Commands:
   build             Build graph report or runner
   codex             Generate Codex task packets
   recommendations   Branch merge/prune recommendations
+  profiles          Cross-access profile readiness
+  gui               Generate HTML GUI dashboard
   actions           Dashboard actions page
   all               Run the safe read-only/report generation pipeline
 EOF

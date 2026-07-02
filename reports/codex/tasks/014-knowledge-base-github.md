@@ -1,10 +1,10 @@
-# Codex Task: .devcontainer from work
+# Codex Task: .github from knowledge-base
 
-- Priority: 78
-- Task type: compare-selectively
-- Allowed paths: `['.devcontainer/codespaces-secrets.env.example']`
+- Priority: 23
+- Task type: idea-review
+- Allowed paths: `['.github/WORKFLOWS.md:151']`
 - Blocked paths: `['.git', 'bin', 'obj']`
-- Expected output: comparison notes, merge risk, tests to run, and idea extraction
+- Expected output: Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.
 - Network required: no, unless explicitly needed by the task
 - Secrets allowed: no
 

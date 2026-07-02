@@ -1,8 +1,8 @@
-# Codex Task: src/core from work
+# Codex Task: scripts from work
 
-- Priority: 104
-- Task type: compare-selectively
-- Allowed paths: `['src/core/HELIOS.Platform.Contracts/AnalyticsContracts.cs', 'src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj']`
+- Priority: 76
+- Task type: extract-ideas
+- Allowed paths: `['scripts/analysis/hybrid_gap_analysis.py', 'scripts/analysis/repo_inventory.py', 'scripts/build_graph/build_graph.py', 'scripts/cloudshell/helios-cloudshell.sh', 'scripts/setup/helios-dev.sh', 'scripts/web/helios-web.py']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

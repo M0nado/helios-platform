@@ -1,8 +1,8 @@
-# Codex Task: infra from work
+# Codex Task: .github/workflows from work
 
 - Priority: 78
-- Task type: compare-selectively
-- Allowed paths: `['infra/azure/README.md', 'infra/azure/main.bicep', 'infra/azure/modules/keyvault.bicep', 'infra/azure/modules/network.bicep', 'infra/azure/modules/observability.bicep', 'infra/azure/modules/storage.bicep', 'infra/azure/parameters/dev.json']`
+- Task type: extract-ideas
+- Allowed paths: `['.github/workflows/helios-control-plane.yml']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

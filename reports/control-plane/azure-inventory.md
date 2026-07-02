@@ -1,6 +1,6 @@
 # Azure Inventory
 
-Generated: `2026-07-02T19:06:46.367750+00:00`
+Generated: `2026-07-02T19:13:19.005547+00:00`
 
 | Area | Status | Detail |
 | --- | --- | --- |

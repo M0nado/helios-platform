@@ -55,6 +55,7 @@ jobs:
           python3 scripts/analysis/hybrid_gap_analysis.py
       - name: 02 Unified secrets map and integration readiness
         run: python3 scripts/integrations/check-connections.py
+          python3 scripts/integrations/cross_access_profiles.py
       - name: 03 GitHub inventory
         run: python3 scripts/github/github-inventory.py
       - name: 04 Azure inventory
@@ -68,8 +69,10 @@ jobs:
           python3 scripts/analysis/branch_intelligence.py
           python3 scripts/analysis/merge_prune_recommendations.py
           python3 scripts/graphs/generate_graphs.py
-      - name: 08 Dashboard actions page
-        run: python3 scripts/dashboard/generate-actions.py
+      - name: 08 Dashboard actions page and GUI
+        run: |
+          python3 scripts/dashboard/generate-actions.py
+          python3 scripts/dashboard/generate-gui.py
       - name: 09 Codex task packets
         run: python3 scripts/codex/generate-codex-tasks.py
       - name: 10 Opt-in AI enrichment readiness

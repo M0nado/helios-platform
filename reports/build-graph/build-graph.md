@@ -2,6 +2,8 @@
 
 | Node | Title | Command |
 | --- | --- | --- |
+| `gui-dashboard` | HTML command center GUI | `python3 scripts/dashboard/generate-gui.py` |
+| `cross-access-profiles` | Cross-access profile readiness | `python3 scripts/integrations/cross_access_profiles.py` |
 | `hybrid-gap-analysis` | Hybrid integration gap analysis | `python3 scripts/analysis/hybrid_gap_analysis.py` |
 | `repo-inventory` | Whole-project inventory | `python3 scripts/analysis/repo_inventory.py` |
 | `python-static` | Python static compile checks | `python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py` |

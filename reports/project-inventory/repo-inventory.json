@@ -1,17 +1,17 @@
 {
-  "fileCount": 2026,
-  "generatedUtc": "2026-07-02T19:06:43.484398+00:00",
+  "fileCount": 2037,
+  "generatedUtc": "2026-07-02T19:13:15.072113+00:00",
   "languageCounts": {
     "bicep": 5,
     "csharp": 575,
     "csharp-project": 18,
     "fsharp": 7,
     "fsharp-project": 2,
-    "json": 96,
-    "markdown": 743,
-    "other": 219,
+    "json": 99,
+    "markdown": 746,
+    "other": 222,
     "powershell": 300,
-    "python": 15,
+    "python": 17,
     "shell": 16,
     "yaml": 30
   },
@@ -2546,9 +2546,9 @@
         "config/execution-order.json",
         "config/github-control.example.json"
       ],
-      "files": 13,
+      "files": 14,
       "languages": {
-        "json": 12,
+        "json": 13,
         "other": 1
       }
     },
@@ -2585,12 +2585,12 @@
         "docs/TEMPLATES_SUMMARY.md",
         "docs/CONFIGURATION_GUIDE.md"
       ],
-      "files": 358,
+      "files": 359,
       "languages": {
         "csharp": 7,
         "csharp-project": 1,
         "json": 3,
-        "markdown": 255,
+        "markdown": 256,
         "other": 80,
         "powershell": 11,
         "shell": 1
@@ -2792,6 +2792,19 @@
         "markdown": 1
       }
     },
+    "reports": {
+      "examples": [
+        "reports/project-inventory/hybrid-gap-analysis.json",
+        "reports/project-inventory/repo-inventory.json",
+        "reports/project-inventory/hybrid-gap-analysis.md",
+        "reports/project-inventory/repo-inventory.md"
+      ],
+      "files": 4,
+      "languages": {
+        "json": 2,
+        "markdown": 2
+      }
+    },
     "samples": {
       "examples": [
         "samples/plugins/plugin-manifest.log.json",
@@ -2814,13 +2827,13 @@
         "scripts/init-github-repo.ps1",
         "scripts/README.md"
       ],
-      "files": 272,
+      "files": 276,
       "languages": {
         "json": 24,
         "markdown": 32,
-        "other": 21,
+        "other": 23,
         "powershell": 171,
-        "python": 15,
+        "python": 17,
         "shell": 9
       }
     },
@@ -2856,13 +2869,14 @@
       "examples": [
         "status-site/index.md",
         "status-site/actions.md",
+        "status-site/index.html",
         "status-site/wiki-export/Module-Ranking.md",
-        "status-site/wiki-export/Branch-Intelligence.md",
-        "status-site/wiki-export/Agent-Work-Queue.md"
+        "status-site/wiki-export/Branch-Intelligence.md"
       ],
-      "files": 7,
+      "files": 8,
       "languages": {
-        "markdown": 7
+        "markdown": 7,
+        "other": 1
       }
     },
     "submodules": {
@@ -3263,10 +3277,10 @@
     "builds": 1,
     "cloud-integration": 20,
     "components": 17,
-    "config": 13,
+    "config": 14,
     "dashboards": 2,
     "demos": 15,
-    "docs": 358,
+    "docs": 359,
     "dotnet-install.sh": 1,
     "examples": 1,
     "file-architecture": 10,
@@ -3285,11 +3299,12 @@
     "phase8_test_results.txt": 1,
     "phases": 27,
     "plugins": 1,
+    "reports": 4,
     "samples": 6,
-    "scripts": 272,
+    "scripts": 276,
     "security.config.template.json": 1,
     "src": 597,
-    "status-site": 7,
+    "status-site": 8,
     "submodules": 3,
     "test-phase3-tier4.ps1": 1,
     "test_compile.cs": 1,

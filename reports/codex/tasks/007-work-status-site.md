@@ -1,8 +1,8 @@
-# Codex Task: config from work
+# Codex Task: status-site from work
 
-- Priority: 78
-- Task type: compare-selectively
-- Allowed paths: `['config/azure-control.example.json', 'config/build-graph.json', 'config/execution-order.json', 'config/github-control.example.json', 'config/integrations.example.json', 'config/secrets-map.example.json']`
+- Priority: 60
+- Task type: extract-ideas
+- Allowed paths: `['status-site/index.md']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

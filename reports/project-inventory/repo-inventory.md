@@ -1,22 +1,22 @@
 # HELIOS Whole-Project Inventory
 
-Generated: `2026-07-02T19:06:43.484398+00:00`
+Generated: `2026-07-02T19:13:15.072113+00:00`
 
-Files indexed: **2026**
+Files indexed: **2037**
 
 ## Languages
 
 | Language | Files |
 | --- | ---: |
-| markdown | 743 |
+| markdown | 746 |
 | csharp | 575 |
 | powershell | 300 |
-| other | 219 |
-| json | 96 |
+| other | 222 |
+| json | 99 |
 | yaml | 30 |
 | csharp-project | 18 |
+| python | 17 |
 | shell | 16 |
-| python | 15 |
 | fsharp | 7 |
 | bicep | 5 |
 | fsharp-project | 2 |
@@ -26,8 +26,8 @@ Files indexed: **2026**
 | Module | Files | Dominant languages |
 | --- | ---: | --- |
 | `src` | 597 | csharp:469, markdown:62, other:45, csharp-project:8 |
-| `docs` | 358 | markdown:255, other:80, powershell:11, csharp:7 |
-| `scripts` | 272 | powershell:171, markdown:32, json:24, other:21 |
+| `docs` | 359 | markdown:256, other:80, powershell:11, csharp:7 |
+| `scripts` | 276 | powershell:171, markdown:32, json:24, other:23 |
 | `installer` | 172 | powershell:91, markdown:40, json:25, other:16 |
 | `tests` | 90 | csharp:72, markdown:10, csharp-project:3, other:2 |
 | `.github` | 44 | yaml:24, markdown:15, json:3, other:2 |
@@ -38,13 +38,14 @@ Files indexed: **2026**
 | `components` | 17 | markdown:15, other:2 |
 | `ai-integration` | 16 | markdown:13, powershell:3 |
 | `demos` | 15 | csharp:9, markdown:5, csharp-project:1 |
-| `config` | 13 | json:12, other:1 |
+| `config` | 14 | json:13, other:1 |
 | `file-architecture` | 10 | markdown:10 |
+| `status-site` | 8 | markdown:7, other:1 |
 | `.devcontainer` | 7 | other:2, shell:2, markdown:1, json:1 |
-| `status-site` | 7 | markdown:7 |
 | `infra` | 7 | bicep:5, markdown:1, json:1 |
 | `samples` | 6 | json:3, csharp:3 |
 | `tools` | 5 | powershell:5 |
+| `reports` | 4 | json:2, markdown:2 |
 | `HELIOS.Platform.Installer` | 3 | csharp:2, csharp-project:1 |
 | `HELIOS-Platform-Portable` | 3 | other:1, markdown:1, yaml:1 |
 | `HELIOS.Platform.SystemIntegration` | 3 | csharp:2, csharp-project:1 |
