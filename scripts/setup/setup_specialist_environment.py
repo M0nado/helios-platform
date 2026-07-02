@@ -121,6 +121,37 @@ def push_current_branch(remote_name: str, *, push: bool) -> CheckResult:
         return CheckResult("Git push", "Pass", output or f"Pushed {current_branch} to {remote_name}.")
     return CheckResult("Git push", "Fail", output, "Verify remote URL, credentials, and branch permissions.")
 
+
+def validate_remote_topology(repo_root: str) -> list[CheckResult]:
+    config_path = os.path.join(repo_root, "config", "repositories", "helios-remotes.json")
+    if not os.path.exists(config_path):
+        return []
+
+    with open(config_path, "r", encoding="utf-8") as handle:
+        config = json.load(handle)
+
+    results: list[CheckResult] = []
+    for remote_name, remote_config in config.get("remotes", {}).items():
+        expected_url = remote_config.get("url", "")
+        code, actual_url = run_text(["git", "remote", "get-url", remote_name])
+        if code != 0:
+            results.append(CheckResult(
+                f"Remote topology: {remote_name}",
+                "Fail",
+                "Remote is not configured.",
+                f"Run git remote add {remote_name} {expected_url}.",
+            ))
+            continue
+
+        results.append(CheckResult(
+            f"Remote topology: {remote_name}",
+            "Pass" if actual_url == expected_url else "Warn",
+            f"actual={actual_url}; expected={expected_url}",
+            f"Run git remote set-url {remote_name} {expected_url}." if actual_url != expected_url else "",
+        ))
+
+    return results
+
 def check_git(focus_branches: Iterable[str]) -> list[CheckResult]:
     if shutil.which("git") is None:
         return [CheckResult("Git", "Fail", "git is not available.", "Install Git and rerun from the repository root.")]
@@ -133,6 +164,7 @@ def check_git(focus_branches: Iterable[str]) -> list[CheckResult]:
     _, branches = run_text(["git", "branch", "--all", "--no-color"], check=True)
 
     results.append(CheckResult("Repository", "Pass", f"Root: {repo_root}; branch: {current_branch}"))
+    results.extend(validate_remote_topology(repo_root))
     results.append(CheckResult(
         "Working tree",
         "Pass" if not status else "Warn",
