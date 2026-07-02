@@ -1,0 +1,81 @@
+name: HELIOS Mass Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Automation mode: score, branch, pr, merge, or all"
+        type: choice
+        default: score
+        options: [score, branch, pr, merge, all]
+      apply:
+        description: "Execute mutating git/gh actions instead of dry-run planning"
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  checks: read
+
+concurrency:
+  group: helios-mass-integration
+  cancel-in-progress: false
+
+jobs:
+  score-and-integrate:
+    name: Score, pull, merge, PR, and auto-merge candidates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git automation identity
+        run: |
+          git config user.name "HELIOS Automation"
+          git config user.email "helios-automation@users.noreply.github.com"
+
+      - name: Fetch remotes and submodules
+        run: |
+          git fetch --all --prune --tags
+          git submodule sync --recursive || true
+          git submodule update --init --recursive --remote || true
+
+      - name: Score mass integration candidates
+        run: python3 scripts/github/mass_integration.py score
+
+      - name: Branch and merge candidates
+        if: ${{ inputs.apply == true && (inputs.mode == 'branch' || inputs.mode == 'all') }}
+        run: python3 scripts/github/mass_integration.py branch --apply --no-fetch
+
+      - name: Create or update pull request
+        if: ${{ inputs.apply == true && (inputs.mode == 'pr' || inputs.mode == 'all') }}
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        run: python3 scripts/github/mass_integration.py pr --apply --no-fetch
+
+      - name: Request automatic PR merge
+        if: ${{ inputs.apply == true && (inputs.mode == 'merge' || inputs.mode == 'all') }}
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        run: python3 scripts/github/mass_integration.py merge --apply --no-fetch
+
+      - name: Dry-run requested mode
+        if: ${{ inputs.apply != true && inputs.mode != 'score' }}
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        run: python3 scripts/github/mass_integration.py ${{ inputs.mode }} --no-fetch
+
+      - name: Upload mass integration reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-mass-integration-reports
+          path: reports/mass-integration
+          if-no-files-found: warn
