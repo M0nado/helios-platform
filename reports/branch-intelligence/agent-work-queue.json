@@ -1,22 +1,7 @@
 [
   {
     "allowedPaths": [
-      ".github/workflows/branch-intelligence.yml"
-    ],
-    "blockedPaths": [
-      ".git",
-      "bin",
-      "obj"
-    ],
-    "branch": "work",
-    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
-    "module": ".github/workflows",
-    "priorityScore": 87,
-    "taskType": "extract-ideas"
-  },
-  {
-    "allowedPaths": [
-      "scripts/analysis/branch_intelligence.py"
+      "scripts/setup/bootstrap-local-tools.sh"
     ],
     "blockedPaths": [
       ".git",
@@ -26,29 +11,12 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "scripts",
-    "priorityScore": 85,
+    "priorityScore": 71,
     "taskType": "extract-ideas"
   },
   {
     "allowedPaths": [
-      "src/native/HELIOS.Native.Performance/CMakeLists.txt",
-      "src/native/HELIOS.Native.Performance/README.md"
-    ],
-    "blockedPaths": [
-      ".git",
-      "bin",
-      "obj"
-    ],
-    "branch": "work",
-    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
-    "module": "src/native",
-    "priorityScore": 85,
-    "taskType": "extract-ideas"
-  },
-  {
-    "allowedPaths": [
-      "docs/integration/BRANCH_INTELLIGENCE.md",
-      "docs/integration/remote-manifest.json"
+      "docs/integration/BRANCH_INTELLIGENCE.md"
     ],
     "blockedPaths": [
       ".git",
@@ -58,23 +26,7 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "docs/integration",
-    "priorityScore": 77,
-    "taskType": "extract-ideas"
-  },
-  {
-    "allowedPaths": [
-      "docs/architecture/DASHBOARD_PUBLISHING_STRATEGY.md",
-      "docs/architecture/FSHARP_RANKING_BRIDGE.md"
-    ],
-    "blockedPaths": [
-      ".git",
-      "bin",
-      "obj"
-    ],
-    "branch": "work",
-    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
-    "module": "docs",
-    "priorityScore": 70,
+    "priorityScore": 63,
     "taskType": "extract-ideas"
   },
   {
@@ -85,10 +37,8 @@
       "reports/branch-intelligence/branch-ranking.json",
       "reports/branch-intelligence/branch-ranking.md",
       "reports/branch-intelligence/connectivity.json",
-      "reports/branch-intelligence/dashboard.md",
-      "reports/branch-intelligence/idea-impact-summary.json",
-      "reports/branch-intelligence/idea-impact-summary.md",
-      "reports/branch-intelligence/idea-impact.json"
+      "reports/branch-intelligence/connectivity.md",
+      "reports/branch-intelligence/dashboard.md"
     ],
     "blockedPaths": [
       ".git",
@@ -98,7 +48,7 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "reports",
-    "priorityScore": 69,
+    "priorityScore": 55,
     "taskType": "extract-ideas"
   },
   {

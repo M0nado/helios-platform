@@ -1,0 +1,29 @@
+@description('Azure region for HELIOS shared infrastructure.')
+param location string = resourceGroup().location
+
+@description('Environment name, e.g. dev, test, prod.')
+param environmentName string = 'dev'
+
+@description('Prefix used for globally named resources.')
+param namePrefix string = 'helios'
+
+module storage 'modules/storage.bicep' = {
+  name: 'storage-${environmentName}'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    environmentName: environmentName
+  }
+}
+
+module observability 'modules/observability.bicep' = {
+  name: 'observability-${environmentName}'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    environmentName: environmentName
+  }
+}
+
+output storageAccountName string = storage.outputs.storageAccountName
+output logAnalyticsWorkspaceName string = observability.outputs.logAnalyticsWorkspaceName
