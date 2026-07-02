@@ -1,0 +1,8 @@
+{
+  "repository": {"visibility": "private-or-internal", "defaultBranch": "main", "pages": "workflow"},
+  "actions": {"enabled": true, "allowedActions": "selected-or-all", "defaultWorkflowPermissions": "read"},
+  "branches": {"protected": ["main"], "requiredChecks": ["HELIOS Control Plane", "Branch Intelligence"]},
+  "environments": ["github-pages", "dev", "prod"],
+  "expectedSecretsFrom": "config/secrets-map.example.json",
+  "applyMode": "disabled-by-default"
+}
