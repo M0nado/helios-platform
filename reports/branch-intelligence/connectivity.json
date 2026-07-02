@@ -1,0 +1,42 @@
+{
+  "azureOpenAIConfigured": false,
+  "checks": [
+    {
+      "authenticated": true,
+      "available": true,
+      "detail": [
+        "git version 2.43.0"
+      ],
+      "name": "git"
+    },
+    {
+      "authenticated": false,
+      "available": false,
+      "detail": "gh not found",
+      "name": "GitHub CLI"
+    },
+    {
+      "authenticated": false,
+      "available": false,
+      "detail": "az not found",
+      "name": "Azure CLI"
+    },
+    {
+      "authenticated": false,
+      "available": false,
+      "detail": "dotnet not found",
+      "name": ".NET SDK"
+    },
+    {
+      "authenticated": true,
+      "available": true,
+      "detail": [
+        "Python 3.12.13"
+      ],
+      "name": "Python"
+    }
+  ],
+  "notes": "This check never prints secret values. Configure credentials in the shell or CI secrets.",
+  "openaiApiKeyConfigured": false,
+  "timestamp": "2026-07-02T17:35:24Z"
+}

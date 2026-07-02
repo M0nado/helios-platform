@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "targetBranch": "work",
+  "remotes": [
+    {
+      "name": "origin",
+      "url": "",
+      "role": "primary-helios-platform",
+      "enabled": false,
+      "defaultBranch": "main",
+      "focus": ["platform", "contracts", "analytics", "dashboard", "ci"]
+    },
+    {
+      "name": "helios-control",
+      "url": "",
+      "role": "control-plane",
+      "enabled": false,
+      "defaultBranch": "main",
+      "focus": ["winui", "csharp", "dashboard", "automation"]
+    },
+    {
+      "name": "hermes-fleet-production",
+      "url": "",
+      "role": "fleet-learning-and-agents",
+      "enabled": false,
+      "defaultBranch": "main",
+      "focus": ["hermes", "fleet", "learning", "recording", "python", "aihub"]
+    },
+    {
+      "name": "xcore",
+      "url": "",
+      "role": "native-performance-backend",
+      "enabled": false,
+      "defaultBranch": "main",
+      "focus": ["cpp", "native", "performance", "telemetry"]
+    }
+  ],
+  "moduleWeights": {
+    "src/core": 30,
+    "src/analytics": 28,
+    "tests": 24,
+    ".github/workflows": 22,
+    "scripts": 20,
+    "installer/hardware-integration": 18,
+    "installer/analytics": 18,
+    "monitoring": 16,
+    "cloud-integration": 14,
+    "ai-integration": 14,
+    "docs/integration": 12,
+    "docs": 5
+  },
+  "ideaKeywords": {
+    "hermes": ["hermes", "agent", "fleet"],
+    "xcore": ["xcore", "native", "c++", "cpp", "performance backend"],
+    "fsharp-analytics": ["f#", "fsharp", "analytics", "prediction", "statistics"],
+    "azure-automation": ["azure", "az cli", "deployment", "pipeline"],
+    "github-automation": ["github", "workflow", "pull request", "branch", "prune"],
+    "aihub-openai": ["openai", "chatgpt", "ai hub", "aihub", "learning"]
+  }
+}

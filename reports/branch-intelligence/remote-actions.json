@@ -1,0 +1,36 @@
+{
+  "fetch": {
+    "executed": false,
+    "result": "dry-run"
+  },
+  "remoteActions": [
+    {
+      "action": "skip",
+      "enabled": false,
+      "name": "origin",
+      "result": "disabled",
+      "urlConfigured": false
+    },
+    {
+      "action": "skip",
+      "enabled": false,
+      "name": "helios-control",
+      "result": "disabled",
+      "urlConfigured": false
+    },
+    {
+      "action": "skip",
+      "enabled": false,
+      "name": "hermes-fleet-production",
+      "result": "disabled",
+      "urlConfigured": false
+    },
+    {
+      "action": "skip",
+      "enabled": false,
+      "name": "xcore",
+      "result": "disabled",
+      "urlConfigured": false
+    }
+  ]
+}

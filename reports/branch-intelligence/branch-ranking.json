@@ -1,0 +1,43 @@
+[
+  {
+    "author": "Codex",
+    "commit": "f6e09d8",
+    "date": "2026-07-02 17:32:54 +0000",
+    "fileCount": 11,
+    "modules": {
+      "src/analytics": {
+        "files": 7,
+        "paths": [
+          "src/analytics/HELIOS.Analytics.FSharp/HELIOS.Analytics.FSharp.fsproj",
+          "src/analytics/HELIOS.Analytics.FSharp/Models/AnalyticsModels.fs",
+          "src/analytics/HELIOS.Analytics.FSharp/ParallelWorkloads.fs",
+          "src/analytics/HELIOS.Analytics.FSharp/Prediction/PredictionWorkloads.fs",
+          "src/analytics/HELIOS.Analytics.FSharp/PublicApi.fs",
+          "src/analytics/HELIOS.Analytics.FSharp/Statistics/AnalyticsWorkloads.fs",
+          "src/analytics/HELIOS.Analytics.FSharp/Statistics/MathWorkloads.fs"
+        ],
+        "weight": 28
+      },
+      "src/core": {
+        "files": 2,
+        "paths": [
+          "src/core/HELIOS.Platform.Contracts/AnalyticsContracts.cs",
+          "src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj"
+        ],
+        "weight": 30
+      },
+      "tests": {
+        "files": 2,
+        "paths": [
+          "tests/analytics/HELIOS.Analytics.FSharp.Tests/AnalyticsEngineTests.fs",
+          "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
+        ],
+        "weight": 24
+      }
+    },
+    "name": "work",
+    "recommendedAction": "compare-selectively",
+    "score": 75,
+    "subject": "Add HELIOS.Analytics.FSharp library, platform contracts, and unit tests"
+  }
+]

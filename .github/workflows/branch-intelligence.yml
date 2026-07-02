@@ -1,0 +1,64 @@
+name: Branch Intelligence Dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      fetch_remotes:
+        description: 'Fetch configured remotes before ranking'
+        required: false
+        default: 'false'
+  schedule:
+    - cron: '30 2 * * *'
+  push:
+    branches:
+      - main
+      - develop
+      - work
+    paths:
+      - 'docs/integration/remote-manifest.json'
+      - 'docs/integration/BRANCH_INTELLIGENCE.md'
+      - 'scripts/analysis/branch_intelligence.py'
+      - '.github/workflows/branch-intelligence.yml'
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+
+jobs:
+  branch-intelligence:
+    name: Rank Branches, Ideas, and Connectivity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run branch intelligence
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.fetch_remotes }}" = "true" ]; then
+            python3 scripts/analysis/branch_intelligence.py --fetch
+          else
+            python3 scripts/analysis/branch_intelligence.py
+          fi
+
+      - name: Publish dashboard summary
+        run: |
+          cat reports/branch-intelligence/dashboard.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload branch intelligence reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-intelligence
+          path: reports/branch-intelligence/
+          retention-days: 30

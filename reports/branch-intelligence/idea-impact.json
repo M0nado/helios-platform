@@ -1,0 +1,3602 @@
+[
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**GitHub CLI** for repository management",
+    "line": 11,
+    "module": ".devcontainer",
+    "path": ".devcontainer/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Azure CLI (az module)",
+    "line": 19,
+    "module": ".devcontainer",
+    "path": ".devcontainer/README.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Feature installation (git, GitHub CLI, PowerShell, Docker)",
+    "line": 87,
+    "module": ".devcontainer",
+    "path": ".devcontainer/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub CLI setup",
+    "line": 100,
+    "module": ".devcontainer",
+    "path": ".devcontainer/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Copilot and PR extension",
+    "line": 142,
+    "module": ".devcontainer",
+    "path": ".devcontainer/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[Node.js NVM](https://github.com/nvm-sh/nvm)",
+    "line": 355,
+    "module": ".devcontainer",
+    "path": ".devcontainer/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Codespaces Quick Start",
+    "line": 1,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Option 2: Via GitHub CLI",
+    "line": 12,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 GitHub CLI authenticated",
+    "line": 30,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Copilot",
+    "line": 35,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Azure Account extension",
+    "line": 37,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Create a new branch",
+    "line": 82,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "5. Submit Pull Request",
+    "line": 101,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Theme**: GitHub Dark (default)",
+    "line": 152,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Max running time**: Depends on GitHub plan",
+    "line": 177,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Use GitHub CLI: `gh auth login`",
+    "line": 208,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Prune Docker: `docker system prune`",
+    "line": 212,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "1. Use GitHub Copilot for Code",
+    "line": 216,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**GitHub Help**: `gh help`",
+    "line": 257,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Flavored Markdown supported",
+    "line": 263,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Create GitHub Issue",
+    "line": 266,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Use GitHub Discussions",
+    "line": 267,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Email via GitHub",
+    "line": 268,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Git shows correct branch",
+    "line": 274,
+    "module": ".github",
+    "path": ".github/CODESPACES_GUIDE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\ude80 Complete GitHub Setup Guide",
+    "line": 1,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Part 1: GitHub Project Board Setup (5-10 minutes)",
+    "line": 9,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Step 1: Create GitHub Project",
+    "line": 11,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Part 2: GitHub Actions Setup (Automatic)",
+    "line": 58,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Verify Workflows",
+    "line": 72,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Part 3: GitHub Codespaces Setup (5 minutes)",
+    "line": 91,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 GitHub CLI",
+    "line": 138,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Part 4: GitHub Issues & Templates",
+    "line": 147,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Set your GitHub token",
+    "line": 174,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Part 5: GitHub Collaborators & Permissions",
+    "line": 238,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Branch Protection Rules",
+    "line": 250,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 Require pull request reviews before merging (1 reviewer)",
+    "line": 256,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 Require branches to be up to date before merging",
+    "line": 259,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Part 6: GitHub Wiki Setup",
+    "line": 274,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Auto-syncs to GitHub Wiki",
+    "line": 297,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Part 7: GitHub Discussions (Optional)",
+    "line": 305,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Part 8: GitHub Insights & Analytics",
+    "line": 325,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "View Repository Statistics",
+    "line": 327,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\udccb GitHub Setup Checklist",
+    "line": 344,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Actions",
+    "line": 359,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Workflows exist in `.github/workflows/`",
+    "line": 360,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Workflows triggered successfully",
+    "line": 362,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Branch protection rules set",
+    "line": 374,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Auto-sync workflow running",
+    "line": 379,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub CLI Essentials",
+    "line": 392,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Setup GitHub CLI",
+    "line": 395,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "View workflow runs",
+    "line": 413,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Watch workflow",
+    "line": 416,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Git Workflow (Local)",
+    "line": 420,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Create feature branch",
+    "line": 427,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Push to GitHub",
+    "line": 437,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Create PR (GitHub will prompt, or use: gh pr create)",
+    "line": 440,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "After approval, merge and delete branch",
+    "line": 442,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\ude80 First Day Workflow",
+    "line": 450,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Project Board**: https://github.com/M0nado/helios-platform/projects",
+    "line": 482,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Issues**: https://github.com/M0nado/helios-platform/issues",
+    "line": 483,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Pull Requests**: https://github.com/M0nado/helios-platform/pulls",
+    "line": 484,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Milestones**: https://github.com/M0nado/helios-platform/milestones",
+    "line": 485,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Code**: https://github.com/M0nado/helios-platform",
+    "line": 488,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Actions**: https://github.com/M0nado/helios-platform/actions",
+    "line": 489,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Codespaces**: https://github.com/codespaces",
+    "line": 490,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Wiki**: https://github.com/M0nado/helios-platform/wiki",
+    "line": 491,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Settings**: https://github.com/M0nado/helios-platform/settings",
+    "line": 494,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Branches**: https://github.com/M0nado/helios-platform/settings/branches",
+    "line": 495,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Secrets**: https://github.com/M0nado/helios-platform/settings/secrets/actions",
+    "line": 496,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Access**: https://github.com/M0nado/helios-platform/settings/access",
+    "line": 497,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Discussions**: https://github.com/M0nado/helios-platform/discussions",
+    "line": 500,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Insights**: https://github.com/M0nado/helios-platform/insights",
+    "line": 501,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Pulse**: https://github.com/M0nado/helios-platform/pulse",
+    "line": 502,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 Actions workflows deployed",
+    "line": 510,
+    "module": ".github",
+    "path": ".github/COMPLETE_GITHUB_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 WORKFLOWS GENERATION COMPLETE",
+    "line": 1,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**7 Production-Ready Workflows Generated**",
+    "line": 4,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflows Created",
+    "line": 11,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 .github/WORKFLOWS.md (10.4 KB - Complete Guide)",
+    "line": 58,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 .github/QUICK_REFERENCE.md (5.6 KB - Quick Lookup)",
+    "line": 59,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Purpose and features for each workflow",
+    "line": 62,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Best-practice workflow patterns",
+    "line": 87,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub issue comments",
+    "line": 98,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub step summaries",
+    "line": 100,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "workflow_dispatch on all workflows",
+    "line": 105,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Generated During Workflows",
+    "line": 126,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "All Workflows Include",
+    "line": 138,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Via GitHub UI",
+    "line": 147,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Via GitHub CLI",
+    "line": 153,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflows start on schedule automatically",
+    "line": 160,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GITHUB_TOKEN used automatically",
+    "line": 162,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Read WORKFLOWS.md for complete details",
+    "line": 204,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Run manually in GitHub Actions tab",
+    "line": 208,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Set up branch protection",
+    "line": 214,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Track workflow execution time",
+    "line": 218,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "See .github/WORKFLOWS.md",
+    "line": 225,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Check individual workflow comments",
+    "line": 226,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Review GitHub Actions logs",
+    "line": 227,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "See .github/QUICK_REFERENCE.md",
+    "line": 231,
+    "module": ".github",
+    "path": ".github/GENERATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Project Setup Guide",
+    "line": 1,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Creating the GitHub Project (Manual Steps via Web)",
+    "line": 3,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Actions Workflow to Auto-Add Issues to Project",
+    "line": 207,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Using the GitHub Project",
+    "line": 229,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Codespaces Launch",
+    "line": 248,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Via GitHub Actions Status Page",
+    "line": 279,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "https://github.com/M0nado/helios-platform/actions",
+    "line": 280,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "View Workflow Runs",
+    "line": 282,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Note: Requires GitHub CLI or REST API token",
+    "line": 301,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Headers @{ Authorization = \"token $token\"; Accept = \"application/vnd.github.v3+json\" } `",
+    "line": 322,
+    "module": ".github",
+    "path": ".github/GITHUB_PROJECT_SETUP.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Azure CLI Version:",
+    "line": 59,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/bug_report.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[ ] CI/CD Pipeline Enhancement",
+    "line": 14,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/build-task.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[ ] Deployment Infrastructure",
+    "line": 16,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/build-task.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflow Files Affected",
+    "line": 132,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/build-task.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Merge to main branch",
+    "line": 133,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/component-task.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Creates a native performance path for C++/XCore acceleration without blocking managed code.",
+    "category": "xcore",
+    "idea": "Alternative Solutions",
+    "line": 21,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/feature-request.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Integrated into main branch",
+    "line": 82,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/feature-request.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Deployment",
+    "line": 39,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Agents",
+    "line": 40,
+    "module": ".github",
+    "path": ".github/ISSUE_TEMPLATE/feature_request.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Quick Reference: Workflow Triggers & Usage",
+    "line": 1,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Trigger via GitHub CLI",
+    "line": 20,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Monitoring Workflows",
+    "line": 80,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "View Workflow Status",
+    "line": 82,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflows use `force-with-lease` for safety",
+    "line": 107,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Verify workflow completed successfully",
+    "line": 111,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Check artifact name in workflow step",
+    "line": 112,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Review build logs in workflow run",
+    "line": 115,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Required Branch Protection Rules",
+    "line": 126,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Require branches to be up to date",
+    "line": 130,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": ".github/workflows/",
+    "line": 143,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Actions Permissions",
+    "line": 145,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Via GitHub UI",
+    "line": 165,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Via GitHub CLI",
+    "line": 172,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Force Workflow",
+    "line": 203,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Monitor workflow status regularly",
+    "line": 215,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Keep workflows updated with code changes",
+    "line": 216,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Disable workflows without reason",
+    "line": 220,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Ignore workflow failures",
+    "line": 221,
+    "module": ".github",
+    "path": ".github/QUICK_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Actions Workflows - Complete Package",
+    "line": 1,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83c\udfaf The 7 Workflows",
+    "line": 11,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "1. **WORKFLOWS.md** - Complete Guide (10+ KB)",
+    "line": 80,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Purpose and features of each workflow",
+    "line": 82,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2728 Key Features (All Workflows)",
+    "line": 112,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Correct GitHub Actions syntax",
+    "line": 115,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Best-practice workflow patterns",
+    "line": 118,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub issue comments",
+    "line": 127,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Pull request reviews",
+    "line": 128,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub step summaries",
+    "line": 129,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "All workflows support `workflow_dispatch`",
+    "line": 133,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "\ud83d\udcca Statistics",
+    "line": 152,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Run Via GitHub CLI",
+    "line": 182,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "All workflows run on schedule automatically",
+    "line": 189,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Start with WORKFLOWS.md for complete details",
+    "line": 223,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Set branch protection rules",
+    "line": 232,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "See `.github/WORKFLOWS.md`",
+    "line": 246,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "See `.github/QUICK_REFERENCE.md`",
+    "line": 249,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Check workflow logs in Actions tab",
+    "line": 252,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "https://docs.github.com/en/actions",
+    "line": 257,
+    "module": ".github",
+    "path": ".github/README.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Overview of all workflows",
+    "line": 77,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Detailed features for each workflow",
+    "line": 78,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Statistics and metrics",
+    "line": 96,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Best-practice workflows \u2713",
+    "line": 140,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub issue comments \u2713",
+    "line": 151,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Pull request reviews \u2713",
+    "line": 152,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub step summaries \u2713",
+    "line": 153,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "workflow_dispatch on all workflows \u2713",
+    "line": 158,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflows run on schedule automatically",
+    "line": 249,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": ".github/WORKFLOWS.md",
+    "line": 370,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": ".github/QUICK_REFERENCE.md",
+    "line": 371,
+    "module": ".github",
+    "path": ".github/SUMMARY.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Actions Workflows Documentation",
+    "line": 1,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflows",
+    "line": 11,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Pull request when `COMPONENT_MATRIX.md` or `src/` changes",
+    "line": 48,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Pull requests",
+    "line": 80,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Pull requests",
+    "line": 114,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Compression statistics tracking",
+    "line": 151,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Git statistics gathering",
+    "line": 210,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Best-practice workflows",
+    "line": 238,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub issue comments",
+    "line": 247,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Step Summary for all results",
+    "line": 249,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "`workflow_dispatch` on all workflows",
+    "line": 253,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "All workflows use GitHub API for pulls and reviews",
+    "line": 289,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Enable \"Require branches to be up to date\" if desired",
+    "line": 336,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Configure branch protection rules",
+    "line": 337,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Check Workflow Status",
+    "line": 343,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Actions tab in repository",
+    "line": 344,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflow run details with logs",
+    "line": 345,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Check build logs in workflow run",
+    "line": 351,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Check artifact names in workflow",
+    "line": 362,
+    "module": ".github",
+    "path": ".github/WORKFLOWS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Actions Workflows Reference",
+    "line": 1,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\udccb Available Workflows",
+    "line": 3,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Every pull request",
+    "line": 10,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 Sync to GitHub Wiki",
+    "line": 60,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "4. **Deploy to Azure**",
+    "line": 66,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Azure CLI login",
+    "line": 83,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Prepare deployment package",
+    "line": 84,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Deploy to Azure",
+    "line": 86,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Run post-deployment tests",
+    "line": 87,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\udd10 Required GitHub Secrets",
+    "line": 94,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Used by all workflows",
+    "line": 103,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Get from: https://platform.openai.com/api-keys",
+    "line": 117,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Created automatically for GitHub Apps",
+    "line": 120,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\udcca View Workflow Runs",
+    "line": 122,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Method 2: Via GitHub CLI",
+    "line": 130,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "List all workflow runs",
+    "line": 132,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83c\udfaf Workflow Status Badges",
+    "line": 142,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2699\ufe0f Customizing Workflows",
+    "line": 157,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "To modify a workflow:",
+    "line": 159,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Path: `.github/workflows/{workflow-name}.yml`",
+    "line": 162,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\udd04 Workflow Status Overview",
+    "line": 198,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Watch workflow progress live",
+    "line": 211,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "2. Debug Failed Workflows",
+    "line": 215,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflow not triggering",
+    "line": 242,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Check branch name matches trigger",
+    "line": 243,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Workflow fails immediately",
+    "line": 247,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Split into multiple workflows",
+    "line": 255,
+    "module": ".github",
+    "path": ".github/WORKFLOWS_REFERENCE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 6-phase automated deployment",
+    "line": 5,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "\u2705 6 coordinated build agents",
+    "line": 6,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Deployment Phases",
+    "line": 73,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "**Phase 1**: Infrastructure deployment",
+    "line": 75,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "**Phase 2**: Agent fleet launch",
+    "line": 76,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "**Phase 4**: Security framework deployment",
+    "line": 78,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Performance analytics",
+    "line": 93,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[Deployment Guide](../docs/DEPLOYMENT_COMPLETE_GUIDE.md)",
+    "line": 100,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\udcac Discussions: GitHub Discussions",
+    "line": 112,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\udc1b Issues: GitHub Issues",
+    "line": 113,
+    "module": ".nuget",
+    "path": ".nuget/HELIOS.Platform.nuspec.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "12+ deployment guides",
+    "line": 258,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "All 6 workflow files configured",
+    "line": 265,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Pages configured",
+    "line": 267,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "5 production workflows configured",
+    "line": 279,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Ready for GitHub deployment",
+    "line": 296,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Create repository on GitHub (manual UI)",
+    "line": 310,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Enable GitHub Actions (manual UI)",
+    "line": 312,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Configure branch protection (manual UI)",
+    "line": 313,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Push code to GitHub",
+    "line": 317,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Monitor first workflow execution",
+    "line": 319,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Enable GitHub Pages (5 minutes)",
+    "line": 323,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Monitor first workflow (5-10 minutes)",
+    "line": 326,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Create GitHub repository",
+    "line": 340,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Enable GitHub Actions",
+    "line": 342,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Configure branch protection",
+    "line": 343,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Push code to GitHub",
+    "line": 347,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Monitor workflow execution",
+    "line": 348,
+    "module": "00_START_HERE_FINAL_STATUS.txt",
+    "path": "00_START_HERE_FINAL_STATUS.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Creates a native performance path for C++/XCore acceleration without blocking managed code.",
+    "category": "xcore",
+    "idea": "1.1 Text Alternatives",
+    "line": 23,
+    "module": "ACCESSIBILITY_COMPLIANCE_REPORT.md",
+    "path": "ACCESSIBILITY_COMPLIANCE_REPORT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Creates a native performance path for C++/XCore acceleration without blocking managed code.",
+    "category": "xcore",
+    "idea": "1.1.1 Text Alternatives",
+    "line": 233,
+    "module": "ACCESSIBILITY_COMPLIANCE_REPORT.md",
+    "path": "ACCESSIBILITY_COMPLIANCE_REPORT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 Backup/restore workflows",
+    "line": 90,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "\u2705 Predictive Analytics (ARIMA-like forecasting)",
+    "line": 104,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "\u23f3 Anomaly Prediction Engine",
+    "line": 164,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[ ] **End-to-End Deployment Testing** (All features on clean system)",
+    "line": 181,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[ ] **USB Deployment Package** (Full OS setup)",
+    "line": 184,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "[ ] Advanced analytics dashboard",
+    "line": 205,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "[ ] Machine learning model training UI",
+    "line": 206,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Custom workflow designer",
+    "line": 207,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "AnomalyPredictionEngine",
+    "line": 231,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "4. GitHub Integration (5 minutes)",
+    "line": 248,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "5. Deployment Package Creation (1-2 hours)",
+    "line": 255,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Build USB deployment package",
+    "line": 258,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\ude80 DEPLOYMENT READINESS",
+    "line": 289,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[ ] End-to-end deployment validation",
+    "line": 305,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[ ] Code committed to GitHub",
+    "line": 325,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[ ] Deployment validated on clean system",
+    "line": 328,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\ud83d\udcde GITHUB REPOSITORY",
+    "line": 334,
+    "module": "ACTUAL_PROJECT_STATUS.md",
+    "path": "ACTUAL_PROJECT_STATUS.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Learning path (4 weeks)",
+    "line": 185,
+    "module": "AI_CODE_QUALITY_TRAINER_COMPLETION.md",
+    "path": "AI_CODE_QUALITY_TRAINER_COMPLETION.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "\ud83c\udf8a Project Statistics",
+    "line": 430,
+    "module": "AI_CODE_QUALITY_TRAINER_COMPLETION.md",
+    "path": "AI_CODE_QUALITY_TRAINER_COMPLETION.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "\ud83c\udf93 Learning Path",
+    "line": 271,
+    "module": "AI_CODE_QUALITY_TRAINER_INDEX.md",
+    "path": "AI_CODE_QUALITY_TRAINER_INDEX.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Share learnings",
+    "line": 426,
+    "module": "AI_CODE_QUALITY_TRAINER_INDEX.md",
+    "path": "AI_CODE_QUALITY_TRAINER_INDEX.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "AI Agent Training & Learning Fleet",
+    "line": 1,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "\ud83d\udcda LEARNINGS FROM PRIOR SESSIONS (21 Documented)",
+    "line": 7,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Azure services factory with singleton pattern",
+    "line": 14,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "AI Hub + WSL2 + Docker integration",
+    "line": 15,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "E2E workflow patterns",
+    "line": 34,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "\ud83e\udd16 AI AGENT FLEET DEPLOYMENT",
+    "line": 47,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Fleet 1: Learning & Knowledge Agent",
+    "line": 49,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Analyze all 21 prior learnings",
+    "line": 54,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Train other agents in patterns",
+    "line": 58,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Measure learning impact",
+    "line": 59,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "LEARNING_TRANSFER.md (knowledge sharing)",
+    "line": 65,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Fleet 2: Code Quality Agent",
+    "line": 69,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Fleet 3: Performance Agent",
+    "line": 89,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Fleet 4: Security Agent",
+    "line": 109,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Fleet 5: Testing Agent",
+    "line": 129,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "E2E workflow tests",
+    "line": 137,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Fleet 6: Documentation Agent",
+    "line": 149,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "\ud83c\udf93 LEARNING TRANSFER PROTOCOL",
+    "line": 169,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "How Agents Learn From Each Other",
+    "line": 171,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Analyze all 21 documented learnings",
+    "line": 174,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Receive patterns from learning agent",
+    "line": 180,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Monitor Phase 5-6 agent output",
+    "line": 186,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Train other agents",
+    "line": 195,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "\ud83d\udcca LEARNING TRANSFER CHANNELS",
+    "line": 199,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\ude80 DEPLOYMENT SEQUENCE",
+    "line": 306,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "T+0:00 - Initialize Training Fleet",
+    "line": 308,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Extract all 21 learnings",
+    "line": 310,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "T+1:30 - Phase 5-6 Agent Completion",
+    "line": 333,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Training modules for new agents",
+    "line": 365,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "\ud83c\udf93 LEARNING OUTCOMES",
+    "line": 379,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "New Learnings Expected:",
+    "line": 390,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "[x] Learning agent extracts all 21 learnings",
+    "line": 401,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "[x] 5 specialized agents deployed",
+    "line": 402,
+    "module": "AI_TRAINING_FLEET.md",
+    "path": "AI_TRAINING_FLEET.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 DriverInstaller: Installation workflows",
+    "line": 116,
+    "module": "ASYNC_STANDARDIZATION_REPORT.md",
+    "path": "ASYNC_STANDARDIZATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Quick statistics",
+    "line": 90,
+    "module": "AUDIO_SYSTEM_INDEX.md",
+    "path": "AUDIO_SYSTEM_INDEX.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Audio Processing Pipeline",
+    "line": 111,
+    "module": "AUDIO_SYSTEM_INDEX.md",
+    "path": "AUDIO_SYSTEM_INDEX.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "File Statistics",
+    "line": 148,
+    "module": "AUDIO_SYSTEM_INDEX.md",
+    "path": "AUDIO_SYSTEM_INDEX.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 All files committed to main branch",
+    "line": 186,
+    "module": "AUDIO_SYSTEM_INDEX.md",
+    "path": "AUDIO_SYSTEM_INDEX.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "ML predictions: 50-80ms",
+    "line": 181,
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "path": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Cache predictions",
+    "line": 187,
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "path": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Entity predictions",
+    "line": 199,
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "path": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Rolled-up statistics",
+    "line": 207,
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "path": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "ML/Prediction tables",
+    "line": 237,
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "path": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.",
+    "category": "fsharp-analytics",
+    "idea": "Batch prediction scoring",
+    "line": 259,
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "path": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[ ] Deployment procedures updated",
+    "line": 435,
+    "module": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "path": "BENCHMARK_VERIFICATION_COMPLETE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHubToken 'ghp_YOUR_TOKEN' \\",
+    "line": 100,
+    "module": "BOARD_AUTOMATION_COMPLETE.txt",
+    "path": "BOARD_AUTOMATION_COMPLETE.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHubToken 'ghp_YOUR_TOKEN' \\",
+    "line": 109,
+    "module": "BOARD_AUTOMATION_COMPLETE.txt",
+    "path": "BOARD_AUTOMATION_COMPLETE.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHubToken 'ghp_YOUR_TOKEN' \\",
+    "line": 118,
+    "module": "BOARD_AUTOMATION_COMPLETE.txt",
+    "path": "BOARD_AUTOMATION_COMPLETE.txt",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Additional deployment scenarios",
+    "line": 12,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Extended Azure integration",
+    "line": 13,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Rendering pipeline inefficiencies",
+    "line": 42,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "3 deployment tiers",
+    "line": 73,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "BuildAgents (CI/CD pipeline management)",
+    "line": 90,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "DevAIHub (developer AI assistance)",
+    "line": 91,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "3 deployment tiers:",
+    "line": 93,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "7-phase deployment process with validation and rollback",
+    "line": 97,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Azure.Identity integration for secure authentication",
+    "line": 99,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Azure.ResourceManager.Storage for cloud resources",
+    "line": 100,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Actions CI/CD automation",
+    "line": 105,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Async/await-based deployment pipeline",
+    "line": 112,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Deployment status tracking",
+    "line": 114,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Tier-based deployment customization",
+    "line": 115,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Parallel build agent management",
+    "line": 122,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "NUGET_BUILD_PROCESS.md (22.1 KB) - Local and GitHub Actions builds",
+    "line": 126,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "NUGET_CI_CD_AUTOMATION.md (19.4 KB) - Workflow automation details",
+    "line": 128,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "HeliosDeployment.cs (main orchestrator)",
+    "line": 134,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "HeliosDeploymentTests.cs (25+ test cases)",
+    "line": 138,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": ".github/workflows/nuget.yml - GitHub Actions workflow",
+    "line": 140,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Deployment tier testing (Professional, Enterprise, Ultimate)",
+    "line": 146,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Automated build on pull requests",
+    "line": 153,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "GitHub Packages publication",
+    "line": 157,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Automatic GitHub release creation",
+    "line": 159,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Azure.Identity v1.10.0",
+    "line": 163,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Azure.ResourceManager.Storage v1.6.0",
+    "line": 164,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**GitHub Issues:** https://github.com/M0nado/helios-platform/issues",
+    "line": 200,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**GitHub Discussions:** https://github.com/M0nado/helios-platform/discussions",
+    "line": 201,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "**Repository:** https://github.com/M0nado/helios-platform",
+    "line": 203,
+    "module": "CHANGELOG.md",
+    "path": "CHANGELOG.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\ude80 DEPLOYMENT SUMMARY",
+    "line": 586,
+    "module": "CHANNEL3_BOOT_TIME_AUTO_INSTALL_INTERNET.md",
+    "path": "CHANNEL3_BOOT_TIME_AUTO_INSTALL_INTERNET.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Channel 3: Complete Hands-Off Deployment Flow",
+    "line": 1,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83c\udfaf COMPLETE DEPLOYMENT FLOW",
+    "line": 20,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "6 AI providers (Claude, GPT-4, Hermes, Local, Custom, Copilot)",
+    "line": 236,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Distributed AI hub (Hyper-V + WSL2 container orchestration)",
+    "line": 237,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Learning database (knowledge persistence)",
+    "line": 239,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "AI Hub (LLM orchestration)",
+    "line": 275,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Distributed Learning (federated learning)",
+    "line": 276,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "Learning engine begins collecting optimization data",
+    "line": 339,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\ude80 DEPLOYMENT READINESS",
+    "line": 483,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Automated enterprise deployments",
+    "line": 486,
+    "module": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "path": "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Hermes (2.1 GB)",
+    "line": 153,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83c\udfe2 Enterprise Deployment",
+    "line": 288,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Fleet management integration",
+    "line": 290,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 GITHUB REPOSITORY STATUS",
+    "line": 304,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 All committed to main branch",
+    "line": 318,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 All pushed to GitHub",
+    "line": 319,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\ude80 DEPLOYMENT OPTIONS",
+    "line": 325,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Option 2: Batch Deployment (50+ Systems)",
+    "line": 334,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "Option 3: Enterprise Fleet",
+    "line": 341,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Details: CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md (5 min read)",
+    "line": 362,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Enterprise deployment",
+    "line": 402,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "\u2705 Fleet management (100+)",
+    "line": 408,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\ude80 **CHANNEL 3 - PRODUCTION DEPLOYMENT SYSTEM - LIVE** \ud83d\ude80",
+    "line": 437,
+    "module": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "path": "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Channel 3 - Complete Deployment System Overview",
+    "line": 1,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Enterprise Deployment (Batch)",
+    "line": 268,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 **Consistent Deployments** - Every system identical",
+    "line": 300,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 **Rapid Deployment** - Days not weeks",
+    "line": 310,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "7-phase secure deployment",
+    "line": 321,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Complete deployment flow",
+    "line": 331,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\ude80 DEPLOYMENT READINESS",
+    "line": 349,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Batch deployment (100+ systems)",
+    "line": 353,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "**Availability:** 1 USB drive for deployment",
+    "line": 382,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Consistent: Every deployment identical",
+    "line": 401,
+    "module": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "path": "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\udccb MONADO BLADE CHANNEL 3 - PRODUCTION DEPLOYMENT CHECKLIST",
+    "line": 1,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "[x] 6 AI providers configured (Claude, GPT-4, Hermes, Local, Custom, Copilot)",
+    "line": 68,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
+    "category": "aihub-openai",
+    "idea": "[x] Learning engine startup",
+    "line": 73,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[x] CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md (18 KB)",
+    "line": 117,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[x] CHANNEL3_USB_BOOT_DEPLOYMENT.md (supporting doc)",
+    "line": 121,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 PHASE 5: GITHUB INTEGRATION",
+    "line": 160,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[x] Repository: https://github.com/M0nado/helios-platform",
+    "line": 162,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[x] Branch: main (production branch)",
+    "line": 166,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Deployment Readiness",
+    "line": 184,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[x] 50+ node deployment capable",
+    "line": 193,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "[x] Fleet management integration planned",
+    "line": 194,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "[x] Files committed to main branch",
+    "line": 221,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "[x] 20-35 minute deployment time",
+    "line": 233,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Channel 3 zero-touch USB deployment system",
+    "line": 302,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "\u2705 GitHub committed & pushed",
+    "line": 328,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Ready for enterprise deployment",
+    "line": 329,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Enterprise deployment",
+    "line": 349,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Secure workstation deployment",
+    "line": 353,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Adds fleet agent telemetry and learning sources for distributed workload optimization.",
+    "category": "hermes",
+    "idea": "\u2705 Fleet management integration",
+    "line": 355,
+    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Monado Blade v2.5.0 Deployment System",
+    "line": 2,
+    "module": "CHANNEL3_QUICK_REFERENCE.md",
+    "path": "CHANNEL3_QUICK_REFERENCE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "`CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md` (18 KB)",
+    "line": 330,
+    "module": "CHANNEL3_QUICK_REFERENCE.md",
+    "path": "CHANNEL3_QUICK_REFERENCE.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83d\ude80 CHANNEL 3: USB BOOT + AUTO-INSTALLATION DEPLOYMENT",
+    "line": 1,
+    "module": "CHANNEL3_USB_BOOT_DEPLOYMENT.md",
+    "path": "CHANNEL3_USB_BOOT_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\ud83c\udfaf DEPLOYMENT WORKFLOW",
+    "line": 23,
+    "module": "CHANNEL3_USB_BOOT_DEPLOYMENT.md",
+    "path": "CHANNEL3_USB_BOOT_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "Pre-Deployment Verification",
+    "line": 392,
+    "module": "CHANNEL3_USB_BOOT_DEPLOYMENT.md",
+    "path": "CHANNEL3_USB_BOOT_DEPLOYMENT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "\u2705 Fix deployment workflow (resolve merge conflict)",
+    "line": 16,
+    "module": "CI_CD_OPTIMIZATION_REPORT.md",
+    "path": "CI_CD_OPTIMIZATION_REPORT.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "1. NEW: .NET Build Workflow (`dotnet-build.yml`)",
+    "line": 39,
+    "module": "CI_CD_OPTIMIZATION_REPORT.md",
+    "path": "CI_CD_OPTIMIZATION_REPORT.md",
+    "recommendedAction": "merge-or-rewrite"
+  }
+]
