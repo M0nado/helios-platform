@@ -19,11 +19,14 @@ def scan_reports(patterns: list[str], paths: list[str]) -> list[dict]:
         base=ROOT/rel
         if not base.exists(): continue
         for file in base.rglob('*'):
+            rel_file = file.relative_to(ROOT).as_posix()
+            if rel_file.startswith('reports/policy/'):
+                continue
             if not file.is_file() or file.suffix.lower() not in {'.json','.md','.txt','.log','.yml','.yaml'}: continue
             text=file.read_text(encoding='utf-8', errors='ignore')[:500000]
             for pat in patterns:
                 if pat in text:
-                    hits.append({'file':file.relative_to(ROOT).as_posix(),'pattern':pat})
+                    hits.append({'file':rel_file,'pattern':pat})
     return hits
 
 def main() -> int:

@@ -34,7 +34,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          token: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.HELIOS_AUTOMATION_TOKEN || github.token }}
 
       - name: Configure Git automation identity
         run: |
@@ -50,6 +50,12 @@ jobs:
       - name: Score mass integration candidates
         run: python3 scripts/github/mass_integration.py score
 
+      - name: Forecast branch conflict risk
+        run: python3 scripts/github/conflict_forecast.py
+
+      - name: Run policy gate before mutating operations
+        run: python3 scripts/security/policy_gate.py
+
       - name: Branch and merge candidates
         if: ${{ inputs.apply == true && (inputs.mode == 'branch' || inputs.mode == 'all') }}
         run: python3 scripts/github/mass_integration.py branch --apply --no-fetch
@@ -57,19 +63,19 @@ jobs:
       - name: Create or update pull request
         if: ${{ inputs.apply == true && (inputs.mode == 'pr' || inputs.mode == 'all') }}
         env:
-          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || github.token }}
         run: python3 scripts/github/mass_integration.py pr --apply --no-fetch
 
       - name: Request automatic PR merge
         if: ${{ inputs.apply == true && (inputs.mode == 'merge' || inputs.mode == 'all') }}
         env:
-          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || github.token }}
         run: python3 scripts/github/mass_integration.py merge --apply --no-fetch
 
       - name: Dry-run requested mode
         if: ${{ inputs.apply != true && inputs.mode != 'score' }}
         env:
-          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || github.token }}
         run: python3 scripts/github/mass_integration.py ${{ inputs.mode }} --no-fetch
 
       - name: Upload mass integration reports
