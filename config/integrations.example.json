@@ -25,7 +25,9 @@
   },
   "openai": {
     "env": [
-      "OPENAI_API_KEY"
+      "OPENAI_API_KEY",
+      "OPENAI_ORG_ID",
+      "OPENAI_PROJECT_ID"
     ]
   },
   "azureOpenAI": {
@@ -41,8 +43,14 @@
   },
   "microsoft365Copilot": {
     "env": [
-      "M365_TENANT_ID",
-      "M365_CLIENT_ID"
+      "M365_CLIENT_ID",
+      "M365_COPILOT_PRO_ACCOUNT",
+      "M365_TENANT_ID"
+    ],
+    "plans": [
+      "standard-work",
+      "pro-consumer",
+      "free-basic-readiness"
     ]
   },
   "localWeb": {
@@ -84,5 +92,11 @@
       "dotnet workload install maui"
     ],
     "notes": "MAUI workloads require supported OS/SDK and Visual Studio on developer machines."
+  },
+  "chatgpt": {
+    "env": [
+      "CHATGPT_WORKSPACE_ID"
+    ],
+    "notes": "ChatGPT UI plans use browser/workspace auth; do not store user session cookies in repo."
   }
 }
