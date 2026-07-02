@@ -1,0 +1,26 @@
+{
+  "repository": "helios-platform",
+  "identity": {
+    "githubUser": "Yolkster64",
+    "primaryForkOwner": "Yolkster64",
+    "upstreamOwner": "M0nado"
+  },
+  "remotes": {
+    "origin": {
+      "url": "https://github.com/Yolkster64/helios-platform.git",
+      "purpose": "authenticated fork used for writable integration branches",
+      "pushAllowed": true
+    },
+    "upstream": {
+      "url": "https://github.com/M0nado/helios-platform.git",
+      "purpose": "source repository used for fetch, branch comparison, and pull requests",
+      "pushAllowed": false
+    }
+  },
+  "integrationBranch": "integration/helios-hermes-xcore",
+  "pullRequest": {
+    "head": "Yolkster64:integration/helios-hermes-xcore",
+    "baseRepository": "M0nado/helios-platform",
+    "baseBranch": "main"
+  }
+}

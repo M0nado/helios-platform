@@ -12,7 +12,7 @@ $response = $client.GenerateCode("Create a function that reverses a string", "py
 #>
 
 param(
-    [string]$ApiKey = $env:OPENAI_API_KEY_CODEX,
+    [string]$ApiKey = $env:OPENAI_API_KEY,
     [string]$ConfigPath = "C:\Users\ADMIN\helios-platform\config\ai-services\ai-services-config.json"
 )
 
@@ -24,12 +24,12 @@ class CodexClient {
     [System.IO.StreamWriter]$Logger
     [hashtable]$RequestStats
     [hashtable]$RetryPolicy
-    
+
     CodexClient([string]$ApiKey, [hashtable]$Config) {
         if ([string]::IsNullOrEmpty($ApiKey)) {
             throw "API key is required for Codex client"
         }
-        
+
         $this.ApiKey = $ApiKey
         $this.Config = $Config
         $this.InitializeHttpClient()
@@ -37,15 +37,15 @@ class CodexClient {
         $this.InitializeRetryPolicy()
         $this.InitializeStats()
     }
-    
+
     [void]InitializeHttpClient() {
         $this.HttpClient = New-Object System.Net.Http.HttpClient
         $this.HttpClient.DefaultRequestHeaders.Add("Authorization", "Bearer $($this.ApiKey)")
         $this.HttpClient.DefaultRequestHeaders.Add("Content-Type", "application/json")
-        $timeout = $this.Config.services.codex.timeout
+        $timeout = $this.Config.services.gpt_5_4_mini.timeout_seconds ?? $this.Config.services.gpt_5_4_mini.timeout
         $this.HttpClient.Timeout = [TimeSpan]::FromSeconds($timeout)
     }
-    
+
     [void]InitializeLogger() {
         $logPath = $this.Config.logging.logPath
         if (-not (Test-Path $logPath)) {
@@ -55,16 +55,16 @@ class CodexClient {
         $this.Logger = [System.IO.StreamWriter]::new($logFile, $true)
         $this.Logger.AutoFlush = $true
     }
-    
+
     [void]InitializeRetryPolicy() {
         $this.RetryPolicy = @{
-            MaxRetries = $this.Config.services.codex.retries
-            RetryDelay = $this.Config.services.codex.retryDelay
+            MaxRetries = $this.Config.services.gpt_5_4_mini.retries ?? 3
+            RetryDelay = $this.Config.services.gpt_5_4_mini.retryDelay ?? 2
             BackoffMultiplier = 2
             MaxBackoffDelay = 60
         }
     }
-    
+
     [void]InitializeStats() {
         $this.RequestStats = @{
             TotalRequests = 0
@@ -76,42 +76,42 @@ class CodexClient {
             TotalCost = 0
         }
     }
-    
+
     [void]LogInfo([string]$Message) {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
         $this.Logger.WriteLine("[$timestamp] [INFO] $Message")
     }
-    
+
     [void]LogError([string]$Message) {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
         $this.Logger.WriteLine("[$timestamp] [ERROR] $Message")
     }
-    
+
     [void]LogWarning([string]$Message) {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff"
         $this.Logger.WriteLine("[$timestamp] [WARNING] $Message")
     }
-    
+
     [PSCustomObject]GenerateCode([string]$Description, [string]$Language = "python", [hashtable]$Options = @{}) {
         try {
             $this.LogInfo("Generating code for: $Description (Language: $Language)")
             $this.RequestStats.GenerationRequests++
-            
+
             # Build prompt
             $prompt = $this.BuildGenerationPrompt($Description, $Language)
-            
+
             # Prepare request with lower temperature for code generation
             $temperature = $Options['temperature'] ?? 0.5
             $requestBody = $this.PrepareRequestBody($prompt, $temperature, $Options)
-            
+
             # Invoke with retries
             $response = $this.InvokeWithRetry($requestBody)
-            
+
             $this.RequestStats.SuccessfulRequests++
             $this.LogInfo("Code generated successfully. Tokens: $($response.usage.total_tokens)")
-            
-            $generatedCode = $response.choices[0].text.Trim()
-            
+
+            $generatedCode = $this.ExtractResponseText($response)
+
             return @{
                 Success = $true
                 Code = $generatedCode
@@ -132,27 +132,27 @@ class CodexClient {
             }
         }
     }
-    
+
     [PSCustomObject]RefactorCode([string]$Code, [string]$Language = "python", [string]$Objective = "improve readability", [hashtable]$Options = @{}) {
         try {
             $this.LogInfo("Refactoring $Language code. Objective: $Objective")
             $this.RequestStats.RefactoringRequests++
-            
+
             # Build refactoring prompt
             $prompt = $this.BuildRefactoringPrompt($Code, $Language, $Objective)
-            
+
             # Prepare request
             $temperature = $Options['temperature'] ?? 0.3
             $requestBody = $this.PrepareRequestBody($prompt, $temperature, $Options)
-            
+
             # Invoke with retries
             $response = $this.InvokeWithRetry($requestBody)
-            
+
             $this.RequestStats.SuccessfulRequests++
             $this.LogInfo("Code refactored successfully. Tokens: $($response.usage.total_tokens)")
-            
-            $refactoredCode = $response.choices[0].text.Trim()
-            
+
+            $refactoredCode = $this.ExtractResponseText($response)
+
             return @{
                 Success = $true
                 OriginalCode = $Code
@@ -175,26 +175,26 @@ class CodexClient {
             }
         }
     }
-    
+
     [PSCustomObject]AnalyzeCode([string]$Code, [string]$Language = "python", [hashtable]$Options = @{}) {
         try {
             $this.LogInfo("Analyzing $Language code")
-            
+
             # Build analysis prompt
             $prompt = $this.BuildAnalysisPrompt($Code, $Language)
-            
+
             $temperature = $Options['temperature'] ?? 0.7
             $requestBody = $this.PrepareRequestBody($prompt, $temperature, $Options)
-            
+
             $response = $this.InvokeWithRetry($requestBody)
-            
+
             $this.RequestStats.SuccessfulRequests++
             $this.LogInfo("Code analysis completed. Tokens: $($response.usage.total_tokens)")
-            
+
             return @{
                 Success = $true
                 Code = $Code
-                Analysis = $response.choices[0].text.Trim()
+                Analysis = $this.ExtractResponseText($response)
                 Language = $Language
                 TokensUsed = $response.usage.total_tokens
                 Cost = $this.CalculateCost($response.usage)
@@ -211,26 +211,26 @@ class CodexClient {
             }
         }
     }
-    
+
     [PSCustomObject]TestGeneration([string]$Code, [string]$Language = "python", [string]$Framework = "pytest", [hashtable]$Options = @{}) {
         try {
             $this.LogInfo("Generating tests for $Language code using $Framework")
-            
+
             # Build test generation prompt
             $prompt = $this.BuildTestGenerationPrompt($Code, $Language, $Framework)
-            
+
             $temperature = $Options['temperature'] ?? 0.4
             $requestBody = $this.PrepareRequestBody($prompt, $temperature, $Options)
-            
+
             $response = $this.InvokeWithRetry($requestBody)
-            
+
             $this.RequestStats.SuccessfulRequests++
             $this.LogInfo("Tests generated successfully. Tokens: $($response.usage.total_tokens)")
-            
+
             return @{
                 Success = $true
                 SourceCode = $Code
-                TestCode = $response.choices[0].text.Trim()
+                TestCode = $this.ExtractResponseText($response)
                 Language = $Language
                 Framework = $Framework
                 TokensUsed = $response.usage.total_tokens
@@ -248,7 +248,7 @@ class CodexClient {
             }
         }
     }
-    
+
     [string]BuildGenerationPrompt([string]$Description, [string]$Language) {
         return @"
 Write a $Language function/method based on this description:
@@ -263,7 +263,7 @@ Requirements:
 Code:
 "@
     }
-    
+
     [string]BuildRefactoringPrompt([string]$Code, [string]$Language, [string]$Objective) {
         return @"
 Refactor this $Language code to $Objective:
@@ -283,7 +283,7 @@ Refactored code:
 ```$Language
 "@
     }
-    
+
     [string]BuildAnalysisPrompt([string]$Code, [string]$Language) {
         return @"
 Analyze this $Language code and provide:
@@ -300,7 +300,7 @@ $Code
 Analysis:
 "@
     }
-    
+
     [string]BuildTestGenerationPrompt([string]$Code, [string]$Language, [string]$Framework) {
         return @"
 Generate comprehensive unit tests for this $Language code using $Framework.
@@ -320,26 +320,44 @@ Test code:
 ```$Language
 "@
     }
-    
+
     [hashtable]PrepareRequestBody([string]$Prompt, [double]$Temperature, [hashtable]$Options) {
+        $serviceConfig = $this.Config.services.gpt_5_4_mini
         $requestBody = @{
-            model = $this.Config.services.codex.model
-            prompt = $Prompt
+            model = $serviceConfig.model
+            messages = @(
+                @{
+                    role = "system"
+                    content = "You are a precise coding assistant. Return only the requested code or analysis unless the user asks for explanation."
+                },
+                @{
+                    role = "user"
+                    content = $Prompt
+                }
+            )
             temperature = $Temperature
-            max_tokens = $Options['maxTokens'] ?? $this.Config.services.codex.maxTokens
+            max_tokens = $Options['maxTokens'] ?? $serviceConfig.max_tokens ?? $serviceConfig.maxTokens
             top_p = $Options['topP'] ?? 1.0
             frequency_penalty = $Options['frequencyPenalty'] ?? 0.0
             presence_penalty = $Options['presencePenalty'] ?? 0.0
-            stop = @("`n`n")
         }
-        
+
         return $requestBody
     }
-    
+
+    [string]ExtractResponseText([PSCustomObject]$Response) {
+        $messageContent = $Response.choices[0].message.content
+        if ([string]::IsNullOrWhiteSpace($messageContent)) {
+            throw "Chat completion response did not include message content"
+        }
+
+        return $messageContent.Trim()
+    }
+
     [PSCustomObject]InvokeWithRetry([hashtable]$RequestBody) {
         $attempt = 0
         $delay = $this.RetryPolicy.RetryDelay
-        
+
         while ($attempt -le $this.RetryPolicy.MaxRetries) {
             try {
                 $response = $this.MakeHttpRequest($RequestBody)
@@ -350,61 +368,61 @@ Test code:
                 if ($attempt -gt $this.RetryPolicy.MaxRetries) {
                     throw
                 }
-                
+
                 $this.LogWarning("Request failed (attempt $attempt). Retrying in ${delay}s: $_")
                 Start-Sleep -Seconds $delay
                 $delay = [Math]::Min($delay * $this.RetryPolicy.BackoffMultiplier, $this.RetryPolicy.MaxBackoffDelay)
             }
         }
     }
-    
+
     [PSCustomObject]MakeHttpRequest([hashtable]$RequestBody) {
         $jsonBody = $RequestBody | ConvertTo-Json -Depth 10
         $content = New-Object System.Net.Http.StringContent($jsonBody, [System.Text.Encoding]::UTF8, "application/json")
-        
+
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        $response = $this.HttpClient.PostAsync("$($this.BaseUrl)/completions", $content).Result
+        $response = $this.HttpClient.PostAsync("$($this.BaseUrl)/chat/completions", $content).Result
         $stopwatch.Stop()
-        
+
         if (-not $response.IsSuccessStatusCode) {
             $errorContent = $response.Content.ReadAsStringAsync().Result
             throw "API request failed with status $($response.StatusCode): $errorContent"
         }
-        
+
         $responseContent = $response.Content.ReadAsStringAsync().Result
         $responseObject = $responseContent | ConvertFrom-Json
-        
+
         $this.RequestStats.TotalRequests++
         $this.RequestStats.TotalTokensUsed += $responseObject.usage.total_tokens
         $this.RequestStats.TotalCost += $this.CalculateCost($responseObject.usage)
-        
+
         $responseObject | Add-Member -NotePropertyName ResponseTime -NotePropertyValue $stopwatch.ElapsedMilliseconds
-        
+
         return $responseObject
     }
-    
+
     [double]CalculateCost([PSCustomObject]$Usage) {
-        $config = $this.Config.services.codex
-        $inputCost = ($Usage.prompt_tokens / 1000) * $config.costPerThousandTokens.input
-        $outputCost = ($Usage.completion_tokens / 1000) * $config.costPerThousandTokens.output
+        $config = $this.Config.services.gpt_5_4_mini
+        $inputCost = ($Usage.prompt_tokens / 1000) * ($config.cost_per_1k_tokens_input ?? $config.costPerThousandTokens.input)
+        $outputCost = ($Usage.completion_tokens / 1000) * ($config.cost_per_1k_tokens_output ?? $config.costPerThousandTokens.output)
         return $inputCost + $outputCost
     }
-    
+
     [string]AnalyzeChanges([string]$Original, [string]$Refactored) {
         $originalLines = $Original -split "`n"
         $refactoredLines = $Refactored -split "`n"
-        
+
         $analysis = "Changes made:`n"
         $analysis += "- Original lines: $($originalLines.Count)`n"
         $analysis += "- Refactored lines: $($refactoredLines.Count)`n"
-        
+
         if ($refactoredLines.Count -lt $originalLines.Count) {
             $analysis += "- Lines reduced by: $($originalLines.Count - $refactoredLines.Count)`n"
         }
-        
+
         return $analysis
     }
-    
+
     [PSCustomObject]GetStatistics() {
         return [PSCustomObject]@{
             TotalRequests = $this.RequestStats.TotalRequests
@@ -419,7 +437,7 @@ Test code:
             TotalCost = [Math]::Round($this.RequestStats.TotalCost, 4)
         }
     }
-    
+
     [void]Close() {
         $this.HttpClient.Dispose()
         $this.Logger.Close()
@@ -433,9 +451,9 @@ Test code:
 try {
     $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
     $client = [CodexClient]::new($ApiKey, $config)
-    
+
     $script:CodexClient = $client
-    
+
     if ($PSBoundParameters.Count -eq 0 -and $MyInvocation.ScriptName -eq $PSCommandPath) {
         Write-Host "Codex Client initialized successfully"
         Write-Host "Usage: `$response = `$CodexClient.GenerateCode(`"Your code description`", `"python`")"

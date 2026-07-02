@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Extract version from tag
+      id: tag_version
+      run: |
+        $tag = "${{ github.ref }}" -replace 'refs/tags/v', ''
+        echo "VERSION=$tag" >> $env:GITHUB_OUTPUT
+      shell: pwsh
+    
+    - name: Restore dependencies
+      run: dotnet restore MonadoBlade.sln
+    
+    - name: Build solution
+      run: dotnet build MonadoBlade.sln --configuration Release --no-restore
+    
+    - name: Run tests
+      run: dotnet test tests/MonadoBlade.Tests.Unit/MonadoBlade.Tests.Unit.csproj --configuration Release --no-build --verbosity normal
+    
+    - name: Publish application
+      run: dotnet publish src/MonadoBlade.GUI/MonadoBlade.GUI.csproj --configuration Release --output ./publish --runtime win-x64
+    
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.tag_version.outputs.VERSION }}
+        release_name: Release v${{ steps.tag_version.outputs.VERSION }}
+        body: |
+          ## MonadoBlade v${{ steps.tag_version.outputs.VERSION }}
+          
+          ### Changes
+          See commit history for detailed changes.
+          
+          ### Download
+          - Windows x64 application
+        draft: false
+        prerelease: false
+    
+    - name: Upload Release Assets
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-${{ steps.tag_version.outputs.VERSION }}
+        path: ./publish/**
+        retention-days: 90

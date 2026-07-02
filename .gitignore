@@ -127,3 +127,11 @@ azure-pipelines.yml
 .git/
 .gitkeep
 .gitmodules
+
+# Generated operational reports and status-site outputs
+reports/**
+!reports/README.md
+status-site/index.html
+status-site/actions.md
+status-site/wiki-export/**
+.github/PULL_REQUEST_BODY.md

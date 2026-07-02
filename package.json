@@ -1,0 +1,32 @@
+{
+  "name": "monado-blade-monitoring",
+  "version": "1.0.0",
+  "description": "Phase 4D: Failover Monitor & Health Monitoring System for Monado Blade",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --passWithNoTests",
+    "test:failover": "jest src/monitoring/__tests__/failover.test.ts",
+    "test:coverage": "jest --coverage",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "failover",
+    "health-monitoring",
+    "circuit-breaker",
+    "graceful-degradation"
+  ],
+  "author": "Monado Blade Team",
+  "license": "MIT",
+  "dependencies": {
+    "typescript": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0"
+  }
+}
