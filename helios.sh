@@ -9,8 +9,10 @@ case "$cmd" in
   github) exec python3 scripts/github/github-inventory.py "$@" ;;
   azure) exec python3 scripts/azure/azure-inventory.py "$@" ;;
   ai) exec python3 scripts/ai/enrich-ideas.py "$@" ;;
+  inventory) exec python3 scripts/analysis/repo_inventory.py "$@" ;;
+  gaps) exec python3 scripts/analysis/hybrid_gap_analysis.py "$@" ;;
   branches) exec python3 scripts/analysis/branch_intelligence.py "$@" ;;
-  build) exec python3 scripts/build/build-graph.py "$@" ;;
+  build) exec python3 scripts/build_graph/build_graph.py "$@" ;;
   codex) exec python3 scripts/codex/generate-codex-tasks.py "$@" ;;
   recommendations) exec python3 scripts/analysis/merge_prune_recommendations.py "$@" ;;
   actions) exec python3 scripts/dashboard/generate-actions.py "$@" ;;
@@ -18,6 +20,8 @@ case "$cmd" in
     # Execution order is defined in config/execution-order.json.
     printf '1/15 HELIOS Command Center single entry point\n'
     python3 scripts/control/helios-control.py
+    python3 scripts/analysis/repo_inventory.py
+    python3 scripts/analysis/hybrid_gap_analysis.py
     printf '2/15 Unified secrets map\n'
     python3 scripts/integrations/check-connections.py
     printf '3/15 GitHub inventory\n'
@@ -27,7 +31,7 @@ case "$cmd" in
     printf '5/15 Control-plane permissions model\n'
     test -f docs/security/CONTROL_PLANE_PERMISSIONS.md
     printf '6/15 Build graph\n'
-    python3 scripts/build/build-graph.py
+    python3 scripts/build_graph/build_graph.py
     printf '7/15 Branch merge/prune recommendations\n'
     python3 scripts/analysis/branch_intelligence.py
     python3 scripts/analysis/merge_prune_recommendations.py
@@ -62,6 +66,8 @@ Commands:
   github            GitHub inventory report
   azure             Azure inventory report
   ai                Safe AI enrichment readiness
+  inventory         Whole-project inventory
+  gaps              Hybrid integration gap analysis
   branches          Branch intelligence reports
   build             Build graph report or runner
   codex             Generate Codex task packets

@@ -1,8 +1,8 @@
 # Codex Task: docs/integration from work
 
-- Priority: 68
-- Task type: extract-ideas
-- Allowed paths: `['docs/integration/CONTROL_PLANE_COMMANDS.md']`
+- Priority: 86
+- Task type: compare-selectively
+- Allowed paths: `['docs/integration/BRANCH_INTELLIGENCE.md', 'docs/integration/CLOUDSHELL_GITHUB_AZURE_SETUP.md', 'docs/integration/CONTROL_PLANE_COMMANDS.md', 'docs/integration/VISUAL_STUDIO_MAUI_SETUP.md', 'docs/integration/WEB_CONTROL_PLANE.md', 'docs/integration/remote-manifest.json']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

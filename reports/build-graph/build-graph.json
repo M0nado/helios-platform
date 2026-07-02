@@ -1,6 +1,23 @@
 {
-  "generatedUtc": "2026-07-02T18:42:13.212320+00:00",
+  "generatedUtc": "2026-07-02T19:06:47.078058+00:00",
   "nodes": [
+    {
+      "id": "hybrid-gap-analysis",
+      "title": "Hybrid integration gap analysis",
+      "command": "python3 scripts/analysis/hybrid_gap_analysis.py",
+      "paths": [
+        "config/hybrid-integration-roadmap.json",
+        "reports/project-inventory/**"
+      ]
+    },
+    {
+      "id": "repo-inventory",
+      "title": "Whole-project inventory",
+      "command": "python3 scripts/analysis/repo_inventory.py",
+      "paths": [
+        "**/*"
+      ]
+    },
     {
       "id": "python-static",
       "title": "Python static compile checks",

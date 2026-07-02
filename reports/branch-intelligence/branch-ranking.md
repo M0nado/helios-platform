@@ -2,4 +2,4 @@
 
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 56 | extract-ideas | 61 | .github/workflows, root, config, docs/integration, docs, reports |
+| work | 74 | compare-selectively | 116 | .devcontainer, .github/workflows, root, config, docs, docs/integration |

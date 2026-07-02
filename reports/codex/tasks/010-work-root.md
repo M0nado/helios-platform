@@ -1,10 +1,10 @@
-# Codex Task: .nuget from knowledge-base
+# Codex Task: root from work
 
-- Priority: 23
-- Task type: idea-review
-- Allowed paths: `['.nuget/HELIOS.Platform.nuspec.md:76']`
+- Priority: 78
+- Task type: compare-selectively
+- Allowed paths: `['COMMAND_CENTER.md', 'Directory.Build.props', 'helios.sh']`
 - Blocked paths: `['.git', 'bin', 'obj']`
-- Expected output: Adds fleet agent telemetry and learning sources for distributed workload optimization.
+- Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task
 - Secrets allowed: no
 

@@ -2,14 +2,20 @@
 
 | Task | Branch | Module | Priority | Expected output |
 |---|---|---|---|---|
-| extract-ideas | work | .github/workflows | 78 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | scripts | 76 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | docs/integration | 68 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | docs | 61 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | root | 60 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | config | 60 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | reports | 60 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | status-site | 60 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | src/core | 104 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | src/analytics | 102 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | tests | 98 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | .github/workflows | 96 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | scripts | 94 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | src/native | 94 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | docs/integration | 86 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | docs | 79 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | .devcontainer | 78 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | root | 78 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | config | 78 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | infra | 78 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | reports | 78 | comparison notes, merge risk, tests to run, and idea extraction |
+| compare-selectively | work | status-site | 78 | comparison notes, merge risk, tests to run, and idea extraction |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
@@ -26,9 +32,3 @@
 | idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | AI_CODE_QUALITY_TRAINER_COMPLETION.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | AI_TRAINING_FLEET.md | 23 | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
-| idea-review | knowledge-base | AI_TRAINING_FLEET.md | 23 | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
-| idea-review | knowledge-base | AI_TRAINING_FLEET.md | 23 | Adds fleet agent telemetry and learning sources for distributed workload optimization. |
-| idea-review | knowledge-base | AI_TRAINING_FLEET.md | 23 | Adds fleet agent telemetry and learning sources for distributed workload optimization. |

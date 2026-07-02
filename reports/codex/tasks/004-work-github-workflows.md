@@ -1,8 +1,8 @@
 # Codex Task: .github/workflows from work
 
-- Priority: 78
-- Task type: extract-ideas
-- Allowed paths: `['.github/workflows/helios-control-plane.yml']`
+- Priority: 96
+- Task type: compare-selectively
+- Allowed paths: `['.github/workflows/azure-infra.yml', '.github/workflows/branch-intelligence.yml', '.github/workflows/helios-control-plane.yml']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

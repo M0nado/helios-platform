@@ -42,7 +42,7 @@ python3 scripts/github/github-inventory.py
 python3 scripts/azure/azure-inventory.py
 python3 scripts/analysis/branch_intelligence.py
 python3 scripts/analysis/merge_prune_recommendations.py
-python3 scripts/build/build-graph.py
+python3 scripts/build_graph/build_graph.py
 python3 scripts/codex/generate-codex-tasks.py
 python3 scripts/dashboard/generate-actions.py
 python3 scripts/graphs/generate_graphs.py

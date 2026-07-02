@@ -1,0 +1,3303 @@
+{
+  "fileCount": 2026,
+  "generatedUtc": "2026-07-02T19:06:43.484398+00:00",
+  "languageCounts": {
+    "bicep": 5,
+    "csharp": 575,
+    "csharp-project": 18,
+    "fsharp": 7,
+    "fsharp-project": 2,
+    "json": 96,
+    "markdown": 743,
+    "other": 219,
+    "powershell": 300,
+    "python": 15,
+    "shell": 16,
+    "yaml": 30
+  },
+  "modules": {
+    ".devcontainer": {
+      "examples": [
+        ".devcontainer/codespaces-secrets.env.example",
+        ".devcontainer/onCreateCommand.sh",
+        ".devcontainer/README.md",
+        ".devcontainer/devcontainer.json",
+        ".devcontainer/docker-compose.yml"
+      ],
+      "files": 7,
+      "languages": {
+        "json": 1,
+        "markdown": 1,
+        "other": 2,
+        "shell": 2,
+        "yaml": 1
+      }
+    },
+    ".editorconfig": {
+      "examples": [
+        ".editorconfig"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    ".env.template": {
+      "examples": [
+        ".env.template"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    ".gitattributes": {
+      "examples": [
+        ".gitattributes"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    ".github": {
+      "examples": [
+        ".github/projects.json",
+        ".github/COMPLETE_GITHUB_SETUP.md",
+        ".github/project-config.json",
+        ".github/README.md",
+        ".github/GITHUB_PROJECT_SETUP.md"
+      ],
+      "files": 44,
+      "languages": {
+        "json": 3,
+        "markdown": 15,
+        "other": 2,
+        "yaml": 24
+      }
+    },
+    ".gitignore": {
+      "examples": [
+        ".gitignore"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    ".gitmodules": {
+      "examples": [
+        ".gitmodules"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    ".prettierrc": {
+      "examples": [
+        ".prettierrc"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "00_START_HERE_FINAL_STATUS.txt": {
+      "examples": [
+        "00_START_HERE_FINAL_STATUS.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "ACCESSIBILITY_COMPLIANCE_REPORT.md": {
+      "examples": [
+        "ACCESSIBILITY_COMPLIANCE_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "ACTUAL_PROJECT_STATUS.md": {
+      "examples": [
+        "ACTUAL_PROJECT_STATUS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "AI_CODE_QUALITY_TRAINER_COMPLETION.md": {
+      "examples": [
+        "AI_CODE_QUALITY_TRAINER_COMPLETION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "AI_CODE_QUALITY_TRAINER_INDEX.md": {
+      "examples": [
+        "AI_CODE_QUALITY_TRAINER_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "AI_TRAINING_FLEET.md": {
+      "examples": [
+        "AI_TRAINING_FLEET.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "ASYNC_STANDARDIZATION_REPORT.md": {
+      "examples": [
+        "ASYNC_STANDARDIZATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "AUDIO_SYSTEM_INDEX.md": {
+      "examples": [
+        "AUDIO_SYSTEM_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "BENCHMARK_VERIFICATION_COMPLETE.md": {
+      "examples": [
+        "BENCHMARK_VERIFICATION_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "BOARD_AUTOMATION_COMPLETE.txt": {
+      "examples": [
+        "BOARD_AUTOMATION_COMPLETE.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "BOARD_AUTOMATION_SCRIPTS_CREATED.txt": {
+      "examples": [
+        "BOARD_AUTOMATION_SCRIPTS_CREATED.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "CHANGELOG.md": {
+      "examples": [
+        "CHANGELOG.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CHANNEL3_BOOT_TIME_AUTO_INSTALL_INTERNET.md": {
+      "examples": [
+        "CHANNEL3_BOOT_TIME_AUTO_INSTALL_INTERNET.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md": {
+      "examples": [
+        "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md": {
+      "examples": [
+        "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md": {
+      "examples": [
+        "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md": {
+      "examples": [
+        "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CHANNEL3_QUICK_REFERENCE.md": {
+      "examples": [
+        "CHANNEL3_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CHANNEL3_USB_BOOT_DEPLOYMENT.md": {
+      "examples": [
+        "CHANNEL3_USB_BOOT_DEPLOYMENT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CI_CD_OPTIMIZATION_REPORT.md": {
+      "examples": [
+        "CI_CD_OPTIMIZATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CLOUDSYNC_API_DOCUMENTATION.md": {
+      "examples": [
+        "CLOUDSYNC_API_DOCUMENTATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CLOUDSYNC_INTEGRATION_GUIDE.md": {
+      "examples": [
+        "CLOUDSYNC_INTEGRATION_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "COACHING_RECOMMENDATIONS.md": {
+      "examples": [
+        "COACHING_RECOMMENDATIONS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "COACHING_REPORT_PHASE5_6_TEMPLATE.md": {
+      "examples": [
+        "COACHING_REPORT_PHASE5_6_TEMPLATE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "CODE_QUALITY_SCORING_GUIDE.md": {
+      "examples": [
+        "CODE_QUALITY_SCORING_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "COMMAND_CENTER.md": {
+      "examples": [
+        "COMMAND_CENTER.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "COMPLETE_DELIVERY_REPORT_v2_5_0.md": {
+      "examples": [
+        "COMPLETE_DELIVERY_REPORT_v2_5_0.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "COMPLETION_CERTIFICATE.txt": {
+      "examples": [
+        "COMPLETION_CERTIFICATE.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "COMPLETION_REPORT.md": {
+      "examples": [
+        "COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "COMPLETION_REPORT.txt": {
+      "examples": [
+        "COMPLETION_REPORT.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "COMPONENT_METRICS.json": {
+      "examples": [
+        "COMPONENT_METRICS.json"
+      ],
+      "files": 1,
+      "languages": {
+        "json": 1
+      }
+    },
+    "COMPREHENSIVE_TEST_SUITE_DELIVERY.txt": {
+      "examples": [
+        "COMPREHENSIVE_TEST_SUITE_DELIVERY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "CSHARP_MODERNIZATION_GUIDE.md": {
+      "examples": [
+        "CSHARP_MODERNIZATION_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DARK_MODE_GUIDE.md": {
+      "examples": [
+        "DARK_MODE_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DASHBOARD_API_DOCUMENTATION.md": {
+      "examples": [
+        "DASHBOARD_API_DOCUMENTATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DASHBOARD_USER_GUIDE.md": {
+      "examples": [
+        "DASHBOARD_USER_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DELIVERABLES_CHECKLIST.txt": {
+      "examples": [
+        "DELIVERABLES_CHECKLIST.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "DELIVERY_PACKAGE.md": {
+      "examples": [
+        "DELIVERY_PACKAGE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DELIVERY_SUMMARY.md": {
+      "examples": [
+        "DELIVERY_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DEPENDENCY_AUDIT_REPORT.md": {
+      "examples": [
+        "DEPENDENCY_AUDIT_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DEPLOYMENT_MONITOR.md": {
+      "examples": [
+        "DEPLOYMENT_MONITOR.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DEVELOPER_DASHBOARD_API.md": {
+      "examples": [
+        "DEVELOPER_DASHBOARD_API.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DEVELOPER_DASHBOARD_USER_GUIDE.md": {
+      "examples": [
+        "DEVELOPER_DASHBOARD_USER_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DEVELOPMENT_ROADMAP.md": {
+      "examples": [
+        "DEVELOPMENT_ROADMAP.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "DOCUMENTATION_DELIVERY_SUMMARY.txt": {
+      "examples": [
+        "DOCUMENTATION_DELIVERY_SUMMARY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "Directory.Build.props": {
+      "examples": [
+        "Directory.Build.props"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "EXECUTION_DASHBOARD.md": {
+      "examples": [
+        "EXECUTION_DASHBOARD.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "EXECUTIVE_SUMMARY_PHASE_3_5.md": {
+      "examples": [
+        "EXECUTIVE_SUMMARY_PHASE_3_5.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "FINAL_GITHUB_PAGES_SUMMARY.txt": {
+      "examples": [
+        "FINAL_GITHUB_PAGES_SUMMARY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "FINAL_PRODUCTION_DEPLOYMENT_STATUS.md": {
+      "examples": [
+        "FINAL_PRODUCTION_DEPLOYMENT_STATUS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "FINAL_RELEASE_NOTES.md": {
+      "examples": [
+        "FINAL_RELEASE_NOTES.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "FULL_GITHUB_INTEGRATION_DEPLOYMENT_MANUAL.md": {
+      "examples": [
+        "FULL_GITHUB_INTEGRATION_DEPLOYMENT_MANUAL.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "GETTING_STARTED.md": {
+      "examples": [
+        "GETTING_STARTED.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "HELIOS": {
+      "examples": [
+        "HELIOS/docs/19_OPTIMIZEDPARTITIONMERGE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "HELIOS-Platform-Portable": {
+      "examples": [
+        "HELIOS-Platform-Portable/HELIOS.Platform.exe",
+        "HELIOS-Platform-Portable/README_PORTABLE.md",
+        "HELIOS-Platform-Portable/config/example-config.yaml"
+      ],
+      "files": 3,
+      "languages": {
+        "markdown": 1,
+        "other": 1,
+        "yaml": 1
+      }
+    },
+    "HELIOS.Platform.Installer": {
+      "examples": [
+        "HELIOS.Platform.Installer/Class1.cs",
+        "HELIOS.Platform.Installer/HELIOS.Platform.Installer.csproj",
+        "HELIOS.Platform.Installer/HeliosInstaller.cs"
+      ],
+      "files": 3,
+      "languages": {
+        "csharp": 2,
+        "csharp-project": 1
+      }
+    },
+    "HELIOS.Platform.ShellExtension": {
+      "examples": [
+        "HELIOS.Platform.ShellExtension/Class1.cs",
+        "HELIOS.Platform.ShellExtension/ContextMenuExtension.cs",
+        "HELIOS.Platform.ShellExtension/HELIOS.Platform.ShellExtension.csproj"
+      ],
+      "files": 3,
+      "languages": {
+        "csharp": 2,
+        "csharp-project": 1
+      }
+    },
+    "HELIOS.Platform.SystemIntegration": {
+      "examples": [
+        "HELIOS.Platform.SystemIntegration/HELIOS.Platform.SystemIntegration.csproj",
+        "HELIOS.Platform.SystemIntegration/Class1.cs",
+        "HELIOS.Platform.SystemIntegration/SystemDetector.cs"
+      ],
+      "files": 3,
+      "languages": {
+        "csharp": 2,
+        "csharp-project": 1
+      }
+    },
+    "HELIOS.Platform.Tray": {
+      "examples": [
+        "HELIOS.Platform.Tray/Class1.cs",
+        "HELIOS.Platform.Tray/Program.cs",
+        "HELIOS.Platform.Tray/HELIOS.Platform.Tray.csproj"
+      ],
+      "files": 3,
+      "languages": {
+        "csharp": 2,
+        "csharp-project": 1
+      }
+    },
+    "HELIOS.Platform.csproj": {
+      "examples": [
+        "HELIOS.Platform.csproj"
+      ],
+      "files": 1,
+      "languages": {
+        "csharp-project": 1
+      }
+    },
+    "HELIOS.Platform.slnx": {
+      "examples": [
+        "HELIOS.Platform.slnx"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "HERMES_SWIFT_COMPLETE_DELIVERY_INDEX.md": {
+      "examples": [
+        "HERMES_SWIFT_COMPLETE_DELIVERY_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "HERMES_SWIFT_OPTIMIZATION_EXECUTION_PLAN.md": {
+      "examples": [
+        "HERMES_SWIFT_OPTIMIZATION_EXECUTION_PLAN.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "HERMES_SWIFT_OPTIMIZATION_EXECUTIVE_SUMMARY.md": {
+      "examples": [
+        "HERMES_SWIFT_OPTIMIZATION_EXECUTIVE_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "HERMES_SWIFT_PHASE_0_STATUS_REPORT.md": {
+      "examples": [
+        "HERMES_SWIFT_PHASE_0_STATUS_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "HeliosAutoSetup.cs": {
+      "examples": [
+        "HeliosAutoSetup.cs"
+      ],
+      "files": 1,
+      "languages": {
+        "csharp": 1
+      }
+    },
+    "INDEX.md": {
+      "examples": [
+        "INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "LICENSE": {
+      "examples": [
+        "LICENSE"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "LICENSE.md": {
+      "examples": [
+        "LICENSE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "MANIFEST.md": {
+      "examples": [
+        "MANIFEST.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "MANIFEST_PHASE5_TIER1.txt": {
+      "examples": [
+        "MANIFEST_PHASE5_TIER1.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "MONADO_BLADE_CHANNEL3_PRODUCTION_DELIVERY.md": {
+      "examples": [
+        "MONADO_BLADE_CHANNEL3_PRODUCTION_DELIVERY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "MONADO_BLADE_COMPLETE_SYSTEM_SUMMARY.md": {
+      "examples": [
+        "MONADO_BLADE_COMPLETE_SYSTEM_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "MONADO_BLADE_PHASE11_UPDATE_SYSTEM.md": {
+      "examples": [
+        "MONADO_BLADE_PHASE11_UPDATE_SYSTEM.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "NUGET_QUICK_REFERENCE.txt": {
+      "examples": [
+        "NUGET_QUICK_REFERENCE.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PARALLEL_OPTIMIZATION_EXECUTION_FULL.md": {
+      "examples": [
+        "PARALLEL_OPTIMIZATION_EXECUTION_FULL.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PARALLEL_OPTIMIZATION_EXECUTION_PLAN.md": {
+      "examples": [
+        "PARALLEL_OPTIMIZATION_EXECUTION_PLAN.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PARALLEL_OPTIMIZATION_PHASE1_RESULTS.md": {
+      "examples": [
+        "PARALLEL_OPTIMIZATION_PHASE1_RESULTS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PARALLEL_OPTIMIZATION_README.md": {
+      "examples": [
+        "PARALLEL_OPTIMIZATION_README.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE10_QUARANTINE_COMPLETE.md": {
+      "examples": [
+        "PHASE10_QUARANTINE_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE10_QUARANTINE_IMPLEMENTATION_SUMMARY.md": {
+      "examples": [
+        "PHASE10_QUARANTINE_IMPLEMENTATION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE10_QUARANTINE_QUICKSTART.md": {
+      "examples": [
+        "PHASE10_QUARANTINE_QUICKSTART.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE10_QUARANTINE_README.md": {
+      "examples": [
+        "PHASE10_QUARANTINE_README.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE2_DELIVERABLES_COMPLETE.md": {
+      "examples": [
+        "PHASE2_DELIVERABLES_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE2_FINAL_REPORT.md": {
+      "examples": [
+        "PHASE2_FINAL_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE2_SERVER_MANAGEMENT_CORE_MANIFEST.md": {
+      "examples": [
+        "PHASE2_SERVER_MANAGEMENT_CORE_MANIFEST.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE2_TASK_2_10_2_11_IMPLEMENTATION_SUMMARY.md": {
+      "examples": [
+        "PHASE2_TASK_2_10_2_11_IMPLEMENTATION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE2_TASK_2_10_2_11_QUICK_REFERENCE.md": {
+      "examples": [
+        "PHASE2_TASK_2_10_2_11_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE3_GUI_COMPLETION_REPORT.md": {
+      "examples": [
+        "PHASE3_GUI_COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE3_TIER4_COMPLETION_REPORT.md": {
+      "examples": [
+        "PHASE3_TIER4_COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE3_TIER4_IMPLEMENTATION.md": {
+      "examples": [
+        "PHASE3_TIER4_IMPLEMENTATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE3_TIER4_INDEX.md": {
+      "examples": [
+        "PHASE3_TIER4_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE3_TIER4_QUICK_REFERENCE.md": {
+      "examples": [
+        "PHASE3_TIER4_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE3_TIER4_SECURITY_DISASTER_RECOVERY_COMPLETION.md": {
+      "examples": [
+        "PHASE3_TIER4_SECURITY_DISASTER_RECOVERY_COMPLETION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE3_TIER4_TEST_RESULTS.md": {
+      "examples": [
+        "PHASE3_TIER4_TEST_RESULTS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE3_TIER4_VERIFICATION_CHECKLIST.md": {
+      "examples": [
+        "PHASE3_TIER4_VERIFICATION_CHECKLIST.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE5_COMPLETION_REPORT.md": {
+      "examples": [
+        "PHASE5_COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE5_FINAL_REPORT.md": {
+      "examples": [
+        "PHASE5_FINAL_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE5_QUICK_SUMMARY.txt": {
+      "examples": [
+        "PHASE5_QUICK_SUMMARY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE5_TIER1_ADVANCEDML_IMPLEMENTATION_REPORT.md": {
+      "examples": [
+        "PHASE5_TIER1_ADVANCEDML_IMPLEMENTATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE5_TIER1_COMPLETION_SUMMARY.txt": {
+      "examples": [
+        "PHASE5_TIER1_COMPLETION_SUMMARY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE5_TIER1_QUICK_REFERENCE.md": {
+      "examples": [
+        "PHASE5_TIER1_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE5_TIER4_ECOSYSTEM_COMPLETION.md": {
+      "examples": [
+        "PHASE5_TIER4_ECOSYSTEM_COMPLETION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE5_TIER4_FINAL_REPORT.md": {
+      "examples": [
+        "PHASE5_TIER4_FINAL_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE6_COMPLETION_SUMMARY.md": {
+      "examples": [
+        "PHASE6_COMPLETION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE6_DELIVERABLES_INDEX.md": {
+      "examples": [
+        "PHASE6_DELIVERABLES_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE6_OPTIMIZATION_METRICS.json": {
+      "examples": [
+        "PHASE6_OPTIMIZATION_METRICS.json"
+      ],
+      "files": 1,
+      "languages": {
+        "json": 1
+      }
+    },
+    "PHASE6_OPTIMIZATION_REPORT.md": {
+      "examples": [
+        "PHASE6_OPTIMIZATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE6_OPTIMIZATION_STRATEGY.md": {
+      "examples": [
+        "PHASE6_OPTIMIZATION_STRATEGY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE6_QUICK_REFERENCE.md": {
+      "examples": [
+        "PHASE6_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE6_STATUS.ps1": {
+      "examples": [
+        "PHASE6_STATUS.ps1"
+      ],
+      "files": 1,
+      "languages": {
+        "powershell": 1
+      }
+    },
+    "PHASE7_STREAM10_INDEX.md": {
+      "examples": [
+        "PHASE7_STREAM10_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE7_STREAM10_SESSION_SUMMARY.md": {
+      "examples": [
+        "PHASE7_STREAM10_SESSION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE7_STREAM6_EXECUTION_SUMMARY.md": {
+      "examples": [
+        "PHASE7_STREAM6_EXECUTION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE7_STREAM7_COMPLETION_SUMMARY.md": {
+      "examples": [
+        "PHASE7_STREAM7_COMPLETION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM1_EXECUTION_SUMMARY.txt": {
+      "examples": [
+        "PHASE8_STREAM1_EXECUTION_SUMMARY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE8_STREAM1_FINAL_ASSESSMENT.md": {
+      "examples": [
+        "PHASE8_STREAM1_FINAL_ASSESSMENT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM1_ISSUES.md": {
+      "examples": [
+        "PHASE8_STREAM1_ISSUES.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM1_REMEDIATION_COMPLETE.md": {
+      "examples": [
+        "PHASE8_STREAM1_REMEDIATION_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM1_VALIDATION_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM1_VALIDATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM2_EXECUTION_SUMMARY.md": {
+      "examples": [
+        "PHASE8_STREAM2_EXECUTION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM2_FINAL_VERIFICATION.md": {
+      "examples": [
+        "PHASE8_STREAM2_FINAL_VERIFICATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM2_README.md": {
+      "examples": [
+        "PHASE8_STREAM2_README.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM2_UI_POLISH_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM2_UI_POLISH_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM3_EXECUTION_COMPLETE.md": {
+      "examples": [
+        "PHASE8_STREAM3_EXECUTION_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM3_QUICK_REFERENCE.md": {
+      "examples": [
+        "PHASE8_STREAM3_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM3_SYSTEM_INTEGRATION_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM3_SYSTEM_INTEGRATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM4_AUDIO_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM4_AUDIO_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM4_DELIVERY_COMPLETE.txt": {
+      "examples": [
+        "PHASE8_STREAM4_DELIVERY_COMPLETE.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE8_STREAM4_EXECUTION_SUMMARY.txt": {
+      "examples": [
+        "PHASE8_STREAM4_EXECUTION_SUMMARY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE8_STREAM4_FINAL_DELIVERY.md": {
+      "examples": [
+        "PHASE8_STREAM4_FINAL_DELIVERY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM5_DELIVERY_MANIFEST.md": {
+      "examples": [
+        "PHASE8_STREAM5_DELIVERY_MANIFEST.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM5_MONITORING_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM5_MONITORING_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM6_AI_HUB_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM6_AI_HUB_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM6_COMPLETION_SUMMARY.txt": {
+      "examples": [
+        "PHASE8_STREAM6_COMPLETION_SUMMARY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE8_STREAM6_EXECUTION_COMPLETE.md": {
+      "examples": [
+        "PHASE8_STREAM6_EXECUTION_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM6_FINAL_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM6_FINAL_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM6_QUICK_REFERENCE.md": {
+      "examples": [
+        "PHASE8_STREAM6_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM7_COMPLETION_SUMMARY.md": {
+      "examples": [
+        "PHASE8_STREAM7_COMPLETION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM7_EXECUTION_FINAL_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM7_EXECUTION_FINAL_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM7_FINAL_CHECKLIST.md": {
+      "examples": [
+        "PHASE8_STREAM7_FINAL_CHECKLIST.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM7_THEMES_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM7_THEMES_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM8_BENCHMARK_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM8_BENCHMARK_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM8_COMPLETION_SUMMARY.md": {
+      "examples": [
+        "PHASE8_STREAM8_COMPLETION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM8_FINAL_STATUS.txt": {
+      "examples": [
+        "PHASE8_STREAM8_FINAL_STATUS.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE8_STREAM8_IMPLEMENTATION_REPORT.md": {
+      "examples": [
+        "PHASE8_STREAM8_IMPLEMENTATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM8_OPTIMIZATION_STRATEGY.md": {
+      "examples": [
+        "PHASE8_STREAM8_OPTIMIZATION_STRATEGY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE8_STREAM8_QUICK_REFERENCE.md": {
+      "examples": [
+        "PHASE8_STREAM8_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_BATCH1_EXECUTION_MONITOR.md": {
+      "examples": [
+        "PHASE9_BATCH1_EXECUTION_MONITOR.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_DOCUMENTATION_INDEX.md": {
+      "examples": [
+        "PHASE9_DOCUMENTATION_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_EXECUTION_BLUEPRINT.md": {
+      "examples": [
+        "PHASE9_EXECUTION_BLUEPRINT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_KICKOFF_SUMMARY.md": {
+      "examples": [
+        "PHASE9_KICKOFF_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_LAUNCH_GUIDE.md": {
+      "examples": [
+        "PHASE9_LAUNCH_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_PLANNING_v3_6_0.md": {
+      "examples": [
+        "PHASE9_PLANNING_v3_6_0.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_READINESS_SUMMARY.md": {
+      "examples": [
+        "PHASE9_READINESS_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_READY_NOW.md": {
+      "examples": [
+        "PHASE9_READY_NOW.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_STATUS_NOW.md": {
+      "examples": [
+        "PHASE9_STATUS_NOW.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_STREAM5_COMPLETION.md": {
+      "examples": [
+        "PHASE9_STREAM5_COMPLETION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_STREAM7_COMPLETION_SUMMARY.md": {
+      "examples": [
+        "PHASE9_STREAM7_COMPLETION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE9_STREAM8_FINAL_SUMMARY.txt": {
+      "examples": [
+        "PHASE9_STREAM8_FINAL_SUMMARY.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE9_STREAM8_PERFORMANCE_OPTIMIZATION.md": {
+      "examples": [
+        "PHASE9_STREAM8_PERFORMANCE_OPTIMIZATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_0_3_EXECUTION_OFFICIALLY_LAUNCHED.md": {
+      "examples": [
+        "PHASE_0_3_EXECUTION_OFFICIALLY_LAUNCHED.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_1_VERIFICATION_REPORT.txt": {
+      "examples": [
+        "PHASE_1_VERIFICATION_REPORT.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE_2_COMPLETION_REPORT.md": {
+      "examples": [
+        "PHASE_2_COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_2_STUDIO_IMPLEMENTATION_SUMMARY.md": {
+      "examples": [
+        "PHASE_2_STUDIO_IMPLEMENTATION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_COMPLETION_REPORT.md": {
+      "examples": [
+        "PHASE_3_COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_IMPLEMENTATION.md": {
+      "examples": [
+        "PHASE_3_IMPLEMENTATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_IMPLEMENTATION_PLAYBOOK.md": {
+      "examples": [
+        "PHASE_3_IMPLEMENTATION_PLAYBOOK.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_PHASE_5_IMPLEMENTATION_STATUS.md": {
+      "examples": [
+        "PHASE_3_PHASE_5_IMPLEMENTATION_STATUS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_PHASE_5_STRATEGY.md": {
+      "examples": [
+        "PHASE_3_PHASE_5_STRATEGY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_ROADMAP.md": {
+      "examples": [
+        "PHASE_3_ROADMAP.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_TIER3_API_IMPLEMENTATION_COMPLETE.md": {
+      "examples": [
+        "PHASE_3_TIER3_API_IMPLEMENTATION_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_TIER3_DELIVERY_CHECKLIST.md": {
+      "examples": [
+        "PHASE_3_TIER3_DELIVERY_CHECKLIST.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_TIER3_DELIVERY_SUMMARY.md": {
+      "examples": [
+        "PHASE_3_TIER3_DELIVERY_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_3_TIER3_USAGE_GUIDE.md": {
+      "examples": [
+        "PHASE_3_TIER3_USAGE_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_COMPLETE.md": {
+      "examples": [
+        "PHASE_4_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_DELIVERY_COMPLETE.md": {
+      "examples": [
+        "PHASE_4_DELIVERY_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_EXECUTIVE_SUMMARY.md": {
+      "examples": [
+        "PHASE_4_EXECUTIVE_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_FINAL_STATUS.txt": {
+      "examples": [
+        "PHASE_4_FINAL_STATUS.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "PHASE_4_FINAL_SUMMARY.md": {
+      "examples": [
+        "PHASE_4_FINAL_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_IMPLEMENTATION.md": {
+      "examples": [
+        "PHASE_4_IMPLEMENTATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_OPTIMIZATION_STRATEGY.md": {
+      "examples": [
+        "PHASE_4_OPTIMIZATION_STRATEGY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_SESSION_SUMMARY.md": {
+      "examples": [
+        "PHASE_4_SESSION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_T12_DATABASE_OPTIMIZATION.md": {
+      "examples": [
+        "PHASE_4_T12_DATABASE_OPTIMIZATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER1_4_BASELINES.md": {
+      "examples": [
+        "PHASE_4_TIER1_4_BASELINES.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER1_COMPLETE.md": {
+      "examples": [
+        "PHASE_4_TIER1_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER2_TESTING.md": {
+      "examples": [
+        "PHASE_4_TIER2_TESTING.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER3_ARCHITECTURE.md": {
+      "examples": [
+        "PHASE_4_TIER3_ARCHITECTURE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER3_OPERATIONS.md": {
+      "examples": [
+        "PHASE_4_TIER3_OPERATIONS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER3_PERFORMANCE_GUIDE.md": {
+      "examples": [
+        "PHASE_4_TIER3_PERFORMANCE_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER4_DEPLOYMENT.md": {
+      "examples": [
+        "PHASE_4_TIER4_DEPLOYMENT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER4_RESILIENCE.md": {
+      "examples": [
+        "PHASE_4_TIER4_RESILIENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_TIER4_SECURITY.md": {
+      "examples": [
+        "PHASE_4_TIER4_SECURITY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_4_VERIFICATION_REPORT.md": {
+      "examples": [
+        "PHASE_4_VERIFICATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_5_6_COMPLETION_PLAN.md": {
+      "examples": [
+        "PHASE_5_6_COMPLETION_PLAN.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_5_ARCHITECTURE_DESIGN.md": {
+      "examples": [
+        "PHASE_5_ARCHITECTURE_DESIGN.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_5_TIER2_IMPLEMENTATION_COMPLETE.md": {
+      "examples": [
+        "PHASE_5_TIER2_IMPLEMENTATION_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_5_TIER2_QUICK_REFERENCE.md": {
+      "examples": [
+        "PHASE_5_TIER2_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_AGENT_DEPLOYMENT.md": {
+      "examples": [
+        "PHASE_6_AGENT_DEPLOYMENT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_COMPLETE_PLAN.md": {
+      "examples": [
+        "PHASE_6_COMPLETE_PLAN.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_COMPLETE_POLISH.md": {
+      "examples": [
+        "PHASE_6_COMPLETE_POLISH.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_EXECUTIVE_SUMMARY.md": {
+      "examples": [
+        "PHASE_6_EXECUTIVE_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_FINAL_COMPLETION_REPORT.md": {
+      "examples": [
+        "PHASE_6_FINAL_COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_GITHUB_INTEGRATION.md": {
+      "examples": [
+        "PHASE_6_GITHUB_INTEGRATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_LAUNCH_CONTEXT.md": {
+      "examples": [
+        "PHASE_6_LAUNCH_CONTEXT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_PROGRESS_DASHBOARD.md": {
+      "examples": [
+        "PHASE_6_PROGRESS_DASHBOARD.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_READY_SUMMARY.md": {
+      "examples": [
+        "PHASE_6_READY_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PHASE_6_SAFETY_PROTOCOLS.md": {
+      "examples": [
+        "PHASE_6_SAFETY_PROTOCOLS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PRODUCTION_EXECUTABLE_DELIVERY.md": {
+      "examples": [
+        "PRODUCTION_EXECUTABLE_DELIVERY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PRODUCTION_SUMMARY.md": {
+      "examples": [
+        "PRODUCTION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PROJECT_COMPLETION_REPORT.md": {
+      "examples": [
+        "PROJECT_COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "PROJECT_INDEX.md": {
+      "examples": [
+        "PROJECT_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "Phase7_Stream10_Service_Audit.txt": {
+      "examples": [
+        "Phase7_Stream10_Service_Audit.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "QUICKREF_ECOSYSTEM_SERVICES.md": {
+      "examples": [
+        "QUICKREF_ECOSYSTEM_SERVICES.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "QUICK_REFERENCE_CARD.md": {
+      "examples": [
+        "QUICK_REFERENCE_CARD.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "QUICK_STATS.json": {
+      "examples": [
+        "QUICK_STATS.json"
+      ],
+      "files": 1,
+      "languages": {
+        "json": 1
+      }
+    },
+    "README.md": {
+      "examples": [
+        "README.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "README_BOARD_SETUP.md": {
+      "examples": [
+        "README_BOARD_SETUP.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "README_CLI.md": {
+      "examples": [
+        "README_CLI.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "README_CURRENT_STATUS.md": {
+      "examples": [
+        "README_CURRENT_STATUS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "README_PHASE8_STREAM4.md": {
+      "examples": [
+        "README_PHASE8_STREAM4.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "README_PHASE_1_DELIVERY.md": {
+      "examples": [
+        "README_PHASE_1_DELIVERY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "README_PHASE_4_COMPLETE.md": {
+      "examples": [
+        "README_PHASE_4_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "README_PORTABLE.md": {
+      "examples": [
+        "README_PORTABLE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "RELEASE_NOTES.md": {
+      "examples": [
+        "RELEASE_NOTES.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "REORGANIZATION_REPORT.md": {
+      "examples": [
+        "REORGANIZATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SANDBOX_CONFIGURATION_GUIDE.md": {
+      "examples": [
+        "SANDBOX_CONFIGURATION_GUIDE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SANDBOX_DOCUMENTATION.md": {
+      "examples": [
+        "SANDBOX_DOCUMENTATION.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SANDBOX_FILE_INDEX.md": {
+      "examples": [
+        "SANDBOX_FILE_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SANDBOX_IMPLEMENTATION_SUMMARY.md": {
+      "examples": [
+        "SANDBOX_IMPLEMENTATION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SANDBOX_QUICK_REFERENCE.md": {
+      "examples": [
+        "SANDBOX_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SANDBOX_README.md": {
+      "examples": [
+        "SANDBOX_README.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SECURITY.md": {
+      "examples": [
+        "SECURITY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SECURITY_TASKS_COMPLETE.txt": {
+      "examples": [
+        "SECURITY_TASKS_COMPLETE.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "SECURITY_VALIDATION_DEPLOYMENT_SUMMARY.md": {
+      "examples": [
+        "SECURITY_VALIDATION_DEPLOYMENT_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SECURITY_VALIDATION_FRAMEWORK.md": {
+      "examples": [
+        "SECURITY_VALIDATION_FRAMEWORK.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SECURITY_VALIDATION_QUICK_REFERENCE.md": {
+      "examples": [
+        "SECURITY_VALIDATION_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SERVICE_CONSOLIDATION_PLAN.md": {
+      "examples": [
+        "SERVICE_CONSOLIDATION_PLAN.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SERVICE_CONSOLIDATION_REPORT.md": {
+      "examples": [
+        "SERVICE_CONSOLIDATION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "SESSION_SUMMARY.md": {
+      "examples": [
+        "SESSION_SUMMARY.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "START_HERE_PHASE2.txt": {
+      "examples": [
+        "START_HERE_PHASE2.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "STREAM2_COMPLETION_REPORT.md": {
+      "examples": [
+        "STREAM2_COMPLETION_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "STREAM2_DELIVERY_MANIFEST.md": {
+      "examples": [
+        "STREAM2_DELIVERY_MANIFEST.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "STREAM2_INDEX.md": {
+      "examples": [
+        "STREAM2_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "STUDIO_QUICK_REFERENCE.md": {
+      "examples": [
+        "STUDIO_QUICK_REFERENCE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "TESTING_REPORT.md": {
+      "examples": [
+        "TESTING_REPORT.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "TEST_FILE_INDEX.md": {
+      "examples": [
+        "TEST_FILE_INDEX.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "TEST_METRICS.md": {
+      "examples": [
+        "TEST_METRICS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "USB_DRIVER_VERIFICATION_COMPLETE.md": {
+      "examples": [
+        "USB_DRIVER_VERIFICATION_COMPLETE.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "V3_6_0_DEPLOYMENT_READINESS.md": {
+      "examples": [
+        "V3_6_0_DEPLOYMENT_READINESS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "V3_6_0_RC1_RELEASE_NOTES.md": {
+      "examples": [
+        "V3_6_0_RC1_RELEASE_NOTES.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "V3_6_0_RELEASE_NOTES_FINAL.md": {
+      "examples": [
+        "V3_6_0_RELEASE_NOTES_FINAL.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "VERIFICATION_1_10a.txt": {
+      "examples": [
+        "VERIFICATION_1_10a.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "VERSION_MANIFEST_v2.5.1.md": {
+      "examples": [
+        "VERSION_MANIFEST_v2.5.1.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "WORKFLOW_ANALYSIS.md": {
+      "examples": [
+        "WORKFLOW_ANALYSIS.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "_config.yml": {
+      "examples": [
+        "_config.yml"
+      ],
+      "files": 1,
+      "languages": {
+        "yaml": 1
+      }
+    },
+    "ai-integration": {
+      "examples": [
+        "ai-integration/QUICK_START.md",
+        "ai-integration/README.md",
+        "ai-integration/REFERENCE.md",
+        "ai-integration/IMPLEMENTATION_CHECKLIST.md",
+        "ai-integration/COMPLETION_REPORT.md"
+      ],
+      "files": 16,
+      "languages": {
+        "markdown": 13,
+        "powershell": 3
+      }
+    },
+    "azure-pipelines.yml": {
+      "examples": [
+        "azure-pipelines.yml"
+      ],
+      "files": 1,
+      "languages": {
+        "yaml": 1
+      }
+    },
+    "build_errors.txt": {
+      "examples": [
+        "build_errors.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "build_integration_log.txt": {
+      "examples": [
+        "build_integration_log.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "build_log.txt": {
+      "examples": [
+        "build_log.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "build_log2.txt": {
+      "examples": [
+        "build_log2.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "build_output.txt": {
+      "examples": [
+        "build_output.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "build_release_attempt.txt": {
+      "examples": [
+        "build_release_attempt.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "builds": {
+      "examples": [
+        "builds/build-templates/variants.json"
+      ],
+      "files": 1,
+      "languages": {
+        "json": 1
+      }
+    },
+    "cloud-integration": {
+      "examples": [
+        "cloud-integration/DELIVERY_SUMMARY.md",
+        "cloud-integration/README.md",
+        "cloud-integration/COMPLETION_STATUS.md",
+        "cloud-integration/IMPLEMENTATION_GUIDE.md",
+        "cloud-integration/INDEX.md"
+      ],
+      "files": 20,
+      "languages": {
+        "csharp": 5,
+        "json": 10,
+        "markdown": 5
+      }
+    },
+    "components": {
+      "examples": [
+        "components/COMPONENT_COMPATIBILITY_MATRIX.md",
+        "components/COMPONENT_CATALOG.md",
+        "components/UNINSTALL_GUIDE.md",
+        "components/DOCUMENTATION_INDEX.md",
+        "components/ADVANCED_BORROWING_SCENARIOS.md"
+      ],
+      "files": 17,
+      "languages": {
+        "markdown": 15,
+        "other": 2
+      }
+    },
+    "config": {
+      "examples": [
+        "config/hybrid-integration-roadmap.json",
+        "config/integrations.example.json",
+        "config/secrets-map.example.json",
+        "config/execution-order.json",
+        "config/github-control.example.json"
+      ],
+      "files": 13,
+      "languages": {
+        "json": 12,
+        "other": 1
+      }
+    },
+    "dashboards": {
+      "examples": [
+        "dashboards/ECOSYSTEM-DASHBOARD.ps1",
+        "dashboards/DOCUMENTATION-PORTAL.ps1"
+      ],
+      "files": 2,
+      "languages": {
+        "powershell": 2
+      }
+    },
+    "demos": {
+      "examples": [
+        "demos/DEPLOYMENT_COMPLETE.md",
+        "demos/DeveloperSetupDemo.cs",
+        "demos/QuickStartDemo.cs",
+        "demos/DemoBase.cs",
+        "demos/README.md"
+      ],
+      "files": 15,
+      "languages": {
+        "csharp": 9,
+        "csharp-project": 1,
+        "markdown": 5
+      }
+    },
+    "docs": {
+      "examples": [
+        "docs/DEVELOPMENT.md",
+        "docs/JSDOC_REFERENCE.md",
+        "docs/USER_ADVANCED_GUIDE.md",
+        "docs/TEMPLATES_SUMMARY.md",
+        "docs/CONFIGURATION_GUIDE.md"
+      ],
+      "files": 358,
+      "languages": {
+        "csharp": 7,
+        "csharp-project": 1,
+        "json": 3,
+        "markdown": 255,
+        "other": 80,
+        "powershell": 11,
+        "shell": 1
+      }
+    },
+    "dotnet-install.sh": {
+      "examples": [
+        "dotnet-install.sh"
+      ],
+      "files": 1,
+      "languages": {
+        "shell": 1
+      }
+    },
+    "examples": {
+      "examples": [
+        "examples/README.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "file-architecture": {
+      "examples": [
+        "file-architecture/PHASE_0_FILE_LOCATIONS.md",
+        "file-architecture/WINDOWS_SYSTEM_PATHS.md",
+        "file-architecture/PHASE_2_FILE_LOCATIONS.md",
+        "file-architecture/README.md",
+        "file-architecture/REGISTRY_CHANGES.md"
+      ],
+      "files": 10,
+      "languages": {
+        "markdown": 10
+      }
+    },
+    "generate-fleet-report.ps1": {
+      "examples": [
+        "generate-fleet-report.ps1"
+      ],
+      "files": 1,
+      "languages": {
+        "powershell": 1
+      }
+    },
+    "helios-autosetup.ps1": {
+      "examples": [
+        "helios-autosetup.ps1"
+      ],
+      "files": 1,
+      "languages": {
+        "powershell": 1
+      }
+    },
+    "helios-deploy.yml": {
+      "examples": [
+        "helios-deploy.yml"
+      ],
+      "files": 1,
+      "languages": {
+        "yaml": 1
+      }
+    },
+    "helios.sh": {
+      "examples": [
+        "helios.sh"
+      ],
+      "files": 1,
+      "languages": {
+        "shell": 1
+      }
+    },
+    "infra": {
+      "examples": [
+        "infra/azure/README.md",
+        "infra/azure/main.bicep",
+        "infra/azure/parameters/dev.json",
+        "infra/azure/modules/storage.bicep",
+        "infra/azure/modules/observability.bicep"
+      ],
+      "files": 7,
+      "languages": {
+        "bicep": 5,
+        "json": 1,
+        "markdown": 1
+      }
+    },
+    "installer": {
+      "examples": [
+        "installer/Uninstall-HELIOS.ps1",
+        "installer/DEPLOYMENT_SUMMARY.md",
+        "installer/version-upgrade.ps1",
+        "installer/PHASE_6_OVERVIEW.md",
+        "installer/setup.nsi"
+      ],
+      "files": 172,
+      "languages": {
+        "json": 25,
+        "markdown": 40,
+        "other": 16,
+        "powershell": 91
+      }
+    },
+    "microsoft-ecosystem": {
+      "examples": [
+        "microsoft-ecosystem/SECURITY_COMPLIANCE.md",
+        "microsoft-ecosystem/README.md",
+        "microsoft-ecosystem/INTEGRATION_MATRIX.md",
+        "microsoft-ecosystem/DEPLOYMENT_ARCHITECTURES.md",
+        "microsoft-ecosystem/QUICKSTART.md"
+      ],
+      "files": 21,
+      "languages": {
+        "markdown": 17,
+        "powershell": 3,
+        "yaml": 1
+      }
+    },
+    "monitoring": {
+      "examples": [
+        "monitoring/COMPLETION-SUMMARY.md",
+        "monitoring/README.md",
+        "monitoring/00-START-HERE.md",
+        "monitoring/01-MONITORING-SYSTEM-OVERVIEW.md",
+        "monitoring/INDEX.md"
+      ],
+      "files": 18,
+      "languages": {
+        "json": 3,
+        "markdown": 6,
+        "other": 1,
+        "powershell": 8
+      }
+    },
+    "nuget.config": {
+      "examples": [
+        "nuget.config"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "parallel_optimization_plan_EXECUTION_TASKS.sql": {
+      "examples": [
+        "parallel_optimization_plan_EXECUTION_TASKS.sql"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "phase-3-build-test-integrate.ps1": {
+      "examples": [
+        "phase-3-build-test-integrate.ps1"
+      ],
+      "files": 1,
+      "languages": {
+        "powershell": 1
+      }
+    },
+    "phase8_stream1_test_output.txt": {
+      "examples": [
+        "phase8_stream1_test_output.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "phase8_test_results.txt": {
+      "examples": [
+        "phase8_test_results.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "phases": {
+      "examples": [
+        "phases/3-capability/FILE_ARCHITECTURE.md",
+        "phases/3-capability/PLAIN_ENGLISH_GUIDE.md",
+        "phases/3-capability/README.md",
+        "phases/3-capability/TESTING_GUIDE.md",
+        "phases/3-capability/BEFORE_AND_AFTER.md"
+      ],
+      "files": 27,
+      "languages": {
+        "markdown": 27
+      }
+    },
+    "plugins": {
+      "examples": [
+        "plugins/README.md"
+      ],
+      "files": 1,
+      "languages": {
+        "markdown": 1
+      }
+    },
+    "samples": {
+      "examples": [
+        "samples/plugins/plugin-manifest.log.json",
+        "samples/plugins/AlertPlugin.cs",
+        "samples/plugins/LogPlugin.cs",
+        "samples/plugins/MetricsPlugin.cs",
+        "samples/plugins/plugin-manifest.alerts.json"
+      ],
+      "files": 6,
+      "languages": {
+        "csharp": 3,
+        "json": 3
+      }
+    },
+    "scripts": {
+      "examples": [
+        "scripts/orchestrate-complete-platform.ps1",
+        "scripts/build-cli.sh",
+        "scripts/collect-all-metrics.ps1",
+        "scripts/init-github-repo.ps1",
+        "scripts/README.md"
+      ],
+      "files": 272,
+      "languages": {
+        "json": 24,
+        "markdown": 32,
+        "other": 21,
+        "powershell": 171,
+        "python": 15,
+        "shell": 9
+      }
+    },
+    "security.config.template.json": {
+      "examples": [
+        "security.config.template.json"
+      ],
+      "files": 1,
+      "languages": {
+        "json": 1
+      }
+    },
+    "src": {
+      "examples": [
+        "src/README.md",
+        "src/core_build_release_attempt3.txt",
+        "src/core_build_release_final.txt",
+        "src/core_build_release_attempt4.txt",
+        "src/core_build_release.txt"
+      ],
+      "files": 597,
+      "languages": {
+        "csharp": 469,
+        "csharp-project": 8,
+        "fsharp": 6,
+        "fsharp-project": 1,
+        "json": 6,
+        "markdown": 62,
+        "other": 45
+      }
+    },
+    "status-site": {
+      "examples": [
+        "status-site/index.md",
+        "status-site/actions.md",
+        "status-site/wiki-export/Module-Ranking.md",
+        "status-site/wiki-export/Branch-Intelligence.md",
+        "status-site/wiki-export/Agent-Work-Queue.md"
+      ],
+      "files": 7,
+      "languages": {
+        "markdown": 7
+      }
+    },
+    "submodules": {
+      "examples": [
+        "submodules/README.md",
+        "submodules/PHASE-1-AppLocker/README.md",
+        "submodules/PHASE-0-USB-Creator/README.md"
+      ],
+      "files": 3,
+      "languages": {
+        "markdown": 3
+      }
+    },
+    "test-phase3-tier4.ps1": {
+      "examples": [
+        "test-phase3-tier4.ps1"
+      ],
+      "files": 1,
+      "languages": {
+        "powershell": 1
+      }
+    },
+    "test_compile.cs": {
+      "examples": [
+        "test_compile.cs"
+      ],
+      "files": 1,
+      "languages": {
+        "csharp": 1
+      }
+    },
+    "test_output.txt": {
+      "examples": [
+        "test_output.txt"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    },
+    "tests": {
+      "examples": [
+        "tests/PERFORMANCE_BENCHMARK.md",
+        "tests/TEST_TEMPLATES.md",
+        "tests/BEFORE_AFTER_CAPTURE.md",
+        "tests/integration.test.js",
+        "tests/SecurityValidationTests.csproj"
+      ],
+      "files": 90,
+      "languages": {
+        "csharp": 72,
+        "csharp-project": 3,
+        "fsharp": 1,
+        "fsharp-project": 1,
+        "markdown": 10,
+        "other": 2,
+        "powershell": 1
+      }
+    },
+    "tools": {
+      "examples": [
+        "tools/USB-Builder.ps1",
+        "tools/USB-Builder-Bootable-Lean.ps1",
+        "tools/USB-Builder-Complete-Fresh-Build.ps1",
+        "tools/submodule-status-checker.ps1",
+        "tools/Install-Wizard-Complete.ps1"
+      ],
+      "files": 5,
+      "languages": {
+        "powershell": 5
+      }
+    },
+    "verify-documentation-testing.sh": {
+      "examples": [
+        "verify-documentation-testing.sh"
+      ],
+      "files": 1,
+      "languages": {
+        "shell": 1
+      }
+    },
+    "verify-setup.sh": {
+      "examples": [
+        "verify-setup.sh"
+      ],
+      "files": 1,
+      "languages": {
+        "shell": 1
+      }
+    },
+    "workspace.code-workspace": {
+      "examples": [
+        "workspace.code-workspace"
+      ],
+      "files": 1,
+      "languages": {
+        "other": 1
+      }
+    }
+  },
+  "projects": [
+    "HELIOS.Platform.slnx",
+    "HELIOS.Platform.csproj",
+    "demos/HeliosDemos.csproj",
+    "HELIOS.Platform.Installer/HELIOS.Platform.Installer.csproj",
+    "HELIOS.Platform.SystemIntegration/HELIOS.Platform.SystemIntegration.csproj",
+    "HELIOS.Platform.Tray/HELIOS.Platform.Tray.csproj",
+    "tests/SecurityValidationTests.csproj",
+    "HELIOS.Platform.ShellExtension/HELIOS.Platform.ShellExtension.csproj",
+    "src/Security/SecurityValidator.csproj",
+    "src/tests/HELIOS.Platform.Tests.csproj",
+    "src/analytics/HELIOS.Analytics.FSharp/HELIOS.Analytics.FSharp.fsproj",
+    "src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj",
+    "src/core/HELIOS.Platform/HELIOS.Platform.csproj",
+    "src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj",
+    "src/core/HELIOS.Platform/Phase10/Users/HELIOS.Platform.Phase10.Users.csproj",
+    "src/core/HELIOS.Platform/Phase10/Sandbox/HELIOS.Platform.Phase10.Sandbox.csproj",
+    "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj",
+    "src/native/HELIOS.Native.Performance/CMakeLists.txt",
+    "docs/ui-xenoblade/HELIOS.WPF.csproj",
+    "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+    "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+    "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj"
+  ],
+  "topLevelCounts": {
+    ".devcontainer": 7,
+    ".editorconfig": 1,
+    ".env.template": 1,
+    ".gitattributes": 1,
+    ".github": 44,
+    ".gitignore": 1,
+    ".gitmodules": 1,
+    ".prettierrc": 1,
+    "00_START_HERE_FINAL_STATUS.txt": 1,
+    "ACCESSIBILITY_COMPLIANCE_REPORT.md": 1,
+    "ACTUAL_PROJECT_STATUS.md": 1,
+    "AI_CODE_QUALITY_TRAINER_COMPLETION.md": 1,
+    "AI_CODE_QUALITY_TRAINER_INDEX.md": 1,
+    "AI_TRAINING_FLEET.md": 1,
+    "ASYNC_STANDARDIZATION_REPORT.md": 1,
+    "AUDIO_SYSTEM_INDEX.md": 1,
+    "BENCHMARK_VERIFICATION_COMPLETE.md": 1,
+    "BOARD_AUTOMATION_COMPLETE.txt": 1,
+    "BOARD_AUTOMATION_SCRIPTS_CREATED.txt": 1,
+    "CHANGELOG.md": 1,
+    "CHANNEL3_BOOT_TIME_AUTO_INSTALL_INTERNET.md": 1,
+    "CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md": 1,
+    "CHANNEL3_COMPLETE_PRODUCTION_SUMMARY.md": 1,
+    "CHANNEL3_COMPLETE_SYSTEM_OVERVIEW.md": 1,
+    "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md": 1,
+    "CHANNEL3_QUICK_REFERENCE.md": 1,
+    "CHANNEL3_USB_BOOT_DEPLOYMENT.md": 1,
+    "CI_CD_OPTIMIZATION_REPORT.md": 1,
+    "CLOUDSYNC_API_DOCUMENTATION.md": 1,
+    "CLOUDSYNC_INTEGRATION_GUIDE.md": 1,
+    "COACHING_RECOMMENDATIONS.md": 1,
+    "COACHING_REPORT_PHASE5_6_TEMPLATE.md": 1,
+    "CODE_QUALITY_SCORING_GUIDE.md": 1,
+    "COMMAND_CENTER.md": 1,
+    "COMPLETE_DELIVERY_REPORT_v2_5_0.md": 1,
+    "COMPLETION_CERTIFICATE.txt": 1,
+    "COMPLETION_REPORT.md": 1,
+    "COMPLETION_REPORT.txt": 1,
+    "COMPONENT_METRICS.json": 1,
+    "COMPREHENSIVE_TEST_SUITE_DELIVERY.txt": 1,
+    "CSHARP_MODERNIZATION_GUIDE.md": 1,
+    "DARK_MODE_GUIDE.md": 1,
+    "DASHBOARD_API_DOCUMENTATION.md": 1,
+    "DASHBOARD_USER_GUIDE.md": 1,
+    "DELIVERABLES_CHECKLIST.txt": 1,
+    "DELIVERY_PACKAGE.md": 1,
+    "DELIVERY_SUMMARY.md": 1,
+    "DEPENDENCY_AUDIT_REPORT.md": 1,
+    "DEPLOYMENT_MONITOR.md": 1,
+    "DEVELOPER_DASHBOARD_API.md": 1,
+    "DEVELOPER_DASHBOARD_USER_GUIDE.md": 1,
+    "DEVELOPMENT_ROADMAP.md": 1,
+    "DOCUMENTATION_DELIVERY_SUMMARY.txt": 1,
+    "Directory.Build.props": 1,
+    "EXECUTION_DASHBOARD.md": 1,
+    "EXECUTIVE_SUMMARY_PHASE_3_5.md": 1,
+    "FINAL_GITHUB_PAGES_SUMMARY.txt": 1,
+    "FINAL_PRODUCTION_DEPLOYMENT_STATUS.md": 1,
+    "FINAL_RELEASE_NOTES.md": 1,
+    "FULL_GITHUB_INTEGRATION_DEPLOYMENT_MANUAL.md": 1,
+    "GETTING_STARTED.md": 1,
+    "HELIOS": 1,
+    "HELIOS-Platform-Portable": 3,
+    "HELIOS.Platform.Installer": 3,
+    "HELIOS.Platform.ShellExtension": 3,
+    "HELIOS.Platform.SystemIntegration": 3,
+    "HELIOS.Platform.Tray": 3,
+    "HELIOS.Platform.csproj": 1,
+    "HELIOS.Platform.slnx": 1,
+    "HERMES_SWIFT_COMPLETE_DELIVERY_INDEX.md": 1,
+    "HERMES_SWIFT_OPTIMIZATION_EXECUTION_PLAN.md": 1,
+    "HERMES_SWIFT_OPTIMIZATION_EXECUTIVE_SUMMARY.md": 1,
+    "HERMES_SWIFT_PHASE_0_STATUS_REPORT.md": 1,
+    "HeliosAutoSetup.cs": 1,
+    "INDEX.md": 1,
+    "LICENSE": 1,
+    "LICENSE.md": 1,
+    "MANIFEST.md": 1,
+    "MANIFEST_PHASE5_TIER1.txt": 1,
+    "MONADO_BLADE_CHANNEL3_PRODUCTION_DELIVERY.md": 1,
+    "MONADO_BLADE_COMPLETE_SYSTEM_SUMMARY.md": 1,
+    "MONADO_BLADE_PHASE11_UPDATE_SYSTEM.md": 1,
+    "NUGET_QUICK_REFERENCE.txt": 1,
+    "PARALLEL_OPTIMIZATION_EXECUTION_FULL.md": 1,
+    "PARALLEL_OPTIMIZATION_EXECUTION_PLAN.md": 1,
+    "PARALLEL_OPTIMIZATION_PHASE1_RESULTS.md": 1,
+    "PARALLEL_OPTIMIZATION_README.md": 1,
+    "PHASE10_QUARANTINE_COMPLETE.md": 1,
+    "PHASE10_QUARANTINE_IMPLEMENTATION_SUMMARY.md": 1,
+    "PHASE10_QUARANTINE_QUICKSTART.md": 1,
+    "PHASE10_QUARANTINE_README.md": 1,
+    "PHASE2_DELIVERABLES_COMPLETE.md": 1,
+    "PHASE2_FINAL_REPORT.md": 1,
+    "PHASE2_SERVER_MANAGEMENT_CORE_MANIFEST.md": 1,
+    "PHASE2_TASK_2_10_2_11_IMPLEMENTATION_SUMMARY.md": 1,
+    "PHASE2_TASK_2_10_2_11_QUICK_REFERENCE.md": 1,
+    "PHASE3_GUI_COMPLETION_REPORT.md": 1,
+    "PHASE3_TIER4_COMPLETION_REPORT.md": 1,
+    "PHASE3_TIER4_IMPLEMENTATION.md": 1,
+    "PHASE3_TIER4_INDEX.md": 1,
+    "PHASE3_TIER4_QUICK_REFERENCE.md": 1,
+    "PHASE3_TIER4_SECURITY_DISASTER_RECOVERY_COMPLETION.md": 1,
+    "PHASE3_TIER4_TEST_RESULTS.md": 1,
+    "PHASE3_TIER4_VERIFICATION_CHECKLIST.md": 1,
+    "PHASE5_COMPLETION_REPORT.md": 1,
+    "PHASE5_FINAL_REPORT.md": 1,
+    "PHASE5_QUICK_SUMMARY.txt": 1,
+    "PHASE5_TIER1_ADVANCEDML_IMPLEMENTATION_REPORT.md": 1,
+    "PHASE5_TIER1_COMPLETION_SUMMARY.txt": 1,
+    "PHASE5_TIER1_QUICK_REFERENCE.md": 1,
+    "PHASE5_TIER4_ECOSYSTEM_COMPLETION.md": 1,
+    "PHASE5_TIER4_FINAL_REPORT.md": 1,
+    "PHASE6_COMPLETION_SUMMARY.md": 1,
+    "PHASE6_DELIVERABLES_INDEX.md": 1,
+    "PHASE6_OPTIMIZATION_METRICS.json": 1,
+    "PHASE6_OPTIMIZATION_REPORT.md": 1,
+    "PHASE6_OPTIMIZATION_STRATEGY.md": 1,
+    "PHASE6_QUICK_REFERENCE.md": 1,
+    "PHASE6_STATUS.ps1": 1,
+    "PHASE7_STREAM10_INDEX.md": 1,
+    "PHASE7_STREAM10_SESSION_SUMMARY.md": 1,
+    "PHASE7_STREAM6_EXECUTION_SUMMARY.md": 1,
+    "PHASE7_STREAM7_COMPLETION_SUMMARY.md": 1,
+    "PHASE8_STREAM1_EXECUTION_SUMMARY.txt": 1,
+    "PHASE8_STREAM1_FINAL_ASSESSMENT.md": 1,
+    "PHASE8_STREAM1_ISSUES.md": 1,
+    "PHASE8_STREAM1_REMEDIATION_COMPLETE.md": 1,
+    "PHASE8_STREAM1_VALIDATION_REPORT.md": 1,
+    "PHASE8_STREAM2_EXECUTION_SUMMARY.md": 1,
+    "PHASE8_STREAM2_FINAL_VERIFICATION.md": 1,
+    "PHASE8_STREAM2_README.md": 1,
+    "PHASE8_STREAM2_UI_POLISH_REPORT.md": 1,
+    "PHASE8_STREAM3_EXECUTION_COMPLETE.md": 1,
+    "PHASE8_STREAM3_QUICK_REFERENCE.md": 1,
+    "PHASE8_STREAM3_SYSTEM_INTEGRATION_REPORT.md": 1,
+    "PHASE8_STREAM4_AUDIO_REPORT.md": 1,
+    "PHASE8_STREAM4_DELIVERY_COMPLETE.txt": 1,
+    "PHASE8_STREAM4_EXECUTION_SUMMARY.txt": 1,
+    "PHASE8_STREAM4_FINAL_DELIVERY.md": 1,
+    "PHASE8_STREAM5_DELIVERY_MANIFEST.md": 1,
+    "PHASE8_STREAM5_MONITORING_REPORT.md": 1,
+    "PHASE8_STREAM6_AI_HUB_REPORT.md": 1,
+    "PHASE8_STREAM6_COMPLETION_SUMMARY.txt": 1,
+    "PHASE8_STREAM6_EXECUTION_COMPLETE.md": 1,
+    "PHASE8_STREAM6_FINAL_REPORT.md": 1,
+    "PHASE8_STREAM6_QUICK_REFERENCE.md": 1,
+    "PHASE8_STREAM7_COMPLETION_SUMMARY.md": 1,
+    "PHASE8_STREAM7_EXECUTION_FINAL_REPORT.md": 1,
+    "PHASE8_STREAM7_FINAL_CHECKLIST.md": 1,
+    "PHASE8_STREAM7_THEMES_REPORT.md": 1,
+    "PHASE8_STREAM8_BENCHMARK_REPORT.md": 1,
+    "PHASE8_STREAM8_COMPLETION_SUMMARY.md": 1,
+    "PHASE8_STREAM8_FINAL_STATUS.txt": 1,
+    "PHASE8_STREAM8_IMPLEMENTATION_REPORT.md": 1,
+    "PHASE8_STREAM8_OPTIMIZATION_STRATEGY.md": 1,
+    "PHASE8_STREAM8_QUICK_REFERENCE.md": 1,
+    "PHASE9_BATCH1_EXECUTION_MONITOR.md": 1,
+    "PHASE9_DOCUMENTATION_INDEX.md": 1,
+    "PHASE9_EXECUTION_BLUEPRINT.md": 1,
+    "PHASE9_KICKOFF_SUMMARY.md": 1,
+    "PHASE9_LAUNCH_GUIDE.md": 1,
+    "PHASE9_PLANNING_v3_6_0.md": 1,
+    "PHASE9_READINESS_SUMMARY.md": 1,
+    "PHASE9_READY_NOW.md": 1,
+    "PHASE9_STATUS_NOW.md": 1,
+    "PHASE9_STREAM5_COMPLETION.md": 1,
+    "PHASE9_STREAM7_COMPLETION_SUMMARY.md": 1,
+    "PHASE9_STREAM8_FINAL_SUMMARY.txt": 1,
+    "PHASE9_STREAM8_PERFORMANCE_OPTIMIZATION.md": 1,
+    "PHASE_0_3_EXECUTION_OFFICIALLY_LAUNCHED.md": 1,
+    "PHASE_1_VERIFICATION_REPORT.txt": 1,
+    "PHASE_2_COMPLETION_REPORT.md": 1,
+    "PHASE_2_STUDIO_IMPLEMENTATION_SUMMARY.md": 1,
+    "PHASE_3_COMPLETION_REPORT.md": 1,
+    "PHASE_3_IMPLEMENTATION.md": 1,
+    "PHASE_3_IMPLEMENTATION_PLAYBOOK.md": 1,
+    "PHASE_3_PHASE_5_IMPLEMENTATION_STATUS.md": 1,
+    "PHASE_3_PHASE_5_STRATEGY.md": 1,
+    "PHASE_3_ROADMAP.md": 1,
+    "PHASE_3_TIER3_API_IMPLEMENTATION_COMPLETE.md": 1,
+    "PHASE_3_TIER3_DELIVERY_CHECKLIST.md": 1,
+    "PHASE_3_TIER3_DELIVERY_SUMMARY.md": 1,
+    "PHASE_3_TIER3_USAGE_GUIDE.md": 1,
+    "PHASE_4_COMPLETE.md": 1,
+    "PHASE_4_DELIVERY_COMPLETE.md": 1,
+    "PHASE_4_EXECUTIVE_SUMMARY.md": 1,
+    "PHASE_4_FINAL_STATUS.txt": 1,
+    "PHASE_4_FINAL_SUMMARY.md": 1,
+    "PHASE_4_IMPLEMENTATION.md": 1,
+    "PHASE_4_OPTIMIZATION_STRATEGY.md": 1,
+    "PHASE_4_SESSION_SUMMARY.md": 1,
+    "PHASE_4_T12_DATABASE_OPTIMIZATION.md": 1,
+    "PHASE_4_TIER1_4_BASELINES.md": 1,
+    "PHASE_4_TIER1_COMPLETE.md": 1,
+    "PHASE_4_TIER2_TESTING.md": 1,
+    "PHASE_4_TIER3_ARCHITECTURE.md": 1,
+    "PHASE_4_TIER3_OPERATIONS.md": 1,
+    "PHASE_4_TIER3_PERFORMANCE_GUIDE.md": 1,
+    "PHASE_4_TIER4_DEPLOYMENT.md": 1,
+    "PHASE_4_TIER4_RESILIENCE.md": 1,
+    "PHASE_4_TIER4_SECURITY.md": 1,
+    "PHASE_4_VERIFICATION_REPORT.md": 1,
+    "PHASE_5_6_COMPLETION_PLAN.md": 1,
+    "PHASE_5_ARCHITECTURE_DESIGN.md": 1,
+    "PHASE_5_TIER2_IMPLEMENTATION_COMPLETE.md": 1,
+    "PHASE_5_TIER2_QUICK_REFERENCE.md": 1,
+    "PHASE_6_AGENT_DEPLOYMENT.md": 1,
+    "PHASE_6_COMPLETE_PLAN.md": 1,
+    "PHASE_6_COMPLETE_POLISH.md": 1,
+    "PHASE_6_EXECUTIVE_SUMMARY.md": 1,
+    "PHASE_6_FINAL_COMPLETION_REPORT.md": 1,
+    "PHASE_6_GITHUB_INTEGRATION.md": 1,
+    "PHASE_6_LAUNCH_CONTEXT.md": 1,
+    "PHASE_6_PROGRESS_DASHBOARD.md": 1,
+    "PHASE_6_READY_SUMMARY.md": 1,
+    "PHASE_6_SAFETY_PROTOCOLS.md": 1,
+    "PRODUCTION_EXECUTABLE_DELIVERY.md": 1,
+    "PRODUCTION_SUMMARY.md": 1,
+    "PROJECT_COMPLETION_REPORT.md": 1,
+    "PROJECT_INDEX.md": 1,
+    "Phase7_Stream10_Service_Audit.txt": 1,
+    "QUICKREF_ECOSYSTEM_SERVICES.md": 1,
+    "QUICK_REFERENCE_CARD.md": 1,
+    "QUICK_STATS.json": 1,
+    "README.md": 1,
+    "README_BOARD_SETUP.md": 1,
+    "README_CLI.md": 1,
+    "README_CURRENT_STATUS.md": 1,
+    "README_PHASE8_STREAM4.md": 1,
+    "README_PHASE_1_DELIVERY.md": 1,
+    "README_PHASE_4_COMPLETE.md": 1,
+    "README_PORTABLE.md": 1,
+    "RELEASE_NOTES.md": 1,
+    "REORGANIZATION_REPORT.md": 1,
+    "SANDBOX_CONFIGURATION_GUIDE.md": 1,
+    "SANDBOX_DOCUMENTATION.md": 1,
+    "SANDBOX_FILE_INDEX.md": 1,
+    "SANDBOX_IMPLEMENTATION_SUMMARY.md": 1,
+    "SANDBOX_QUICK_REFERENCE.md": 1,
+    "SANDBOX_README.md": 1,
+    "SECURITY.md": 1,
+    "SECURITY_TASKS_COMPLETE.txt": 1,
+    "SECURITY_VALIDATION_DEPLOYMENT_SUMMARY.md": 1,
+    "SECURITY_VALIDATION_FRAMEWORK.md": 1,
+    "SECURITY_VALIDATION_QUICK_REFERENCE.md": 1,
+    "SERVICE_CONSOLIDATION_PLAN.md": 1,
+    "SERVICE_CONSOLIDATION_REPORT.md": 1,
+    "SESSION_SUMMARY.md": 1,
+    "START_HERE_PHASE2.txt": 1,
+    "STREAM2_COMPLETION_REPORT.md": 1,
+    "STREAM2_DELIVERY_MANIFEST.md": 1,
+    "STREAM2_INDEX.md": 1,
+    "STUDIO_QUICK_REFERENCE.md": 1,
+    "TESTING_REPORT.md": 1,
+    "TEST_FILE_INDEX.md": 1,
+    "TEST_METRICS.md": 1,
+    "USB_DRIVER_VERIFICATION_COMPLETE.md": 1,
+    "V3_6_0_DEPLOYMENT_READINESS.md": 1,
+    "V3_6_0_RC1_RELEASE_NOTES.md": 1,
+    "V3_6_0_RELEASE_NOTES_FINAL.md": 1,
+    "VERIFICATION_1_10a.txt": 1,
+    "VERSION_MANIFEST_v2.5.1.md": 1,
+    "WORKFLOW_ANALYSIS.md": 1,
+    "_config.yml": 1,
+    "ai-integration": 16,
+    "azure-pipelines.yml": 1,
+    "build_errors.txt": 1,
+    "build_integration_log.txt": 1,
+    "build_log.txt": 1,
+    "build_log2.txt": 1,
+    "build_output.txt": 1,
+    "build_release_attempt.txt": 1,
+    "builds": 1,
+    "cloud-integration": 20,
+    "components": 17,
+    "config": 13,
+    "dashboards": 2,
+    "demos": 15,
+    "docs": 358,
+    "dotnet-install.sh": 1,
+    "examples": 1,
+    "file-architecture": 10,
+    "generate-fleet-report.ps1": 1,
+    "helios-autosetup.ps1": 1,
+    "helios-deploy.yml": 1,
+    "helios.sh": 1,
+    "infra": 7,
+    "installer": 172,
+    "microsoft-ecosystem": 21,
+    "monitoring": 18,
+    "nuget.config": 1,
+    "parallel_optimization_plan_EXECUTION_TASKS.sql": 1,
+    "phase-3-build-test-integrate.ps1": 1,
+    "phase8_stream1_test_output.txt": 1,
+    "phase8_test_results.txt": 1,
+    "phases": 27,
+    "plugins": 1,
+    "samples": 6,
+    "scripts": 272,
+    "security.config.template.json": 1,
+    "src": 597,
+    "status-site": 7,
+    "submodules": 3,
+    "test-phase3-tier4.ps1": 1,
+    "test_compile.cs": 1,
+    "test_output.txt": 1,
+    "tests": 90,
+    "tools": 5,
+    "verify-documentation-testing.sh": 1,
+    "verify-setup.sh": 1,
+    "workspace.code-workspace": 1
+  }
+}

@@ -22,6 +22,8 @@ curl -X POST http://127.0.0.1:8787/rebuild
 - [Agent Work Queue](reports/agent-work-queue.md)
 - [Module Ranking](reports/branch-ranking.md)
 - [Actions](actions.md)
+- [Whole-Project Inventory](reports/repo-inventory.md)
+- [Hybrid Gap Analysis](reports/hybrid-gap-analysis.md)
 - [Control Plane Summary](reports/control-summary.md)
 - [Build Graph](reports/build-graph.md)
 - [Codex Tasks](reports/task-index.md)

@@ -1,8 +1,8 @@
-# Codex Task: config from work
+# Codex Task: src/native from work
 
-- Priority: 60
-- Task type: extract-ideas
-- Allowed paths: `['config/azure-control.example.json', 'config/build-graph.json', 'config/github-control.example.json', 'config/secrets-map.example.json']`
+- Priority: 94
+- Task type: compare-selectively
+- Allowed paths: `['src/native/HELIOS.Native.Performance/CMakeLists.txt', 'src/native/HELIOS.Native.Performance/README.md']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

@@ -2,6 +2,8 @@
 
 | Node | Title | Command |
 | --- | --- | --- |
+| `hybrid-gap-analysis` | Hybrid integration gap analysis | `python3 scripts/analysis/hybrid_gap_analysis.py` |
+| `repo-inventory` | Whole-project inventory | `python3 scripts/analysis/repo_inventory.py` |
 | `python-static` | Python static compile checks | `python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py` |
 | `analytics-tests` | F# analytics tests | `dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-restore` |
 | `native-configure` | Native/XCore CMake configure | `cmake -S src/native/HELIOS.Native.Performance -B .build/native` |

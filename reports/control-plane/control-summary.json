@@ -79,7 +79,7 @@
       "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run"
     ]
   },
-  "generatedUtc": "2026-07-02T18:42:11.100082+00:00",
+  "generatedUtc": "2026-07-02T19:06:42.534028+00:00",
   "github": {
     "auth": {
       "available": false,

@@ -1,6 +1,23 @@
 {
   "nodes": [
     {
+      "id": "hybrid-gap-analysis",
+      "title": "Hybrid integration gap analysis",
+      "command": "python3 scripts/analysis/hybrid_gap_analysis.py",
+      "paths": [
+        "config/hybrid-integration-roadmap.json",
+        "reports/project-inventory/**"
+      ]
+    },
+    {
+      "id": "repo-inventory",
+      "title": "Whole-project inventory",
+      "command": "python3 scripts/analysis/repo_inventory.py",
+      "paths": [
+        "**/*"
+      ]
+    },
+    {
       "id": "python-static",
       "title": "Python static compile checks",
       "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py",

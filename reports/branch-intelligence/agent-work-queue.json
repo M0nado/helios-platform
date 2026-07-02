@@ -1,6 +1,61 @@
 [
   {
     "allowedPaths": [
+      "src/core/HELIOS.Platform.Contracts/AnalyticsContracts.cs",
+      "src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": "src/core",
+    "priorityScore": 104,
+    "taskType": "compare-selectively"
+  },
+  {
+    "allowedPaths": [
+      "src/analytics/HELIOS.Analytics.FSharp/HELIOS.Analytics.FSharp.fsproj",
+      "src/analytics/HELIOS.Analytics.FSharp/Models/AnalyticsModels.fs",
+      "src/analytics/HELIOS.Analytics.FSharp/ParallelWorkloads.fs",
+      "src/analytics/HELIOS.Analytics.FSharp/Prediction/PredictionWorkloads.fs",
+      "src/analytics/HELIOS.Analytics.FSharp/PublicApi.fs",
+      "src/analytics/HELIOS.Analytics.FSharp/Statistics/AnalyticsWorkloads.fs",
+      "src/analytics/HELIOS.Analytics.FSharp/Statistics/MathWorkloads.fs"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": "src/analytics",
+    "priorityScore": 102,
+    "taskType": "compare-selectively"
+  },
+  {
+    "allowedPaths": [
+      "tests/analytics/HELIOS.Analytics.FSharp.Tests/AnalyticsEngineTests.fs",
+      "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": "tests",
+    "priorityScore": 98,
+    "taskType": "compare-selectively"
+  },
+  {
+    "allowedPaths": [
+      ".github/workflows/azure-infra.yml",
+      ".github/workflows/branch-intelligence.yml",
       ".github/workflows/helios-control-plane.yml"
     ],
     "blockedPaths": [
@@ -11,21 +66,21 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": ".github/workflows",
-    "priorityScore": 78,
-    "taskType": "extract-ideas"
+    "priorityScore": 96,
+    "taskType": "compare-selectively"
   },
   {
     "allowedPaths": [
+      "scripts/ai/enrich-ideas.py",
+      "scripts/analysis/branch_intelligence.py",
       "scripts/analysis/merge_prune_recommendations.py",
       "scripts/azure/azure-inventory.py",
       "scripts/azure/sync-keyvault-secrets.sh",
       "scripts/cloudshell/helios-cloudshell.sh",
       "scripts/codex/generate-codex-tasks.py",
+      "scripts/control/helios-control.py",
       "scripts/dashboard/generate-actions.py",
-      "scripts/github/github-inventory.py",
-      "scripts/integrations/check-connections.py",
-      "scripts/setup/helios-dev.sh",
-      "scripts/web/helios-web.py"
+      "scripts/github/github-inventory.py"
     ],
     "blockedPaths": [
       ".git",
@@ -35,12 +90,33 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "scripts",
-    "priorityScore": 76,
-    "taskType": "extract-ideas"
+    "priorityScore": 94,
+    "taskType": "compare-selectively"
   },
   {
     "allowedPaths": [
-      "docs/integration/CONTROL_PLANE_COMMANDS.md"
+      "src/native/HELIOS.Native.Performance/CMakeLists.txt",
+      "src/native/HELIOS.Native.Performance/README.md"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": "src/native",
+    "priorityScore": 94,
+    "taskType": "compare-selectively"
+  },
+  {
+    "allowedPaths": [
+      "docs/integration/BRANCH_INTELLIGENCE.md",
+      "docs/integration/CLOUDSHELL_GITHUB_AZURE_SETUP.md",
+      "docs/integration/CONTROL_PLANE_COMMANDS.md",
+      "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md",
+      "docs/integration/WEB_CONTROL_PLANE.md",
+      "docs/integration/remote-manifest.json"
     ],
     "blockedPaths": [
       ".git",
@@ -50,11 +126,15 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "docs/integration",
-    "priorityScore": 68,
-    "taskType": "extract-ideas"
+    "priorityScore": 86,
+    "taskType": "compare-selectively"
   },
   {
     "allowedPaths": [
+      "docs/architecture/AZURE_HYBRID_ARCHITECTURE.md",
+      "docs/architecture/DASHBOARD_PUBLISHING_STRATEGY.md",
+      "docs/architecture/FSHARP_RANKING_BRIDGE.md",
+      "docs/microsoft-365/COPILOT_INTEGRATION.md",
       "docs/security/CONTROL_PLANE_PERMISSIONS.md"
     ],
     "blockedPaths": [
@@ -65,12 +145,28 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "docs",
-    "priorityScore": 61,
-    "taskType": "extract-ideas"
+    "priorityScore": 79,
+    "taskType": "compare-selectively"
+  },
+  {
+    "allowedPaths": [
+      ".devcontainer/codespaces-secrets.env.example"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": ".devcontainer",
+    "priorityScore": 78,
+    "taskType": "compare-selectively"
   },
   {
     "allowedPaths": [
       "COMMAND_CENTER.md",
+      "Directory.Build.props",
       "helios.sh"
     ],
     "blockedPaths": [
@@ -81,14 +177,16 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "root",
-    "priorityScore": 60,
-    "taskType": "extract-ideas"
+    "priorityScore": 78,
+    "taskType": "compare-selectively"
   },
   {
     "allowedPaths": [
       "config/azure-control.example.json",
       "config/build-graph.json",
+      "config/execution-order.json",
       "config/github-control.example.json",
+      "config/integrations.example.json",
       "config/secrets-map.example.json"
     ],
     "blockedPaths": [
@@ -99,21 +197,42 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "config",
-    "priorityScore": 60,
-    "taskType": "extract-ideas"
+    "priorityScore": 78,
+    "taskType": "compare-selectively"
+  },
+  {
+    "allowedPaths": [
+      "infra/azure/README.md",
+      "infra/azure/main.bicep",
+      "infra/azure/modules/keyvault.bicep",
+      "infra/azure/modules/network.bicep",
+      "infra/azure/modules/observability.bicep",
+      "infra/azure/modules/storage.bicep",
+      "infra/azure/parameters/dev.json"
+    ],
+    "blockedPaths": [
+      ".git",
+      "bin",
+      "obj"
+    ],
+    "branch": "work",
+    "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
+    "module": "infra",
+    "priorityScore": 78,
+    "taskType": "compare-selectively"
   },
   {
     "allowedPaths": [
       "reports/branch-intelligence/agent-work-queue.json",
       "reports/branch-intelligence/agent-work-queue.md",
+      "reports/branch-intelligence/ai-enrichment.json",
       "reports/branch-intelligence/analytics-metrics.json",
       "reports/branch-intelligence/branch-ranking.json",
       "reports/branch-intelligence/branch-ranking.md",
       "reports/branch-intelligence/connectivity.json",
+      "reports/branch-intelligence/connectivity.md",
       "reports/branch-intelligence/dashboard.md",
-      "reports/branch-intelligence/graphs.md",
-      "reports/branch-intelligence/merge-prune-recommendations.json",
-      "reports/branch-intelligence/merge-prune-recommendations.md"
+      "reports/branch-intelligence/graphs.md"
     ],
     "blockedPaths": [
       ".git",
@@ -123,13 +242,18 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "reports",
-    "priorityScore": 60,
-    "taskType": "extract-ideas"
+    "priorityScore": 78,
+    "taskType": "compare-selectively"
   },
   {
     "allowedPaths": [
       "status-site/actions.md",
-      "status-site/index.md"
+      "status-site/index.md",
+      "status-site/wiki-export/Agent-Work-Queue.md",
+      "status-site/wiki-export/Branch-Graphs.md",
+      "status-site/wiki-export/Branch-Intelligence.md",
+      "status-site/wiki-export/Idea-Impact.md",
+      "status-site/wiki-export/Module-Ranking.md"
     ],
     "blockedPaths": [
       ".git",
@@ -139,8 +263,8 @@
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
     "module": "status-site",
-    "priorityScore": 60,
-    "taskType": "extract-ideas"
+    "priorityScore": 78,
+    "taskType": "compare-selectively"
   },
   {
     "allowedPaths": [
