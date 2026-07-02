@@ -136,3 +136,6 @@ status-site/index.html
 status-site/reports/**
 status-site/wiki-export/**
 .github/PULL_REQUEST_BODY.md
+
+# Local bootstrap downloads
+/dotnet-install.sh
