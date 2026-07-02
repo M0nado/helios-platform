@@ -1,0 +1,69 @@
+{
+  "account": {
+    "available": false,
+    "command": [
+      "az",
+      "account",
+      "show"
+    ],
+    "detail": "az not found",
+    "ok": false
+  },
+  "bicep": {
+    "available": false,
+    "command": [
+      "az",
+      "bicep",
+      "version"
+    ],
+    "detail": "az not found",
+    "ok": false
+  },
+  "desiredState": "config/azure-control.example.json",
+  "generatedUtc": "2026-07-02T19:17:31.633492+00:00",
+  "keyVaults": {
+    "available": false,
+    "command": [
+      "az",
+      "keyvault",
+      "list",
+      "--query",
+      "[].{name:name,resourceGroup:resourceGroup,location:location}",
+      "-o",
+      "table"
+    ],
+    "detail": "az not found",
+    "ok": false
+  },
+  "resourceGroups": {
+    "available": false,
+    "command": [
+      "az",
+      "group",
+      "list",
+      "--query",
+      "[].{name:name,location:location}",
+      "-o",
+      "table"
+    ],
+    "detail": "az not found",
+    "ok": false
+  },
+  "safeByDefault": true,
+  "storageAccounts": {
+    "available": false,
+    "command": [
+      "az",
+      "storage",
+      "account",
+      "list",
+      "--query",
+      "[].{name:name,resourceGroup:resourceGroup,location:primaryLocation}",
+      "-o",
+      "table"
+    ],
+    "detail": "az not found",
+    "ok": false
+  },
+  "whatIfCommand": "az deployment group what-if --resource-group <resource-group> --template-file infra/azure/main.bicep --parameters @infra/azure/parameters/dev.json"
+}

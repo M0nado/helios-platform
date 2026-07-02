@@ -1,0 +1,79 @@
+{
+  "automationPaths": {
+    ".github/workflows/helios-control-plane.yml": true,
+    "config/execution-order.json": true,
+    "docs/security/CONTROL_PLANE_PERMISSIONS.md": true,
+    "infra/azure/main.bicep": true,
+    "scripts/ai/enrich-ideas.py": true,
+    "scripts/azure/sync-keyvault-secrets.sh": true,
+    "scripts/web/helios-web.py": true
+  },
+  "azure": {
+    "authenticated": false,
+    "available": false,
+    "detail": "az not found"
+  },
+  "azureOpenAI": {
+    "AZURE_OPENAI_API_KEY": false,
+    "AZURE_OPENAI_ENDPOINT": false
+  },
+  "claude": {
+    "ANTHROPIC_API_KEY": false
+  },
+  "dotnet": {
+    "authenticated": false,
+    "available": false,
+    "detail": "dotnet not found"
+  },
+  "github": {
+    "authenticated": false,
+    "available": false,
+    "detail": "gh not found"
+  },
+  "localWeb": {
+    "command": "scripts/setup/helios-dev.sh --serve",
+    "rebuildEndpoint": "POST /rebuild",
+    "url": "http://127.0.0.1:8787/"
+  },
+  "microsoft365Copilot": {
+    "M365_CLIENT_ID": false,
+    "M365_TENANT_ID": false
+  },
+  "notes": "No secret values are printed; booleans only. Prefer GitHub secrets or Azure Key Vault.",
+  "openai": {
+    "OPENAI_API_KEY": false
+  },
+  "python": {
+    "authenticated": true,
+    "available": true,
+    "detail": [
+      "Python 3.12.13"
+    ]
+  },
+  "secretsMap": {
+    "ANTHROPIC_API_KEY": false,
+    "AZURE_OPENAI_API_KEY": false,
+    "AZURE_OPENAI_ENDPOINT": false,
+    "HELIOS_CONTROL_REMOTE_URL": false,
+    "HELIOS_PLATFORM_REMOTE_URL": false,
+    "HERMES_FLEET_REMOTE_URL": false,
+    "M365_CLIENT_ID": false,
+    "M365_TENANT_ID": false,
+    "OPENAI_API_KEY": false,
+    "SLACK_WEBHOOK_URL": false,
+    "XCORE_REMOTE_URL": false
+  },
+  "slack": {
+    "SLACK_WEBHOOK_URL": false
+  },
+  "visualStudioMaui": {
+    "notes": "MAUI workloads require supported OS/SDK and Visual Studio on developer machines.",
+    "recommendedCommands": [
+      "dotnet workload list",
+      "dotnet workload install maui"
+    ],
+    "workloads": [
+      "maui"
+    ]
+  }
+}

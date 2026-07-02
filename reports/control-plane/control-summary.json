@@ -1,0 +1,163 @@
+{
+  "ai": {
+    "azureOpenAI": {
+      "AZURE_OPENAI_API_KEY": false,
+      "AZURE_OPENAI_ENDPOINT": false
+    },
+    "claude": {
+      "ANTHROPIC_API_KEY": false
+    },
+    "codex": {
+      "cli": {
+        "available": false,
+        "command": [
+          "codex",
+          "--version"
+        ],
+        "detail": "codex not found",
+        "ok": false
+      },
+      "homeSet": true
+    },
+    "microsoft365": {
+      "M365_CLIENT_ID": false,
+      "M365_TENANT_ID": false
+    },
+    "notes": "This status check never prints secret values and does not call OpenAI, Azure OpenAI, Slack, or Microsoft 365 APIs.",
+    "openai": {
+      "OPENAI_API_KEY": false
+    },
+    "safeCommands": [
+      "python3 scripts/ai/enrich-ideas.py",
+      "python3 scripts/integrations/check-connections.py",
+      "python3 scripts/control/helios-control.py ai",
+      "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run"
+    ],
+    "slack": {
+      "SLACK_WEBHOOK_URL": false
+    }
+  },
+  "azure": {
+    "account": {
+      "available": false,
+      "command": [
+        "az",
+        "account",
+        "show"
+      ],
+      "detail": "az not found",
+      "ok": false
+    },
+    "bicep": {
+      "available": false,
+      "command": [
+        "az",
+        "bicep",
+        "version"
+      ],
+      "detail": "az not found",
+      "ok": false
+    },
+    "groups": {
+      "available": false,
+      "command": [
+        "az",
+        "group",
+        "list",
+        "--query",
+        "[].{name:name,location:location}",
+        "-o",
+        "table"
+      ],
+      "detail": "az not found",
+      "ok": false
+    },
+    "safeCommands": [
+      "az login",
+      "az group create --name <resource-group> --location <region>",
+      "az deployment group what-if --resource-group <resource-group> --template-file infra/azure/main.bicep --parameters @infra/azure/parameters/dev.json",
+      "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run"
+    ]
+  },
+  "generatedUtc": "2026-07-02T19:17:26.367006+00:00",
+  "github": {
+    "auth": {
+      "available": false,
+      "command": [
+        "gh",
+        "auth",
+        "status"
+      ],
+      "detail": "gh not found",
+      "ok": false
+    },
+    "repo": {
+      "available": false,
+      "command": [
+        "gh",
+        "repo",
+        "view",
+        "--json",
+        "nameWithOwner,defaultBranchRef,url"
+      ],
+      "detail": "gh not found",
+      "ok": false
+    },
+    "safeCommands": [
+      "gh auth login",
+      "gh workflow run helios-control-plane.yml -f publish_pages=false -f update_wiki=true",
+      "gh run list --limit 10"
+    ],
+    "secrets": {
+      "available": false,
+      "command": [
+        "gh",
+        "secret",
+        "list"
+      ],
+      "detail": "gh not found",
+      "ok": false
+    },
+    "workflows": {
+      "available": false,
+      "command": [
+        "gh",
+        "workflow",
+        "list",
+        "--limit",
+        "25"
+      ],
+      "detail": "gh not found",
+      "ok": false
+    }
+  },
+  "local": {
+    "paths": {
+      ".github/workflows/helios-control-plane.yml": true,
+      "config/execution-order.json": true,
+      "docs/architecture/AZURE_HYBRID_ARCHITECTURE.md": true,
+      "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md": true,
+      "infra/azure/main.bicep": true,
+      "scripts/ai/enrich-ideas.py": true,
+      "scripts/analysis/branch_intelligence.py": true,
+      "scripts/setup/helios-dev.sh": true,
+      "scripts/web/helios-web.py": true,
+      "status-site/index.md": true
+    },
+    "safeCommands": [
+      "scripts/setup/helios-dev.sh --serve",
+      "curl -X POST http://127.0.0.1:8787/rebuild"
+    ],
+    "tools": {
+      "az": null,
+      "claude": null,
+      "cmake": "/usr/bin/cmake",
+      "codex": null,
+      "dotnet": null,
+      "gh": null,
+      "git": "/usr/bin/git",
+      "python3": "/root/.pyenv/versions/3.12.13/bin/python3"
+    }
+  },
+  "scope": "all"
+}

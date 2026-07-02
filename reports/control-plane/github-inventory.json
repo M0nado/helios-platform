@@ -1,0 +1,101 @@
+{
+  "auth": {
+    "available": false,
+    "command": [
+      "gh",
+      "auth",
+      "status"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  },
+  "branchProtection": {
+    "available": false,
+    "command": [
+      "gh",
+      "api",
+      "repos/{owner}/{repo}/branches/main/protection"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  },
+  "desiredState": "config/github-control.example.json",
+  "environments": {
+    "available": false,
+    "command": [
+      "gh",
+      "api",
+      "repos/{owner}/{repo}/environments"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  },
+  "generatedUtc": "2026-07-02T19:17:30.950174+00:00",
+  "pages": {
+    "available": false,
+    "command": [
+      "gh",
+      "api",
+      "repos/{owner}/{repo}/pages"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  },
+  "repo": {
+    "available": false,
+    "command": [
+      "gh",
+      "repo",
+      "view",
+      "--json",
+      "nameWithOwner,defaultBranchRef,url,visibility"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  },
+  "runs": {
+    "available": false,
+    "command": [
+      "gh",
+      "run",
+      "list",
+      "--limit",
+      "10"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  },
+  "safeByDefault": true,
+  "secrets": {
+    "available": false,
+    "command": [
+      "gh",
+      "secret",
+      "list"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  },
+  "variables": {
+    "available": false,
+    "command": [
+      "gh",
+      "variable",
+      "list"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  },
+  "workflows": {
+    "available": false,
+    "command": [
+      "gh",
+      "workflow",
+      "list",
+      "--limit",
+      "50"
+    ],
+    "detail": "gh not found",
+    "ok": false
+  }
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "author": "Codex",
+    "ci": {
+      "available": false,
+      "score": 0,
+      "summary": "gh not found"
+    },
+    "commit": "91707d3",
+    "date": "2026-07-02 19:13:35 +0000",
+    "fileCount": 63,
+    "heuristicCiCloseness": 8,
+    "modules": {
+      ".github/workflows": {
+        "files": 1,
+        "paths": [
+          ".github/workflows/helios-control-plane.yml"
+        ],
+        "weight": 22
+      },
+      "config": {
+        "files": 2,
+        "paths": [
+          "config/build-graph.json",
+          "config/cross-access-profiles.example.json"
+        ],
+        "weight": 4
+      },
+      "docs/integration": {
+        "files": 1,
+        "paths": [
+          "docs/integration/CROSS_ACCESS_PROFILES.md"
+        ],
+        "weight": 12
+      },
+      "reports": {
+        "files": 53,
+        "paths": [
+          "reports/branch-intelligence/agent-work-queue.json",
+          "reports/branch-intelligence/agent-work-queue.md",
+          "reports/branch-intelligence/analytics-metrics.json",
+          "reports/branch-intelligence/branch-ranking.json",
+          "reports/branch-intelligence/branch-ranking.md",
+          "reports/branch-intelligence/connectivity.json",
+          "reports/branch-intelligence/dashboard.md",
+          "reports/branch-intelligence/graphs.md",
+          "reports/branch-intelligence/merge-prune-recommendations.json",
+          "reports/branch-intelligence/merge-prune-recommendations.md"
+        ],
+        "weight": 4
+      },
+      "root": {
+        "files": 1,
+        "paths": [
+          "helios.sh"
+        ],
+        "weight": 4
+      },
+      "scripts": {
+        "files": 3,
+        "paths": [
+          "scripts/dashboard/generate-gui.py",
+          "scripts/integrations/cross_access_profiles.py",
+          "scripts/web/helios-web.py"
+        ],
+        "weight": 20
+      },
+      "status-site": {
+        "files": 2,
+        "paths": [
+          "status-site/index.html",
+          "status-site/index.md"
+        ],
+        "weight": 4
+      }
+    },
+    "name": "work",
+    "recommendedAction": "extract-ideas",
+    "score": 56,
+    "subject": "Add cross-access profiles and GUI dashboard"
+  }
+]

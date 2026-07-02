@@ -1,0 +1,2341 @@
+{
+  "branchScores": [
+    {
+      "fileCount": 63,
+      "name": "work",
+      "score": 56
+    }
+  ],
+  "ideaScores": [
+    {
+      "category": "fsharp-analytics",
+      "key": "582288adaa3a910d",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "6b80daeb8100108a",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "xcore",
+      "key": "7a8915613075f6c7",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "3a6e8388339a494a",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "00eecbe3da0824da",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "57db5630449e9e84",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "f18d63ca5d900b77",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "5d86c99c96b80727",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "594e8637c8fb9c5f",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "65c26a5cbf928694",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "0a1e5f693a9b69fa",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "xcore",
+      "key": "1090834786ed53f8",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "xcore",
+      "key": "cafb13cc9ac5defa",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "c224714e45e3ae36",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "7b05cb926080e629",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "72ee79091868a6b3",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "52e9ee693da9f033",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "68dd5fddd0ac85f9",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "e0f3464809b9f37c",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "9094941a9942b25f",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "5a27b541e8674810",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "0546ca76cc2e7eb5",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "d0d679dff9cf9081",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "4e14cf8a6a8a4028",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "4624bce762b82b2e",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "e891ac8e55a516a2",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "8d9de39612dac781",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "d1a8503dc7df4843",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "b9d9e6700c98812c",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "b07d2bfb9de5a6e1",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "86cbe6ed2cf12850",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "80fe50b1993cec91",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "032793b4f660fb8d",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "4a38c6645b944be7",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "79f07fc7d86d9ab9",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "eaefbaf60d4d1cd8",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "9cf95f7395318d32",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "4aae11064de95299",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "f892ce5d708311cf",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "65d56b8fbd8573c4",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "cbf1e1e9e15613bf",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "9c500a3714e78774",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "7142096122f92551",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "fsharp-analytics",
+      "key": "4a21798499e88332",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "8b6b8e798cac5c66",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "9e67b864d452d38a",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "e819018bd4ec50fe",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "4bfe1d3cb8cbd5e2",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "8d07ed7eb9e299d7",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "6aa87a48c37164b5",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "98352c97b2ae297a",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "hermes",
+      "key": "59a586d9214a7d0f",
+      "occurrences": 1,
+      "score": 23
+    },
+    {
+      "category": "github-automation",
+      "key": "513671a7c060fc88",
+      "occurrences": 3,
+      "score": 21
+    },
+    {
+      "category": "github-automation",
+      "key": "461c6692658c3816",
+      "occurrences": 3,
+      "score": 21
+    },
+    {
+      "category": "github-automation",
+      "key": "cbfe4f3f3d1144a7",
+      "occurrences": 2,
+      "score": 18
+    },
+    {
+      "category": "github-automation",
+      "key": "949b76b08755cae0",
+      "occurrences": 2,
+      "score": 18
+    },
+    {
+      "category": "github-automation",
+      "key": "a63350759bea8e3e",
+      "occurrences": 2,
+      "score": 18
+    },
+    {
+      "category": "github-automation",
+      "key": "c97ee560d1b670df",
+      "occurrences": 2,
+      "score": 18
+    },
+    {
+      "category": "github-automation",
+      "key": "5fb25482507bede7",
+      "occurrences": 2,
+      "score": 18
+    },
+    {
+      "category": "cmake-native",
+      "key": "a8b75a778a2b028f",
+      "occurrences": 2,
+      "score": 18
+    },
+    {
+      "category": "github-automation",
+      "key": "ccacde41bdb1d468",
+      "occurrences": 2,
+      "score": 18
+    },
+    {
+      "category": "github-automation",
+      "key": "315faac9eaa4567c",
+      "occurrences": 2,
+      "score": 18
+    },
+    {
+      "category": "github-automation",
+      "key": "d076b8b2e926b9cf",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "966221426fe46fc8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f5b0ce1e4274a5d2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "b730b8378d5321c6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "ea8de4273bd23e25",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e15053549157e617",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "37e65280b6dbee0c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "9eff6c529a0c478e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "8f7a7ec7cddd610d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "858830248eef76bc",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "eb83fa9b2b111c5b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "6398668fc6031322",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e4473932e6e8034d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "ad198b77c670da1b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f897b91c303ec0be",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "ababbe4cdf292e8b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "def2a272cfe94ab7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e0f112f07549114c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "170d0f9fa13ccbcd",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "772381979b6e4d6c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "bece3cf400cc1815",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "8bba52826ebc3aad",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f6c3b1737db985ff",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "dab8162aad307112",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "92ca91c70ec766d5",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4bb14347de1e4210",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "50c80a3e526b55be",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "8d92c51c84d4ec50",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "60d2a400b3bf14cf",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "74c713eca51147b2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "404d5a1b416f0767",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "01db5237b033e725",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cb72462ab3dd290a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cdf69be52b169919",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "b16ea5bbee73f735",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "15ca89bdf949cbd6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "bbe649ed21d9baf0",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7d30c751b9ce2bd0",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4f7b794295635a5a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f1a69e08b816301e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "2c95e55fe2610c96",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "03fcfe0255d84e4c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "880c4246bc2b176b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cca3292381b2c24b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "13e65e8d8c333538",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "95f4f88907384ab7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "18cac26d18edfc36",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "40a6ba9f4cebac0c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "353f860139b192ce",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "602ebbea02ff625d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "365773c47a34ddf7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "3ec28fc657420657",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "b6ad01592035d314",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e588394191ae1d86",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d3943e1986aba63f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "9da4fd4d89f1bed1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "59636c0194344ef8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "11a1e5ddc6801867",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "aff087e25d01ed57",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "8e33729341c5dd21",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "9c4820a6520284da",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "c3d5797f64d3ea89",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "05fa795e131e9163",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "2a22d7fa03040b8e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d0d8ad120ab420b3",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f896f55805359947",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "06068958305fdf8a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "6f84c36768c4a7c1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "22eb681fffb1fe17",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "0356ae972cd83ee6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e6575a9dd668be73",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f952f376122498e2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "40e1208555895a3d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4ee110ec47c30137",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "5e0573ecd3e1cc88",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d8a218c489fb9520",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "6f7f05ffb0ee1f1d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "5fc9eff832ccc922",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f3c49d8b222e3fc1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "71b91c479f70d1d0",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "5ddec75db9beeb8c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "6f03c65f6b102674",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "c383e5b169b98c5b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "a34b049df66b1044",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "5557e6c8565263be",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "671f13775c438c34",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "aaa179b36719a84b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "60c1e4f168e04231",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "01794fc5c942032d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7f3319dc4523a2bc",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "2a234415b24d84ac",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4f620f667eb0cd67",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "790ffa50bc61a473",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "9ab60cb58cbb257f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "161f702dd36741d1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "64a6a675d1597ba2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "27fdb4dabee1e024",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "034b7665932e3c23",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d02d91f6664aeac8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "8b1ea803ba821a8b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "ad6c462a3e179c3e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "b218e4174531317f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4bebb4985566b8c1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "19bafa4daca54c5a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "2b312bae868ac70c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "bf342ae34b50a98f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "dc93f0a100d9f6f9",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "dd5081e5ef60533e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "a946b4159c656fe1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "8322244008ab6e5b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "eb0aa8a2922eca60",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "89d11f9117703cba",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7679572dab76e013",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cc967df5f8ed6575",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "af1ce14ecde8aac0",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "0ea500ccb749bd4f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "6513b3d25a31f4a6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "5360e384044e862d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "c03c3ee9d459f358",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "5ada30258c6ac9f0",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "116a60f1f57ee6f7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "95d2f26a7e320bd6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e8d773353d4deaec",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "32a06c0ace6492b2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cbe7da596007a952",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "b5d1a1ca6546d0d6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "46c75cac2f573c92",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "140ad4a139cbe5a7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "ac03c771f6433054",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cda1060d56f1bac6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "a98db2eb7887c682",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "6e7355fcda973569",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d66c2c316a362ad5",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e7f4ecbe08bb8608",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7ef3db6dd9e934f6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "fd3f8d3e50d421e9",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7f6f694f5591bbbd",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7c907ed46ba9a34b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "49090ce0de7dd638",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cb0a4664f9df8b55",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "521118cfcb11f43a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "1e04185ed80930cf",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e321ef9eee21b61d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "ac9172a83c27b675",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "58414983ada1b296",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "0cf8b9582d28e2b5",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "152c7d943ead3925",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "78ce7339c1615e0e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "3c722f65145fe3a6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "ebe3391627826c26",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "88b651c25a5c2b2e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "18829a6887637761",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "90a37d487a0cf821",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "b9efea07df4a77f8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7f09d5e49ab6269c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f11590fd2060bd4a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "c3922455ca120ab8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "17bbd5b881a3e870",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "6bdb58fffee3e8e5",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d2780d5472953976",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "f3e720c9e26b61ae",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "85a5135527f18e05",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "29456b6f4074d1f4",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "21a749c588ddd685",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "58b12f1b0beb4976",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "5a72c6ce741cbe66",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "690bc99d7ad5e215",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "91d14f1ca892a9f7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "786eee1bf00ba117",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "44e18ac5adabea8f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "42b6adee188b1482",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "94c0cc18be894052",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "70c39b71f3846a12",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "60c2e26edcad4a05",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "f2f260f4385cfa49",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "8bbb9f4584e34007",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "dbcf77ca587f20e7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "edf0f18ba83e2154",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "777dbf9f2423eb8b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "ba2a6c38ab39a5ec",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e91d3790ceb49fe8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "65dee4702bd67fdd",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "fa20cbb1f068cf45",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "ee67922233f8dbb2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "b0cd4b55c9fca50e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "10692db4535e9d74",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "420648d601934da7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e2f48df1d10b29c2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "576f6f5dbf614cd0",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "0515bf3cc93f8584",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4d5321052884ce75",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "c282d7e4db4888e8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f41f579d23a65959",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "6a02151505d4d262",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7dfac5cf8ebbaa88",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "78a1a05320c83359",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "bd0f94dac97ba5c9",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "22614c09da7d9856",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "1d972f735979c854",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "bc4f5320818831ec",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "e139c1702f5b179a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7d775fac42e68ac1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "9245b56a7fbe186a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "01674684c5ef0b69",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4dfbd36c59933b97",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "42b00874e5338270",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "61452dddb1e4f61f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d787551843f1bd5f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cc9d79fb8aecc6e6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "00169f4d8ee8d80f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "b6ff4939c498997b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "a71cdb72f976cb06",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "65089adb6f39ab79",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "2f7c4f0b8f6716eb",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "a52108dfe2e22967",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "2d56c855b8822ce6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "cb038d4bc0ee1476",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "8fc02f1dd6777e51",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7857245ed42274b7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "f34b4eeaeef27627",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "61eb07f060274df8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "b64bbcf0ad537981",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "a494cfc2d7bb4548",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d62a4a267216181a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "ab5df334922acb6f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "04cce1ef508e837c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "381b5d32012d1347",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "c15c8cbe3590d373",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7d5b196cd58aff9c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "1af1b6a3f977b643",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d252d77a2f027c4b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "485df621f59d8f6a",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "ae7d06fb564da98f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "063f25b35920258c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "ba2027c16b9a8e8f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "80135b75b2b12a30",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "4a4044ce575c9757",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "df1a0f25b909a9f7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "54338cf97b86c997",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "760f6bf630b05b07",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "4228a0715a89fcb2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "06b01379a1f6b2a5",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "25d3a14ed034fe84",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "62302426a607ca6b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "1955306188ac3576",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "c6472ca508533842",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "061120a2e49b42ce",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "2189d5f0f4d8d04d",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "8e7b6ae50dad29c6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "cc3d8241ce0376e9",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "5f33a7bfe1e5cdd1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "ac18d688f7fba548",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "95ef1601d0914d5f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "1fa913dbe489074e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "28b9c00f30204edf",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "826fe9ee9bc71ee4",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "91a80bfbd0889a6c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "fc1d2750f99fdca8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "aa474b639f5f60f9",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "9b4253db5344f0dc",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "44ba67def105aa31",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "66661816efce1bf2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "24e34ffb0a48f31c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "0d6176e344c4f487",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "2b10db573f98b964",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "83880475188c1ee0",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "d62ff947b85f4d07",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "d492e12b3b758f4f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "d1fd38335872fb60",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "f8fea4a4857ddceb",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "f27c4fd58291eb8e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "223a8f058121d6f8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "7575658dfdc9cda9",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4aaeeddfe96dd461",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "b333a774c3cebd3b",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "cc0ce87673863a36",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "230db1e259339d3e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "99f01ce7ecfb1e81",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "9a77e75dadd125a6",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "47e7899903249448",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "f0d15c7065683332",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "633ad4f571ff97db",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "214c3fddbe793b65",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "4b7eb079d9000404",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "118a4d082a195d76",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "a5fa1e64ea94aabe",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "73e4e0ece3eea8c9",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "83c7d80edc56250e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "4e426b78c3ee277c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "3766e0cd5cd826cc",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "88c4b336df934c81",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "fccbb9b6e9f4c8e1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "ac0fd069b749685f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "70c952ae9e9210d1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "070ac5526f256933",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "aihub-openai",
+      "key": "9cf87b76bd298292",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "693cf9ea93622327",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "6dc3843317951451",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "6b898b7d28dc492f",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "27e4bf41a7009741",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "ee9c5e770b2667e7",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "4e3f87b5cf9ea2a8",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "90784e54add8f0ae",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "abf5862dabc144ee",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "8bd6c79a31df4256",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "c5b7277b30401c8c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "7c74c7d31d4e0c54",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "ed8b4084b46caa91",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "74e8423a48bfb679",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "00540d0e60ea09dc",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "3282edd4fc60addf",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "2a0013c8109a8cb1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "a5d0b536c6643614",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "1f97d497559a7d30",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "afe96762c1c34943",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "c5bc8e5d1faa6d77",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "6341b44569e091d2",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "8162d3ed8013bddd",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "ed9df093fda442fd",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "50f77eb39ee458c5",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "3ee1cfe7f959db20",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "4194845cfde6e84c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "077a1c9225e83a04",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "20f383770e75fa0c",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "147e612cf07b14a0",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "cmake-native",
+      "key": "7c804f7a22863de8",
+      "occurrences": 1,
+      "score": 15
+    }
+  ],
+  "intendedConsumer": "src/analytics/HELIOS.Analytics.FSharp via future HELIOS.RepositoryAnalytics tool",
+  "schema": "HELIOS.BranchIntelligence.AnalyticsMetrics.v1"
+}

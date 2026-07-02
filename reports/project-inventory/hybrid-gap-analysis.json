@@ -1,0 +1,122 @@
+{
+  "generatedUtc": "2026-07-02T19:17:28.075910+00:00",
+  "items": [
+    {
+      "domain": "command-center",
+      "existing": [
+        "helios.sh",
+        "COMMAND_CENTER.md",
+        "scripts/control"
+      ],
+      "missing": [],
+      "next": "Keep one entry point for every local, Cloud Shell, Codespaces, and CI action.",
+      "priority": 100,
+      "readiness": 100
+    },
+    {
+      "domain": "github-control",
+      "existing": [
+        ".github",
+        "scripts/github",
+        "config/github-control.example.json"
+      ],
+      "missing": [],
+      "next": "Add drift reports before any apply-mode support.",
+      "priority": 95,
+      "readiness": 100
+    },
+    {
+      "domain": "azure-hybrid",
+      "existing": [
+        "infra/azure",
+        "scripts/azure",
+        "docs/architecture/AZURE_HYBRID_ARCHITECTURE.md"
+      ],
+      "missing": [],
+      "next": "Add private endpoint and self-hosted runner modules after what-if validation.",
+      "priority": 95,
+      "readiness": 100
+    },
+    {
+      "domain": "ai-orchestration",
+      "existing": [
+        "scripts/ai",
+        "ai-integration",
+        "scripts/ai-services"
+      ],
+      "missing": [],
+      "next": "Unify ChatGPT/OpenAI, Azure OpenAI, Claude, and Codex routing behind safe provider manifests.",
+      "priority": 90,
+      "readiness": 100
+    },
+    {
+      "domain": "dotnet-visual-studio-maui",
+      "existing": [
+        "*.csproj",
+        "*.slnx",
+        "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md"
+      ],
+      "missing": [],
+      "next": "Add solution-level build targets for GUI, MAUI-ready front ends, contracts, and analytics.",
+      "priority": 88,
+      "readiness": 100
+    },
+    {
+      "domain": "fsharp-analytics",
+      "existing": [
+        "src/analytics",
+        "tests/analytics"
+      ],
+      "missing": [],
+      "next": "Connect analytics scoring into branch intelligence and build graph scoring.",
+      "priority": 86,
+      "readiness": 100
+    },
+    {
+      "domain": "native-xcore",
+      "existing": [
+        "src/native"
+      ],
+      "missing": [],
+      "next": "Add benchmark harness and C ABI boundaries for C#/F#/Python callers.",
+      "priority": 84,
+      "readiness": 100
+    },
+    {
+      "domain": "python-automation",
+      "existing": [
+        "scripts",
+        "reports"
+      ],
+      "missing": [],
+      "next": "Normalize all Python entry points into build graph nodes and command-center actions.",
+      "priority": 82,
+      "readiness": 100
+    },
+    {
+      "domain": "security-compliance",
+      "existing": [
+        "docs/security",
+        "scripts/security",
+        "installer/security",
+        "src/Security"
+      ],
+      "missing": [],
+      "next": "Add secret scanning, policy checks, and compliance report generation to CI.",
+      "priority": 90,
+      "readiness": 100
+    },
+    {
+      "domain": "docs-dashboard",
+      "existing": [
+        "docs",
+        "status-site",
+        "dashboards"
+      ],
+      "missing": [],
+      "next": "Keep generated status pages separate from durable architecture docs.",
+      "priority": 78,
+      "readiness": 100
+    }
+  ]
+}

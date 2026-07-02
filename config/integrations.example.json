@@ -1,0 +1,88 @@
+{
+  "github": {
+    "requiredCli": "gh",
+    "secretNames": [
+      "HELIOS_PLATFORM_REMOTE_URL",
+      "HELIOS_CONTROL_REMOTE_URL",
+      "HERMES_FLEET_REMOTE_URL",
+      "XCORE_REMOTE_URL"
+    ]
+  },
+  "azure": {
+    "requiredCli": "az",
+    "keyVaultSecretNames": [
+      "OPENAI-API-KEY",
+      "AZURE-OPENAI-ENDPOINT",
+      "AZURE-OPENAI-API-KEY",
+      "SLACK-WEBHOOK-URL",
+      "M365-TENANT-ID"
+    ],
+    "deployment": {
+      "bicepEntryPoint": "infra/azure/main.bicep",
+      "parameters": "infra/azure/parameters/dev.json",
+      "keyVaultSyncScript": "scripts/azure/sync-keyvault-secrets.sh"
+    }
+  },
+  "openai": {
+    "env": [
+      "OPENAI_API_KEY"
+    ]
+  },
+  "azureOpenAI": {
+    "env": [
+      "AZURE_OPENAI_ENDPOINT",
+      "AZURE_OPENAI_API_KEY"
+    ]
+  },
+  "slack": {
+    "env": [
+      "SLACK_WEBHOOK_URL"
+    ]
+  },
+  "microsoft365Copilot": {
+    "env": [
+      "M365_TENANT_ID",
+      "M365_CLIENT_ID"
+    ]
+  },
+  "localWeb": {
+    "command": "scripts/setup/helios-dev.sh --serve",
+    "url": "http://127.0.0.1:8787/",
+    "rebuildEndpoint": "POST /rebuild"
+  },
+  "safeAiEnrichment": {
+    "script": "scripts/ai/enrich-ideas.py",
+    "networkDefault": "disabled",
+    "env": [
+      "OPENAI_API_KEY",
+      "AZURE_OPENAI_API_KEY"
+    ]
+  },
+  "controlPlane": {
+    "script": "scripts/control/helios-control.py",
+    "report": "reports/control-plane/control-summary.md",
+    "safeByDefault": true,
+    "scopes": [
+      "all",
+      "github",
+      "azure",
+      "ai"
+    ]
+  },
+  "claude": {
+    "env": [
+      "ANTHROPIC_API_KEY"
+    ],
+    "networkDefault": "disabled"
+  },
+  "visualStudioMaui": {
+    "workloads": [
+      "maui"
+    ],
+    "recommendedCommands": [
+      "dotnet workload list",
+      "dotnet workload install maui"
+    ],
+    "notes": "MAUI workloads require supported OS/SDK and Visual Studio on developer machines."
+  }
+}

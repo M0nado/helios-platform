@@ -1,0 +1,92 @@
+{
+  "checks": [
+    {
+      "id": "command-center",
+      "ok": true,
+      "target": "helios.sh"
+    },
+    {
+      "id": "execution-order",
+      "ok": true,
+      "target": "config/execution-order.json"
+    },
+    {
+      "id": "secrets-map",
+      "ok": true,
+      "target": "config/secrets-map.example.json"
+    },
+    {
+      "id": "cross-access-profiles",
+      "ok": true,
+      "target": "config/cross-access-profiles.example.json"
+    },
+    {
+      "id": "github-inventory",
+      "ok": true,
+      "target": "scripts/github/github-inventory.py"
+    },
+    {
+      "id": "azure-inventory",
+      "ok": true,
+      "target": "scripts/azure/azure-inventory.py"
+    },
+    {
+      "id": "repo-inventory",
+      "ok": true,
+      "target": "scripts/analysis/repo_inventory.py"
+    },
+    {
+      "id": "hybrid-gap-analysis",
+      "ok": true,
+      "target": "scripts/analysis/hybrid_gap_analysis.py"
+    },
+    {
+      "id": "gui-dashboard",
+      "ok": true,
+      "target": "scripts/dashboard/generate-gui.py"
+    },
+    {
+      "id": "web-server",
+      "ok": true,
+      "target": "scripts/web/helios-web.py"
+    },
+    {
+      "id": "pr-update-helper",
+      "ok": true,
+      "target": "scripts/github/update-pr-from-reports.py"
+    },
+    {
+      "id": "python3-cli",
+      "ok": true,
+      "target": "python3"
+    },
+    {
+      "id": "git-cli",
+      "ok": true,
+      "target": "git"
+    },
+    {
+      "id": "github-cli",
+      "ok": false,
+      "target": "gh"
+    },
+    {
+      "id": "azure-cli",
+      "ok": false,
+      "target": "az"
+    },
+    {
+      "id": "dotnet-cli",
+      "ok": false,
+      "target": "dotnet"
+    },
+    {
+      "id": "cmake-cli",
+      "ok": true,
+      "target": "cmake"
+    }
+  ],
+  "generatedUtc": "2026-07-02T19:17:30.260620+00:00",
+  "notes": "Score reflects local readiness and repo wiring. Provider auth readiness is reported separately in cross-access profiles.",
+  "score": 82
+}
