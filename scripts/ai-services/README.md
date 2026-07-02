@@ -1,23 +1,23 @@
 # HELIOS AI Services Hub
 
-Multi-AI integration system coordinating ChatGPT Pro, Codex, and GPT-4.5 for intelligent development.
+Multi-AI integration system coordinating gpt-5.4, gpt-5.4-mini, and gpt-5.5 for intelligent development.
 
 ---
 
 ## 🤖 Three AI Services
 
-### 1. ChatGPT Pro (GPT-4)
+### 1. gpt-5.4
 **Best for:** Strategic analysis, code review, optimization suggestions
 
 ```powershell
 # Get optimization suggestions
-.\scripts\ai-services\invoke-ai.ps1 -Service "chatgpt" -Task "analyze-build" -BuildVariant "phase-2"
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4" -Task "analyze-build" -BuildVariant "phase-2"
 
 # Code review
-.\scripts\ai-services\invoke-ai.ps1 -Service "chatgpt" -Task "review-code" -FilePath "scripts/security/baseline/applock/setup.ps1"
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4" -Task "review-code" -FilePath "scripts/security/baseline/applock/setup.ps1"
 
 # Generate documentation
-.\scripts\ai-services\invoke-ai.ps1 -Service "chatgpt" -Task "document-code" -FilePath "scripts/optimization/level-2/tune.ps1"
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4" -Task "document-code" -FilePath "scripts/optimization/level-2/tune.ps1"
 ```
 
 **Strengths:**
@@ -28,20 +28,20 @@ Multi-AI integration system coordinating ChatGPT Pro, Codex, and GPT-4.5 for int
 
 ---
 
-### 2. Codex
+### 2. gpt-5.4-mini
 **Best for:** Code generation, refactoring, test creation
 
 ```powershell
 # Generate code from description
-.\scripts\ai-services\invoke-ai.ps1 -Service "codex" -Task "generate-code" `
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4_mini" -Task "generate-code" `
   -Description "Create AppLocker rule for Microsoft Office"
 
 # Refactor existing code
-.\scripts\ai-services\invoke-ai.ps1 -Service "codex" -Task "refactor" `
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4_mini" -Task "refactor" `
   -FilePath "scripts/optimization/level-2/tune.ps1" -Goal "improve-performance"
 
 # Generate tests
-.\scripts\ai-services\invoke-ai.ps1 -Service "codex" -Task "generate-tests" `
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4_mini" -Task "generate-tests" `
   -FilePath "scripts/build-agents/agent-1-storage/run.ps1"
 ```
 
@@ -53,19 +53,19 @@ Multi-AI integration system coordinating ChatGPT Pro, Codex, and GPT-4.5 for int
 
 ---
 
-### 3. GPT-4.5 (Latest Model)
+### 3. gpt-5.5 (Latest Model)
 **Best for:** Complex analysis, architectural decisions, multi-component reasoning
 
 ```powershell
 # Analyze build architecture
-.\scripts\ai-services\invoke-ai.ps1 -Service "gpt-4-5" -Task "analyze-architecture" -BuildVariant "complete"
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_5" -Task "analyze-architecture" -BuildVariant "complete"
 
 # Design new component
-.\scripts\ai-services\invoke-ai.ps1 -Service "gpt-4-5" -Task "design-component" `
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_5" -Task "design-component" `
   -Description "Design distributed sync component for multi-machine support"
 
 # Complex problem solving
-.\scripts\ai-services\invoke-ai.ps1 -Service "gpt-4-5" -Task "solve-problem" -Problem "component-conflict"
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_5" -Task "solve-problem" -Problem "component-conflict"
 ```
 
 **Strengths:**
@@ -92,18 +92,18 @@ Automatically routes tasks to best AI service:
 ```
 Task Type              | Primary Service | Secondary | Tertiary
 -----------------------|-----------------|-----------|----------
-Code Generation        | Codex           | GPT-4.5   | ChatGPT
-Code Refactoring       | Codex           | GPT-4.5   | ChatGPT
-Test Creation          | Codex           | GPT-4.5   | ChatGPT
-Code Review            | ChatGPT         | GPT-4.5   | Codex
-Documentation Gen      | ChatGPT         | Codex     | GPT-4.5
-Optimization Suggest   | ChatGPT         | GPT-4.5   | Codex
-Bug Detection          | ChatGPT         | GPT-4.5   | Codex
-Security Analysis      | ChatGPT         | GPT-4.5   | Codex
-Architecture Design    | GPT-4.5         | ChatGPT   | Codex
-Component Analysis     | GPT-4.5         | ChatGPT   | Codex
-Conflict Resolution    | GPT-4.5         | ChatGPT   | Codex
-Build Optimization     | ChatGPT         | GPT-4.5   | Codex
+Code Generation        | gpt-5.4-mini           | gpt-5.5   | ChatGPT
+Code Refactoring       | gpt-5.4-mini           | gpt-5.5   | ChatGPT
+Test Creation          | gpt-5.4-mini           | gpt-5.5   | ChatGPT
+Code Review            | ChatGPT         | gpt-5.5   | gpt-5.4-mini
+Documentation Gen      | ChatGPT         | gpt-5.4-mini     | gpt-5.5
+Optimization Suggest   | ChatGPT         | gpt-5.5   | gpt-5.4-mini
+Bug Detection          | ChatGPT         | gpt-5.5   | gpt-5.4-mini
+Security Analysis      | ChatGPT         | gpt-5.5   | gpt-5.4-mini
+Architecture Design    | gpt-5.5         | ChatGPT   | gpt-5.4-mini
+Component Analysis     | gpt-5.5         | ChatGPT   | gpt-5.4-mini
+Conflict Resolution    | gpt-5.5         | ChatGPT   | gpt-5.4-mini
+Build Optimization     | ChatGPT         | gpt-5.5   | gpt-5.4-mini
 ```
 
 ---
@@ -136,7 +136,7 @@ Track usage and costs across services:
 # Shows per-service breakdown, totals, trends
 
 # Set cost limits
-.\scripts\ai-services\set-cost-limits.ps1 -GPT4 100 -Codex 50 -GPT45 75
+.\scripts\ai-services\set-cost-limits.ps1 -GPT4 100 -gpt-5.4-mini 50 -GPT55 75
 # Cost in USD per month
 
 # View usage analytics
@@ -151,9 +151,9 @@ Track usage and costs across services:
 
 ```powershell
 .\scripts\ai-services\setup-ai-hub.ps1
-# 1. Enter ChatGPT Pro API key
-# 2. Enter Codex API key
-# 3. Enter GPT-4.5 API key
+# 1. Enter gpt-5.4 API key
+# 2. Enter gpt-5.4-mini API key
+# 3. Enter gpt-5.5 API key
 # 4. Set cost limits
 # 5. Verify all services
 ```
@@ -161,22 +161,22 @@ Track usage and costs across services:
 ### .env File (Sensitive - NOT IN GIT)
 ```bash
 CHATGPT_API_KEY="sk-..."
-CHATGPT_MODEL="gpt-4"
+OPENAI_MODEL="gpt-5.4"
 CHATGPT_ENABLED=true
 
 CODEX_API_KEY="sk-..."
 CODEX_TEMPERATURE=0.3
 CODEX_ENABLED=true
 
-GPT45_API_KEY="sk-..."
-GPT45_MODEL="gpt-4-turbo"
-GPT45_ENABLED=true
+GPT55_API_KEY="sk-..."
+GPT55_MODEL="gpt-5.5"
+GPT55_ENABLED=true
 
 # Cost limits (USD per month)
 COST_LIMIT_TOTAL=300
 COST_LIMIT_CHATGPT=100
 COST_LIMIT_CODEX=50
-COST_LIMIT_GPT45=150
+COST_LIMIT_GPT55=150
 
 # Rate limiting
 RATE_LIMIT_REQUESTS_PER_MINUTE=30
@@ -187,10 +187,10 @@ RATE_LIMIT_REQUESTS_PER_DAY=500
 ```json
 {
   "service_weights": {
-    "code_generation": {"codex": 0.9, "gpt-4": 0.1},
-    "code_review": {"chatgpt": 0.7, "gpt-4-5": 0.3},
-    "optimization": {"chatgpt": 0.6, "gpt-4-5": 0.4},
-    "architecture": {"gpt-4-5": 0.8, "chatgpt": 0.2}
+    "code_generation": {"gpt_5_4_mini": 0.9, "gpt_5_5": 0.1},
+    "code_review": {"gpt_5_4": 0.7, "gpt_5_5": 0.3},
+    "optimization": {"gpt_5_4": 0.6, "gpt_5_5": 0.4},
+    "architecture": {"gpt_5_5": 0.8, "gpt_5_4": 0.2}
   },
   "min_confidence_for_auto_approval": 0.9,
   "conflict_resolution_strategy": "consensus"
@@ -254,15 +254,15 @@ Every AI-made change is tracked:
 
 ```powershell
 # 1. Analyze current build
-.\scripts\ai-services\invoke-ai.ps1 -Service "chatgpt" `
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4" `
   -Task "analyze-build" -BuildVariant "phase-2"
 
 # 2. Get optimization suggestions
-.\scripts\ai-services\invoke-ai.ps1 -Service "gpt-4-5" `
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_5" `
   -Task "suggest-optimizations" -BuildVariant "phase-2"
 
-# 3. Generate code for optimizations (via Codex)
-.\scripts\ai-services\invoke-ai.ps1 -Service "codex" `
+# 3. Generate code for optimizations (via gpt-5.4-mini)
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4_mini" `
   -Task "implement-suggestions" -Suggestions "suggestion-file.json"
 
 # 4. Review suggested changes
@@ -275,20 +275,20 @@ Every AI-made change is tracked:
 ### Workflow 2: Generate New Feature
 
 ```powershell
-# 1. Design with GPT-4.5
-.\scripts\ai-services\invoke-ai.ps1 -Service "gpt-4-5" `
+# 1. Design with gpt-5.5
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_5" `
   -Task "design-feature" -Description "Multi-machine sync component"
 
-# 2. Generate code with Codex
-.\scripts\ai-services\invoke-ai.ps1 -Service "codex" `
+# 2. Generate code with gpt-5.4-mini
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4_mini" `
   -Task "implement-design" -Design "design-output.md"
 
-# 3. Create tests with Codex
-.\scripts\ai-services\invoke-ai.ps1 -Service "codex" `
+# 3. Create tests with gpt-5.4-mini
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4_mini" `
   -Task "generate-tests" -Implementation "generated-code.ps1"
 
 # 4. Document with ChatGPT
-.\scripts\ai-services\invoke-ai.ps1 -Service "chatgpt" `
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4" `
   -Task "document-feature" -Code "generated-code.ps1"
 
 # 5. Review everything
@@ -304,17 +304,17 @@ Every AI-made change is tracked:
 # 1. Detect conflict
 .\scripts\ai-services\detect-conflicts.ps1 -Component "security" -Component "performance"
 
-# 2. Analyze with GPT-4.5
-.\scripts\ai-services\invoke-ai.ps1 -Service "gpt-4-5" `
+# 2. Analyze with gpt-5.5
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_5" `
   -Task "analyze-conflict" -Components @("security", "performance")
 
 # 3. Get alternatives from ChatGPT
-.\scripts\ai-services\invoke-ai.ps1 -Service "chatgpt" `
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4" `
   -Task "suggest-alternatives" -Conflict "detected-conflict.json"
 
 # 4. Generate code for best alternative
-.\scripts\ai-services\invoke-ai.ps1 -Service "codex" `
-  -Task "implement-alternative" -Alternative "chatgpt-suggestion.json"
+.\scripts\ai-services\invoke-ai.ps1 -Service "gpt_5_4_mini" `
+  -Task "implement-alternative" -Alternative "gpt_5_4-suggestion.json"
 
 # 5. Resolve
 .\scripts\ai-services\resolve-conflict.ps1 -Conflict "detected-conflict.json" `
@@ -346,27 +346,27 @@ View how well AI services are performing:
 
 ## ⚙️ Advanced Configuration
 
-### Temperature Control (Codex only)
+### Temperature Control (gpt-5.4-mini only)
 ```powershell
 # More creative code generation
-.\scripts\ai-services\set-temperature.ps1 -Service "codex" -Temperature 0.7
+.\scripts\ai-services\set-temperature.ps1 -Service "gpt_5_4_mini" -Temperature 0.7
 
 # More deterministic code generation
-.\scripts\ai-services\set-temperature.ps1 -Service "codex" -Temperature 0.1
+.\scripts\ai-services\set-temperature.ps1 -Service "gpt_5_4_mini" -Temperature 0.1
 ```
 
 ### Model Selection
 ```powershell
 # Use specific model version
-.\scripts\ai-services\set-model.ps1 -Service "chatgpt" -Model "gpt-4-turbo"
-.\scripts\ai-services\set-model.ps1 -Service "gpt-4-5" -Model "gpt-4-turbo-2024-04"
+.\scripts\ai-services\set-model.ps1 -Service "gpt_5_4" -Model "gpt-5.5"
+.\scripts\ai-services\set-model.ps1 -Service "gpt_5_5" -Model "gpt-5.5"
 ```
 
 ### Fallback Strategies
 ```powershell
 # If primary service fails, try secondary
 .\scripts\ai-services\set-fallback.ps1 -Task "code-generation" `
-  -Primary "codex" -Secondary "gpt-4-5" -Tertiary "chatgpt"
+  -Primary "gpt_5_4_mini" -Secondary "gpt_5_5" -Tertiary "gpt_5_4"
 ```
 
 ---

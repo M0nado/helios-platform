@@ -3,9 +3,9 @@
 ## 📋 System Overview
 
 This is a production-ready AI services coordination hub that orchestrates:
-- **ChatGPT Pro (GPT-4)** - Strategic planning, code review, optimization
-- **Codex** - Code generation and refactoring  
-- **GPT-4.5** - Complex analysis and architectural decisions
+- **gpt-5.4** - Strategic planning, code review, optimization
+- **gpt-5.4-mini** - Code generation and refactoring
+- **gpt-5.5** - Complex analysis and architectural decisions
 
 ## ✅ Pre-Installation Checklist
 
@@ -55,9 +55,9 @@ $result.CombinedResult
 scripts/ai-services/
 ├── Hub & Clients
 │   ├── hub.ps1 (Master orchestrator - 500+ lines)
-│   ├── chatgpt-pro-client.ps1 (GPT-4 integration - 300+ lines)
-│   ├── codex-client.ps1 (Code AI - 300+ lines)
-│   ├── gpt-4-5-client.ps1 (Advanced reasoning - 300+ lines)
+│   ├── gpt_5_4-client.ps1 (GPT-4 integration - 300+ lines)
+│   ├── gpt_5_4_mini-client.ps1 (Code AI - 300+ lines)
+│   ├── gpt_5_5-client.ps1 (Advanced reasoning - 300+ lines)
 │   ├── service-router.ps1 (Intelligent routing - 400+ lines)
 │   └── conflict-resolver.ps1 (Conflict management - 350+ lines)
 │
@@ -88,7 +88,7 @@ config/ai-services/
 
 # With options
 .\scripts\ai-services\view-ai-usage.ps1 -DateRange week
-.\scripts\ai-services\view-ai-usage.ps1 -Service chatgpt-pro -ExportCsv
+.\scripts\ai-services\view-ai-usage.ps1 -Service gpt_5_4 -ExportCsv
 ```
 
 ### Check Costs & Budget
@@ -99,18 +99,18 @@ config/ai-services/
 .\scripts\ai-services\show-ai-costs.ps1 -ShowTrends -ShowProjections
 ```
 
-### Generate Code with Codex
+### Generate Code with gpt-5.4-mini
 ```powershell
-. .\scripts\ai-services\codex-client.ps1
+. .\scripts\ai-services\gpt_5_4_mini-client.ps1
 
-$response = $CodexClient.GenerateCode(
+$response = $gpt-5.4-miniClient.GenerateCode(
     "Create a function to validate email",
     "python"
 )
 $response.Code
 ```
 
-### Code Review with ChatGPT Pro
+### Code Review with gpt-5.4
 ```powershell
 . .\scripts\ai-services\hub.ps1
 
@@ -118,11 +118,11 @@ $review = $hub.RequestAnalysis("code-review", $codeContent)
 $review.CombinedResult
 ```
 
-### Architecture Analysis with GPT-4.5
+### Architecture Analysis with gpt-5.5
 ```powershell
-. .\scripts\ai-services\gpt-4-5-client.ps1
+. .\scripts\ai-services\gpt_5_5-client.ps1
 
-$analysis = $GPT45Client.AnalyzeArchitecture(
+$analysis = $GPT55Client.AnalyzeArchitecture(
     "Microservices system with 5 services",
     @("API Gateway", "Auth Service", "Data Service", "Cache", "Queue")
 )
@@ -131,9 +131,9 @@ $analysis.ArchitectureAnalysis
 
 ### Security Review
 ```powershell
-. .\scripts\ai-services\gpt-4-5-client.ps1
+. .\scripts\ai-services\gpt_5_5-client.ps1
 
-$security = $GPT45Client.SecurityReview($code, "python")
+$security = $GPT55Client.SecurityReview($code, "python")
 $security.Vulnerabilities
 ```
 
@@ -143,13 +143,13 @@ $security.Vulnerabilities
 ```json
 {
   "services": {
-    "chatgpt-pro": { "enabled": true, "model": "gpt-4", ... },
-    "codex": { "enabled": true, "model": "code-davinci-002", ... },
-    "gpt-4-5": { "enabled": true, "model": "gpt-4.5", ... }
+    "gpt_5_4": { "enabled": true, "model": "gpt-5.4", ... },
+    "gpt_5_4_mini": { "enabled": true, "model": "gpt-5.4-mini", ... },
+    "gpt_5_5": { "enabled": true, "model": "gpt-5.5", ... }
   },
-  "coordination": { "enableConflictDetection": true, ... },
-  "rateLimiting": { "requestsPerMinute": 60, ... },
-  "costManagement": { "dailyBudgetLimit": 50.0, ... }
+  "conflict_resolution": { "enabled": true, ... },
+  "rate_limiting": { "global_per_minute": 30, ... },
+  "cost_management": { "tracking_enabled": true, ... }
 }
 ```
 
@@ -159,7 +159,7 @@ $security.Vulnerabilities
   "budgets": {
     "daily": 50.0,
     "monthly": 500.0,
-    "perService": { "chatgpt-pro": { "daily": 20.0, ... } }
+    "perService": { "gpt_5_4": { "daily": 20.0, ... } }
   },
   "thresholds": { "warnAtPercent": 80, "alertAtPercent": 90 }
 }
@@ -170,9 +170,9 @@ Map tasks to optimal services:
 ```json
 {
   "taskTypeToServices": {
-    "code-review": { "primary": "chatgpt-pro", "secondary": ["codex"] },
-    "code-generation": { "primary": "codex", "secondary": ["chatgpt-pro"] },
-    "complex-analysis": { "primary": "gpt-4-5", "secondary": ["chatgpt-pro"] }
+    "code-review": { "primary": "gpt_5_4", "secondary": ["gpt_5_4_mini"] },
+    "code-generation": { "primary": "gpt_5_4_mini", "secondary": ["gpt_5_4"] },
+    "complex-analysis": { "primary": "gpt_5_5", "secondary": ["gpt_5_4"] }
   }
 }
 ```
@@ -253,9 +253,9 @@ $hub.GetHealthStatus()
 ## 📈 Performance Tips
 
 ### Optimize Costs
-- Use Codex for code tasks (most efficient)
-- Use ChatGPT Pro for analysis
-- Use GPT-4.5 only for complex decisions
+- Use gpt-5.4-mini for code tasks (most efficient)
+- Use gpt-5.4 for analysis
+- Use gpt-5.5 only for complex decisions
 - Cache repeated requests
 - Batch similar requests
 
@@ -297,10 +297,10 @@ Write-Host "Cost: $($result.TotalCost)"
 
 ### Example 2: Generate and Test Code
 ```powershell
-. .\scripts\ai-services\codex-client.ps1
+. .\scripts\ai-services\gpt_5_4_mini-client.ps1
 
 # Generate function
-$generation = $CodexClient.GenerateCode(
+$generation = $gpt-5.4-miniClient.GenerateCode(
     "Fibonacci function that returns array",
     "python"
 )
@@ -312,7 +312,7 @@ Write-Host "Cost: $($generation.Cost)"
 
 ### Example 3: Architecture Review
 ```powershell
-. .\scripts\ai-services\gpt-4-5-client.ps1
+. .\scripts\ai-services\gpt_5_5-client.ps1
 
 $description = @"
 Distributed system with:
@@ -323,7 +323,7 @@ Distributed system with:
 - Cache (Redis)
 "@
 
-$analysis = $GPT45Client.AnalyzeArchitecture(
+$analysis = $GPT55Client.AnalyzeArchitecture(
     $description,
     @("Frontend", "API", "Services", "DB", "Cache")
 )
@@ -340,7 +340,7 @@ Write-Host "`nRecommendations:`n$($analysis.Recommendations | ConvertTo-Json)"
 Get-Content logs\ai-services\hub_*.log -Tail 20
 
 # Search for specific service
-Select-String "chatgpt-pro" logs\ai-services\*.log
+Select-String "gpt_5_4" logs\ai-services\*.log
 ```
 
 ### Run Diagnostics
