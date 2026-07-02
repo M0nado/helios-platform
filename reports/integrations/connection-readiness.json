@@ -1,0 +1,45 @@
+{
+  "azure": {
+    "authenticated": false,
+    "available": true,
+    "detail": [
+      "ERROR: Please run 'az login' to setup account."
+    ]
+  },
+  "azureOpenAI": {
+    "AZURE_OPENAI_API_KEY": false,
+    "AZURE_OPENAI_ENDPOINT": false
+  },
+  "dotnet": {
+    "authenticated": true,
+    "available": true,
+    "detail": [
+      "8.0.422"
+    ]
+  },
+  "github": {
+    "authenticated": false,
+    "available": true,
+    "detail": [
+      "You are not logged into any GitHub hosts. To log in, run: gh auth login"
+    ]
+  },
+  "microsoft365Copilot": {
+    "M365_CLIENT_ID": false,
+    "M365_TENANT_ID": false
+  },
+  "notes": "No secret values are printed; booleans only. Prefer GitHub secrets or Azure Key Vault.",
+  "openai": {
+    "OPENAI_API_KEY": false
+  },
+  "python": {
+    "authenticated": true,
+    "available": true,
+    "detail": [
+      "Python 3.12.13"
+    ]
+  },
+  "slack": {
+    "SLACK_WEBHOOK_URL": false
+  }
+}

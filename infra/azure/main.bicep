@@ -16,6 +16,15 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
+module keyVault 'modules/keyvault.bicep' = {
+  name: 'keyvault-${environmentName}'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    environmentName: environmentName
+  }
+}
+
 module observability 'modules/observability.bicep' = {
   name: 'observability-${environmentName}'
   params: {
@@ -27,3 +36,5 @@ module observability 'modules/observability.bicep' = {
 
 output storageAccountName string = storage.outputs.storageAccountName
 output logAnalyticsWorkspaceName string = observability.outputs.logAnalyticsWorkspaceName
+output keyVaultName string = keyVault.outputs.keyVaultName
+output keyVaultUri string = keyVault.outputs.keyVaultUri

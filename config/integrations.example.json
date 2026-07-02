@@ -1,0 +1,33 @@
+{
+  "github": {
+    "requiredCli": "gh",
+    "secretNames": [
+      "HELIOS_PLATFORM_REMOTE_URL",
+      "HELIOS_CONTROL_REMOTE_URL",
+      "HERMES_FLEET_REMOTE_URL",
+      "XCORE_REMOTE_URL"
+    ]
+  },
+  "azure": {
+    "requiredCli": "az",
+    "keyVaultSecretNames": [
+      "OPENAI-API-KEY",
+      "AZURE-OPENAI-ENDPOINT",
+      "AZURE-OPENAI-API-KEY",
+      "SLACK-WEBHOOK-URL",
+      "M365-TENANT-ID"
+    ]
+  },
+  "openai": {
+    "env": ["OPENAI_API_KEY"]
+  },
+  "azureOpenAI": {
+    "env": ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY"]
+  },
+  "slack": {
+    "env": ["SLACK_WEBHOOK_URL"]
+  },
+  "microsoft365Copilot": {
+    "env": ["M365_TENANT_ID", "M365_CLIENT_ID"]
+  }
+}

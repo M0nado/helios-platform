@@ -1,6 +1,6 @@
 # HELIOS Branch Intelligence Dashboard
 
-Generated: 2026-07-02T17:57:47Z
+Generated: 2026-07-02T18:05:20Z
 
 ## Remote setup
 | Remote | Enabled | URL configured | Action | Result |
@@ -13,7 +13,7 @@ Generated: 2026-07-02T17:57:47Z
 ## Branch ranking
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 51 | extract-ideas | 10 | docs/integration, reports, scripts |
+| work | 64 | extract-ideas | 28 | .github/workflows, root, docs, infra, reports, scripts |
 
 ## Idea impact
 | Category | Module | Key | Occurrences | Action | How it affects us |
@@ -42,9 +42,13 @@ Generated: 2026-07-02T17:57:47Z
 ## Agent work queue
 | Task | Branch | Module | Priority | Expected output |
 |---|---|---|---|---|
-| extract-ideas | work | scripts | 71 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | docs/integration | 63 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | reports | 55 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | .github/workflows | 86 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | scripts | 84 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | docs | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | root | 68 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | infra | 68 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | reports | 68 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | status-site | 68 | comparison notes, merge risk, tests to run, and idea extraction |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
@@ -58,10 +62,6 @@ Generated: 2026-07-02T17:57:47Z
 | idea-review | knowledge-base | .nuget | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | ACCESSIBILITY_COMPLIANCE_REPORT.md | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
 | idea-review | knowledge-base | ACCESSIBILITY_COMPLIANCE_REPORT.md | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 
 ## Connectivity
 | Tool | Available | Authenticated | Detail |

@@ -2,4 +2,4 @@
 
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 51 | extract-ideas | 10 | docs/integration, reports, scripts |
+| work | 64 | extract-ideas | 28 | .github/workflows, root, docs, infra, reports, scripts |

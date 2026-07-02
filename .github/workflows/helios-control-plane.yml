@@ -48,6 +48,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Integration readiness
+        run: python3 scripts/integrations/check-connections.py
       - name: Branch intelligence
         run: python3 scripts/analysis/branch_intelligence.py
       - name: Generate graphs
@@ -71,6 +73,7 @@ jobs:
           name: helios-control-plane
           path: |
             reports/branch-intelligence/
+            reports/integrations/
             status-site/
           retention-days: 30
       - name: Upload Pages artifact
