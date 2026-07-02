@@ -54,9 +54,11 @@ jobs:
           python3 scripts/analysis/repo_inventory.py
           python3 scripts/analysis/hybrid_gap_analysis.py
       - name: 02 Unified secrets map and integration readiness
-        run: python3 scripts/integrations/check-connections.py
+        run: |
+          python3 scripts/integrations/check-connections.py
           python3 scripts/integrations/cross_access_profiles.py
           python3 scripts/integrations/readiness_score.py
+          python3 scripts/integrations/app_automation.py
       - name: 03 GitHub inventory
         run: python3 scripts/github/github-inventory.py
       - name: 04 Azure inventory

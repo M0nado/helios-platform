@@ -38,6 +38,9 @@
   },
   "slack": {
     "env": [
+      "SLACK_APP_TOKEN",
+      "SLACK_BOT_TOKEN",
+      "SLACK_SIGNING_SECRET",
       "SLACK_WEBHOOK_URL"
     ]
   },
@@ -98,5 +101,38 @@
       "CHATGPT_WORKSPACE_ID"
     ],
     "notes": "ChatGPT UI plans use browser/workspace auth; do not store user session cookies in repo."
+  },
+  "linear": {
+    "env": [
+      "LINEAR_API_KEY",
+      "LINEAR_TEAM_ID"
+    ]
+  },
+  "githubMcp": {
+    "env": [
+      "GITHUB_TOKEN"
+    ],
+    "notes": "Use an existing GitHub token from the runner or shell; do not write token values to disk.",
+    "recommendedTransport": "stdio or remote MCP gateway configured outside git"
+  },
+  "appAutomation": {
+    "script": "scripts/integrations/app_automation.py",
+    "safeByDefault": true,
+    "browserModes": [
+      "default-browser",
+      "microsoft-edge",
+      "edge-ie-mode-documentation-only"
+    ],
+    "apps": [
+      "GitHub",
+      "Azure",
+      "Microsoft 365 Copilot",
+      "ChatGPT",
+      "Claude",
+      "Slack",
+      "Linear",
+      "GitHub MCP"
+    ],
+    "notes": "Reports launch/setup commands and auth readiness only; it does not scrape browser sessions or persist cookies."
   }
 }

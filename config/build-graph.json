@@ -154,6 +154,16 @@
       "paths": [
         "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md"
       ]
+    },
+    {
+      "id": "app-automation-readiness",
+      "type": "python",
+      "path": "scripts/integrations/app_automation.py",
+      "command": "python3 scripts/integrations/app_automation.py",
+      "outputs": [
+        "reports/integrations/app-automation-readiness.json",
+        "reports/integrations/app-automation-readiness.md"
+      ]
     }
   ]
 }

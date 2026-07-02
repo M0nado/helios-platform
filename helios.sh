@@ -18,6 +18,7 @@ case "$cmd" in
   recommendations) exec python3 scripts/analysis/merge_prune_recommendations.py "$@" ;;
   profiles) exec python3 scripts/integrations/cross_access_profiles.py "$@" ;;
   readiness) exec python3 scripts/integrations/readiness_score.py "$@" ;;
+  apps) exec python3 scripts/integrations/app_automation.py "$@" ;;
   doctor) exec python3 scripts/control/doctor.py "$@" ;;
   pr-update) exec python3 scripts/github/update-pr-from-reports.py "$@" ;;
   gui)
@@ -39,6 +40,7 @@ case "$cmd" in
     python3 scripts/integrations/check-connections.py
     python3 scripts/integrations/cross_access_profiles.py
     python3 scripts/integrations/readiness_score.py
+    python3 scripts/integrations/app_automation.py
     printf '3/15 GitHub inventory\n'
     python3 scripts/github/github-inventory.py
     printf '4/15 Azure inventory\n'
@@ -93,6 +95,7 @@ Commands:
   recommendations   Branch merge/prune recommendations
   profiles          Cross-access profile readiness
   readiness         Local/repo readiness score
+  apps              App automation readiness for GitHub MCP, Slack, Linear, Copilot, ChatGPT, Claude, Azure
   doctor            Setup doctor and fix hints
   pr-update         Generate or apply PR body from reports
   gui               Generate HTML GUI dashboard
