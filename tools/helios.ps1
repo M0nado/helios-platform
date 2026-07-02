@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'upgrade', 'finish', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -145,6 +145,7 @@ Commands in integration order:
   github repo-verify|repo-setup      Verify or apply GitHub repository automation setup.
   upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
   finish plan|verify|apply           Run the full setup finisher and final reports.
+  start plan|verify|apply            Run the shortest ASAP start/merge sequence.
   ideas super|specialties          Rank next additions or render specialization matrix.
   llm plan                         Render multi-LLM cross-optimization routing plan.
   agents list|validate|run       Inspect and run registered HELIOS agents.
@@ -462,6 +463,23 @@ function Invoke-FinishCommand {
 }
 
 
+
+function Invoke-StartCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "start $SubAction"
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/start_asap.py'
+    if (-not (Test-Path $ScriptPath)) {
+        throw "Start ASAP script not found: $ScriptPath"
+    }
+    $Mode = if ($SubAction -eq 'default') { 'plan' } else { $SubAction }
+    if ($Mode -notin @('plan', 'verify', 'apply')) {
+        throw "Unknown start action '$SubAction'. Use plan, verify, or apply."
+    }
+    $Args = @($ScriptPath, $Mode) + $RemainingArgs
+    Invoke-ExternalCommand python3 $Args
+    New-HeliosReport -Name "start-$Mode" -Status 'completed' -Checks @([ordered]@{ name = "start:$Mode"; status = 'ok'; message = 'ASAP start sequence completed' }) -Commands @("python3 $($Args -join ' ')")
+}
+
 function Invoke-IdeasCommand {
     param([string]$SubAction)
     Write-HeliosHeader "ideas $SubAction"
@@ -645,6 +663,7 @@ switch ($Command) {
     'github' { Invoke-GitHubCommand $Action }
     'upgrade' { Invoke-UpgradeCommand $Action }
     'finish' { Invoke-FinishCommand $Action }
+    'start' { Invoke-StartCommand $Action }
     'ideas' { Invoke-IdeasCommand $Action }
     'llm' { Invoke-LlmCommand $Action }
     'agents' { Invoke-AgentsCommand $Action }

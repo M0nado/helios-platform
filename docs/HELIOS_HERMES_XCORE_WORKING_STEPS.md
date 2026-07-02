@@ -169,3 +169,7 @@ Use `./tools/helios.ps1 llm plan` to generate the configurable multi-LLM router 
 ## 17. Blocking final gate and Azure Bicep commands
 
 Use `./tools/helios.ps1 gate final` to run the blocking merge-readiness gate implemented by `scripts/automation/final_gate.py`. The gate validates workspace hygiene, JSON configs, Python entrypoints, Bicep build, C# builds, F# analytics tests, native C++ build, security tests, main tests, and mass integration scoring. Azure infrastructure commands are available as `./tools/helios.ps1 azure bicep-build`, `./tools/helios.ps1 azure validate`, `./tools/helios.ps1 azure what-if`, and `./tools/helios.ps1 azure deploy --apply`.
+
+## 18. Start ASAP command
+
+Use `./tools/helios.ps1 start plan` to print the shortest safe start sequence without executing it. Use `./tools/helios.ps1 start verify` to run the non-mutating half: final gate, Azure Bicep build/validate/what-if, and mass integration scoring. Use `./tools/helios.ps1 start apply` only on a fully provisioned runner with remotes, Azure login, and `HELIOS_AUTOMATION_TOKEN`; it stops at the first failed command before repository setup, branch apply, PR creation, or auto-merge.
