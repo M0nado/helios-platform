@@ -29,3 +29,13 @@ The endpoint does not merge branches, push changes, or call external AI APIs. It
 ## Cloud path
 
 Run `.github/workflows/helios-control-plane.yml` from GitHub Actions to do the same work on GitHub-hosted runners and optionally publish GitHub Pages.
+
+## Full control summary
+
+Run the control summary directly when you want a terminal-first view of GitHub, Azure, AI, Codex, Slack, and Microsoft 365 readiness:
+
+```bash
+python3 scripts/control/helios-control.py
+```
+
+The generated `reports/control-plane/control-summary.md` is copied into the local dashboard by `scripts/web/helios-web.py` and into the GitHub Actions artifact by the `HELIOS Control Plane` workflow.

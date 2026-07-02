@@ -57,5 +57,16 @@
       "OPENAI_API_KEY",
       "AZURE_OPENAI_API_KEY"
     ]
+  },
+  "controlPlane": {
+    "script": "scripts/control/helios-control.py",
+    "report": "reports/control-plane/control-summary.md",
+    "safeByDefault": true,
+    "scopes": [
+      "all",
+      "github",
+      "azure",
+      "ai"
+    ]
   }
 }

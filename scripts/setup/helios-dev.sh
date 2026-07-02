@@ -36,6 +36,7 @@ mkdir -p reports/local-setup
   echo 'python3 scripts/analysis/branch_intelligence.py'
   echo 'python3 scripts/web/helios-web.py'
   echo 'scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run'
+  echo 'python3 scripts/control/helios-control.py'
   echo 'dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj'
   echo '```'
 } | tee reports/local-setup/helios-dev-summary.md
@@ -44,6 +45,7 @@ python3 scripts/analysis/branch_intelligence.py
 python3 scripts/graphs/generate_graphs.py
 python3 scripts/github/update-wiki-from-reports.py
 python3 scripts/ai/enrich-ideas.py
+python3 scripts/control/helios-control.py
 
 if [[ "$SERVE_DASHBOARD" == "true" ]]; then
   exec python3 scripts/web/helios-web.py --no-rebuild

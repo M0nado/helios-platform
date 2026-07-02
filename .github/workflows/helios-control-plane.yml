@@ -56,6 +56,8 @@ jobs:
         run: python3 scripts/graphs/generate_graphs.py
       - name: Safe AI enrichment readiness
         run: python3 scripts/ai/enrich-ideas.py
+      - name: GitHub Azure AI Codex control summary
+        run: python3 scripts/control/helios-control.py
       - name: Wiki export
         if: ${{ github.event.inputs.update_wiki == 'true' }}
         run: python3 scripts/github/update-wiki-from-reports.py
@@ -73,12 +75,14 @@ jobs:
           mkdir -p status-site/reports
           cp reports/branch-intelligence/*.md status-site/reports/
           cp reports/integrations/*.json status-site/reports/ || true
+          cp reports/control-plane/*.md status-site/reports/ || true
       - uses: actions/upload-artifact@v4
         with:
           name: helios-control-plane
           path: |
             reports/branch-intelligence/
             reports/integrations/
+            reports/control-plane/
             status-site/
           retention-days: 30
       - name: Upload Pages artifact

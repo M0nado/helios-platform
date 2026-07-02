@@ -6,18 +6,11 @@
       "score": 0,
       "summary": "gh not found"
     },
-    "commit": "82bc84e",
-    "date": "2026-07-02 18:05:42 +0000",
-    "fileCount": 17,
+    "commit": "ff24276",
+    "date": "2026-07-02 18:15:39 +0000",
+    "fileCount": 25,
     "heuristicCiCloseness": 15,
     "modules": {
-      ".devcontainer": {
-        "files": 1,
-        "paths": [
-          ".devcontainer/codespaces-secrets.env.example"
-        ],
-        "weight": 4
-      },
       ".github/workflows": {
         "files": 1,
         "paths": [
@@ -33,47 +26,55 @@
         "weight": 4
       },
       "docs/integration": {
-        "files": 1,
+        "files": 2,
         "paths": [
-          "docs/integration/CLOUDSHELL_GITHUB_AZURE_SETUP.md"
+          "docs/integration/CLOUDSHELL_GITHUB_AZURE_SETUP.md",
+          "docs/integration/WEB_CONTROL_PLANE.md"
         ],
         "weight": 12
       },
-      "infra": {
-        "files": 2,
-        "paths": [
-          "infra/azure/main.bicep",
-          "infra/azure/modules/keyvault.bicep"
-        ],
-        "weight": 4
-      },
       "reports": {
-        "files": 9,
+        "files": 11,
         "paths": [
           "reports/branch-intelligence/agent-work-queue.json",
           "reports/branch-intelligence/agent-work-queue.md",
+          "reports/branch-intelligence/ai-enrichment.json",
           "reports/branch-intelligence/analytics-metrics.json",
           "reports/branch-intelligence/branch-ranking.json",
           "reports/branch-intelligence/branch-ranking.md",
           "reports/branch-intelligence/connectivity.json",
+          "reports/branch-intelligence/connectivity.md",
           "reports/branch-intelligence/dashboard.md",
-          "reports/branch-intelligence/graphs.md",
-          "reports/integrations/connection-readiness.json"
+          "reports/branch-intelligence/graphs.md"
         ],
         "weight": 4
       },
       "scripts": {
-        "files": 2,
+        "files": 5,
         "paths": [
-          "scripts/cloudshell/helios-cloudshell.sh",
-          "scripts/integrations/check-connections.py"
+          "scripts/ai/enrich-ideas.py",
+          "scripts/azure/sync-keyvault-secrets.sh",
+          "scripts/integrations/check-connections.py",
+          "scripts/setup/helios-dev.sh",
+          "scripts/web/helios-web.py"
         ],
         "weight": 20
+      },
+      "status-site": {
+        "files": 5,
+        "paths": [
+          "status-site/index.md",
+          "status-site/wiki-export/Agent-Work-Queue.md",
+          "status-site/wiki-export/Branch-Graphs.md",
+          "status-site/wiki-export/Branch-Intelligence.md",
+          "status-site/wiki-export/Module-Ranking.md"
+        ],
+        "weight": 4
       }
     },
     "name": "work",
     "recommendedAction": "extract-ideas",
-    "score": 65,
-    "subject": "Add cloud integration readiness foundation"
+    "score": 64,
+    "subject": "Add web control plane and Azure secret sync"
   }
 ]

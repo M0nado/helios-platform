@@ -37,6 +37,10 @@ def rebuild() -> None:
     if branch_dir.exists():
         for path in branch_dir.glob("*.md"):
             shutil.copy2(path, STATUS / "reports" / path.name)
+    control_dir = REPORTS / "control-plane"
+    if control_dir.exists():
+        for path in control_dir.glob("*.md"):
+            shutil.copy2(path, STATUS / "reports" / path.name)
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
