@@ -1,0 +1,51 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        dotnet-version: ['8.0.x']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ matrix.dotnet-version }}
+    
+    - name: Display .NET version
+      run: dotnet --version
+    
+    - name: Restore dependencies
+      run: dotnet restore MonadoBlade.sln
+    
+    - name: Build Debug
+      run: dotnet build MonadoBlade.sln --configuration Debug --no-restore --verbosity minimal
+    
+    - name: Build Release
+      run: dotnet build MonadoBlade.sln --configuration Release --no-restore --verbosity minimal
+    
+    - name: Check build artifacts
+      run: |
+        Get-ChildItem -Path ./bin -Recurse -ErrorAction SilentlyContinue | Measure-Object | Select-Object Count
+        Get-ChildItem -Path ./src -Recurse -Filter "*.dll" | Measure-Object | Select-Object Count
+      shell: pwsh
+    
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-logs
+        path: |
+          build-*.log
+          **/*.log
+        retention-days: 7

@@ -1,0 +1,101 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        dotnet-version: ['8.0.x']
+        test-type: ['Unit', 'Integration', 'Performance']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ matrix.dotnet-version }}
+    
+    - name: Restore dependencies
+      run: dotnet restore MonadoBlade.sln
+    
+    - name: Build solution
+      run: dotnet build MonadoBlade.sln --configuration Debug --no-restore --verbosity minimal
+    
+    - name: Run Unit Tests
+      if: matrix.test-type == 'Unit'
+      run: dotnet test tests/MonadoBlade.Tests.Unit/MonadoBlade.Tests.Unit.csproj --configuration Debug --no-build --verbosity normal --logger "console;verbosity=normal"
+    
+    - name: Run Integration Tests
+      if: matrix.test-type == 'Integration'
+      run: dotnet test tests/MonadoBlade.Tests.Integration/MonadoBlade.Tests.Integration.csproj --configuration Debug --no-build --verbosity normal --logger "console;verbosity=normal"
+    
+    - name: Run Performance Tests
+      if: matrix.test-type == 'Performance'
+      run: dotnet test tests/MonadoBlade.Tests.Performance/MonadoBlade.Tests.Performance.csproj --configuration Debug --no-build --verbosity normal
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.test-type }}
+        path: |
+          test-*.log
+          **/TestResults/**
+        retention-days: 7
+
+  coverage:
+    runs-on: windows-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Install coverage tools
+      run: dotnet tool install -g coverlet.console
+    
+    - name: Restore dependencies
+      run: dotnet restore MonadoBlade.sln
+    
+    - name: Build solution
+      run: dotnet build MonadoBlade.sln --configuration Debug --no-restore
+    
+    - name: Collect coverage
+      run: |
+        dotnet test tests/MonadoBlade.Tests.Unit/MonadoBlade.Tests.Unit.csproj `
+          --configuration Debug `
+          --no-build `
+          /p:CollectCoverage=true `
+          /p:CoverageFormat=lcov `
+          /p:CoverageFileName=coverage.lcov `
+          /p:Exclude="[xunit.*]*"
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.lcov
+        flags: unittests
+        name: codecov-monadoBlade
+        fail_ci_if_error: false
+    
+    - name: Upload coverage artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-coverage
+        path: |
+          **/coverage.*
+          coverage/**
+        retention-days: 30
