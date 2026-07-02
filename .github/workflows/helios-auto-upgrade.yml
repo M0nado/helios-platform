@@ -45,6 +45,9 @@ jobs:
           MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL }}
         run: python3 scripts/automation/helios_auto_upgrade.py ${{ inputs.mode || 'plan' }}
 
+      - name: Run final setup finisher
+        run: python3 scripts/automation/finish_helios_setup.py verify
+
       - name: Upload auto-upgrade reports and GUI
         if: always()
         uses: actions/upload-artifact@v4

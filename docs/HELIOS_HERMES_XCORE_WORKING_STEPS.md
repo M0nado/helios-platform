@@ -149,3 +149,7 @@ Use `./tools/helios.ps1 github repo-verify` to verify labels, workflows, token e
 ## 12. Deep auto-upgrade runners and GUI
 
 Use `./tools/helios.ps1 upgrade plan` to generate the full upgrade map for automation runners, auto-fix checks, mass merge/PR, local/cloud setup, provider mesh, Hermes XCore GUI, and learning/token optimization loops. Use `./tools/helios.ps1 upgrade gui` to render a local/hybrid static dashboard at `reports/auto-upgrade/gui/index.html`. The scheduled/manual GitHub runner is `.github/workflows/helios-auto-upgrade.yml`, and the phase registry is `config/helios-auto-upgrade.json`.
+
+## 13. Finish setup command
+
+Use `./tools/helios.ps1 finish verify` for the complete final non-mutating setup verification stack: GitHub repository setup verify, deep capability verify, mass integration score, auto-upgrade GUI generation, JSON validation, Python compilation, and whitespace validation. Use `./tools/helios.ps1 finish apply` only when the runner has the required GitHub/Azure/provider permissions and you want the full mutating setup chain.

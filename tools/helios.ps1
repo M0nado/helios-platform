@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'upgrade', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'upgrade', 'finish', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -143,6 +143,7 @@ Commands in integration order:
                                   Score, branch, PR, and auto-merge mass integration.
   github repo-verify|repo-setup      Verify or apply GitHub repository automation setup.
   upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
+  finish plan|verify|apply           Run the full setup finisher and final reports.
   agents list|validate|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
   test csharp|security|fsharp|native|python-aihub|all
@@ -416,6 +417,23 @@ function Invoke-UpgradeCommand {
     New-HeliosReport -Name "upgrade-$Mode" -Status 'completed' -Checks @([ordered]@{ name = "upgrade:$Mode"; status = 'ok'; message = 'auto-upgrade command completed' }) -Commands @("python3 $($Args -join ' ')")
 }
 
+
+function Invoke-FinishCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "finish $SubAction"
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/finish_helios_setup.py'
+    if (-not (Test-Path $ScriptPath)) {
+        throw "Finish setup script not found: $ScriptPath"
+    }
+    $Mode = if ($SubAction -eq 'default') { 'verify' } else { $SubAction }
+    if ($Mode -notin @('plan', 'verify', 'apply')) {
+        throw "Unknown finish action '$SubAction'. Use plan, verify, or apply."
+    }
+    $Args = @($ScriptPath, $Mode) + $RemainingArgs
+    Invoke-ExternalCommand python3 $Args
+    New-HeliosReport -Name "finish-$Mode" -Status 'completed' -Checks @([ordered]@{ name = "finish:$Mode"; status = 'ok'; message = 'finish setup command completed' }) -Commands @("python3 $($Args -join ' ')")
+}
+
 function Invoke-AgentsCommand {
     param([string]$SubAction)
     Write-HeliosHeader "agents $SubAction"
@@ -573,6 +591,7 @@ switch ($Command) {
     'branches' { Invoke-BranchesCommand $Action }
     'github' { Invoke-GitHubCommand $Action }
     'upgrade' { Invoke-UpgradeCommand $Action }
+    'finish' { Invoke-FinishCommand $Action }
     'agents' { Invoke-AgentsCommand $Action }
     'build' { Invoke-BuildCommand $Action }
     'test' { Invoke-TestCommand $Action }
