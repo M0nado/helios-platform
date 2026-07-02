@@ -1,0 +1,54 @@
+name: HELIOS Auto Upgrade
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Auto-upgrade mode: plan, verify, gui, or apply"
+        type: choice
+        default: plan
+        options: [plan, verify, gui, apply]
+  schedule:
+    - cron: '33 4 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  checks: read
+
+jobs:
+  auto-upgrade:
+    name: Deep automation plan, GUI, and apply runner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Validate auto-upgrade configuration
+        run: |
+          python3 -m json.tool config/helios-auto-upgrade.json >/dev/null
+          python3 -m py_compile scripts/automation/helios_auto_upgrade.py
+
+      - name: Run HELIOS auto-upgrade
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HELIOS_AUTOMATION_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          MCP_SERVER_URL: ${{ secrets.MCP_SERVER_URL }}
+        run: python3 scripts/automation/helios_auto_upgrade.py ${{ inputs.mode || 'plan' }}
+
+      - name: Upload auto-upgrade reports and GUI
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-auto-upgrade
+          path: reports/auto-upgrade
+          if-no-files-found: warn

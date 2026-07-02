@@ -145,3 +145,7 @@ The deep capability registry lives in `config/helios-capabilities.json` and orde
 ## 11. GitHub repository setup completion
 
 Use `./tools/helios.ps1 github repo-verify` to verify labels, workflows, token environment, and repository setup readiness. Use `./tools/helios.ps1 github repo-setup --apply` or the `HELIOS Repository Setup` workflow with `apply=true` when the automation token has repository administration permission. This applies the GitHub-side setup needed by the no-review automation path: auto-merge-capable repository settings, integration labels, optional branch protection, and setup reports under `reports/github-setup`.
+
+## 12. Deep auto-upgrade runners and GUI
+
+Use `./tools/helios.ps1 upgrade plan` to generate the full upgrade map for automation runners, auto-fix checks, mass merge/PR, local/cloud setup, provider mesh, Hermes XCore GUI, and learning/token optimization loops. Use `./tools/helios.ps1 upgrade gui` to render a local/hybrid static dashboard at `reports/auto-upgrade/gui/index.html`. The scheduled/manual GitHub runner is `.github/workflows/helios-auto-upgrade.yml`, and the phase registry is `config/helios-auto-upgrade.json`.

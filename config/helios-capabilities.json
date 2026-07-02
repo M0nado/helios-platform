@@ -10,7 +10,8 @@
     "mcp-server",
     "hermes-xcore",
     "agent-skills",
-    "mass-integration"
+    "mass-integration",
+    "auto-upgrade"
   ],
   "capabilities": [
     {
@@ -225,6 +226,32 @@
         "python3 scripts/github/mass_integration.py score --no-fetch"
       ],
       "automationRole": "Score, branch, merge, PR, and request auto-merge from GitHub runners when apply=true."
+    },
+    {
+      "id": "auto-upgrade",
+      "title": "Deep auto-upgrade runners, provider mesh, GUI, and learning loops",
+      "requiredCommands": [
+        "python3"
+      ],
+      "requiredEnvironment": [],
+      "optionalEnvironment": [
+        "GITHUB_TOKEN",
+        "HELIOS_AUTOMATION_TOKEN",
+        "AZURE_SUBSCRIPTION_ID",
+        "OPENAI_API_KEY",
+        "SLACK_BOT_TOKEN",
+        "MCP_SERVER_URL"
+      ],
+      "ownedPaths": [
+        "config/helios-auto-upgrade.json",
+        "scripts/automation/helios_auto_upgrade.py",
+        ".github/workflows/helios-auto-upgrade.yml"
+      ],
+      "setupCommands": [
+        "python3 scripts/automation/helios_auto_upgrade.py plan",
+        "python3 scripts/automation/helios_auto_upgrade.py gui"
+      ],
+      "automationRole": "Connect runner autofix, mass merge, provider mesh, Hermes XCore GUI, local/cloud setup, and learning/token optimization loops."
     }
   ]
 }

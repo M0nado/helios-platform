@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "description": "HELIOS deep auto-upgrade plan for runners, autofix, mass merge, local/cloud setup, GUI, providers, agents, token optimization, and learning loops.",
+  "phases": [
+    {
+      "id": "runner-autofix",
+      "title": "Automation runners and auto-fix",
+      "agents": ["final-gate-runner", "security-validator", "csharp-core-builder"],
+      "commands": [
+        "git diff --check",
+        "python3 -m py_compile scripts/github/mass_integration.py scripts/github/setup_repository.py scripts/integrations/helios_capability_setup.py scripts/automation/helios_auto_upgrade.py"
+      ],
+      "outputs": ["reports/auto-upgrade/runner-autofix.json"]
+    },
+    {
+      "id": "code-merge",
+      "title": "Mass branch scoring and automated merge/PR",
+      "agents": ["branch-integrator"],
+      "commands": [
+        "python3 scripts/github/mass_integration.py score --no-fetch",
+        "python3 scripts/github/setup_repository.py verify"
+      ],
+      "outputs": ["reports/mass-integration/mass-integration-score.json"]
+    },
+    {
+      "id": "autosetup-local-cloud",
+      "title": "Local and cloud auto-setup",
+      "agents": ["azure-bootstrapper"],
+      "commands": [
+        "python3 scripts/integrations/helios_capability_setup.py verify",
+        "./tools/helios.ps1 status"
+      ],
+      "outputs": ["reports/capabilities/capability-readiness.json"]
+    },
+    {
+      "id": "provider-mesh",
+      "title": "GitHub, Copilot, Azure CLI, Microsoft 365, ChatGPT/OpenAI/Codex, Slack, Visual Studio, .NET, MCP provider mesh",
+      "agents": ["python-aihub-integrator", "azure-bootstrapper"],
+      "providers": ["github", "copilot", "azure-cli", "microsoft-365", "chatgpt", "openai-api", "codex", "slack", "visual-studio", "dotnet", "mcp-server"],
+      "commands": [
+        "python3 scripts/integrations/helios_capability_setup.py verify"
+      ],
+      "outputs": ["reports/auto-upgrade/provider-mesh.json"]
+    },
+    {
+      "id": "hermes-xcore-gui",
+      "title": "Hermes XCore local/hybrid GUI and website",
+      "agents": ["frontend-observability-checker", "native-performance-benchmarker", "fsharp-analytics-validator"],
+      "commands": [
+        "python3 scripts/automation/helios_auto_upgrade.py gui"
+      ],
+      "outputs": ["reports/auto-upgrade/gui/index.html", "reports/auto-upgrade/gui/automation-state.json"]
+    },
+    {
+      "id": "learning-optimization",
+      "title": "Multi-AI token saving, ML learning, and optimization loops",
+      "agents": ["python-aihub-integrator", "fsharp-analytics-validator"],
+      "strategies": ["cache-provider-scores", "dedupe-prompts", "route-cheap-first", "summarize-before-expensive-models", "persist-learning-records", "rank-branches-with-fsharp-analytics"],
+      "commands": [
+        "python3 scripts/automation/helios_auto_upgrade.py plan"
+      ],
+      "outputs": ["reports/auto-upgrade/learning-optimization.json"]
+    }
+  ],
+  "specialties": [
+    "csharp-winui-frontend",
+    "cpp-native-performance",
+    "fsharp-analytics-prediction",
+    "python-aihub-integration",
+    "azure-cli-infrastructure",
+    "github-runner-automation",
+    "microsoft-365-copilot",
+    "openai-codex-api",
+    "slack-notifications",
+    "mcp-server-tools",
+    "hermes-xcore-gui",
+    "token-optimization",
+    "learning-ml-feedback"
+  ]
+}

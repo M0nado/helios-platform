@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'upgrade', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -142,6 +142,7 @@ Commands in integration order:
   github mass-score|mass-plan|mass-branch|mass-pr|mass-merge|mass-all
                                   Score, branch, PR, and auto-merge mass integration.
   github repo-verify|repo-setup      Verify or apply GitHub repository automation setup.
+  upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
   agents list|validate|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
   test csharp|security|fsharp|native|python-aihub|all
@@ -398,6 +399,23 @@ function Invoke-GitHubCommand {
     New-HeliosReport -Name "github-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "github:$SubAction"; status = 'ok'; message = 'mass integration command completed' }) -Commands @("python3 $($Args -join ' ')")
 }
 
+
+function Invoke-UpgradeCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "upgrade $SubAction"
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/helios_auto_upgrade.py'
+    if (-not (Test-Path $ScriptPath)) {
+        throw "Auto-upgrade script not found: $ScriptPath"
+    }
+    $Mode = if ($SubAction -eq 'default') { 'plan' } else { $SubAction }
+    if ($Mode -notin @('plan', 'verify', 'gui', 'apply')) {
+        throw "Unknown upgrade action '$SubAction'. Use plan, verify, gui, or apply."
+    }
+    $Args = @($ScriptPath, $Mode) + $RemainingArgs
+    Invoke-ExternalCommand python3 $Args
+    New-HeliosReport -Name "upgrade-$Mode" -Status 'completed' -Checks @([ordered]@{ name = "upgrade:$Mode"; status = 'ok'; message = 'auto-upgrade command completed' }) -Commands @("python3 $($Args -join ' ')")
+}
+
 function Invoke-AgentsCommand {
     param([string]$SubAction)
     Write-HeliosHeader "agents $SubAction"
@@ -554,6 +572,7 @@ switch ($Command) {
     'azure' { Invoke-AzureCommand $Action }
     'branches' { Invoke-BranchesCommand $Action }
     'github' { Invoke-GitHubCommand $Action }
+    'upgrade' { Invoke-UpgradeCommand $Action }
     'agents' { Invoke-AgentsCommand $Action }
     'build' { Invoke-BuildCommand $Action }
     'test' { Invoke-TestCommand $Action }
