@@ -31,13 +31,17 @@ jobs:
           if-no-files-found: warn
 
   helios-final-gate:
-    name: Final gate dry run
-    runs-on: ubuntu-latest
+    name: Blocking final gate
+    runs-on: windows-latest
     needs: helios-status
     steps:
       - uses: actions/checkout@v4
       - name: Whitespace check
         run: git diff --check
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -49,5 +53,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: helios-shell-gate-reports
-          path: reports/generated/helios-shell
+          path: |
+            reports/generated/helios-shell
+            reports/final-gate
+            reports/mass-integration
           if-no-files-found: warn
