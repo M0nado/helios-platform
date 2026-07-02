@@ -157,3 +157,7 @@ Use `./tools/helios.ps1 finish verify` for the complete final non-mutating setup
 ## 14. Super automation backlog
 
 Use `./tools/helios.ps1 ideas super` to rank the next highest-impact additions: event-driven webhooks, agent GUI controls, multi-LLM routing/token optimization, safety vault/policy engine, fleet learning store, autofix patch pipeline, branch/submodule fusion, runner fleet bootstrap, MCP/plugin marketplace, and Hermes XCore digital twin simulation. The backlog is declared in `config/helios-super-automation-backlog.json` and rendered under `reports/super-automation`.
+
+## 15. Specialization and learning instructions
+
+Use `./tools/helios.ps1 ideas specialties` to render specialized and sub-specialized agent instructions for C# frontend, C++ XCore performance, F# ML analytics, Python AIHub routing, Azure/Microsoft 365/Copilot cloud, GitHub mass integration, safety vault policy, and MCP/plugin tooling. The specialization registry is `config/helios-specializations.json`, and the generated learning/instruction matrix is written under `reports/specializations`.

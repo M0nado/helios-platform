@@ -126,6 +126,22 @@
         "reports/super-automation/super-automation-backlog.json",
         "reports/super-automation/super-automation-backlog.md"
       ]
+    },
+    {
+      "id": "specialization-matrix",
+      "title": "Render specialization and learning instruction matrix",
+      "agents": [
+        "final-gate-runner",
+        "python-aihub-integrator",
+        "security-validator"
+      ],
+      "commands": [
+        "python3 scripts/automation/specialization_matrix.py"
+      ],
+      "outputs": [
+        "reports/specializations/specialization-matrix.json",
+        "reports/specializations/specialization-matrix.md"
+      ]
     }
   ],
   "specialties": [

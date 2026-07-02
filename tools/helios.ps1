@@ -144,7 +144,7 @@ Commands in integration order:
   github repo-verify|repo-setup      Verify or apply GitHub repository automation setup.
   upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
   finish plan|verify|apply           Run the full setup finisher and final reports.
-  ideas super                      Rank the next major automation additions.
+  ideas super|specialties          Rank next additions or render specialization matrix.
   agents list|validate|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
   test csharp|security|fsharp|native|python-aihub|all
@@ -439,8 +439,14 @@ function Invoke-FinishCommand {
 function Invoke-IdeasCommand {
     param([string]$SubAction)
     Write-HeliosHeader "ideas $SubAction"
+    if ($SubAction -eq 'specialties') {
+        $ScriptPath = Join-Path $RepoRoot 'scripts/automation/specialization_matrix.py'
+        Invoke-ExternalCommand python3 @($ScriptPath)
+        New-HeliosReport -Name 'ideas-specialties' -Status 'completed' -Checks @([ordered]@{ name = 'ideas:specialties'; status = 'ok'; message = 'specialization matrix generated' }) -Commands @("python3 $ScriptPath")
+        return
+    }
     if ($SubAction -ne 'super' -and $SubAction -ne 'default') {
-        throw "Unknown ideas action '$SubAction'. Use super."
+        throw "Unknown ideas action '$SubAction'. Use super or specialties."
     }
     $ScriptPath = Join-Path $RepoRoot 'scripts/automation/super_automation_backlog.py'
     Invoke-ExternalCommand python3 @($ScriptPath)

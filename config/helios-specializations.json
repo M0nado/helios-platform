@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "description": "HELIOS specialized and sub-specialized agent instructions with learning signals for deep automation.",
+  "learningLoop": {
+    "collect": ["command results", "test failures", "merge conflicts", "token spend", "provider quality", "fleet telemetry", "security findings"],
+    "score": ["success rate", "latency", "cost", "risk", "coverage", "regression frequency", "operator override frequency"],
+    "adapt": ["update routing weights", "promote stable agents", "quarantine risky commands", "compress prompts", "prefer cheaper models for low-risk tasks"]
+  },
+  "specializations": [
+    {
+      "id": "csharp-frontend-shell",
+      "title": "C# WinUI/WPF frontend shell specialist",
+      "primaryAgent": "frontend-observability-checker",
+      "subSpecialties": ["view-model isolation", "async cancellation", "telemetry overlays", "agent-control GUI", "Hermes XCore operator panels"],
+      "instructions": ["Keep business logic out of UI classes", "Expose agent variables as typed view models", "Render local/cloud status from generated JSON reports", "Use cancellation tokens for long-running agent commands"],
+      "learningSignals": ["UI freeze reports", "slow command traces", "operator click paths", "failed command replays"],
+      "preferredModels": ["local-small-ui-summarizer", "cloud-reasoning-for-architecture"]
+    },
+    {
+      "id": "cpp-xcore-performance",
+      "title": "C++ Hermes XCore performance specialist",
+      "primaryAgent": "native-performance-benchmarker",
+      "subSpecialties": ["SIMD kernels", "native telemetry sampling", "interop ABI", "benchmark replay", "digital twin simulation"],
+      "instructions": ["Benchmark before runtime integration", "Keep managed fallback paths", "Version native interop boundaries", "Feed benchmark features into F# analytics"],
+      "learningSignals": ["benchmark deltas", "crash signatures", "interop failures", "hardware profile"],
+      "preferredModels": ["local-code-model", "cloud-performance-reviewer"]
+    },
+    {
+      "id": "fsharp-ml-analytics",
+      "title": "F# analytics, prediction, and ML specialist",
+      "primaryAgent": "fsharp-analytics-validator",
+      "subSpecialties": ["branch ranking", "fleet anomaly detection", "prediction confidence", "parallel workload tuning", "learning feedback scoring"],
+      "instructions": ["Use deterministic datasets first", "Publish stable public APIs", "Score branch and fleet signals", "Return explanations with model outputs"],
+      "learningSignals": ["prediction accuracy", "false positive rate", "branch merge outcomes", "fleet incident labels"],
+      "preferredModels": ["statistical-baseline", "cloud-ml-architect"]
+    },
+    {
+      "id": "python-aihub-router",
+      "title": "Python AIHub and multi-LLM router specialist",
+      "primaryAgent": "python-aihub-integrator",
+      "subSpecialties": ["OpenAI routing", "Codex task packets", "local LLM fallback", "prompt compression", "provider evaluation", "token budget enforcement"],
+      "instructions": ["Route cheap-first for low-risk work", "Summarize before expensive models", "Deduplicate prompts", "Persist provider quality scores", "Never write provider secrets to reports"],
+      "learningSignals": ["token spend", "provider latency", "patch acceptance", "hallucination flags", "retry counts"],
+      "preferredModels": ["local-fast-classifier", "openai-reasoning", "codex-code-specialist"]
+    },
+    {
+      "id": "azure-m365-cloud",
+      "title": "Azure CLI, Microsoft 365, and Copilot cloud specialist",
+      "primaryAgent": "azure-bootstrapper",
+      "subSpecialties": ["Azure CLI extensions", "resource group defaults", "Key Vault readiness", "Graph/Copilot readiness", "Cloud Shell bootstrap"],
+      "instructions": ["Use idempotent CLI commands", "Separate verify from apply", "Prefer managed identity where available", "Report missing env without printing secrets"],
+      "learningSignals": ["failed az commands", "missing extensions", "tenant mismatch", "resource deployment latency"],
+      "preferredModels": ["cloud-ops-summarizer", "policy-risk-reviewer"]
+    },
+    {
+      "id": "github-mass-integration",
+      "title": "GitHub runner, webhook, and mass integration specialist",
+      "primaryAgent": "branch-integrator",
+      "subSpecialties": ["branch scoring", "submodule fusion", "webhook routing", "auto-PR", "auto-merge", "repository setup"],
+      "instructions": ["Prioritize helios-control and hermes-fleet-production", "Stop on merge conflicts", "Write JSON and Markdown reports", "Use branch protection and required checks as guardrails"],
+      "learningSignals": ["merge conflicts", "CI conclusions", "branch age", "changed module weights", "auto-merge success"],
+      "preferredModels": ["local-merge-classifier", "cloud-architecture-reviewer"]
+    },
+    {
+      "id": "safety-vault-policy",
+      "title": "Safety vault, secrets, and policy specialist",
+      "primaryAgent": "security-validator",
+      "subSpecialties": ["secret inventory", "redaction", "least privilege", "agent permission scopes", "audit signing", "quarantine"],
+      "instructions": ["Never log secrets", "Default to verify before apply", "Scope tokens per agent", "Quarantine commands that fail safety policy"],
+      "learningSignals": ["secret scan hits", "policy denials", "quarantine events", "credential age", "permission drift"],
+      "preferredModels": ["local-secret-detector", "cloud-security-reviewer"]
+    },
+    {
+      "id": "mcp-plugin-tools",
+      "title": "MCP server, plugin, Slack, and tool marketplace specialist",
+      "primaryAgent": "final-gate-runner",
+      "subSpecialties": ["MCP health probes", "Slack notifications", "plugin manifests", "tool permission matrix", "agent tool selection"],
+      "instructions": ["Register tools with explicit capabilities", "Probe remote tool health", "Map each tool to allowed agents", "Emit Slack summaries without sensitive data"],
+      "learningSignals": ["tool failure rate", "notification delivery", "MCP latency", "agent-tool mismatch", "manual override count"],
+      "preferredModels": ["local-tool-router", "cloud-integration-planner"]
+    }
+  ]
+}
