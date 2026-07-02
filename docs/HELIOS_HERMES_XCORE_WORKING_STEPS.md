@@ -153,3 +153,7 @@ Use `./tools/helios.ps1 upgrade plan` to generate the full upgrade map for autom
 ## 13. Finish setup command
 
 Use `./tools/helios.ps1 finish verify` for the complete final non-mutating setup verification stack: GitHub repository setup verify, deep capability verify, mass integration score, auto-upgrade GUI generation, JSON validation, Python compilation, and whitespace validation. Use `./tools/helios.ps1 finish apply` only when the runner has the required GitHub/Azure/provider permissions and you want the full mutating setup chain.
+
+## 14. Super automation backlog
+
+Use `./tools/helios.ps1 ideas super` to rank the next highest-impact additions: event-driven webhooks, agent GUI controls, multi-LLM routing/token optimization, safety vault/policy engine, fleet learning store, autofix patch pipeline, branch/submodule fusion, runner fleet bootstrap, MCP/plugin marketplace, and Hermes XCore digital twin simulation. The backlog is declared in `config/helios-super-automation-backlog.json` and rendered under `reports/super-automation`.

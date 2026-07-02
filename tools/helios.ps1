@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'upgrade', 'finish', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'upgrade', 'finish', 'ideas', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -144,6 +144,7 @@ Commands in integration order:
   github repo-verify|repo-setup      Verify or apply GitHub repository automation setup.
   upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
   finish plan|verify|apply           Run the full setup finisher and final reports.
+  ideas super                      Rank the next major automation additions.
   agents list|validate|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
   test csharp|security|fsharp|native|python-aihub|all
@@ -434,6 +435,18 @@ function Invoke-FinishCommand {
     New-HeliosReport -Name "finish-$Mode" -Status 'completed' -Checks @([ordered]@{ name = "finish:$Mode"; status = 'ok'; message = 'finish setup command completed' }) -Commands @("python3 $($Args -join ' ')")
 }
 
+
+function Invoke-IdeasCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "ideas $SubAction"
+    if ($SubAction -ne 'super' -and $SubAction -ne 'default') {
+        throw "Unknown ideas action '$SubAction'. Use super."
+    }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/super_automation_backlog.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'ideas-super' -Status 'completed' -Checks @([ordered]@{ name = 'ideas:super'; status = 'ok'; message = 'super automation backlog generated' }) -Commands @("python3 $ScriptPath")
+}
+
 function Invoke-AgentsCommand {
     param([string]$SubAction)
     Write-HeliosHeader "agents $SubAction"
@@ -592,6 +605,7 @@ switch ($Command) {
     'github' { Invoke-GitHubCommand $Action }
     'upgrade' { Invoke-UpgradeCommand $Action }
     'finish' { Invoke-FinishCommand $Action }
+    'ideas' { Invoke-IdeasCommand $Action }
     'agents' { Invoke-AgentsCommand $Action }
     'build' { Invoke-BuildCommand $Action }
     'test' { Invoke-TestCommand $Action }
