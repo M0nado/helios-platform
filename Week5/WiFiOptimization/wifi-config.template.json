@@ -1,0 +1,191 @@
+{
+  "wifiOptimization": {
+    "version": "2.2.0",
+    "enabled": true,
+    "security": {
+      "requireWPA3": true,
+      "wpa3Details": {
+        "enterpriseEncryptionBits": 192,
+        "personalEncryptionBits": 128,
+        "allowWPA2Fallback": false
+      },
+      "networkConfiguration": {
+        "disableWPS": true,
+        "disableLegacyProtocols": ["802.11a", "802.11b", "802.11g"],
+        "enableWiFi6": true,
+        "enableWiFi6E": true,
+        "channelSelection": "auto-least-congested"
+      },
+      "ssidSecurity": {
+        "hiddenSSID": true,
+        "macFiltering": true,
+        "rateLimitPerMAC": 100
+      },
+      "connectionSecurity": {
+        "certificatePinning": true,
+        "dnsOverHTTPS": true,
+        "dnssecValidation": true,
+        "ethernetFallback": {
+          "enabled": true,
+          "signalThresholdDBm": -70,
+          "latencyThresholdMs": 100,
+          "packetLossThreshold": 0.02
+        }
+      }
+    },
+    "networkProfiles": {
+      "corporate": {
+        "name": "Enterprise Network",
+        "securityPosture": "enterprise",
+        "requireVPN": false,
+        "enable802_1X": true,
+        "allowCloudSync": true,
+        "allowExternalCalls": true,
+        "description": "Trusted enterprise networks with built-in security"
+      },
+      "public": {
+        "name": "Public WiFi",
+        "securityPosture": "very-high",
+        "requireVPN": true,
+        "localOnlyMode": true,
+        "allowCloudSync": false,
+        "allowExternalCalls": false,
+        "description": "Public WiFi networks - maximum security"
+      },
+      "home": {
+        "name": "Home Network",
+        "securityPosture": "medium",
+        "requireVPN": false,
+        "allowCloudSync": true,
+        "allowLLMAPICalls": true,
+        "description": "Trusted home networks"
+      },
+      "unknown": {
+        "name": "Unknown Network",
+        "securityPosture": "very-high",
+        "requireVPN": true,
+        "localOnlyMode": true,
+        "allowExternalCalls": false,
+        "description": "Unknown networks - highest security"
+      }
+    },
+    "performance": {
+      "channelScanning": {
+        "scan2_4GHz": [1, 6, 11],
+        "scan5GHz": "all",
+        "scan6GHz": "if-available",
+        "preferBand": "5GHz",
+        "fallbackChain": ["5GHz", "2.4GHz"]
+      },
+      "linkQualityMonitoring": {
+        "enabled": true,
+        "sampleRateMs": 5000,
+        "trackMetrics": ["rssi", "latency", "packetLoss", "dataRate"],
+        "historyRetentionHours": 24
+      },
+      "adaptiveAdjustments": {
+        "lowSignalAction": "suggest-ethernet",
+        "lowSignalThresholdDBm": -70,
+        "highLatencyAction": "enable-compression",
+        "highLatencyThresholdMs": 100,
+        "highPacketLossAction": "reduce-refresh-rate",
+        "highPacketLossThreshold": 0.02
+      },
+      "bandSteering": {
+        "enabled": true,
+        "autoMode": true,
+        "manualOverrideAllowed": true,
+        "preferStrong5GHz": true,
+        "fallbackTo2_4GHzThreshold": -70
+      }
+    },
+    "vpn": {
+      "enabled": true,
+      "requirementsByNetwork": {
+        "public": "always",
+        "corporate": "if-no-802_1X",
+        "home": "optional",
+        "unknown": "always"
+      },
+      "configuration": {
+        "autoDownloadFromVault": true,
+        "killSwitchEnabled": true,
+        "splitTunnelingEnabled": false,
+        "allowedLocalSubnets": ["192.168.0.0/16", "10.0.0.0/8"],
+        "preferredProtocol": "WireGuard",
+        "preferredCipher": "AES-256-GCM"
+      },
+      "monitoring": {
+        "checkIntervalSeconds": 30,
+        "autoReconnectOnFailure": true,
+        "alertOnDisconnection": true,
+        "disconnectionRetries": 3
+      }
+    },
+    "optimization": {
+      "dns": {
+        "customServers": ["8.8.8.8", "1.1.1.1", "9.9.9.9"],
+        "localCachingEnabled": true,
+        "cacheTTLSeconds": 300,
+        "dnssecEnabled": true,
+        "fallbackBehavior": "use-next-server"
+      },
+      "bandwidth": {
+        "reserveForSystem": 0.10,
+        "allocateToUser": 0.90,
+        "qosEnabled": true,
+        "criticalTrafficPriority": 0.3,
+        "standardTrafficPriority": 0.5,
+        "backgroundTrafficPriority": 0.2
+      },
+      "connectionPooling": {
+        "enabled": true,
+        "strategy": "default",
+        "maxConnectionsPerHost": 6,
+        "connectionTimeoutSeconds": 30,
+        "idleTimeoutSeconds": 90,
+        "maxIdleConnections": 10,
+        "http2Multiplexing": true
+      },
+      "compression": {
+        "enabled": true,
+        "preferredAlgorithm": "brotli",
+        "fallbackAlgorithm": "gzip",
+        "minPayloadSizeBytes": 1000,
+        "skipForFormats": ["video", "image", "zip", "gz"]
+      }
+    },
+    "monitoring": {
+      "healthDashboard": {
+        "enabled": true,
+        "refreshIntervalSeconds": 10,
+        "metricsTracked": ["signal", "latency", "packetLoss", "bandwidth", "uptime"],
+        "graphTimeRangeHours": 24
+      },
+      "alerting": {
+        "enabled": true,
+        "signalThresholdDBm": -75,
+        "latencyThresholdMs": 150,
+        "packetLossThresholdPercent": 2.0,
+        "enableCriticalAlerts": true,
+        "enableMediumAlerts": true,
+        "enableNotifications": true
+      },
+      "reporting": {
+        "monthlyReportEnabled": true,
+        "reportDay": "last-day-of-month",
+        "reportHour": 18,
+        "includeRecommendations": true,
+        "trackDataUsage": true,
+        "estimateCostIfCapped": true
+      }
+    },
+    "advanced": {
+      "debugMode": false,
+      "logLevel": "info",
+      "enableTelemetry": false,
+      "customSSIDWhitelist": [],
+      "customSSIDBlacklist": []
+    }
+  }
+}

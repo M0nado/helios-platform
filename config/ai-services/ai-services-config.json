@@ -1,97 +1,269 @@
 {
+  "ai_services": {
+    "enabled": true,
+    "hub_version": "1.0.0",
+    "default_service": "smart_route"
+  },
   "services": {
-    "chatgpt-pro": {
+    "gpt_5_4": {
+      "name": "gpt-5.4",
+      "provider": "OpenAI",
+      "model": "gpt-5.4",
       "enabled": true,
-      "provider": "openai",
-      "model": "gpt-4",
-      "description": "Strategic planning, code review, optimization",
-      "priority": 2,
-      "maxTokens": 4096,
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url": "https://api.openai.com/v1",
+      "timeout_seconds": 120,
+      "best_for": [
+        "code_review",
+        "code_analysis",
+        "optimization_suggestions",
+        "documentation_generation",
+        "strategic_planning"
+      ],
       "temperature": 0.7,
-      "timeout": 60,
-      "retries": 3,
-      "retryDelay": 2,
-      "costPerThousandTokens": {
-        "input": 0.03,
-        "output": 0.06
-      }
+      "max_tokens": 4096,
+      "rate_limit_per_minute": 30,
+      "rate_limit_per_day": 500,
+      "cost_per_1k_tokens_input": 0.03,
+      "cost_per_1k_tokens_output": 0.06
     },
-    "codex": {
+    "gpt_5_4_mini": {
+      "name": "gpt-5.4-mini",
+      "provider": "OpenAI",
+      "model": "gpt-5.4-mini",
       "enabled": true,
-      "provider": "openai",
-      "model": "code-davinci-002",
-      "description": "Code generation, refactoring",
-      "priority": 1,
-      "maxTokens": 8000,
-      "temperature": 0.5,
-      "timeout": 45,
-      "retries": 3,
-      "retryDelay": 2,
-      "costPerThousandTokens": {
-        "input": 0.02,
-        "output": 0.1
-      }
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url": "https://api.openai.com/v1",
+      "timeout_seconds": 90,
+      "best_for": [
+        "code_generation",
+        "code_refactoring",
+        "test_creation",
+        "implementation",
+        "snippet_generation"
+      ],
+      "temperature": 0.2,
+      "max_tokens": 2048,
+      "rate_limit_per_minute": 60,
+      "rate_limit_per_day": 1000,
+      "cost_per_1k_tokens_input": 0.00075,
+      "cost_per_1k_tokens_output": 0.0045
     },
-    "gpt-4-5": {
+    "gpt_5_5": {
+      "name": "gpt-5.5",
+      "provider": "OpenAI",
+      "model": "gpt-5.5",
       "enabled": true,
-      "provider": "openai",
-      "model": "gpt-4.5",
-      "description": "Complex analysis, architectural decisions",
-      "priority": 3,
-      "maxTokens": 8192,
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url": "https://api.openai.com/v1",
+      "timeout_seconds": 180,
+      "best_for": [
+        "complex_analysis",
+        "architectural_decisions",
+        "multi_component_reasoning",
+        "problem_solving",
+        "design_generation"
+      ],
       "temperature": 0.8,
-      "timeout": 90,
-      "retries": 3,
-      "retryDelay": 3,
-      "costPerThousandTokens": {
-        "input": 0.04,
-        "output": 0.12
+      "max_tokens": 8192,
+      "rate_limit_per_minute": 20,
+      "rate_limit_per_day": 300,
+      "cost_per_1k_tokens_input": 0.005,
+      "cost_per_1k_tokens_output": 0.03
+    }
+  },
+  "service_router": {
+    "enabled": true,
+    "strategy": "confidence_weighted",
+    "task_routing": {
+      "code_generation": {
+        "primary": "gpt_5_4_mini",
+        "primary_weight": 0.9,
+        "secondary": "gpt_5_5",
+        "secondary_weight": 0.1
+      },
+      "code_refactoring": {
+        "primary": "gpt_5_4_mini",
+        "primary_weight": 0.85,
+        "secondary": "gpt_5_5",
+        "secondary_weight": 0.15
+      },
+      "test_creation": {
+        "primary": "gpt_5_4_mini",
+        "primary_weight": 0.8,
+        "secondary": "gpt_5_5",
+        "secondary_weight": 0.2
+      },
+      "code_review": {
+        "primary": "gpt_5_4",
+        "primary_weight": 0.7,
+        "secondary": "gpt_5_5",
+        "secondary_weight": 0.3
+      },
+      "documentation_generation": {
+        "primary": "gpt_5_4",
+        "primary_weight": 0.75,
+        "secondary": "gpt_5_4_mini",
+        "secondary_weight": 0.25
+      },
+      "optimization_suggestions": {
+        "primary": "gpt_5_4",
+        "primary_weight": 0.6,
+        "secondary": "gpt_5_5",
+        "secondary_weight": 0.4
+      },
+      "bug_detection": {
+        "primary": "gpt_5_4",
+        "primary_weight": 0.65,
+        "secondary": "gpt_5_5",
+        "secondary_weight": 0.35
+      },
+      "security_analysis": {
+        "primary": "gpt_5_4",
+        "primary_weight": 0.7,
+        "secondary": "gpt_5_5",
+        "secondary_weight": 0.3
+      },
+      "architecture_design": {
+        "primary": "gpt_5_5",
+        "primary_weight": 0.8,
+        "secondary": "gpt_5_4",
+        "secondary_weight": 0.2
+      },
+      "component_analysis": {
+        "primary": "gpt_5_5",
+        "primary_weight": 0.75,
+        "secondary": "gpt_5_4",
+        "secondary_weight": 0.25
+      },
+      "conflict_resolution": {
+        "primary": "gpt_5_5",
+        "primary_weight": 0.8,
+        "secondary": "gpt_5_4",
+        "secondary_weight": 0.2
+      },
+      "build_optimization": {
+        "primary": "gpt_5_4",
+        "primary_weight": 0.6,
+        "secondary": "gpt_5_5",
+        "secondary_weight": 0.4
       }
     }
   },
-  "coordination": {
-    "enableConflictDetection": true,
-    "enableCostTracking": true,
-    "enableRateLimiting": true,
-    "enableFallbackStrategies": true,
-    "conflictThreshold": 0.4,
-    "consensusThreshold": 0.7,
-    "maxConcurrentRequests": 5,
-    "requestTimeoutMs": 120000,
-    "logLevel": "Info"
-  },
-  "rateLimiting": {
+  "cost_management": {
     "enabled": true,
-    "requestsPerMinute": 60,
-    "requestsPerHour": 1000,
-    "requestsPerDay": 10000
+    "tracking_enabled": true,
+    "cost_limits": {
+      "total_monthly_usd": 300,
+      "gpt_5_4_usd": 100,
+      "gpt_5_4_mini_usd": 50,
+      "gpt_5_5_usd": 150
+    },
+    "cost_warning_threshold_percent": 80,
+    "cost_limit_action": "pause_requests",
+    "track_daily": true,
+    "track_by_task": true,
+    "track_by_service": true
   },
-  "costManagement": {
-    "enableCostTracking": true,
-    "dailyBudgetLimit": 50.0,
-    "monthlyBudgetLimit": 500.0,
-    "warnThresholdPercent": 80,
-    "trackByService": true,
-    "trackByUsageType": true
-  },
-  "fallbackStrategy": {
+  "rate_limiting": {
     "enabled": true,
-    "order": ["chatgpt-pro", "codex", "gpt-4-5"],
-    "retryFailedService": true,
-    "maxFallbacks": 2
+    "global_per_minute": 30,
+    "global_per_day": 500,
+    "per_service_override": true,
+    "queue_strategy": "fifo",
+    "retry_on_limit": true,
+    "retry_attempts": 3,
+    "retry_backoff_seconds": 10
   },
-  "logging": {
-    "enableLogging": true,
-    "logPath": "C:\\Users\\ADMIN\\helios-platform\\logs\\ai-services",
-    "maxLogSize": 52428800,
-    "maxLogFiles": 10,
-    "includeTimestamp": true,
-    "includeCallStack": true
+  "conflict_resolution": {
+    "enabled": true,
+    "strategy": "consensus",
+    "min_services_for_consensus": 2,
+    "min_agreement_percent": 75,
+    "when_conflicted": "ask_user",
+    "auto_approve_threshold": 0.95,
+    "log_conflicts": true
   },
   "security": {
-    "maskApiKeys": true,
-    "encryptSensitiveData": true,
-    "auditTrailEnabled": true,
-    "auditLogPath": "C:\\Users\\ADMIN\\helios-platform\\logs\\ai-services\\audit"
+    "api_key_encryption": true,
+    "sanitize_logs": true,
+    "sanitize_audit_trail": true,
+    "mask_sensitive_data": true,
+    "require_approval_for_risky_tasks": true,
+    "enable_rollback": true,
+    "audit_all_changes": true,
+    "auditLogPath": "audit-logs/"
+  },
+  "audit": {
+    "enabled": true,
+    "log_all_requests": true,
+    "log_all_responses": true,
+    "log_approval_decisions": true,
+    "log_changes_made": true,
+    "retention_days": 90,
+    "storage_location": "audit-logs/"
+  },
+  "fallback": {
+    "enabled": true,
+    "strategy": "sequential",
+    "max_fallback_depth": 3,
+    "fallback_on_timeout": true,
+    "fallback_on_error": true,
+    "fallback_on_rate_limit": true,
+    "fallback_on_cost_limit": true
+  },
+  "notifications": {
+    "enabled": true,
+    "notify_on_approval_needed": true,
+    "notify_on_error": true,
+    "notify_on_cost_threshold": true,
+    "notify_on_conflict": true,
+    "notification_methods": [
+      "console",
+      "file"
+    ],
+    "log_file": "logs/ai-notifications.log"
+  },
+  "features": {
+    "enable_dry_run": true,
+    "enable_preview_mode": true,
+    "enable_consensus_mode": true,
+    "enable_smart_routing": true,
+    "enable_cost_tracking": true,
+    "enable_performance_metrics": true,
+    "enable_audit_trail": true,
+    "enable_change_tracking": true,
+    "enable_automatic_rollback": true
+  },
+  "debug": {
+    "enabled": false,
+    "verbose_logging": false,
+    "log_api_calls": false,
+    "log_responses": false,
+    "log_file": "logs/debug.log"
+  },
+  "model_registry": {
+    "allowed_model_ids": [
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.4-mini"
+    ],
+    "deprecated_model_ids": [
+      "code-davinci-002",
+      "gpt-4",
+      "gpt-4-turbo",
+      "gpt-4-turbo-2024-04",
+      "gpt-4.5"
+    ],
+    "placeholder_patterns": [
+      "^gpt[-_]?4[-_]?5$",
+      "^codex$",
+      "^model[-_]?id$",
+      "^placeholder$"
+    ],
+    "validation_mode": "fail_closed"
+  },
+  "logging": {
+    "logPath": "logs/ai-services"
   }
 }

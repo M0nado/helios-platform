@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>MonadoBlade.Developer.Ecosystem</RootNamespace>
+    <AssemblyName>MonadoBlade.Developer.Ecosystem</AssemblyName>
+    <Version>1.0.0</Version>
+    <Authors>MONADO BLADE Development Team</Authors>
+    <Description>Complete developer environment with dual-AI fallback strategy (Hermes LLM + GitHub Copilot)</Description>
+    <RepositoryUrl>https://github.com/monadoblade/developer-ecosystem</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Moq" Version="4.20.70" />
+    <PackageReference Include="xunit" Version="2.6.6" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="DeveloperEcosystemWindow.xaml" Generator="MSBuild:Compile" />
+    <None Include="DeveloperEcosystemWindow.xaml.cs" DependentUpon="DeveloperEcosystemWindow.xaml" SubType="Code" />
+  </ItemGroup>
+
+</Project>
