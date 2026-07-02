@@ -1,0 +1,18 @@
+{
+  "schema": "helios.partitionLayout.v1",
+  "name": "HELIOS Default Workstation Layout",
+  "destructiveByDefault": false,
+  "requiresTypedConfirmation": true,
+  "volumes": [
+    { "letter": "C", "name": "HELIOS_SYSTEM", "purpose": "Windows and boot-critical drivers", "fileSystem": "NTFS", "sizeGb": 220 },
+    { "letter": "D", "name": "HELIOS_DATA", "purpose": "User data", "fileSystem": "NTFS", "sizeGb": 500 },
+    { "letter": "E", "name": "HELIOS_DEVDRIVE", "purpose": "DevDrive source, build, and cache", "fileSystem": "ReFS", "sizeGb": 250, "devDrive": true },
+    { "letter": "F", "name": "HELIOS_APPS_COMMON", "purpose": "Core/common software and verified installers", "fileSystem": "NTFS", "sizeGb": 300 },
+    { "letter": "G", "name": "HELIOS_GAMES_MEDIA", "purpose": "Games and media", "fileSystem": "NTFS", "sizeGb": 800 },
+    { "letter": "H", "name": "HELIOS_MUSIC", "purpose": "REAPER, DAW sessions, samples, plugins, renders", "fileSystem": "NTFS", "sizeGb": 500 },
+    { "letter": "I", "name": "HELIOS_AIHUB", "purpose": "Local LLM models, vector database, AI cache, WSL2 AI workspace", "fileSystem": "NTFS", "sizeGb": 500 },
+    { "letter": "J", "name": "HELIOS_BACKUP", "purpose": "Backups and Windows recovery images", "fileSystem": "NTFS", "sizeGb": 500 },
+    { "letter": "K", "name": "HELIOS_VAULT", "purpose": "BitLocker/VHDX secure vault", "fileSystem": "NTFS", "sizeGb": 250, "encrypted": true },
+    { "letter": "L", "name": "HELIOS_LOGS_SANDBOX", "purpose": "Logs, sandbox, quarantine, exports", "fileSystem": "NTFS", "sizeGb": 100 }
+  ]
+}
