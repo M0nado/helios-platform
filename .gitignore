@@ -127,3 +127,6 @@ azure-pipelines.yml
 .git/
 .gitkeep
 .gitmodules
+
+# Generated PR body
+.github/PULL_REQUEST_BODY.md
