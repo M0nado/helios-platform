@@ -2,6 +2,9 @@
 
 | Node | Title | Command |
 | --- | --- | --- |
+| `pr-update-body` | Generated PR update body | `python3 scripts/github/update-pr-from-reports.py --dry-run` |
+| `doctor` | Setup doctor | `python3 scripts/control/doctor.py` |
+| `readiness-score` | Readiness score | `python3 scripts/integrations/readiness_score.py` |
 | `gui-dashboard` | HTML command center GUI | `python3 scripts/dashboard/generate-gui.py` |
 | `cross-access-profiles` | Cross-access profile readiness | `python3 scripts/integrations/cross_access_profiles.py` |
 | `hybrid-gap-analysis` | Hybrid integration gap analysis | `python3 scripts/analysis/hybrid_gap_analysis.py` |

@@ -1,10 +1,10 @@
 # Codex Task Packets
 
-Generated: `2026-07-02T19:13:23.759248+00:00`
+Generated: `2026-07-02T19:17:37.848792+00:00`
 
 - [001-work-github-workflows.md](tasks/001-work-github-workflows.md)
 - [002-work-scripts.md](tasks/002-work-scripts.md)
-- [003-work-docs.md](tasks/003-work-docs.md)
+- [003-work-docs-integration.md](tasks/003-work-docs-integration.md)
 - [004-work-config.md](tasks/004-work-config.md)
 - [005-work-root.md](tasks/005-work-root.md)
 - [006-work-reports.md](tasks/006-work-reports.md)

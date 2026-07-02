@@ -4,7 +4,7 @@
 |---|---|---|---|---|
 | extract-ideas | work | .github/workflows | 78 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | scripts | 76 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | docs | 61 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | docs/integration | 68 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | config | 60 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | root | 60 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | reports | 60 | comparison notes, merge risk, tests to run, and idea extraction |

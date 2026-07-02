@@ -1,6 +1,6 @@
 # HELIOS Branch Intelligence Dashboard
 
-Generated: 2026-07-02T19:13:20Z
+Generated: 2026-07-02T19:17:33Z
 
 ## Remote setup
 | Remote | Enabled | URL configured | Action | Result |
@@ -13,7 +13,7 @@ Generated: 2026-07-02T19:13:20Z
 ## Branch ranking
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 56 | extract-ideas | 63 | .github/workflows, config, docs, root, reports, scripts |
+| work | 56 | extract-ideas | 63 | .github/workflows, config, docs/integration, root, reports, scripts |
 
 ## Idea impact
 | Category | Module | Key | Occurrences | Action | How it affects us |
@@ -44,7 +44,7 @@ Generated: 2026-07-02T19:13:20Z
 |---|---|---|---|---|
 | extract-ideas | work | .github/workflows | 78 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | scripts | 76 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | docs | 61 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | docs/integration | 68 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | config | 60 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | root | 60 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | reports | 60 | comparison notes, merge risk, tests to run, and idea extraction |

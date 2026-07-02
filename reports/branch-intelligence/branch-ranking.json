@@ -6,8 +6,8 @@
       "score": 0,
       "summary": "gh not found"
     },
-    "commit": "a6d928b",
-    "date": "2026-07-02 19:07:48 +0000",
+    "commit": "91707d3",
+    "date": "2026-07-02 19:13:35 +0000",
     "fileCount": 63,
     "heuristicCiCloseness": 8,
     "modules": {
@@ -22,20 +22,19 @@
         "files": 2,
         "paths": [
           "config/build-graph.json",
-          "config/hybrid-integration-roadmap.json"
+          "config/cross-access-profiles.example.json"
         ],
         "weight": 4
       },
-      "docs": {
-        "files": 2,
+      "docs/integration": {
+        "files": 1,
         "paths": [
-          "docs/architecture/HYBRID_INTEGRATION_EXPANSION_PLAN.md",
-          "docs/architecture/WHOLE_PROJECT_NEXT_STEPS.md"
+          "docs/integration/CROSS_ACCESS_PROFILES.md"
         ],
-        "weight": 5
+        "weight": 12
       },
       "reports": {
-        "files": 50,
+        "files": 53,
         "paths": [
           "reports/branch-intelligence/agent-work-queue.json",
           "reports/branch-intelligence/agent-work-queue.md",
@@ -58,20 +57,18 @@
         "weight": 4
       },
       "scripts": {
-        "files": 6,
+        "files": 3,
         "paths": [
-          "scripts/analysis/hybrid_gap_analysis.py",
-          "scripts/analysis/repo_inventory.py",
-          "scripts/build_graph/build_graph.py",
-          "scripts/cloudshell/helios-cloudshell.sh",
-          "scripts/setup/helios-dev.sh",
+          "scripts/dashboard/generate-gui.py",
+          "scripts/integrations/cross_access_profiles.py",
           "scripts/web/helios-web.py"
         ],
         "weight": 20
       },
       "status-site": {
-        "files": 1,
+        "files": 2,
         "paths": [
+          "status-site/index.html",
           "status-site/index.md"
         ],
         "weight": 4
@@ -80,6 +77,6 @@
     "name": "work",
     "recommendedAction": "extract-ideas",
     "score": 56,
-    "subject": "Add whole-project inventory and hybrid roadmap"
+    "subject": "Add cross-access profiles and GUI dashboard"
   }
 ]

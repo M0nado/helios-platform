@@ -1017,6 +1017,24 @@
     },
     {
       "category": "github-automation",
+      "key": "dc93f0a100d9f6f9",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
+      "key": "dd5081e5ef60533e",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "azure-automation",
+      "key": "a946b4159c656fe1",
+      "occurrences": 1,
+      "score": 15
+    },
+    {
+      "category": "github-automation",
       "key": "8322244008ab6e5b",
       "occurrences": 1,
       "score": 15
@@ -2314,24 +2332,6 @@
     {
       "category": "cmake-native",
       "key": "7c804f7a22863de8",
-      "occurrences": 1,
-      "score": 15
-    },
-    {
-      "category": "aihub-openai",
-      "key": "b7d5384a91e5184b",
-      "occurrences": 1,
-      "score": 15
-    },
-    {
-      "category": "cmake-native",
-      "key": "4fb9cb6ffa5d9c9f",
-      "occurrences": 1,
-      "score": 15
-    },
-    {
-      "category": "azure-automation",
-      "key": "d7159d4bb40e8ff3",
       "occurrences": 1,
       "score": 15
     }

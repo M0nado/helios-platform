@@ -1,6 +1,6 @@
 # Hybrid Integration Gap Analysis
 
-Generated: `2026-07-02T19:13:15.871324+00:00`
+Generated: `2026-07-02T19:17:28.075910+00:00`
 
 | Domain | Priority | Readiness | Next |
 | --- | ---: | ---: | --- |

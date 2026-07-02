@@ -1645,6 +1645,48 @@
     },
     "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
     "category": "github-automation",
+    "idea": "Branch Recommendations",
+    "line": 63,
+    "module": ".github",
+    "path": ".github/PULL_REQUEST_BODY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "aiEnrichment": {
+      "configured": false,
+      "requested": false,
+      "status": "disabled"
+    },
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "idea": "Branch Merge / Prune Recommendations",
+    "line": 65,
+    "module": ".github",
+    "path": ".github/PULL_REQUEST_BODY.md",
+    "recommendedAction": "merge-or-rewrite"
+  },
+  {
+    "aiEnrichment": {
+      "configured": false,
+      "requested": false,
+      "status": "disabled"
+    },
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "idea": "GitHub org/enterprise, Azure subscription/tenant, Entra, Purview, and provider apply modes remain disabled unless explicitly implemented later behind `--apply` and reviewed scopes.",
+    "line": 97,
+    "module": ".github",
+    "path": ".github/PULL_REQUEST_BODY.md",
+    "recommendedAction": "save-and-score"
+  },
+  {
+    "aiEnrichment": {
+      "configured": false,
+      "requested": false,
+      "status": "disabled"
+    },
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
     "idea": "Quick Reference: Workflow Triggers & Usage",
     "line": 1,
     "module": ".github",
@@ -5556,47 +5598,5 @@
     "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
     "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
     "recommendedAction": "merge-or-rewrite"
-  },
-  {
-    "aiEnrichment": {
-      "configured": false,
-      "requested": false,
-      "status": "disabled"
-    },
-    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
-    "category": "aihub-openai",
-    "idea": "[x] Learning engine startup",
-    "line": 73,
-    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "recommendedAction": "save-and-score"
-  },
-  {
-    "aiEnrichment": {
-      "configured": false,
-      "requested": false,
-      "status": "disabled"
-    },
-    "bonusImpact": "Potential platform capability improvement after review.",
-    "category": "cmake-native",
-    "idea": "[x] Device information section (CPU, GPU, RAM, Storage, Network)",
-    "line": 103,
-    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "recommendedAction": "save-and-score"
-  },
-  {
-    "aiEnrichment": {
-      "configured": false,
-      "requested": false,
-      "status": "disabled"
-    },
-    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
-    "category": "azure-automation",
-    "idea": "[x] CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md (18 KB)",
-    "line": 117,
-    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "recommendedAction": "save-and-score"
   }
 ]

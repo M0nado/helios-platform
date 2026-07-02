@@ -2,7 +2,7 @@
 
 - Priority: 60
 - Task type: extract-ideas
-- Allowed paths: `['config/build-graph.json', 'config/hybrid-integration-roadmap.json']`
+- Allowed paths: `['config/build-graph.json', 'config/cross-access-profiles.example.json']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

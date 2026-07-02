@@ -9,7 +9,7 @@ def load(path, default):
 profiles=load(Path('reports/integrations/cross-access-profiles.json'), {'profiles':[]}).get('profiles',[])
 summary=load(Path('reports/control-plane/control-summary.json'), {})
 inv=load(Path('reports/project-inventory/repo-inventory.json'), {})
-actions=[('Run all safe reports','./helios.sh all'),('Refresh local GUI','curl -X POST http://127.0.0.1:8787/rebuild'),('GitHub inventory','./helios.sh github'),('Azure inventory','./helios.sh azure'),('Cross-access profiles','python3 scripts/integrations/cross_access_profiles.py'),('Codex packets','./helios.sh codex'),('Build graph','./helios.sh build'),('Open dashboard','./helios.sh dashboard')]
+actions=[('Run all safe reports','./helios.sh all'),('Refresh local GUI','curl -X POST http://127.0.0.1:8787/rebuild'),('GitHub inventory','./helios.sh github'),('Azure inventory','./helios.sh azure'),('Cross-access profiles','python3 scripts/integrations/cross_access_profiles.py'),('Readiness score','./helios.sh readiness'),('Doctor','./helios.sh doctor'),('PR body preview','./helios.sh pr-update --dry-run'),('Codex packets','./helios.sh codex'),('Build graph','./helios.sh build'),('Open dashboard','./helios.sh dashboard')]
 cards=''.join(f"<article><h3>{html.escape(p['displayName'])}</h3><p>{html.escape(p['provider'])} / {html.escape(p['scope'])}</p><p>CLI: {'✅' if p.get('cliAvailable') else '⚠️'} Auth: {'✅' if p.get('authenticated') else '⚠️'}</p><code>{html.escape(p.get('inventory',''))}</code></article>" for p in profiles)
 buttons=''.join(f"<button onclick=\"copyCmd('{html.escape(cmd)}')\">{html.escape(name)}</button>" for name,cmd in actions)
 langs=''.join(f"<li>{html.escape(k)}: {v}</li>" for k,v in sorted(inv.get('languageCounts',{}).items()))
@@ -21,6 +21,6 @@ OUT.write_text(f'''<!doctype html>
 <section><h2>Instant safe actions</h2>{buttons}<button onclick="rebuild()">Rebuild reports now</button><p>Last copied: <code id="last"></code></p></section>
 <section><h2>Cross-access profiles</h2><div class="grid">{cards}</div></section>
 <section><h2>Whole-project inventory</h2><p>Files indexed: {inv.get('fileCount','unknown')}</p><ul>{langs}</ul></section>
-<section><h2>Reports</h2><ul><li><a href="reports/cross-access-profiles.md">Cross-access profiles</a></li><li><a href="reports/repo-inventory.md">Whole-project inventory</a></li><li><a href="reports/hybrid-gap-analysis.md">Hybrid gap analysis</a></li><li><a href="reports/control-summary.md">Control summary</a></li><li><a href="reports/build-graph.md">Build graph</a></li><li><a href="actions.md">Action commands</a></li></ul></section>
+<section><h2>Reports</h2><ul><li><a href="reports/cross-access-profiles.md">Cross-access profiles</a></li><li><a href="reports/readiness-score.md">Readiness score</a></li><li><a href="reports/doctor.md">Doctor</a></li><li><a href="reports/repo-inventory.md">Whole-project inventory</a></li><li><a href="reports/hybrid-gap-analysis.md">Hybrid gap analysis</a></li><li><a href="reports/control-summary.md">Control summary</a></li><li><a href="reports/build-graph.md">Build graph</a></li><li><a href="actions.md">Action commands</a></li></ul></section>
 </main></body></html>''')
 print(f'Wrote {OUT.relative_to(ROOT)}')

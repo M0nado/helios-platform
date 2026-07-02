@@ -1,8 +1,8 @@
-# Codex Task: docs from work
+# Codex Task: docs/integration from work
 
-- Priority: 61
+- Priority: 68
 - Task type: extract-ideas
-- Allowed paths: `['docs/architecture/HYBRID_INTEGRATION_EXPANSION_PLAN.md', 'docs/architecture/WHOLE_PROJECT_NEXT_STEPS.md']`
+- Allowed paths: `['docs/integration/CROSS_ACCESS_PROFILES.md']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

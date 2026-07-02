@@ -3379,6 +3379,66 @@
     },
     "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
     "category": "github-automation",
+    "dedupeKey": "dc93f0a100d9f6f9",
+    "idea": "Branch Recommendations",
+    "impactScore": 15,
+    "line": 63,
+    "module": ".github",
+    "occurrences": 1,
+    "path": ".github/PULL_REQUEST_BODY.md",
+    "recommendedAction": "merge-or-rewrite",
+    "sources": [
+      ".github/PULL_REQUEST_BODY.md:63"
+    ]
+  },
+  {
+    "aiEnrichment": {
+      "configured": false,
+      "requested": false,
+      "status": "disabled"
+    },
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
+    "dedupeKey": "dd5081e5ef60533e",
+    "idea": "Branch Merge / Prune Recommendations",
+    "impactScore": 15,
+    "line": 65,
+    "module": ".github",
+    "occurrences": 1,
+    "path": ".github/PULL_REQUEST_BODY.md",
+    "recommendedAction": "merge-or-rewrite",
+    "sources": [
+      ".github/PULL_REQUEST_BODY.md:65"
+    ]
+  },
+  {
+    "aiEnrichment": {
+      "configured": false,
+      "requested": false,
+      "status": "disabled"
+    },
+    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
+    "category": "azure-automation",
+    "dedupeKey": "a946b4159c656fe1",
+    "idea": "GitHub org/enterprise, Azure subscription/tenant, Entra, Purview, and provider apply modes remain disabled unless explicitly implemented later behind `--apply` and reviewed scopes.",
+    "impactScore": 15,
+    "line": 97,
+    "module": ".github",
+    "occurrences": 1,
+    "path": ".github/PULL_REQUEST_BODY.md",
+    "recommendedAction": "save-and-score",
+    "sources": [
+      ".github/PULL_REQUEST_BODY.md:97"
+    ]
+  },
+  {
+    "aiEnrichment": {
+      "configured": false,
+      "requested": false,
+      "status": "disabled"
+    },
+    "bonusImpact": "Improves branch pruning, PR selection, and dashboard freshness.",
+    "category": "github-automation",
     "dedupeKey": "8322244008ab6e5b",
     "idea": "Quick Reference: Workflow Triggers & Usage",
     "impactScore": 15,
@@ -7709,66 +7769,6 @@
     "recommendedAction": "save-and-score",
     "sources": [
       "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md:45"
-    ]
-  },
-  {
-    "aiEnrichment": {
-      "configured": false,
-      "requested": false,
-      "status": "disabled"
-    },
-    "bonusImpact": "Enables AI-assisted idea extraction and learning-record enrichment when credentials are present.",
-    "category": "aihub-openai",
-    "dedupeKey": "b7d5384a91e5184b",
-    "idea": "[x] Learning engine startup",
-    "impactScore": 15,
-    "line": 73,
-    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "occurrences": 1,
-    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "recommendedAction": "save-and-score",
-    "sources": [
-      "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md:73"
-    ]
-  },
-  {
-    "aiEnrichment": {
-      "configured": false,
-      "requested": false,
-      "status": "disabled"
-    },
-    "bonusImpact": "Potential platform capability improvement after review.",
-    "category": "cmake-native",
-    "dedupeKey": "4fb9cb6ffa5d9c9f",
-    "idea": "[x] Device information section (CPU, GPU, RAM, Storage, Network)",
-    "impactScore": 15,
-    "line": 103,
-    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "occurrences": 1,
-    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "recommendedAction": "save-and-score",
-    "sources": [
-      "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md:103"
-    ]
-  },
-  {
-    "aiEnrichment": {
-      "configured": false,
-      "requested": false,
-      "status": "disabled"
-    },
-    "bonusImpact": "Improves deployment repeatability and environment verification through Azure CLI automation.",
-    "category": "azure-automation",
-    "dedupeKey": "d7159d4bb40e8ff3",
-    "idea": "[x] CHANNEL3_COMPLETE_HANDS_OFF_DEPLOYMENT.md (18 KB)",
-    "impactScore": 15,
-    "line": 117,
-    "module": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "occurrences": 1,
-    "path": "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md",
-    "recommendedAction": "save-and-score",
-    "sources": [
-      "CHANNEL3_PRODUCTION_DEPLOYMENT_CHECKLIST.md:117"
     ]
   }
 ]

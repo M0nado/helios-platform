@@ -23,9 +23,12 @@ def rebuild() -> None:
     commands = [
         ["python3", "scripts/integrations/check-connections.py"],
         ["python3", "scripts/integrations/cross_access_profiles.py"],
+        ["python3", "scripts/integrations/readiness_score.py"],
         ["python3", "scripts/analysis/branch_intelligence.py"],
         ["python3", "scripts/graphs/generate_graphs.py"],
         ["python3", "scripts/github/update-wiki-from-reports.py"],
+        ["python3", "scripts/control/doctor.py"],
+        ["python3", "scripts/github/update-pr-from-reports.py", "--dry-run"],
         ["python3", "scripts/dashboard/generate-actions.py"],
         ["python3", "scripts/dashboard/generate-gui.py"],
     ]

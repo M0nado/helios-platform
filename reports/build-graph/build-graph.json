@@ -1,6 +1,32 @@
 {
-  "generatedUtc": "2026-07-02T19:13:19.751711+00:00",
+  "generatedUtc": "2026-07-02T19:17:32.427993+00:00",
   "nodes": [
+    {
+      "id": "pr-update-body",
+      "title": "Generated PR update body",
+      "command": "python3 scripts/github/update-pr-from-reports.py --dry-run",
+      "paths": [
+        "scripts/github/update-pr-from-reports.py",
+        "reports/**"
+      ]
+    },
+    {
+      "id": "doctor",
+      "title": "Setup doctor",
+      "command": "python3 scripts/control/doctor.py",
+      "paths": [
+        "scripts/control/doctor.py"
+      ]
+    },
+    {
+      "id": "readiness-score",
+      "title": "Readiness score",
+      "command": "python3 scripts/integrations/readiness_score.py",
+      "paths": [
+        "scripts/integrations/readiness_score.py",
+        "reports/**"
+      ]
+    },
     {
       "id": "gui-dashboard",
       "title": "HTML command center GUI",

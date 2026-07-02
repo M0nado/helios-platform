@@ -1,21 +1,21 @@
 # HELIOS Whole-Project Inventory
 
-Generated: `2026-07-02T19:13:15.072113+00:00`
+Generated: `2026-07-02T19:17:27.340437+00:00`
 
-Files indexed: **2037**
+Files indexed: **2045**
 
 ## Languages
 
 | Language | Files |
 | --- | ---: |
-| markdown | 746 |
+| markdown | 748 |
 | csharp | 575 |
 | powershell | 300 |
-| other | 222 |
+| other | 225 |
 | json | 99 |
 | yaml | 30 |
+| python | 20 |
 | csharp-project | 18 |
-| python | 17 |
 | shell | 16 |
 | fsharp | 7 |
 | bicep | 5 |
@@ -26,11 +26,11 @@ Files indexed: **2037**
 | Module | Files | Dominant languages |
 | --- | ---: | --- |
 | `src` | 597 | csharp:469, markdown:62, other:45, csharp-project:8 |
-| `docs` | 359 | markdown:256, other:80, powershell:11, csharp:7 |
-| `scripts` | 276 | powershell:171, markdown:32, json:24, other:23 |
+| `docs` | 360 | markdown:257, other:80, powershell:11, csharp:7 |
+| `scripts` | 282 | powershell:171, markdown:32, other:26, json:24 |
 | `installer` | 172 | powershell:91, markdown:40, json:25, other:16 |
 | `tests` | 90 | csharp:72, markdown:10, csharp-project:3, other:2 |
-| `.github` | 44 | yaml:24, markdown:15, json:3, other:2 |
+| `.github` | 45 | yaml:24, markdown:16, json:3, other:2 |
 | `phases` | 27 | markdown:27 |
 | `microsoft-ecosystem` | 21 | markdown:17, powershell:3, yaml:1 |
 | `cloud-integration` | 20 | json:10, markdown:5, csharp:5 |

@@ -16,7 +16,14 @@ case "$cmd" in
   codex) exec python3 scripts/codex/generate-codex-tasks.py "$@" ;;
   recommendations) exec python3 scripts/analysis/merge_prune_recommendations.py "$@" ;;
   profiles) exec python3 scripts/integrations/cross_access_profiles.py "$@" ;;
-  gui) exec python3 scripts/dashboard/generate-gui.py "$@" ;;
+  readiness) exec python3 scripts/integrations/readiness_score.py "$@" ;;
+  doctor) exec python3 scripts/control/doctor.py "$@" ;;
+  pr-update) exec python3 scripts/github/update-pr-from-reports.py "$@" ;;
+  gui)
+    python3 scripts/control/doctor.py
+    python3 scripts/github/update-pr-from-reports.py --dry-run >/tmp/helios-pr-update-preview.md
+    exec python3 scripts/dashboard/generate-gui.py "$@"
+    ;;
   actions)
     python3 scripts/dashboard/generate-actions.py "$@"
     exec python3 scripts/dashboard/generate-gui.py "$@"
@@ -30,6 +37,7 @@ case "$cmd" in
     printf '2/15 Unified secrets map\n'
     python3 scripts/integrations/check-connections.py
     python3 scripts/integrations/cross_access_profiles.py
+    python3 scripts/integrations/readiness_score.py
     printf '3/15 GitHub inventory\n'
     python3 scripts/github/github-inventory.py
     printf '4/15 Azure inventory\n'
@@ -43,6 +51,8 @@ case "$cmd" in
     python3 scripts/analysis/merge_prune_recommendations.py
     printf '8/15 Dashboard actions page\n'
     python3 scripts/dashboard/generate-actions.py
+    python3 scripts/control/doctor.py
+    python3 scripts/github/update-pr-from-reports.py --dry-run >/tmp/helios-pr-update-preview.md
     python3 scripts/dashboard/generate-gui.py
     printf '9/15 Codex task packet generation\n'
     python3 scripts/codex/generate-codex-tasks.py
@@ -80,6 +90,9 @@ Commands:
   codex             Generate Codex task packets
   recommendations   Branch merge/prune recommendations
   profiles          Cross-access profile readiness
+  readiness         Local/repo readiness score
+  doctor            Setup doctor and fix hints
+  pr-update         Generate or apply PR body from reports
   gui               Generate HTML GUI dashboard
   actions           Dashboard actions page
   all               Run the safe read-only/report generation pipeline

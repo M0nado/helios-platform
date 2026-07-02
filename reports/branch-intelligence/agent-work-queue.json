@@ -16,11 +16,8 @@
   },
   {
     "allowedPaths": [
-      "scripts/analysis/hybrid_gap_analysis.py",
-      "scripts/analysis/repo_inventory.py",
-      "scripts/build_graph/build_graph.py",
-      "scripts/cloudshell/helios-cloudshell.sh",
-      "scripts/setup/helios-dev.sh",
+      "scripts/dashboard/generate-gui.py",
+      "scripts/integrations/cross_access_profiles.py",
       "scripts/web/helios-web.py"
     ],
     "blockedPaths": [
@@ -36,8 +33,7 @@
   },
   {
     "allowedPaths": [
-      "docs/architecture/HYBRID_INTEGRATION_EXPANSION_PLAN.md",
-      "docs/architecture/WHOLE_PROJECT_NEXT_STEPS.md"
+      "docs/integration/CROSS_ACCESS_PROFILES.md"
     ],
     "blockedPaths": [
       ".git",
@@ -46,14 +42,14 @@
     ],
     "branch": "work",
     "expectedOutput": "comparison notes, merge risk, tests to run, and idea extraction",
-    "module": "docs",
-    "priorityScore": 61,
+    "module": "docs/integration",
+    "priorityScore": 68,
     "taskType": "extract-ideas"
   },
   {
     "allowedPaths": [
       "config/build-graph.json",
-      "config/hybrid-integration-roadmap.json"
+      "config/cross-access-profiles.example.json"
     ],
     "blockedPaths": [
       ".git",
@@ -107,6 +103,7 @@
   },
   {
     "allowedPaths": [
+      "status-site/index.html",
       "status-site/index.md"
     ],
     "blockedPaths": [

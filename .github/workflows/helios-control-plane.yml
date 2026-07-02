@@ -56,6 +56,7 @@ jobs:
       - name: 02 Unified secrets map and integration readiness
         run: python3 scripts/integrations/check-connections.py
           python3 scripts/integrations/cross_access_profiles.py
+          python3 scripts/integrations/readiness_score.py
       - name: 03 GitHub inventory
         run: python3 scripts/github/github-inventory.py
       - name: 04 Azure inventory
@@ -71,6 +72,8 @@ jobs:
           python3 scripts/graphs/generate_graphs.py
       - name: 08 Dashboard actions page and GUI
         run: |
+          python3 scripts/control/doctor.py
+          python3 scripts/github/update-pr-from-reports.py --dry-run > /tmp/helios-pr-preview.md
           python3 scripts/dashboard/generate-actions.py
           python3 scripts/dashboard/generate-gui.py
       - name: 09 Codex task packets
@@ -115,6 +118,7 @@ jobs:
             reports/branch-intelligence/
             reports/integrations/
             reports/control-plane/
+            .github/PULL_REQUEST_BODY.md
             reports/project-inventory/
             reports/build-graph/
             reports/codex/

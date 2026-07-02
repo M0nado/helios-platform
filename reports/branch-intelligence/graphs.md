@@ -7,7 +7,7 @@ graph TD
   work["work (56)"]
   work --> _github_workflows[".github/workflows"]
   work --> config["config"]
-  work --> docs["docs"]
+  work --> docs_integration["docs/integration"]
   work --> reports["reports"]
   work --> root["root"]
   work --> scripts["scripts"]
@@ -51,7 +51,7 @@ graph LR
 graph TD
   Q1["extract-ideas 78"] --> M1[".github/workflows"]
   Q2["extract-ideas 76"] --> M2["scripts"]
-  Q3["extract-ideas 61"] --> M3["docs"]
+  Q3["extract-ideas 68"] --> M3["docs/integration"]
   Q4["extract-ideas 60"] --> M4["config"]
   Q5["extract-ideas 60"] --> M5["root"]
   Q6["extract-ideas 60"] --> M6["reports"]

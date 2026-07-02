@@ -1,6 +1,6 @@
 {
-  "fileCount": 2037,
-  "generatedUtc": "2026-07-02T19:13:15.072113+00:00",
+  "fileCount": 2045,
+  "generatedUtc": "2026-07-02T19:17:27.340437+00:00",
   "languageCounts": {
     "bicep": 5,
     "csharp": 575,
@@ -8,10 +8,10 @@
     "fsharp": 7,
     "fsharp-project": 2,
     "json": 99,
-    "markdown": 746,
-    "other": 222,
+    "markdown": 748,
+    "other": 225,
     "powershell": 300,
-    "python": 17,
+    "python": 20,
     "shell": 16,
     "yaml": 30
   },
@@ -66,12 +66,12 @@
         ".github/COMPLETE_GITHUB_SETUP.md",
         ".github/project-config.json",
         ".github/README.md",
-        ".github/GITHUB_PROJECT_SETUP.md"
+        ".github/PULL_REQUEST_BODY.md"
       ],
-      "files": 44,
+      "files": 45,
       "languages": {
         "json": 3,
-        "markdown": 15,
+        "markdown": 16,
         "other": 2,
         "yaml": 24
       }
@@ -2585,12 +2585,12 @@
         "docs/TEMPLATES_SUMMARY.md",
         "docs/CONFIGURATION_GUIDE.md"
       ],
-      "files": 359,
+      "files": 360,
       "languages": {
         "csharp": 7,
         "csharp-project": 1,
         "json": 3,
-        "markdown": 256,
+        "markdown": 257,
         "other": 80,
         "powershell": 11,
         "shell": 1
@@ -2827,13 +2827,13 @@
         "scripts/init-github-repo.ps1",
         "scripts/README.md"
       ],
-      "files": 276,
+      "files": 282,
       "languages": {
         "json": 24,
         "markdown": 32,
-        "other": 23,
+        "other": 26,
         "powershell": 171,
-        "python": 17,
+        "python": 20,
         "shell": 9
       }
     },
@@ -3006,7 +3006,7 @@
     ".editorconfig": 1,
     ".env.template": 1,
     ".gitattributes": 1,
-    ".github": 44,
+    ".github": 45,
     ".gitignore": 1,
     ".gitmodules": 1,
     ".prettierrc": 1,
@@ -3280,7 +3280,7 @@
     "config": 14,
     "dashboards": 2,
     "demos": 15,
-    "docs": 359,
+    "docs": 360,
     "dotnet-install.sh": 1,
     "examples": 1,
     "file-architecture": 10,
@@ -3301,7 +3301,7 @@
     "plugins": 1,
     "reports": 4,
     "samples": 6,
-    "scripts": 276,
+    "scripts": 282,
     "security.config.template.json": 1,
     "src": 597,
     "status-site": 8,
