@@ -77,6 +77,8 @@ docker run hello-world
 az --version
 ```
 
+For the full branch-integration, Azure, mixed-language build, security, performance, F# analytics, C++ backend, and Python AIHub sequence, follow [HELIOS Hermes XCore: best steps to get everything working](./HELIOS_HERMES_XCORE_WORKING_STEPS.md).
+
 **6. Code Editor** (choose one)
 ```powershell
 # Visual Studio Code
