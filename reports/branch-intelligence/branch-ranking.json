@@ -2,13 +2,13 @@
   {
     "author": "Codex",
     "ci": {
-      "available": false,
+      "available": true,
       "score": 0,
-      "summary": "gh not found"
+      "summary": "To get started with GitHub CLI, please run:  gh auth login\nAlternatively, populate the GH_TOKEN environment variable with a GitHub API authentication token."
     },
-    "commit": "8236f14",
-    "date": "2026-07-02 17:35:41 +0000",
-    "fileCount": 12,
+    "commit": "b6c8fd0",
+    "date": "2026-07-02 17:43:56 +0000",
+    "fileCount": 18,
     "heuristicCiCloseness": 15,
     "modules": {
       ".github/workflows": {
@@ -17,6 +17,14 @@
           ".github/workflows/branch-intelligence.yml"
         ],
         "weight": 22
+      },
+      "docs": {
+        "files": 2,
+        "paths": [
+          "docs/architecture/DASHBOARD_PUBLISHING_STRATEGY.md",
+          "docs/architecture/FSHARP_RANKING_BRIDGE.md"
+        ],
+        "weight": 5
       },
       "docs/integration": {
         "files": 2,
@@ -27,16 +35,18 @@
         "weight": 12
       },
       "reports": {
-        "files": 8,
+        "files": 10,
         "paths": [
+          "reports/branch-intelligence/agent-work-queue.json",
+          "reports/branch-intelligence/agent-work-queue.md",
+          "reports/branch-intelligence/analytics-metrics.json",
           "reports/branch-intelligence/branch-ranking.json",
           "reports/branch-intelligence/branch-ranking.md",
           "reports/branch-intelligence/connectivity.json",
-          "reports/branch-intelligence/connectivity.md",
           "reports/branch-intelligence/dashboard.md",
-          "reports/branch-intelligence/idea-impact.json",
-          "reports/branch-intelligence/idea-impact.md",
-          "reports/branch-intelligence/remote-actions.json"
+          "reports/branch-intelligence/idea-impact-summary.json",
+          "reports/branch-intelligence/idea-impact-summary.md",
+          "reports/branch-intelligence/idea-impact.json"
         ],
         "weight": 4
       },
@@ -46,11 +56,19 @@
           "scripts/analysis/branch_intelligence.py"
         ],
         "weight": 20
+      },
+      "src/native": {
+        "files": 2,
+        "paths": [
+          "src/native/HELIOS.Native.Performance/CMakeLists.txt",
+          "src/native/HELIOS.Native.Performance/README.md"
+        ],
+        "weight": 20
       }
     },
     "name": "work",
     "recommendedAction": "extract-ideas",
     "score": 65,
-    "subject": "Add branch intelligence automation"
+    "subject": "Expand branch intelligence scoring and native planning"
   }
 ]

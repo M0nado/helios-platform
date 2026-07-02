@@ -1,6 +1,6 @@
 # HELIOS Branch Intelligence Dashboard
 
-Generated: 2026-07-02T17:43:40Z
+Generated: 2026-07-02T17:48:02Z
 
 ## Remote setup
 | Remote | Enabled | URL configured | Action | Result |
@@ -13,7 +13,7 @@ Generated: 2026-07-02T17:43:40Z
 ## Branch ranking
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 65 | extract-ideas | 12 | .github/workflows, docs/integration, reports, scripts |
+| work | 65 | extract-ideas | 18 | .github/workflows, docs, docs/integration, reports, scripts, src/native |
 
 ## Idea impact
 | Category | Module | Key | Occurrences | Action | How it affects us |
@@ -44,7 +44,9 @@ Generated: 2026-07-02T17:43:40Z
 |---|---|---|---|---|
 | extract-ideas | work | .github/workflows | 87 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | scripts | 85 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | src/native | 85 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | docs/integration | 77 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | docs | 70 | comparison notes, merge risk, tests to run, and idea extraction |
 | extract-ideas | work | reports | 69 | comparison notes, merge risk, tests to run, and idea extraction |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
@@ -60,16 +62,14 @@ Generated: 2026-07-02T17:43:40Z
 | idea-review | knowledge-base | ACCESSIBILITY_COMPLIANCE_REPORT.md | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
 | idea-review | knowledge-base | ACCESSIBILITY_COMPLIANCE_REPORT.md | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
 | idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 
 ## Connectivity
 | Tool | Available | Authenticated | Detail |
 |---|---|---|---|
 | git | True | True | ['git version 2.43.0'] |
-| GitHub CLI | False | False | gh not found |
-| Azure CLI | False | False | az not found |
-| .NET SDK | False | False | dotnet not found |
+| GitHub CLI | True | False | ['You are not logged into any GitHub hosts. To log in, run: gh auth login'] |
+| Azure CLI | True | False | ["ERROR: Please run 'az login' to setup account."] |
+| .NET SDK | True | True | ['8.0.422'] |
 | Python | True | True | ['Python 3.12.13'] |
 
 ## Safe merge policy

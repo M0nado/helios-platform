@@ -17,6 +17,14 @@ This workflow ranks branches, splits work by module/submodule, extracts unique i
 
 ## Local setup
 
+Install local tools without root access when needed:
+
+```bash
+scripts/setup/bootstrap-local-tools.sh
+```
+
+Run the analysis:
+
 ```bash
 python3 scripts/analysis/branch_intelligence.py
 ```
