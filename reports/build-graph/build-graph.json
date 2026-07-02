@@ -1,5 +1,5 @@
 {
-  "generatedUtc": "2026-07-02T18:35:02.354172+00:00",
+  "generatedUtc": "2026-07-02T18:42:13.212320+00:00",
   "nodes": [
     {
       "id": "python-static",
@@ -67,6 +67,31 @@
       "command": "az bicep build --file infra/azure/main.bicep",
       "paths": [
         "infra/azure/**"
+      ]
+    },
+    {
+      "id": "dotnet-workloads",
+      "title": ".NET workload visibility for MAUI/Visual Studio readiness",
+      "command": "dotnet workload list",
+      "paths": [
+        "src/**",
+        "tests/**"
+      ]
+    },
+    {
+      "id": "maui-readiness",
+      "title": "MAUI readiness placeholder",
+      "command": "dotnet --info",
+      "paths": [
+        "src/**"
+      ]
+    },
+    {
+      "id": "visual-studio-readiness",
+      "title": "Visual Studio developer machine readiness guidance",
+      "command": "python3 -c \"print('Visual Studio/MAUI readiness is documented; install VS with .NET MAUI workload on Windows/macOS.')\"",
+      "paths": [
+        "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md"
       ]
     }
   ],

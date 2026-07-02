@@ -4,6 +4,9 @@
       "AZURE_OPENAI_API_KEY": false,
       "AZURE_OPENAI_ENDPOINT": false
     },
+    "claude": {
+      "ANTHROPIC_API_KEY": false
+    },
     "codex": {
       "cli": {
         "available": false,
@@ -27,6 +30,7 @@
     "safeCommands": [
       "python3 scripts/ai/enrich-ideas.py",
       "python3 scripts/integrations/check-connections.py",
+      "python3 scripts/control/helios-control.py ai",
       "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run"
     ],
     "slack": {
@@ -75,7 +79,7 @@
       "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run"
     ]
   },
-  "generatedUtc": "2026-07-02T18:34:42.611337+00:00",
+  "generatedUtc": "2026-07-02T18:42:11.100082+00:00",
   "github": {
     "auth": {
       "available": false,
@@ -130,6 +134,9 @@
   "local": {
     "paths": {
       ".github/workflows/helios-control-plane.yml": true,
+      "config/execution-order.json": true,
+      "docs/architecture/AZURE_HYBRID_ARCHITECTURE.md": true,
+      "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md": true,
       "infra/azure/main.bicep": true,
       "scripts/ai/enrich-ideas.py": true,
       "scripts/analysis/branch_intelligence.py": true,
@@ -143,6 +150,7 @@
     ],
     "tools": {
       "az": null,
+      "claude": null,
       "cmake": "/usr/bin/cmake",
       "codex": null,
       "dotnet": null,

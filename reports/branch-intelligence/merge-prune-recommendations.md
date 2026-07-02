@@ -4,4 +4,4 @@ No branches are merged or deleted by this report.
 
 | Branch | Score | CI | Files | Recommendation |
 | --- | ---: | ---: | ---: | --- |
-| `work` | 65 | 0 | 22 | extract-ideas-only |
+| `work` | 56 | 0 | 61 | extract-ideas-only |

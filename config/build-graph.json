@@ -1,12 +1,97 @@
 {
   "nodes": [
-    {"id": "python-static", "title": "Python static compile checks", "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py", "paths": ["scripts/**/*.py"]},
-    {"id": "analytics-tests", "title": "F# analytics tests", "command": "dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-restore", "paths": ["src/analytics/**", "tests/analytics/**"]},
-    {"id": "native-configure", "title": "Native/XCore CMake configure", "command": "cmake -S src/native/HELIOS.Native.Performance -B .build/native", "paths": ["src/native/**"]},
-    {"id": "native-build", "title": "Native/XCore CMake build", "command": "cmake --build .build/native", "paths": ["src/native/**"]},
-    {"id": "branch-intelligence", "title": "Branch intelligence reports", "command": "python3 scripts/analysis/branch_intelligence.py", "paths": ["scripts/analysis/**", "docs/integration/remote-manifest.json"]},
-    {"id": "graphs", "title": "Graph reports", "command": "python3 scripts/graphs/generate_graphs.py", "paths": ["scripts/graphs/**", "reports/branch-intelligence/**"]},
-    {"id": "control-summary", "title": "Control summary", "command": "python3 scripts/control/helios-control.py", "paths": ["scripts/control/**", "config/*.json"]},
-    {"id": "azure-bicep", "title": "Azure Bicep build", "command": "az bicep build --file infra/azure/main.bicep", "paths": ["infra/azure/**"]}
+    {
+      "id": "python-static",
+      "title": "Python static compile checks",
+      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py",
+      "paths": [
+        "scripts/**/*.py"
+      ]
+    },
+    {
+      "id": "analytics-tests",
+      "title": "F# analytics tests",
+      "command": "dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-restore",
+      "paths": [
+        "src/analytics/**",
+        "tests/analytics/**"
+      ]
+    },
+    {
+      "id": "native-configure",
+      "title": "Native/XCore CMake configure",
+      "command": "cmake -S src/native/HELIOS.Native.Performance -B .build/native",
+      "paths": [
+        "src/native/**"
+      ]
+    },
+    {
+      "id": "native-build",
+      "title": "Native/XCore CMake build",
+      "command": "cmake --build .build/native",
+      "paths": [
+        "src/native/**"
+      ]
+    },
+    {
+      "id": "branch-intelligence",
+      "title": "Branch intelligence reports",
+      "command": "python3 scripts/analysis/branch_intelligence.py",
+      "paths": [
+        "scripts/analysis/**",
+        "docs/integration/remote-manifest.json"
+      ]
+    },
+    {
+      "id": "graphs",
+      "title": "Graph reports",
+      "command": "python3 scripts/graphs/generate_graphs.py",
+      "paths": [
+        "scripts/graphs/**",
+        "reports/branch-intelligence/**"
+      ]
+    },
+    {
+      "id": "control-summary",
+      "title": "Control summary",
+      "command": "python3 scripts/control/helios-control.py",
+      "paths": [
+        "scripts/control/**",
+        "config/*.json"
+      ]
+    },
+    {
+      "id": "azure-bicep",
+      "title": "Azure Bicep build",
+      "command": "az bicep build --file infra/azure/main.bicep",
+      "paths": [
+        "infra/azure/**"
+      ]
+    },
+    {
+      "id": "dotnet-workloads",
+      "title": ".NET workload visibility for MAUI/Visual Studio readiness",
+      "command": "dotnet workload list",
+      "paths": [
+        "src/**",
+        "tests/**"
+      ]
+    },
+    {
+      "id": "maui-readiness",
+      "title": "MAUI readiness placeholder",
+      "command": "dotnet --info",
+      "paths": [
+        "src/**"
+      ]
+    },
+    {
+      "id": "visual-studio-readiness",
+      "title": "Visual Studio developer machine readiness guidance",
+      "command": "python3 -c \"print('Visual Studio/MAUI readiness is documented; install VS with .NET MAUI workload on Windows/macOS.')\"",
+      "paths": [
+        "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md"
+      ]
+    }
   ]
 }

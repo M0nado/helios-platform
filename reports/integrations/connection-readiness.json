@@ -1,6 +1,8 @@
 {
   "automationPaths": {
     ".github/workflows/helios-control-plane.yml": true,
+    "config/execution-order.json": true,
+    "docs/security/CONTROL_PLANE_PERMISSIONS.md": true,
     "infra/azure/main.bicep": true,
     "scripts/ai/enrich-ideas.py": true,
     "scripts/azure/sync-keyvault-secrets.sh": true,
@@ -14,6 +16,9 @@
   "azureOpenAI": {
     "AZURE_OPENAI_API_KEY": false,
     "AZURE_OPENAI_ENDPOINT": false
+  },
+  "claude": {
+    "ANTHROPIC_API_KEY": false
   },
   "dotnet": {
     "authenticated": false,
@@ -46,6 +51,7 @@
     ]
   },
   "secretsMap": {
+    "ANTHROPIC_API_KEY": false,
     "AZURE_OPENAI_API_KEY": false,
     "AZURE_OPENAI_ENDPOINT": false,
     "HELIOS_CONTROL_REMOTE_URL": false,
@@ -59,5 +65,15 @@
   },
   "slack": {
     "SLACK_WEBHOOK_URL": false
+  },
+  "visualStudioMaui": {
+    "notes": "MAUI workloads require supported OS/SDK and Visual Studio on developer machines.",
+    "recommendedCommands": [
+      "dotnet workload list",
+      "dotnet workload install maui"
+    ],
+    "workloads": [
+      "maui"
+    ]
   }
 }

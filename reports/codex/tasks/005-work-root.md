@@ -1,8 +1,8 @@
-# Codex Task: status-site from work
+# Codex Task: root from work
 
-- Priority: 69
+- Priority: 60
 - Task type: extract-ideas
-- Allowed paths: `['status-site/index.md', 'status-site/wiki-export/Agent-Work-Queue.md', 'status-site/wiki-export/Branch-Graphs.md', 'status-site/wiki-export/Branch-Intelligence.md', 'status-site/wiki-export/Module-Ranking.md']`
+- Allowed paths: `['COMMAND_CENTER.md', 'helios.sh']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task

@@ -38,6 +38,8 @@ report = {
     "azureOpenAI": env_status(cfg["azureOpenAI"]["env"]),
     "slack": env_status(cfg["slack"]["env"]),
     "microsoft365Copilot": env_status(cfg["microsoft365Copilot"]["env"]),
+    "claude": env_status(cfg.get("claude", {}).get("env", [])),
+    "visualStudioMaui": cfg.get("visualStudioMaui", {}),
     "secretsMap": env_status(secret_env_names),
     "localWeb": cfg.get("localWeb", {}),
     "automationPaths": path_status([
@@ -45,7 +47,9 @@ report = {
         "scripts/azure/sync-keyvault-secrets.sh",
         "scripts/ai/enrich-ideas.py",
         "infra/azure/main.bicep",
-        ".github/workflows/helios-control-plane.yml"
+        ".github/workflows/helios-control-plane.yml",
+        "config/execution-order.json",
+        "docs/security/CONTROL_PLANE_PERMISSIONS.md"
     ]),
     "notes": "No secret values are printed; booleans only. Prefer GitHub secrets or Azure Key Vault."
 }

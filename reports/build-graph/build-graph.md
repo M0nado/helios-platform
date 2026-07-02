@@ -10,3 +10,6 @@
 | `graphs` | Graph reports | `python3 scripts/graphs/generate_graphs.py` |
 | `control-summary` | Control summary | `python3 scripts/control/helios-control.py` |
 | `azure-bicep` | Azure Bicep build | `az bicep build --file infra/azure/main.bicep` |
+| `dotnet-workloads` | .NET workload visibility for MAUI/Visual Studio readiness | `dotnet workload list` |
+| `maui-readiness` | MAUI readiness placeholder | `dotnet --info` |
+| `visual-studio-readiness` | Visual Studio developer machine readiness guidance | `python3 -c "print('Visual Studio/MAUI readiness is documented; install VS with .NET MAUI workload on Windows/macOS.')"` |

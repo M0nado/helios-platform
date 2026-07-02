@@ -13,11 +13,11 @@ if SRC.exists():
     payload = json.loads(SRC.read_text())
     ideas = payload if isinstance(payload, list) else payload.get("ideas", payload.get("items", []))
 
-enabled = bool(os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_API_KEY"))
+enabled = bool(os.environ.get("OPENAI_API_KEY") or os.environ.get("AZURE_OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY"))
 summary = {
     "enabled": enabled,
     "mode": "ready" if enabled else "offline-placeholder",
-    "providerHint": "OPENAI_API_KEY or AZURE_OPENAI_API_KEY",
+    "providerHint": "OPENAI_API_KEY, AZURE_OPENAI_API_KEY, or ANTHROPIC_API_KEY",
     "ideaCount": len(ideas) if isinstance(ideas, list) else 0,
     "recommendation": "Use this report as the handoff point for safe AI enrichment; no prompt content or secrets are sent by this offline script."
 }

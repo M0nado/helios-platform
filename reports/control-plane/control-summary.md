@@ -1,6 +1,6 @@
 # HELIOS Control Plane Summary
 
-Generated: `2026-07-02T18:34:42.611337+00:00`
+Generated: `2026-07-02T18:42:11.100082+00:00`
 
 ## Local quick start
 
@@ -38,6 +38,7 @@ scripts/setup/helios-dev.sh --serve
 
 - ℹ️ **openai**: 0/1 configured
 - ℹ️ **azureOpenAI**: 0/2 configured
+- ℹ️ **claude**: 0/1 configured
 - ℹ️ **codex**: 2/2 configured
 - ℹ️ **microsoft365**: 0/2 configured
 - ℹ️ **slack**: 0/1 configured
@@ -45,4 +46,5 @@ scripts/setup/helios-dev.sh --serve
 
 - `python3 scripts/ai/enrich-ideas.py`
 - `python3 scripts/integrations/check-connections.py`
+- `python3 scripts/control/helios-control.py ai`
 - `scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run`

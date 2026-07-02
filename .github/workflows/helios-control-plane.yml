@@ -48,28 +48,39 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Integration readiness
-        run: python3 scripts/integrations/check-connections.py
-      - name: Branch intelligence
-        run: python3 scripts/analysis/branch_intelligence.py
-      - name: Generate graphs
-        run: python3 scripts/graphs/generate_graphs.py
-      - name: Safe AI enrichment readiness
-        run: python3 scripts/ai/enrich-ideas.py
-      - name: GitHub Azure AI Codex control summary
+      - name: 01 HELIOS Command Center single entry point
         run: python3 scripts/control/helios-control.py
-      - name: GitHub inventory
+      - name: 02 Unified secrets map and integration readiness
+        run: python3 scripts/integrations/check-connections.py
+      - name: 03 GitHub inventory
         run: python3 scripts/github/github-inventory.py
-      - name: Azure inventory
+      - name: 04 Azure inventory
         run: python3 scripts/azure/azure-inventory.py
-      - name: Merge prune recommendations
-        run: python3 scripts/analysis/merge_prune_recommendations.py
-      - name: Build graph report
+      - name: 05 Control-plane permissions model
+        run: test -f docs/security/CONTROL_PLANE_PERMISSIONS.md
+      - name: 06 Build graph report
         run: python3 scripts/build/build-graph.py
-      - name: Codex task packets
-        run: python3 scripts/codex/generate-codex-tasks.py
-      - name: Dashboard actions page
+      - name: 07 Branch merge prune recommendations
+        run: |
+          python3 scripts/analysis/branch_intelligence.py
+          python3 scripts/analysis/merge_prune_recommendations.py
+          python3 scripts/graphs/generate_graphs.py
+      - name: 08 Dashboard actions page
         run: python3 scripts/dashboard/generate-actions.py
+      - name: 09 Codex task packets
+        run: python3 scripts/codex/generate-codex-tasks.py
+      - name: 10 Opt-in AI enrichment readiness
+        run: python3 scripts/ai/enrich-ideas.py
+      - name: 11 GitHub desired-state manifest
+        run: test -f config/github-control.example.json
+      - name: 12 Azure desired-state manifest
+        run: test -f config/azure-control.example.json
+      - name: 13 Hosted GitHub workflow expansion
+        run: test -f .github/workflows/helios-control-plane.yml
+      - name: 14 Cloud Shell full setup
+        run: bash -n scripts/cloudshell/helios-cloudshell.sh
+      - name: 15 Long-term org enterprise apply-mode controls
+        run: test -f docs/security/CONTROL_PLANE_PERMISSIONS.md
       - name: Wiki export
         if: ${{ github.event.inputs.update_wiki == 'true' }}
         run: python3 scripts/github/update-wiki-from-reports.py

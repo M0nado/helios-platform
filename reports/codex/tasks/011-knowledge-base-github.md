@@ -2,9 +2,9 @@
 
 - Priority: 23
 - Task type: idea-review
-- Allowed paths: `['.github/README.md:152']`
+- Allowed paths: `['.github/ISSUE_TEMPLATE/feature-request.md:21']`
 - Blocked paths: `['.git', 'bin', 'obj']`
-- Expected output: Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.
+- Expected output: Creates a native performance path for C++/XCore acceleration without blocking managed code.
 - Network required: no, unless explicitly needed by the task
 - Secrets allowed: no
 

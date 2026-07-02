@@ -2,7 +2,7 @@
 
 - Priority: 23
 - Task type: idea-review
-- Allowed paths: `['.github/WORKFLOWS.md:210']`
+- Allowed paths: `['.github/SUMMARY.txt:96']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.
 - Network required: no, unless explicitly needed by the task

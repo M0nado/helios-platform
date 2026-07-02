@@ -1,10 +1,10 @@
-# Codex Task: .github from knowledge-base
+# Codex Task: docs from work
 
-- Priority: 23
-- Task type: idea-review
-- Allowed paths: `['.github/COMPLETE_GITHUB_SETUP.md:327']`
+- Priority: 61
+- Task type: extract-ideas
+- Allowed paths: `['docs/security/CONTROL_PLANE_PERMISSIONS.md']`
 - Blocked paths: `['.git', 'bin', 'obj']`
-- Expected output: Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.
+- Expected output: comparison notes, merge risk, tests to run, and idea extraction
 - Network required: no, unless explicitly needed by the task
 - Secrets allowed: no
 

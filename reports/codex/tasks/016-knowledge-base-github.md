@@ -1,10 +1,10 @@
-# Codex Task: config from work
+# Codex Task: .github from knowledge-base
 
-- Priority: 69
-- Task type: extract-ideas
-- Allowed paths: `['config/integrations.example.json']`
+- Priority: 23
+- Task type: idea-review
+- Allowed paths: `['.github/WORKFLOWS.md:210']`
 - Blocked paths: `['.git', 'bin', 'obj']`
-- Expected output: comparison notes, merge risk, tests to run, and idea extraction
+- Expected output: Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.
 - Network required: no, unless explicitly needed by the task
 - Secrets allowed: no
 

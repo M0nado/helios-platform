@@ -1,8 +1,8 @@
-# Codex Task: ACTUAL_PROJECT_STATUS.md from knowledge-base
+# Codex Task: .nuget from knowledge-base
 
 - Priority: 23
 - Task type: idea-review
-- Allowed paths: `['ACTUAL_PROJECT_STATUS.md:104']`
+- Allowed paths: `['.nuget/HELIOS.Platform.nuspec.md:93']`
 - Blocked paths: `['.git', 'bin', 'obj']`
 - Expected output: Uses existing F# math/prediction APIs to rank modules, branches, and fleet events.
 - Network required: no, unless explicitly needed by the task

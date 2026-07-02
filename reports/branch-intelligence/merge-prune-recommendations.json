@@ -1,14 +1,14 @@
 {
-  "generatedUtc": "2026-07-02T18:34:43.838752+00:00",
+  "generatedUtc": "2026-07-02T18:42:14.454748+00:00",
   "recommendations": [
     {
       "branch": "work",
       "ciScore": 0,
       "currentAction": "extract-ideas",
-      "fileCount": 22,
+      "fileCount": 61,
       "reason": "Safe recommendation only; no branch is deleted or merged automatically.",
       "recommendation": "extract-ideas-only",
-      "score": 65
+      "score": 56
     }
   ]
 }

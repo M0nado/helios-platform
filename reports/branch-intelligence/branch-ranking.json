@@ -6,10 +6,10 @@
       "score": 0,
       "summary": "gh not found"
     },
-    "commit": "a625af7",
-    "date": "2026-07-02 18:22:56 +0000",
-    "fileCount": 22,
-    "heuristicCiCloseness": 15,
+    "commit": "99b31c8",
+    "date": "2026-07-02 18:36:12 +0000",
+    "fileCount": 61,
+    "heuristicCiCloseness": 8,
     "modules": {
       ".github/workflows": {
         "files": 1,
@@ -19,22 +19,31 @@
         "weight": 22
       },
       "config": {
-        "files": 1,
+        "files": 4,
         "paths": [
-          "config/integrations.example.json"
+          "config/azure-control.example.json",
+          "config/build-graph.json",
+          "config/github-control.example.json",
+          "config/secrets-map.example.json"
         ],
         "weight": 4
       },
-      "docs/integration": {
-        "files": 2,
+      "docs": {
+        "files": 1,
         "paths": [
-          "docs/integration/CONTROL_PLANE_COMMANDS.md",
-          "docs/integration/WEB_CONTROL_PLANE.md"
+          "docs/security/CONTROL_PLANE_PERMISSIONS.md"
+        ],
+        "weight": 5
+      },
+      "docs/integration": {
+        "files": 1,
+        "paths": [
+          "docs/integration/CONTROL_PLANE_COMMANDS.md"
         ],
         "weight": 12
       },
       "reports": {
-        "files": 10,
+        "files": 40,
         "paths": [
           "reports/branch-intelligence/agent-work-queue.json",
           "reports/branch-intelligence/agent-work-queue.md",
@@ -44,35 +53,47 @@
           "reports/branch-intelligence/connectivity.json",
           "reports/branch-intelligence/dashboard.md",
           "reports/branch-intelligence/graphs.md",
-          "reports/control-plane/control-summary.json",
-          "reports/control-plane/control-summary.md"
+          "reports/branch-intelligence/merge-prune-recommendations.json",
+          "reports/branch-intelligence/merge-prune-recommendations.md"
+        ],
+        "weight": 4
+      },
+      "root": {
+        "files": 2,
+        "paths": [
+          "COMMAND_CENTER.md",
+          "helios.sh"
         ],
         "weight": 4
       },
       "scripts": {
-        "files": 3,
+        "files": 10,
         "paths": [
-          "scripts/control/helios-control.py",
+          "scripts/analysis/merge_prune_recommendations.py",
+          "scripts/azure/azure-inventory.py",
+          "scripts/azure/sync-keyvault-secrets.sh",
+          "scripts/cloudshell/helios-cloudshell.sh",
+          "scripts/codex/generate-codex-tasks.py",
+          "scripts/dashboard/generate-actions.py",
+          "scripts/github/github-inventory.py",
+          "scripts/integrations/check-connections.py",
           "scripts/setup/helios-dev.sh",
           "scripts/web/helios-web.py"
         ],
         "weight": 20
       },
       "status-site": {
-        "files": 5,
+        "files": 2,
         "paths": [
-          "status-site/index.md",
-          "status-site/wiki-export/Agent-Work-Queue.md",
-          "status-site/wiki-export/Branch-Graphs.md",
-          "status-site/wiki-export/Branch-Intelligence.md",
-          "status-site/wiki-export/Module-Ranking.md"
+          "status-site/actions.md",
+          "status-site/index.md"
         ],
         "weight": 4
       }
     },
     "name": "work",
     "recommendedAction": "extract-ideas",
-    "score": 65,
-    "subject": "Add unified control plane command summary"
+    "score": 56,
+    "subject": "Add HELIOS command center and control inventories"
   }
 ]

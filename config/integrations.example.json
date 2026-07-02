@@ -68,5 +68,21 @@
       "azure",
       "ai"
     ]
+  },
+  "claude": {
+    "env": [
+      "ANTHROPIC_API_KEY"
+    ],
+    "networkDefault": "disabled"
+  },
+  "visualStudioMaui": {
+    "workloads": [
+      "maui"
+    ],
+    "recommendedCommands": [
+      "dotnet workload list",
+      "dotnet workload install maui"
+    ],
+    "notes": "MAUI workloads require supported OS/SDK and Visual Studio on developer machines."
   }
 }

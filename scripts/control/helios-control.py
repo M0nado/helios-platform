@@ -69,6 +69,7 @@ def ai_status() -> dict[str, Any]:
     return {
         "openai": env_flags(["OPENAI_API_KEY"]),
         "azureOpenAI": env_flags(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY"]),
+        "claude": env_flags(["ANTHROPIC_API_KEY"]),
         "codex": {
             "cli": run(["codex", "--version"], timeout=10),
             "homeSet": bool(os.environ.get("CODEX_HOME")),
@@ -78,6 +79,7 @@ def ai_status() -> dict[str, Any]:
         "safeCommands": [
             "python3 scripts/ai/enrich-ideas.py",
             "python3 scripts/integrations/check-connections.py",
+            "python3 scripts/control/helios-control.py ai",
             "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run",
         ],
         "notes": "This status check never prints secret values and does not call OpenAI, Azure OpenAI, Slack, or Microsoft 365 APIs.",
@@ -86,7 +88,7 @@ def ai_status() -> dict[str, Any]:
 
 def local_status() -> dict[str, Any]:
     return {
-        "tools": {name: shutil.which(name) for name in ["git", "gh", "az", "dotnet", "python3", "cmake", "codex"]},
+        "tools": {name: shutil.which(name) for name in ["git", "gh", "az", "dotnet", "python3", "cmake", "codex", "claude"]},
         "paths": {path: (ROOT / path).exists() for path in [
             "scripts/setup/helios-dev.sh",
             "scripts/web/helios-web.py",
@@ -95,6 +97,9 @@ def local_status() -> dict[str, Any]:
             "infra/azure/main.bicep",
             ".github/workflows/helios-control-plane.yml",
             "status-site/index.md",
+            "config/execution-order.json",
+            "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md",
+            "docs/architecture/AZURE_HYBRID_ARCHITECTURE.md",
         ]},
         "safeCommands": [
             "scripts/setup/helios-dev.sh --serve",

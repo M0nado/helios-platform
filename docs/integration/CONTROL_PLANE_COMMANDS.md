@@ -66,3 +66,13 @@ The current AI/Codex path is safe-by-default: it checks local CLI/env readiness 
 ```
 
 See `COMMAND_CENTER.md` for the full entry-point map.
+
+## Required execution order
+
+The canonical order lives in `config/execution-order.json` and is enforced by `./helios.sh all` and the `HELIOS Control Plane` workflow. This keeps local, Cloud Shell, Codespaces, and GitHub-hosted runs aligned.
+
+## Claude, Visual Studio, MAUI, and hybrid Azure additions
+
+- Claude readiness is represented by `ANTHROPIC_API_KEY` in `config/secrets-map.example.json`.
+- Visual Studio and .NET MAUI setup is documented in `docs/integration/VISUAL_STUDIO_MAUI_SETUP.md`.
+- Hybrid Azure architecture is documented in `docs/architecture/AZURE_HYBRID_ARCHITECTURE.md` and starts with `infra/azure/modules/network.bicep`.
