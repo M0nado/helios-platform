@@ -22,6 +22,9 @@ def tool(name, check_cmd):
 def env_status(names):
     return {name: bool(os.environ.get(name)) for name in names}
 
+def path_status(paths):
+    return {path: (ROOT / path).exists() for path in paths}
+
 cfg = json.loads(CONFIG.read_text())
 report = {
     "github": tool("github", ["gh", "auth", "status"]),
@@ -32,6 +35,14 @@ report = {
     "azureOpenAI": env_status(cfg["azureOpenAI"]["env"]),
     "slack": env_status(cfg["slack"]["env"]),
     "microsoft365Copilot": env_status(cfg["microsoft365Copilot"]["env"]),
+    "localWeb": cfg.get("localWeb", {}),
+    "automationPaths": path_status([
+        "scripts/web/helios-web.py",
+        "scripts/azure/sync-keyvault-secrets.sh",
+        "scripts/ai/enrich-ideas.py",
+        "infra/azure/main.bicep",
+        ".github/workflows/helios-control-plane.yml"
+    ]),
     "notes": "No secret values are printed; booleans only. Prefer GitHub secrets or Azure Key Vault."
 }
 OUT.parent.mkdir(parents=True, exist_ok=True)

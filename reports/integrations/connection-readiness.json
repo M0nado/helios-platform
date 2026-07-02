@@ -1,28 +1,34 @@
 {
+  "automationPaths": {
+    ".github/workflows/helios-control-plane.yml": true,
+    "infra/azure/main.bicep": true,
+    "scripts/ai/enrich-ideas.py": true,
+    "scripts/azure/sync-keyvault-secrets.sh": true,
+    "scripts/web/helios-web.py": true
+  },
   "azure": {
     "authenticated": false,
-    "available": true,
-    "detail": [
-      "ERROR: Please run 'az login' to setup account."
-    ]
+    "available": false,
+    "detail": "az not found"
   },
   "azureOpenAI": {
     "AZURE_OPENAI_API_KEY": false,
     "AZURE_OPENAI_ENDPOINT": false
   },
   "dotnet": {
-    "authenticated": true,
-    "available": true,
-    "detail": [
-      "8.0.422"
-    ]
+    "authenticated": false,
+    "available": false,
+    "detail": "dotnet not found"
   },
   "github": {
     "authenticated": false,
-    "available": true,
-    "detail": [
-      "You are not logged into any GitHub hosts. To log in, run: gh auth login"
-    ]
+    "available": false,
+    "detail": "gh not found"
+  },
+  "localWeb": {
+    "command": "scripts/setup/helios-dev.sh --serve",
+    "rebuildEndpoint": "POST /rebuild",
+    "url": "http://127.0.0.1:8787/"
   },
   "microsoft365Copilot": {
     "M365_CLIENT_ID": false,

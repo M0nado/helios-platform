@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "ideaCount": 388,
+  "mode": "offline-placeholder",
+  "providerHint": "OPENAI_API_KEY or AZURE_OPENAI_API_KEY",
+  "recommendation": "Use this report as the handoff point for safe AI enrichment; no prompt content or secrets are sent by this offline script."
+}

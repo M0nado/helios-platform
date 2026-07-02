@@ -4,14 +4,14 @@
 
 ```mermaid
 graph TD
-  work["work (64)"]
+  work["work (65)"]
+  work --> _devcontainer[".devcontainer"]
   work --> _github_workflows[".github/workflows"]
-  work --> docs["docs"]
+  work --> config["config"]
+  work --> docs_integration["docs/integration"]
   work --> infra["infra"]
   work --> reports["reports"]
-  work --> root["root"]
   work --> scripts["scripts"]
-  work --> status_site["status-site"]
 ```
 
 ## Idea categories
@@ -49,13 +49,13 @@ graph LR
 
 ```mermaid
 graph TD
-  Q1["extract-ideas 86"] --> M1[".github/workflows"]
-  Q2["extract-ideas 84"] --> M2["scripts"]
-  Q3["extract-ideas 69"] --> M3["docs"]
-  Q4["extract-ideas 68"] --> M4["root"]
-  Q5["extract-ideas 68"] --> M5["infra"]
-  Q6["extract-ideas 68"] --> M6["reports"]
-  Q7["extract-ideas 68"] --> M7["status-site"]
+  Q1["extract-ideas 87"] --> M1[".github/workflows"]
+  Q2["extract-ideas 85"] --> M2["scripts"]
+  Q3["extract-ideas 77"] --> M3["docs/integration"]
+  Q4["extract-ideas 69"] --> M4[".devcontainer"]
+  Q5["extract-ideas 69"] --> M5["config"]
+  Q6["extract-ideas 69"] --> M6["infra"]
+  Q7["extract-ideas 69"] --> M7["reports"]
   Q8["idea-review 23"] --> M8[".github"]
   Q9["idea-review 23"] --> M9[".github"]
   Q10["idea-review 23"] --> M10[".github"]

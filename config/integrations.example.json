@@ -16,18 +16,46 @@
       "AZURE-OPENAI-API-KEY",
       "SLACK-WEBHOOK-URL",
       "M365-TENANT-ID"
-    ]
+    ],
+    "deployment": {
+      "bicepEntryPoint": "infra/azure/main.bicep",
+      "parameters": "infra/azure/parameters/dev.json",
+      "keyVaultSyncScript": "scripts/azure/sync-keyvault-secrets.sh"
+    }
   },
   "openai": {
-    "env": ["OPENAI_API_KEY"]
+    "env": [
+      "OPENAI_API_KEY"
+    ]
   },
   "azureOpenAI": {
-    "env": ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY"]
+    "env": [
+      "AZURE_OPENAI_ENDPOINT",
+      "AZURE_OPENAI_API_KEY"
+    ]
   },
   "slack": {
-    "env": ["SLACK_WEBHOOK_URL"]
+    "env": [
+      "SLACK_WEBHOOK_URL"
+    ]
   },
   "microsoft365Copilot": {
-    "env": ["M365_TENANT_ID", "M365_CLIENT_ID"]
+    "env": [
+      "M365_TENANT_ID",
+      "M365_CLIENT_ID"
+    ]
+  },
+  "localWeb": {
+    "command": "scripts/setup/helios-dev.sh --serve",
+    "url": "http://127.0.0.1:8787/",
+    "rebuildEndpoint": "POST /rebuild"
+  },
+  "safeAiEnrichment": {
+    "script": "scripts/ai/enrich-ideas.py",
+    "networkDefault": "disabled",
+    "env": [
+      "OPENAI_API_KEY",
+      "AZURE_OPENAI_API_KEY"
+    ]
   }
 }

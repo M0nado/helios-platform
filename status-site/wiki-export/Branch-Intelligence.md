@@ -1,6 +1,6 @@
 # HELIOS Branch Intelligence Dashboard
 
-Generated: 2026-07-02T17:57:47Z
+Generated: 2026-07-02T18:14:44Z
 
 ## Remote setup
 | Remote | Enabled | URL configured | Action | Result |
@@ -13,7 +13,7 @@ Generated: 2026-07-02T17:57:47Z
 ## Branch ranking
 | Branch | Score | Action | Files | Modules |
 |---|---|---|---|---|
-| work | 51 | extract-ideas | 10 | docs/integration, reports, scripts |
+| work | 65 | extract-ideas | 17 | .devcontainer, .github/workflows, config, docs/integration, infra, reports |
 
 ## Idea impact
 | Category | Module | Key | Occurrences | Action | How it affects us |
@@ -42,9 +42,13 @@ Generated: 2026-07-02T17:57:47Z
 ## Agent work queue
 | Task | Branch | Module | Priority | Expected output |
 |---|---|---|---|---|
-| extract-ideas | work | scripts | 71 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | docs/integration | 63 | comparison notes, merge risk, tests to run, and idea extraction |
-| extract-ideas | work | reports | 55 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | .github/workflows | 87 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | scripts | 85 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | docs/integration | 77 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | .devcontainer | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | config | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | infra | 69 | comparison notes, merge risk, tests to run, and idea extraction |
+| extract-ideas | work | reports | 69 | comparison notes, merge risk, tests to run, and idea extraction |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | .github | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
@@ -58,18 +62,14 @@ Generated: 2026-07-02T17:57:47Z
 | idea-review | knowledge-base | .nuget | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 | idea-review | knowledge-base | ACCESSIBILITY_COMPLIANCE_REPORT.md | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
 | idea-review | knowledge-base | ACCESSIBILITY_COMPLIANCE_REPORT.md | 23 | Creates a native performance path for C++/XCore acceleration without blocking managed code. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
-| idea-review | knowledge-base | ACTUAL_PROJECT_STATUS.md | 23 | Uses existing F# math/prediction APIs to rank modules, branches, and fleet events. |
 
 ## Connectivity
 | Tool | Available | Authenticated | Detail |
 |---|---|---|---|
 | git | True | True | ['git version 2.43.0'] |
-| GitHub CLI | True | False | ['You are not logged into any GitHub hosts. To log in, run: gh auth login'] |
-| Azure CLI | True | False | ["ERROR: Please run 'az login' to setup account."] |
-| .NET SDK | True | True | ['8.0.422'] |
+| GitHub CLI | False | False | gh not found |
+| Azure CLI | False | False | az not found |
+| .NET SDK | False | False | dotnet not found |
 | Python | True | True | ['Python 3.12.13'] |
 
 ## Safe merge policy

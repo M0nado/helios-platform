@@ -54,6 +54,8 @@ jobs:
         run: python3 scripts/analysis/branch_intelligence.py
       - name: Generate graphs
         run: python3 scripts/graphs/generate_graphs.py
+      - name: Safe AI enrichment readiness
+        run: python3 scripts/ai/enrich-ideas.py
       - name: Wiki export
         if: ${{ github.event.inputs.update_wiki == 'true' }}
         run: python3 scripts/github/update-wiki-from-reports.py
@@ -64,10 +66,13 @@ jobs:
         run: dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-build
       - name: Native/XCore configure validation
         run: cmake -S src/native/HELIOS.Native.Performance -B .build/native
+      - name: Native/XCore build validation
+        run: cmake --build .build/native
       - name: Stage status site
         run: |
           mkdir -p status-site/reports
           cp reports/branch-intelligence/*.md status-site/reports/
+          cp reports/integrations/*.json status-site/reports/ || true
       - uses: actions/upload-artifact@v4
         with:
           name: helios-control-plane

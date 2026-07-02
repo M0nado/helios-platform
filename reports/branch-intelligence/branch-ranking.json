@@ -2,43 +2,53 @@
   {
     "author": "Codex",
     "ci": {
-      "available": true,
+      "available": false,
       "score": 0,
-      "summary": "To get started with GitHub CLI, please run:  gh auth login\nAlternatively, populate the GH_TOKEN environment variable with a GitHub API authentication token."
+      "summary": "gh not found"
     },
-    "commit": "c28f3f7",
-    "date": "2026-07-02 17:58:37 +0000",
-    "fileCount": 28,
+    "commit": "82bc84e",
+    "date": "2026-07-02 18:05:42 +0000",
+    "fileCount": 17,
     "heuristicCiCloseness": 15,
     "modules": {
-      ".github/workflows": {
-        "files": 2,
+      ".devcontainer": {
+        "files": 1,
         "paths": [
-          ".github/workflows/azure-infra.yml",
+          ".devcontainer/codespaces-secrets.env.example"
+        ],
+        "weight": 4
+      },
+      ".github/workflows": {
+        "files": 1,
+        "paths": [
           ".github/workflows/helios-control-plane.yml"
         ],
         "weight": 22
       },
-      "docs": {
+      "config": {
         "files": 1,
         "paths": [
-          "docs/microsoft-365/COPILOT_INTEGRATION.md"
+          "config/integrations.example.json"
         ],
-        "weight": 5
+        "weight": 4
+      },
+      "docs/integration": {
+        "files": 1,
+        "paths": [
+          "docs/integration/CLOUDSHELL_GITHUB_AZURE_SETUP.md"
+        ],
+        "weight": 12
       },
       "infra": {
-        "files": 5,
+        "files": 2,
         "paths": [
-          "infra/azure/README.md",
           "infra/azure/main.bicep",
-          "infra/azure/modules/observability.bicep",
-          "infra/azure/modules/storage.bicep",
-          "infra/azure/parameters/dev.json"
+          "infra/azure/modules/keyvault.bicep"
         ],
         "weight": 4
       },
       "reports": {
-        "files": 8,
+        "files": 9,
         "paths": [
           "reports/branch-intelligence/agent-work-queue.json",
           "reports/branch-intelligence/agent-work-queue.md",
@@ -47,44 +57,23 @@
           "reports/branch-intelligence/branch-ranking.md",
           "reports/branch-intelligence/connectivity.json",
           "reports/branch-intelligence/dashboard.md",
-          "reports/branch-intelligence/graphs.md"
-        ],
-        "weight": 4
-      },
-      "root": {
-        "files": 1,
-        "paths": [
-          "Directory.Build.props"
+          "reports/branch-intelligence/graphs.md",
+          "reports/integrations/connection-readiness.json"
         ],
         "weight": 4
       },
       "scripts": {
-        "files": 5,
+        "files": 2,
         "paths": [
-          "scripts/github/update-wiki-from-reports.py",
-          "scripts/graphs/generate_graphs.py",
-          "scripts/sandbox/clean-sandbox-workspaces.sh",
-          "scripts/sandbox/run-sandbox-workspace.sh",
-          "scripts/setup/helios-dev.sh"
+          "scripts/cloudshell/helios-cloudshell.sh",
+          "scripts/integrations/check-connections.py"
         ],
         "weight": 20
-      },
-      "status-site": {
-        "files": 6,
-        "paths": [
-          "status-site/index.md",
-          "status-site/wiki-export/Agent-Work-Queue.md",
-          "status-site/wiki-export/Branch-Graphs.md",
-          "status-site/wiki-export/Branch-Intelligence.md",
-          "status-site/wiki-export/Idea-Impact.md",
-          "status-site/wiki-export/Module-Ranking.md"
-        ],
-        "weight": 4
       }
     },
     "name": "work",
     "recommendedAction": "extract-ideas",
-    "score": 64,
-    "subject": "Add HELIOS control plane automation foundation"
+    "score": 65,
+    "subject": "Add cloud integration readiness foundation"
   }
 ]
