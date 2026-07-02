@@ -142,6 +142,22 @@
         "reports/specializations/specialization-matrix.json",
         "reports/specializations/specialization-matrix.md"
       ]
+    },
+    {
+      "id": "multi-llm-router",
+      "title": "Multi-LLM cross-optimization router and model profiles",
+      "agents": [
+        "python-aihub-integrator",
+        "final-gate-runner",
+        "hermes-xcore-orchestrator"
+      ],
+      "commands": [
+        "python3 scripts/automation/llm_router_plan.py"
+      ],
+      "outputs": [
+        "reports/llm-router/llm-router-plan.json",
+        "reports/llm-router/llm-router-plan.md"
+      ]
     }
   ],
   "specialties": [

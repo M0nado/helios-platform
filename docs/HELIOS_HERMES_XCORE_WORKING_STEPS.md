@@ -161,3 +161,7 @@ Use `./tools/helios.ps1 ideas super` to rank the next highest-impact additions: 
 ## 15. Specialization and learning instructions
 
 Use `./tools/helios.ps1 ideas specialties` to render specialized and sub-specialized agent instructions for C# frontend, C++ XCore performance, F# ML analytics, Python AIHub routing, Azure/Microsoft 365/Copilot cloud, GitHub mass integration, safety vault policy, and MCP/plugin tooling. The specialization registry is `config/helios-specializations.json`, and the generated learning/instruction matrix is written under `reports/specializations`.
+
+## 16. Multi-LLM cross-optimization router
+
+Use `./tools/helios.ps1 llm plan` to generate the configurable multi-LLM router plan for cloud, local, Codex/code, Hermes, and XCore agent roles. The router registry is `config/helios-llm-router.json`; it defines provider families, agent model profiles, parallelism levels, routing objectives, cheap-first/privacy-first/parallel-consensus policies, and learning rules for cost, latency, quality, safety, and token optimization. Reports are written under `reports/llm-router`.

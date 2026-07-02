@@ -11,7 +11,8 @@
     "hermes-xcore",
     "agent-skills",
     "mass-integration",
-    "auto-upgrade"
+    "auto-upgrade",
+    "multi-llm-router"
   ],
   "capabilities": [
     {
@@ -252,6 +253,33 @@
         "python3 scripts/automation/helios_auto_upgrade.py gui"
       ],
       "automationRole": "Connect runner autofix, mass merge, provider mesh, Hermes XCore GUI, local/cloud setup, and learning/token optimization loops."
+    },
+    {
+      "id": "multi-llm-router",
+      "title": "Multi-LLM cross-optimization router",
+      "requiredCommands": [
+        "python3"
+      ],
+      "requiredEnvironment": [],
+      "optionalEnvironment": [
+        "OPENAI_API_KEY",
+        "AZURE_OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "MISTRAL_API_KEY",
+        "COHERE_API_KEY",
+        "LOCAL_LLM_ENDPOINT",
+        "DEEPSEEK_API_KEY",
+        "XAI_API_KEY"
+      ],
+      "ownedPaths": [
+        "config/helios-llm-router.json",
+        "scripts/automation/llm_router_plan.py"
+      ],
+      "setupCommands": [
+        "python3 scripts/automation/llm_router_plan.py"
+      ],
+      "automationRole": "Choose and learn from cloud/local/code LLM families for each specialized HELIOS/Hermes/XCore agent while optimizing quality, cost, latency, privacy, safety, and token use."
     }
   ]
 }
