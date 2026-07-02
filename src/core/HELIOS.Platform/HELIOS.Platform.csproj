@@ -177,6 +177,22 @@
   <ItemGroup>
     <Compile Remove="Phase10/BootEnvironment/Channel3USBBootInstallation.cs" />
     <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
+    <!-- GUI implementations require Windows desktop assemblies; keep the net8.0 core build portable for Linux CI. -->
+    <Compile Remove="Phase10/BuilderUI/BuilderUIHost.cs" />
+    <Compile Remove="Phase10/BuilderUI/DriveSelector.cs" />
+    <Compile Remove="Phase10/BuilderUI/OptionsPanel.cs" />
+    <Compile Remove="Phase10/BuilderUI/PackageSelector.cs" />
+    <Compile Remove="Phase10/BuilderUI/ProfileSelector.cs" />
+    <Compile Remove="Phase10/BuilderUI/ProgressMonitor.cs" />
+    <Compile Remove="Phase10/BuilderUI/SummaryReview.cs" />
+    <!-- Windows-only integration sources require WinRT/Task Scheduler APIs that are unavailable in the portable Linux CI build. -->
+    <Compile Remove="SystemIntegration/DeviceController.cs" />
+    <Compile Remove="SystemIntegration/DynamicLightingController.cs" />
+    <Compile Remove="Phase10/Malware/MalwareScanScheduler.cs" />
+    <!-- Unit tests (including Moq-based tests) belong in test projects, not the portable core application build. -->
+    <Compile Remove="**/*Tests.cs" />
+    <Compile Remove="**/Tests/**/*.cs" />
+    <Compile Remove="Phase10/BootEnvironment/MonadoUSBManagementGUI.cs" />
   </ItemGroup>
 
 </Project>

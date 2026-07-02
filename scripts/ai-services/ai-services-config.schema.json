@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios.local/schemas/ai-services-config.schema.json",
+  "title": "HELIOS AI services configuration",
+  "type": "object",
+  "required": ["ai_services", "services", "service_router", "model_registry"],
+  "properties": {
+    "services": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["name", "provider", "model", "enabled", "api_key_env", "base_url"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "provider": { "type": "string", "enum": ["OpenAI", "AzureOpenAI"] },
+          "model": { "type": "string", "enum": ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"] },
+          "enabled": { "type": "boolean" },
+          "api_key_env": { "type": "string", "minLength": 1 },
+          "base_url": { "type": "string", "format": "uri" }
+        },
+        "not": {
+          "properties": {
+            "model": { "enum": ["code-davinci-002", "gpt-4", "gpt-4-turbo", "gpt-4-turbo-2024-04", "gpt-4.5"] }
+          },
+          "required": ["model"]
+        }
+      }
+    },
+    "model_registry": {
+      "type": "object",
+      "required": ["allowed_model_ids", "deprecated_model_ids", "placeholder_patterns", "validation_mode"],
+      "properties": {
+        "allowed_model_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "deprecated_model_ids": { "type": "array", "items": { "type": "string" } },
+        "placeholder_patterns": { "type": "array", "items": { "type": "string" } },
+        "validation_mode": { "type": "string", "enum": ["fail_closed"] }
+      }
+    }
+  }
+}

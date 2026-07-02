@@ -16,9 +16,9 @@
 ## 📋 Checklist
 
 - [x] Hub orchestration system (500+ lines)
-- [x] ChatGPT Pro client (300+ lines)
-- [x] Codex client (300+ lines)
-- [x] GPT-4.5 client (300+ lines)
+- [x] gpt-5.4 client (300+ lines)
+- [x] gpt-5.4-mini client (300+ lines)
+- [x] gpt-5.5 client (300+ lines)
 - [x] Service router (400+ lines)
 - [x] Conflict resolver (350+ lines)
 - [x] Cost tracking & budgets
@@ -106,19 +106,19 @@ $hub.GetHealthStatus()
 
 ## 🎯 Service Routing
 
-**ChatGPT Pro (GPT-4):**
+**gpt-5.4:**
 - Strategic planning
 - Code review
 - Optimization
 - Technical writing
 
-**Codex:**
+**gpt-5.4-mini:**
 - Code generation
 - Code refactoring
 - Test generation
 - Code analysis
 
-**GPT-4.5:**
+**gpt-5.5:**
 - Complex analysis
 - Architecture decisions
 - Security review
@@ -157,9 +157,9 @@ C:\Users\ADMIN\helios-platform\
 ## 📈 Typical Usage Costs
 
 Estimated monthly costs (at default usage):
-- **ChatGPT Pro**: $15-20/month
-- **Codex**: $10-15/month
-- **GPT-4.5**: $15-20/month
+- **gpt-5.4**: $15-20/month
+- **gpt-5.4-mini**: $10-15/month
+- **gpt-5.5**: $15-20/month
 - **Total**: $40-55/month
 
 (Varies based on usage patterns and token counts)

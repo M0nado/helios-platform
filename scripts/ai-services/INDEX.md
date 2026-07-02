@@ -2,7 +2,7 @@
 
 ## Welcome to the AI Services Coordination Hub!
 
-This is a production-ready master orchestration system for managing ChatGPT Pro, Codex, and GPT-4.5 with intelligent routing, conflict resolution, cost management, and comprehensive monitoring.
+This is a production-ready master orchestration system for managing gpt-5.4, gpt-5.4-mini, and gpt-5.5 with intelligent routing, conflict resolution, cost management, and comprehensive monitoring.
 
 ---
 
@@ -28,9 +28,9 @@ This is a production-ready master orchestration system for managing ChatGPT Pro,
 | Script | Lines | Purpose |
 |--------|-------|---------|
 | **hub.ps1** | 569 | Master orchestration system - START HERE for usage |
-| **chatgpt-pro-client.ps1** | 362 | ChatGPT Pro (GPT-4) API integration |
-| **codex-client.ps1** | 431 | Codex code generation & refactoring |
-| **gpt-4-5-client.ps1** | 564 | GPT-4.5 advanced reasoning & analysis |
+| **chatgpt-pro-client.ps1** | 362 | gpt-5.4 API integration |
+| **codex-client.ps1** | 431 | gpt-5.4-mini code generation & refactoring |
+| **gpt-4-5-client.ps1** | 564 | gpt-5.5 advanced reasoning & analysis |
 | **service-router.ps1** | 476 | Intelligent service routing & selection |
 | **conflict-resolver.ps1** | 453 | Conflict detection & resolution |
 
@@ -80,7 +80,7 @@ $result.CombinedResult
 ### Workflow 2: Generate Code
 ```powershell
 . .\codex-client.ps1
-$code = $CodexClient.GenerateCode("function description", "python")
+$code = $gpt-5.4-miniClient.GenerateCode("function description", "python")
 $code.Code
 ```
 
@@ -162,7 +162,7 @@ Intelligently routes tasks to the best-suited service based on task type, perfor
 Detects when services give conflicting recommendations and resolves them using various strategies (confidence weighting, user preferences, etc.).
 
 ### Clients
-Individual API clients for each service (ChatGPT Pro, Codex, GPT-4.5) that handle authentication, requests, and responses.
+Individual API clients for each service (gpt-5.4, gpt-5.4-mini, gpt-5.5) that handle authentication, requests, and responses.
 
 ### Cost Tracker
 Real-time cost calculation and budget management to prevent overspending and provide cost visibility.

@@ -200,6 +200,16 @@ Annual Savings:  $10,200+
 - `phase-5-monitoring.ps1` - Dashboard setup
 - `phase-6-verification.ps1` - Final validation (42 tests)
 
+### Deep GitHub, AI, Azure, and Workflow Automation
+
+HELIOS now includes a safe automation readiness orchestrator for branch consolidation guardrails, GitHub Actions inventory, AI hub configuration validation, Azure CLI readiness checks, and multi-language asset reporting. Run it locally with:
+
+```bash
+python3 scripts/automation/deep_automation_orchestrator.py --mode full
+```
+
+See [docs/automation/deep-github-ai-automation.md](docs/automation/deep-github-ai-automation.md) for the full runbook and GitHub Actions setup.
+
 ### Build Agents (6 types)
 1. **Storage Agent** - Data management & replication
 2. **Security Agent** - Access control & compliance

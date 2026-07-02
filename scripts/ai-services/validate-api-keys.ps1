@@ -18,7 +18,7 @@ param(
 
 function Test-ApiKeyFormat {
     param([string]$Key, [string]$Value)
-    
+
     switch ($Key) {
         { $_ -match "OPENAI" } {
             if ($Value -match "^sk-[A-Za-z0-9]{48,}$") {
@@ -41,9 +41,9 @@ function Test-ApiKeyFormat {
 
 function Load-ApiKeys {
     param([string]$Path)
-    
+
     $keys = @{}
-    
+
     if (Test-Path $Path) {
         $content = Get-Content $Path
         foreach ($line in $content) {
@@ -55,7 +55,7 @@ function Load-ApiKeys {
             }
         }
     }
-    
+
     return $keys
 }
 
@@ -64,10 +64,10 @@ function Save-ApiKeys {
         [string]$Path,
         [hashtable]$Keys
     )
-    
+
     $content = "# AI Services Configuration - API Keys`n"
     $content += "# Generated: $(Get-Date)`n`n"
-    
+
     foreach ($key in $Keys.GetEnumerator() | Sort-Object Name) {
         $value = $key.Value
         if ($value -match "password|key|secret") {
@@ -75,7 +75,7 @@ function Save-ApiKeys {
         }
         $content += "$($key.Name)=$value`n"
     }
-    
+
     Set-Content -Path $Path -Value $content -Force
 }
 
@@ -84,15 +84,15 @@ function Interactive-KeyEntry {
     Write-Host "─────────────────────────────────────────────────────────────" -ForegroundColor Cyan
     Write-Host "             Interactive API Key Configuration" -ForegroundColor Cyan
     Write-Host "─────────────────────────────────────────────────────────────" -ForegroundColor Cyan
-    
+
     $keys = @{}
-    
+
     $keyConfigs = @(
-        @{ Name = "OPENAI_API_KEY_CHATGPT_PRO"; Description = "ChatGPT Pro API Key" },
-        @{ Name = "OPENAI_API_KEY_CODEX"; Description = "Codex API Key" },
-        @{ Name = "OPENAI_API_KEY_GPT45"; Description = "GPT-4.5 API Key" }
+        @{ Name = "OPENAI_API_KEY"; Description = "gpt-5.4 API Key" },
+        @{ Name = "OPENAI_API_KEY"; Description = "gpt-5.4-mini API Key" },
+        @{ Name = "OPENAI_API_KEY"; Description = "gpt-5.5 API Key" }
     )
-    
+
     foreach ($config in $keyConfigs) {
         $current = [Environment]::GetEnvironmentVariable($config.Name)
         if ($current) {
@@ -104,14 +104,14 @@ function Interactive-KeyEntry {
             Write-Host "`n$($config.Description):" -ForegroundColor Yellow
             $prompt = "Enter key (press Enter to skip): "
         }
-        
+
         $input = Read-Host $prompt
-        
+
         if ($input -and $input -ne "n") {
             $keys[$config.Name] = $input
         }
     }
-    
+
     return $keys
 }
 
@@ -137,13 +137,13 @@ $invalidCount = 0
 
 foreach ($key in $keys.GetEnumerator() | Sort-Object Name) {
     $validation = Test-ApiKeyFormat -Key $key.Name -Value $key.Value
-    
+
     $statusColor = if ($validation.Valid) { "Green" } else { "Red" }
     $status = if ($validation.Valid) { "✓" } else { "✗" }
-    
+
     Write-Host "$status $($key.Name): " -NoNewline -ForegroundColor $statusColor
     Write-Host $validation.Message -ForegroundColor $statusColor
-    
+
     if ($validation.Valid) { $validCount++ } else { $invalidCount++ }
 }
 
