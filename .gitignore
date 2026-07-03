@@ -143,3 +143,6 @@ status-site/wiki-export/**
 # Local HELIOS app shell/private workspace
 .helios/
 config/hermes-fleet.local.json
+
+# Local tool bootstrap install directory
+.tools/
