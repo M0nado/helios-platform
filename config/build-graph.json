@@ -1,6 +1,21 @@
 {
   "nodes": [
     {
+      "id": "azure-connection-pipeline",
+      "title": "Azure connection pipeline",
+      "command": "python3 scripts/azure/azure_connection_pipeline.py --stage all",
+      "paths": [
+        "scripts/azure/**",
+        "infra/azure/**"
+      ],
+      "tags": [
+        "azure",
+        "setup",
+        "quick"
+      ],
+      "timeoutSeconds": 180
+    },
+    {
       "id": "finish-root-command",
       "title": "Root one-command finish setup validation",
       "command": "bash -n finish.sh",
@@ -142,7 +157,7 @@
     {
       "id": "azure-auth-ready",
       "title": "Azure authentication readiness",
-      "command": "az account show",
+      "command": "python3 scripts/azure/azure_connection_pipeline.py --stage auth",
       "paths": [
         "infra/azure/**",
         "scripts/azure/**"
@@ -373,7 +388,7 @@
     {
       "id": "python-static",
       "title": "Python static compile checks",
-      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py tests/scripts/test_build_graph.py scripts/apply/finish_readiness_apply.py scripts/apply/generate_finish_tasks.py",
+      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py tests/scripts/test_build_graph.py scripts/apply/finish_readiness_apply.py scripts/apply/generate_finish_tasks.py scripts/azure/azure_connection_pipeline.py",
       "paths": [
         "scripts/**/*.py"
       ],
@@ -477,7 +492,7 @@
     {
       "id": "azure-bicep",
       "title": "Azure Bicep build",
-      "command": "az bicep build --file infra/azure/main.bicep",
+      "command": "python3 scripts/azure/azure_connection_pipeline.py --stage bicep",
       "paths": [
         "infra/azure/**"
       ],
