@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using HELIOS.Platform.Core.Logging;
 
 namespace HELIOS.Platform.Utilities
 {

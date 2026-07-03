@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing;
 using System.Diagnostics;
+using HELIOS.Platform.Core.Logging;
 
 namespace HELIOS.Platform.Phase11.GUI
 {

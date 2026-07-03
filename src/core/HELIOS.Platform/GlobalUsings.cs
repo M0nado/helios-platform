@@ -18,7 +18,6 @@ global using System.Threading.Tasks;
 // Microsoft namespaces
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
-global using Microsoft.Extensions.Logging;
 
 // HELIOS Phase 3 ML Services
 global using HELIOS.Platform.Core.ML.Interfaces;

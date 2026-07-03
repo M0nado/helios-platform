@@ -1,3 +1,4 @@
+using HELIOS.Platform.AI.MLService;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +15,7 @@ namespace HELIOS.Platform.AI.Models
         public string ModelId { get; } = "mock-resource-forecast-v1";
         public string ModelName { get; } = "Mock Resource Forecasting";
         public string Version { get; } = "1.0.0";
-        public ModelType ModelType { get; } = ModelType.ResourceForecasting;
+        public HELIOS.Platform.AI.MLService.ModelType ModelType { get; } = HELIOS.Platform.AI.MLService.ModelType.ResourceForecasting;
         public DateTime CreatedAt { get; } = DateTime.UtcNow;
         public DateTime LastUpdatedAt { get; private set; } = DateTime.UtcNow;
         public bool IsLoaded { get; private set; }
@@ -153,7 +154,7 @@ namespace HELIOS.Platform.AI.Models
         public string ModelId { get; } = "mock-anomaly-detect-v1";
         public string ModelName { get; } = "Mock Anomaly Detection";
         public string Version { get; } = "1.0.0";
-        public ModelType ModelType { get; } = ModelType.AnomalyDetection;
+        public HELIOS.Platform.AI.MLService.ModelType ModelType { get; } = HELIOS.Platform.AI.MLService.ModelType.AnomalyDetection;
         public DateTime CreatedAt { get; } = DateTime.UtcNow;
         public DateTime LastUpdatedAt { get; private set; } = DateTime.UtcNow;
         public bool IsLoaded { get; private set; }
