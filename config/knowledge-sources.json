@@ -1,0 +1,34 @@
+{
+  "sources": {
+    "repo-history": {
+      "role": "local commit and branch memory",
+      "commands": ["git log --all --date=iso", "python3 scripts/analysis/commit_window_unification.py"],
+      "safeMode": "read-only"
+    },
+    "github-control": {
+      "role": "issues, PRs, workflows, wiki, Codespaces, runners, and branch automation",
+      "commands": ["gh auth login", "python3 scripts/github/github-inventory.py", "python3 scripts/agents/branch_fix_agents.py --max-branches 88 --scan-origin"],
+      "safeMode": "inventory/report by default; no takeover mutation"
+    },
+    "jstor": {
+      "role": "external research corpus for literature-backed learning and scoring ideas",
+      "commands": ["configure JSTOR/local academic corpus connector", "add citations only through approved local data exports"],
+      "safeMode": "planned; no credentials or scraping included"
+    },
+    "hermes-fleet": {
+      "role": "Hermes/Fleet agent readiness and XCore coordination",
+      "commands": ["python3 scripts/agents/hermes_fleet_readiness.py", "python3 scripts/agents/agent_specialization_matrix.py"],
+      "safeMode": "dry-run/report by default"
+    },
+    "xcore-native": {
+      "role": "native/performance agent engine and C++ placement target",
+      "commands": ["cmake -S src/native/HELIOS.Native.Performance -B .build/native"],
+      "safeMode": "local build/configure only"
+    },
+    "wiki-docs": {
+      "role": "GitHub wiki/docs/codespace plans and generated project knowledge",
+      "commands": ["python3 scripts/github/update-wiki-from-reports.py --dry-run", "python3 scripts/dashboard/generate-gui.py"],
+      "safeMode": "dry-run/report unless explicitly authenticated"
+    }
+  }
+}
