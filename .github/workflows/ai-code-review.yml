@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   ai-security-review:
     runs-on: ubuntu-latest
