@@ -1,6 +1,20 @@
 {
   "nodes": [
     {
+      "id": "finish-easy-setup-shell",
+      "title": "Finish easy setup shell validation",
+      "command": "bash -n scripts/setup/finish-easy-setup.sh",
+      "paths": [
+        "scripts/setup/finish-easy-setup.sh"
+      ],
+      "tags": [
+        "setup",
+        "apply",
+        "quick"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
       "id": "finish-apply-plan",
       "title": "Finish readiness safe apply plan",
       "command": "python3 scripts/apply/finish_readiness_apply.py",
