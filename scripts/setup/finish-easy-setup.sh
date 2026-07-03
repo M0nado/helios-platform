@@ -20,7 +20,11 @@ export PATH="$TOOLS_DIR/dotnet:$TOOLS_DIR/gh/bin:$TOOLS_DIR/azcli-venv/bin:$PATH
 
 python3 scripts/apply/finish_readiness_apply.py --apply
 python3 scripts/apply/generate_finish_tasks.py
-python3 scripts/build_graph/build_graph.py run --profile "$PROFILE" --changed-only --max-workers "${HELIOS_BUILD_GRAPH_WORKERS:-4}"
+if [[ "$PROFILE" == "full" ]]; then
+  python3 scripts/build_graph/build_graph.py run --profile "$PROFILE" --max-workers "${HELIOS_BUILD_GRAPH_WORKERS:-2}"
+else
+  python3 scripts/build_graph/build_graph.py run --profile "$PROFILE" --changed-only --max-workers "${HELIOS_BUILD_GRAPH_WORKERS:-4}"
+fi
 python3 scripts/integrations/readiness_score.py
 python3 scripts/dashboard/generate-gui.py
 
