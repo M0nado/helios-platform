@@ -14,6 +14,7 @@ case "$cmd" in
   prune-generated) exec python3 scripts/analysis/prune_generated_artifacts.py "$@" ;;
   branches) exec python3 scripts/analysis/branch_intelligence.py "$@" ;;
   build) exec python3 scripts/build_graph/build_graph.py "$@" ;;
+  verify) exec python3 scripts/build_graph/build_graph.py run --changed-only --include-readiness "$@" ;;
   codex) exec python3 scripts/codex/generate-codex-tasks.py "$@" ;;
   recommendations) exec python3 scripts/analysis/merge_prune_recommendations.py "$@" ;;
   profiles) exec python3 scripts/integrations/cross_access_profiles.py "$@" ;;
@@ -94,6 +95,7 @@ Commands:
   prune-generated   Delete generated report/dashboard artifacts from the working tree
   branches          Branch intelligence reports
   build             Build graph report or runner
+  verify            Run changed build graph nodes plus full-stack readiness
   codex             Generate Codex task packets
   recommendations   Branch merge/prune recommendations
   profiles          Cross-access profile readiness
