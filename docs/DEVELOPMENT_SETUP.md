@@ -609,3 +609,15 @@ dotnet test --configuration Debug
 
 **Last Updated:** 2024  
 **Version:** 1.0.0
+
+
+## Local .NET SDK bootstrap
+
+If `dotnet --info` is not available on a runner or local machine, install a repo-local SDK without committing binaries:
+
+```bash
+tools/dotnet/setup-local-dotnet.sh
+export DOTNET_ROOT="$PWD/.dotnet-local" PATH="$PWD/.dotnet-local:$PATH" DOTNET_CLI_TELEMETRY_OPTOUT=1
+```
+
+The `.dotnet-local/` directory is ignored by Git. Use it to build the C# orchestration core, F# analytics engine, and C# CLI when the container image does not provide .NET.

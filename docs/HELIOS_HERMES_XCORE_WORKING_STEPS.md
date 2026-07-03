@@ -312,3 +312,14 @@ python3 scripts/automation/unitary_ai_system.py
 ```
 
 The report writes `reports/ai-system/unitary-ai-system.json` and `.md`, and the deep setup plan runs it first so every provider, agent, model, safety gate, and language engine shares the same optimization DNA.
+
+
+## Python-to-native/Core split review
+
+Use the split report to decide which Python scripts should stay as provider/report/Linux glue and which should be promoted into the C# core, F# analytics engine, or C++ performance layer:
+
+```powershell
+python3 scripts/automation/python_language_split_report.py
+```
+
+The intended through-line is one C# orchestration branch that can call every language-owned engine: C# owns safety, contracts, GUI/CLI and branch orchestration; F# owns stable scoring/ranking/learning; C++ owns repeated hot-path diff, overlap, indexing, rendering, memory, and vector work; Python stays where its SDK/library ecosystem produces better integration speed.
