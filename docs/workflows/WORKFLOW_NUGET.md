@@ -143,7 +143,7 @@ jobs:
 
 6. **Upload Results**
    ```yaml
-   - uses: actions/upload-artifact@v3
+   - uses: actions/upload-artifact@v4
      with:
        name: test-results-${{ matrix.os }}-${{ matrix.dotnet-version }}
        path: '**/test-results.trx'
@@ -286,7 +286,7 @@ jobs:
 
 1. **Download Package**
    ```yaml
-   - uses: actions/download-artifact@v3
+   - uses: actions/download-artifact@v4
      with:
        path: download/
    ```

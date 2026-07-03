@@ -86,7 +86,7 @@ jobs:
       should-pack: ${{ steps.check.outputs.should-pack }}
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
@@ -114,9 +114,9 @@ jobs:
       fail-fast: true
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
       
@@ -132,7 +132,7 @@ jobs:
             --verbosity minimal
       
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: matrix.configuration == 'Release'
         with:
           name: build-${{ matrix.framework }}
@@ -159,8 +159,8 @@ Savings:    66% (24 → 8 min)
         framework: [net6.0, net8.0]
     
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
       
       - name: Run unit tests
         run: |
@@ -181,8 +181,8 @@ Savings:    66% (24 → 8 min)
         test-suite: [Database, API, Security]
     
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
       
       - name: Run ${{ matrix.test-suite }} integration tests
         run: |
@@ -197,8 +197,8 @@ Savings:    66% (24 → 8 min)
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
       
       - name: Run E2E tests
         run: |
@@ -241,7 +241,7 @@ Phase 3 (Sequential):
 
 ```yaml
   - name: Setup NuGet cache
-    uses: actions/cache@v3
+    uses: actions/cache@v4
     with:
       path: ~/.nuget/packages
       key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
@@ -261,7 +261,7 @@ Monthly savings: 85% of restore time × 300 builds = 425 min
 
 ```yaml
   - name: Setup build cache
-    uses: actions/cache@v3
+    uses: actions/cache@v4
     with:
       path: |
         **/bin
@@ -279,7 +279,7 @@ Monthly savings: 85% of restore time × 300 builds = 425 min
 
 ```yaml
   - name: Cache dotnet tools
-    uses: actions/cache@v3
+    uses: actions/cache@v4
     with:
       path: ~/.dotnet/tools
       key: ${{ runner.os }}-dotnet-tools-${{ hashFiles('.dotnet-tools.json') }}
@@ -334,7 +334,7 @@ Total:           800 MB → 450 MB (43% reduction)
       tests: ${{ steps.set-matrix.outputs.tests }}
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Generate build matrix
         id: set-matrix
@@ -413,7 +413,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Run full test suite
         run: |
@@ -545,7 +545,7 @@ Annual savings                  $972
 
 ```yaml
   upload-artifacts:
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: nuget-${{ github.run_number }}
         path: ./dist/*.nupkg

@@ -367,7 +367,7 @@ jobs:
   update-pages:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Get latest release
         id: release

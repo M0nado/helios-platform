@@ -222,7 +222,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run linters
         run: |
           ./scripts/lint.sh
@@ -255,9 +255,9 @@ jobs:
         platform: [x86, x64]
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
@@ -266,7 +266,7 @@ jobs:
             --configuration ${{ matrix.configuration }} \
             --no-restore
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.configuration }}-${{ matrix.platform }}
           path: ./bin/${{ matrix.configuration }}/

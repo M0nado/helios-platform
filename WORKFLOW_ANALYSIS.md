@@ -191,7 +191,7 @@ This should include:
 ### NuGet Cache
 ```yaml
 - name: Restore NuGet cache
-  uses: actions/cache@v3
+  uses: actions/cache@v4
   with:
     path: |
       ~/.nuget/packages

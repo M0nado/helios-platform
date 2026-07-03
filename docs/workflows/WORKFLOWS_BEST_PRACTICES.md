@@ -120,7 +120,7 @@ environments:
 
 ```yaml
 # NPM caching
-- uses: actions/cache@v3
+- uses: actions/cache@v4
   with:
     path: ~/.npm
     key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
@@ -128,7 +128,7 @@ environments:
       ${{ runner.os }}-npm-
 
 # .NET caching
-- uses: actions/cache@v3
+- uses: actions/cache@v4
   with:
     path: ~/.nuget/packages
     key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
@@ -175,12 +175,12 @@ jobs:
 
 ```yaml
 # ❌ LARGE: Include all files
-- uses: actions/upload-artifact@v3
+- uses: actions/upload-artifact@v4
   with:
     path: ./
 
 # ✅ OPTIMIZED: Specific files only
-- uses: actions/upload-artifact@v3
+- uses: actions/upload-artifact@v4
   with:
     path: |
       dist/
@@ -189,7 +189,7 @@ jobs:
       !**/node_modules/
 
 # ✅ FAST: Quick exclusions
-- uses: actions/upload-artifact@v3
+- uses: actions/upload-artifact@v4
   with:
     path: dist/
     if-no-files-found: ignore
@@ -246,7 +246,7 @@ jobs:
 ```yaml
 # Built-in retries
 - name: Download Dependencies
-  uses: actions/download-artifact@v3
+  uses: actions/download-artifact@v4
   with:
     path: ./
 
@@ -310,7 +310,7 @@ jobs:
 
 - name: Upload Debug Logs
   if: failure()
-  uses: actions/upload-artifact@v3
+  uses: actions/upload-artifact@v4
   with:
     name: debug-logs
     path: '**/*.log'
@@ -342,13 +342,13 @@ runs-on: macos-latest-xl
 
 ```yaml
 # ✅ ECONOMICAL: 7 days
-- uses: actions/upload-artifact@v3
+- uses: actions/upload-artifact@v4
   with:
     path: dist/
     retention-days: 7  # Default
 
 # ❌ EXPENSIVE: 90 days
-- uses: actions/upload-artifact@v3
+- uses: actions/upload-artifact@v4
   with:
     path: dist/
     retention-days: 90
@@ -551,7 +551,7 @@ jobs:
 
       - name: Report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: reports
           path: reports/
