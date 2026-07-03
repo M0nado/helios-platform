@@ -1,0 +1,138 @@
+{
+  "github": {
+    "requiredCli": "gh",
+    "secretNames": [
+      "HELIOS_PLATFORM_REMOTE_URL",
+      "HELIOS_CONTROL_REMOTE_URL",
+      "HERMES_FLEET_REMOTE_URL",
+      "XCORE_REMOTE_URL"
+    ]
+  },
+  "azure": {
+    "requiredCli": "az",
+    "keyVaultSecretNames": [
+      "OPENAI-API-KEY",
+      "AZURE-OPENAI-ENDPOINT",
+      "AZURE-OPENAI-API-KEY",
+      "SLACK-WEBHOOK-URL",
+      "M365-TENANT-ID"
+    ],
+    "deployment": {
+      "bicepEntryPoint": "infra/azure/main.bicep",
+      "parameters": "infra/azure/parameters/dev.json",
+      "keyVaultSyncScript": "scripts/azure/sync-keyvault-secrets.sh"
+    }
+  },
+  "openai": {
+    "env": [
+      "OPENAI_API_KEY",
+      "OPENAI_ORG_ID",
+      "OPENAI_PROJECT_ID"
+    ]
+  },
+  "azureOpenAI": {
+    "env": [
+      "AZURE_OPENAI_ENDPOINT",
+      "AZURE_OPENAI_API_KEY"
+    ]
+  },
+  "slack": {
+    "env": [
+      "SLACK_APP_TOKEN",
+      "SLACK_BOT_TOKEN",
+      "SLACK_SIGNING_SECRET",
+      "SLACK_WEBHOOK_URL"
+    ]
+  },
+  "microsoft365Copilot": {
+    "env": [
+      "M365_CLIENT_ID",
+      "M365_COPILOT_PRO_ACCOUNT",
+      "M365_TENANT_ID"
+    ],
+    "plans": [
+      "standard-work",
+      "pro-consumer",
+      "free-basic-readiness"
+    ]
+  },
+  "localWeb": {
+    "command": "scripts/setup/helios-dev.sh --serve",
+    "url": "http://127.0.0.1:8787/",
+    "rebuildEndpoint": "POST /rebuild"
+  },
+  "safeAiEnrichment": {
+    "script": "scripts/ai/enrich-ideas.py",
+    "networkDefault": "disabled",
+    "env": [
+      "OPENAI_API_KEY",
+      "AZURE_OPENAI_API_KEY"
+    ]
+  },
+  "controlPlane": {
+    "script": "scripts/control/helios-control.py",
+    "report": "reports/control-plane/control-summary.md",
+    "safeByDefault": true,
+    "scopes": [
+      "all",
+      "github",
+      "azure",
+      "ai"
+    ]
+  },
+  "claude": {
+    "env": [
+      "ANTHROPIC_API_KEY"
+    ],
+    "networkDefault": "disabled"
+  },
+  "visualStudioMaui": {
+    "workloads": [
+      "maui"
+    ],
+    "recommendedCommands": [
+      "dotnet workload list",
+      "dotnet workload install maui"
+    ],
+    "notes": "MAUI workloads require supported OS/SDK and Visual Studio on developer machines."
+  },
+  "chatgpt": {
+    "env": [
+      "CHATGPT_WORKSPACE_ID"
+    ],
+    "notes": "ChatGPT UI plans use browser/workspace auth; do not store user session cookies in repo."
+  },
+  "linear": {
+    "env": [
+      "LINEAR_API_KEY",
+      "LINEAR_TEAM_ID"
+    ]
+  },
+  "githubMcp": {
+    "env": [
+      "GITHUB_TOKEN"
+    ],
+    "notes": "Use an existing GitHub token from the runner or shell; do not write token values to disk.",
+    "recommendedTransport": "stdio or remote MCP gateway configured outside git"
+  },
+  "appAutomation": {
+    "script": "scripts/integrations/app_automation.py",
+    "safeByDefault": true,
+    "browserModes": [
+      "default-browser",
+      "microsoft-edge",
+      "edge-ie-mode-documentation-only"
+    ],
+    "apps": [
+      "GitHub",
+      "Azure",
+      "Microsoft 365 Copilot",
+      "ChatGPT",
+      "Claude",
+      "Slack",
+      "Linear",
+      "GitHub MCP"
+    ],
+    "notes": "Reports launch/setup commands and auth readiness only; it does not scrape browser sessions or persist cookies."
+  }
+}
