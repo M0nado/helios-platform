@@ -1,12 +1,1077 @@
 {
   "nodes": [
     {
+      "id": "aihub-self-learning-notes",
+      "title": "AIHub self-learning notes and help cards",
+      "command": "python3 scripts/analysis/aihub_self_learning_notes.py",
+      "paths": [
+        "scripts/analysis/aihub_self_learning_notes.py",
+        "reports/learning/**",
+        "scripts/analysis/module_submodule_organizer.py"
+      ],
+      "tags": [
+        "analysis",
+        "quick",
+        "ai"
+      ],
+      "dependsOn": [
+        "module-submodule-organizer",
+        "aihub-learning-feedback-loop"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-self-learning-growth-workflow",
+      "title": "AIHub self-learning growth workflow",
+      "command": "python3 scripts/analysis/aihub_self_learning_notes.py && python3 scripts/dashboard/generate-gui.py",
+      "paths": [
+        ".github/workflows/aihub-self-learning-growth.yml",
+        "scripts/analysis/aihub_self_learning_notes.py",
+        "scripts/analysis/complex_code_grading.py",
+        "scripts/analysis/module_submodule_organizer.py",
+        "src/native/HELIOS.Native.Performance/include/helios/aihub_native_engine.hpp"
+      ],
+      "tags": [
+        "analysis",
+        "quick",
+        "ai",
+        "automation"
+      ],
+      "dependsOn": [
+        "aihub-self-learning-notes"
+      ],
+      "timeoutSeconds": 90
+    },
+    {
+      "id": "module-submodule-organizer",
+      "title": "Automatic module/submodule organizer and placement tree",
+      "command": "python3 scripts/analysis/module_submodule_organizer.py",
+      "paths": [
+        "scripts/analysis/module_submodule_organizer.py",
+        "src/**",
+        "scripts/**",
+        "config/**",
+        ".github/workflows/**"
+      ],
+      "tags": [
+        "analysis",
+        "quick",
+        "ai"
+      ],
+      "dependsOn": [
+        "complex-code-grading"
+      ],
+      "timeoutSeconds": 90
+    },
+    {
+      "id": "aihub-learning-feedback-loop",
+      "title": "AIHub integrated learning feedback loop",
+      "command": "python3 scripts/analysis/aihub_learning_feedback_loop.py",
+      "paths": [
+        "scripts/analysis/aihub_learning_feedback_loop.py",
+        "reports/**",
+        "scripts/analysis/**",
+        "scripts/agents/**",
+        "scripts/dashboard/**"
+      ],
+      "tags": [
+        "analysis",
+        "quick",
+        "ai"
+      ],
+      "dependsOn": [
+        "complex-code-grading",
+        "branch-absorption-multicloud-plan"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "complex-code-grading",
+      "title": "Complex 30-variable code grading and prune/keep analytics",
+      "command": "python3 scripts/analysis/complex_code_grading.py",
+      "paths": [
+        "scripts/analysis/complex_code_grading.py",
+        "src/**",
+        "scripts/**",
+        "config/**",
+        ".github/workflows/**"
+      ],
+      "tags": [
+        "analysis",
+        "quick",
+        "ai"
+      ],
+      "timeoutSeconds": 120
+    },
+    {
+      "id": "branch-absorption-multicloud-plan",
+      "title": "Branch absorption multicloud UI and GitHub YAML plan",
+      "command": "python3 scripts/analysis/branch_absorption_multicloud_plan.py",
+      "paths": [
+        "scripts/analysis/branch_absorption_multicloud_plan.py",
+        ".github/workflows/branch-absorption-multicloud.yml",
+        "src/core/HELIOS.Platform.Contracts/**",
+        "src/analytics/**",
+        "src/native/**",
+        "scripts/dashboard/**"
+      ],
+      "tags": [
+        "analysis",
+        "github",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "simple-build-center",
+      "title": "Simple GUI-friendly build command center",
+      "command": "python3 scripts/analysis/simple_build_center.py",
+      "paths": [
+        "scripts/setup/simple-build.sh",
+        "scripts/analysis/simple_build_center.py",
+        "scripts/dashboard/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "analysis",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-language-skill-profiles",
+      "title": "AIHub language skill profiles and automatic upgrade loop",
+      "command": "python3 scripts/analysis/aihub_language_skill_profiles.py",
+      "paths": [
+        "config/aihub-language-skill-profiles.json",
+        "scripts/analysis/aihub_language_skill_profiles.py",
+        "src/**",
+        "scripts/dashboard/**",
+        "config/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-module-blueprint",
+      "title": "AIHub GUI USBWizard language-balanced module blueprint",
+      "command": "python3 scripts/analysis/aihub_module_blueprint.py",
+      "paths": [
+        "config/aihub-module-blueprint.json",
+        "scripts/analysis/aihub_module_blueprint.py",
+        "src/core/HELIOS.Platform.Contracts/**",
+        "src/analytics/**",
+        "src/native/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-supershell-vault-wizard",
+      "title": "AIHub SuperShell vault/setup wizard and module map",
+      "command": "python3 scripts/integrations/aihub_supershell_vault_wizard.py",
+      "paths": [
+        "scripts/integrations/**",
+        "config/aihub-supershell-vault.example.json",
+        ".github/workflows/aihub-supershell-vault-wizard.yml",
+        "src/core/HELIOS.Platform/wwwroot/**",
+        "scripts/dashboard/**",
+        "config/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "github",
+        "azure",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-unified-control-plane",
+      "title": "Unified AIHub Hermes XCore GUI control plane",
+      "command": "python3 scripts/integrations/aihub_unified_control_plane.py",
+      "paths": [
+        "scripts/integrations/**",
+        "scripts/agents/**",
+        "scripts/dashboard/**",
+        "src/core/HELIOS.Platform/wwwroot/**",
+        "config/**",
+        ".github/**",
+        "infra/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "github",
+        "azure",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-integration-graph",
+      "title": "AIHub cross-language integration graph and GUI model",
+      "command": "python3 scripts/integrations/aihub_integration_graph.py",
+      "paths": [
+        "scripts/integrations/**",
+        "scripts/agents/**",
+        "scripts/analysis/**",
+        "scripts/dashboard/**",
+        "src/core/**",
+        "src/analytics/**",
+        "src/native/**",
+        "config/**",
+        ".github/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "github",
+        "azure",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-live-flags",
+      "title": "AIHub live automation flags and collective learning transfer",
+      "command": "python3 scripts/integrations/aihub_live_flags.py",
+      "paths": [
+        "config/aihub-live-flags.example.json",
+        "scripts/integrations/**",
+        "scripts/setup/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "github",
+        "azure",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "branch-test-autofix-plan",
+      "title": "Automatic branch testing/autofix specialty plan",
+      "command": "python3 scripts/agents/branch_test_autofix_plan.py",
+      "paths": [
+        "scripts/agents/**",
+        "config/**",
+        ".git/refs/**",
+        ".github/**",
+        "src/**",
+        "infra/**"
+      ],
+      "tags": [
+        "analysis",
+        "github",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-learning-rules",
+      "title": "AIHub learning/routing rules for LLM tool agent combos",
+      "command": "python3 scripts/integrations/aihub_learning_rules.py",
+      "paths": [
+        "scripts/integrations/**",
+        "scripts/agents/**",
+        "scripts/analysis/**",
+        "config/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "legacy-algorithm-recovery",
+      "title": "Recover older algorithms/code/docs for AIHub framework",
+      "command": "python3 scripts/analysis/legacy_algorithm_recovery.py",
+      "paths": [
+        "**/*.md",
+        "src/**",
+        "scripts/**",
+        "docs/**",
+        "config/**",
+        "infra/**",
+        ".github/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 90
+    },
+    {
+      "id": "aihub-full-framework",
+      "title": "AIHub full framework run-everything launch plan",
+      "command": "python3 scripts/integrations/aihub_full_framework.py",
+      "paths": [
+        "scripts/integrations/**",
+        "scripts/agents/**",
+        "scripts/analysis/**",
+        "config/**",
+        ".github/**",
+        "infra/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "azure",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-connectivity-guide",
+      "title": "AIHub local/cloud ports tunnels and smart learning guide",
+      "command": "python3 scripts/integrations/aihub_connectivity_guide.py",
+      "paths": [
+        "scripts/integrations/**",
+        "scripts/agents/**",
+        "scripts/web/**",
+        "config/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "azure",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "aihub-super-shell",
+      "title": "AIHub cross-LLM super shell provider/vault setup",
+      "command": "python3 scripts/integrations/aihub_super_shell.py",
+      "paths": [
+        "scripts/integrations/**",
+        "scripts/agents/**",
+        "config/**",
+        ".github/**",
+        "infra/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "azure",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "agent-fleet-autopilot",
+      "title": "Smart agent fleet autopilot plan",
+      "command": "python3 scripts/agents/agent_fleet_autopilot.py",
+      "paths": [
+        "scripts/agents/**",
+        "scripts/setup/**",
+        "config/**",
+        ".github/**",
+        "src/**",
+        "docs/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 90
+    },
+    {
+      "id": "agent-fleet-control-catalog",
+      "title": "Agent fleet/provider/control catalog for local/cloud runners",
+      "command": "python3 scripts/agents/agent_fleet_control_catalog.py",
+      "paths": [
+        "scripts/agents/**",
+        "scripts/setup/**",
+        "config/**",
+        ".github/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "agent-runner-easy-setup-shell",
+      "title": "Agent runner easy setup shell validation",
+      "command": "bash -n scripts/setup/agent-runner-easy-setup.sh",
+      "paths": [
+        "scripts/setup/agent-runner-easy-setup.sh"
+      ],
+      "tags": [
+        "ci",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "agent-language-framework",
+      "title": "Agent/language/module branch framework system",
+      "command": "python3 scripts/analysis/agent_language_framework.py",
+      "paths": [
+        "scripts/analysis/**",
+        "scripts/agents/**",
+        "src/**",
+        ".github/**",
+        "config/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "native",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 90
+    },
+    {
+      "id": "language-engine-catalog",
+      "title": "Language engine catalog with 50+ capabilities and abstract synthesis",
+      "command": "python3 scripts/analysis/language_engine_catalog.py",
+      "paths": [
+        "scripts/analysis/**",
+        "reports/learning/document-code-absorption-ranker.json"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "native",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "document-code-absorption-ranker",
+      "title": "Document/code absorption ranker for MD/Bicep/YAML/JSTOR/code ideas",
+      "command": "python3 scripts/analysis/document_code_absorption_ranker.py",
+      "paths": [
+        "**/*.md",
+        "infra/**/*.bicep",
+        "config/**/*.json",
+        ".github/**/*.yml",
+        "scripts/**",
+        "src/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "azure",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 90
+    },
+    {
+      "id": "control-plane-knowledge-matrix",
+      "title": "Control plane knowledge matrix for GitHub/wiki/Codespaces/Hermes/XCore/JSTOR",
+      "command": "python3 scripts/analysis/control_plane_knowledge_matrix.py",
+      "paths": [
+        "config/knowledge-sources.json",
+        ".github/**",
+        "scripts/**",
+        "docs/**",
+        "src/native/**",
+        "HERMES*.md"
+      ],
+      "tags": [
+        "analysis",
+        "github",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "language-decision-matrix",
+      "title": "Language decision matrix with 60 placement variables",
+      "command": "python3 scripts/analysis/language_decision_matrix.py",
+      "paths": [
+        "config/language-decision-variables.json",
+        "scripts/analysis/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "native",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "knowledge-absorption-engine",
+      "title": "Knowledge absorption engine for today commits GUI/Hermes/XCore/pruning",
+      "command": "python3 scripts/analysis/knowledge_absorption_engine.py",
+      "paths": [
+        "scripts/analysis/**",
+        "scripts/agents/**",
+        "scripts/dashboard/**",
+        "config/**",
+        ".git/refs/**",
+        ".git/logs/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "github",
+        "gui",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "module-submodule-test-matrix",
+      "title": "Module/submodule/testing matrix with Hermes/XCore/cloud flags",
+      "command": "python3 scripts/analysis/module_submodule_test_matrix.py",
+      "paths": [
+        "src/**",
+        "tests/**",
+        "scripts/**",
+        "config/**",
+        "infra/**",
+        ".github/**",
+        "ai-integration/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "native",
+        "gui",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "language-role-optimizer",
+      "title": "Language role optimizer for C#/C++/F#/Python module placement",
+      "command": "python3 scripts/analysis/language_role_optimizer.py",
+      "paths": [
+        "config/language-role-strategy.json",
+        "src/**",
+        "scripts/**",
+        "ai-integration/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "native",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "recover-missing-branch-work",
+      "title": "Recover missing July 30/31 branch work and merge/prune visibility",
+      "command": "python3 scripts/analysis/recover_missing_branch_work.py",
+      "paths": [
+        "scripts/analysis/**",
+        ".git/refs/**",
+        ".git/logs/**"
+      ],
+      "tags": [
+        "analysis",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "code-learning-atlas",
+      "title": "Code learning atlas with 50 signals per domain",
+      "command": "python3 scripts/analysis/code_learning_atlas.py",
+      "paths": [
+        "src/**",
+        "scripts/**",
+        "config/**",
+        "infra/**",
+        ".github/**",
+        "ai-integration/**",
+        "HERMES*.md"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "azure",
+        "gui",
+        "native",
+        "quick"
+      ],
+      "timeoutSeconds": 90
+    },
+    {
+      "id": "commit-window-unification",
+      "title": "Commit window unification from requested date/time",
+      "command": "python3 scripts/analysis/commit_window_unification.py",
+      "paths": [
+        "scripts/analysis/**",
+        ".git/logs/**",
+        ".git/refs/**"
+      ],
+      "tags": [
+        "analysis",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "agent-specialization-matrix",
+      "title": "Agent specialization matrix for branch repair",
+      "command": "python3 scripts/agents/agent_specialization_matrix.py",
+      "paths": [
+        "config/agent-specializations.json",
+        "scripts/agents/**",
+        "src/**",
+        "infra/**",
+        ".github/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "branch-fix-agents",
+      "title": "Generate branch fix agent packets for blocking branches",
+      "command": "python3 scripts/agents/branch_fix_agents.py --max-branches 88",
+      "paths": [
+        "scripts/agents/**",
+        "scripts/analysis/**",
+        ".github/workflows/branch-fix-agents.yml",
+        ".git/refs/**"
+      ],
+      "tags": [
+        "analysis",
+        "github",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 120
+    },
+    {
+      "id": "deep-branch-code-score",
+      "title": "Deep branch/code scoring across C#/C++/F#/Python/YAML/Bicep/Hermes",
+      "command": "python3 scripts/analysis/deep_branch_code_score.py",
+      "paths": [
+        "src/**",
+        "scripts/**",
+        "config/**",
+        "infra/**",
+        ".github/**",
+        "ai-integration/**",
+        ".git/refs/**"
+      ],
+      "tags": [
+        "analysis",
+        "github",
+        "ai",
+        "azure",
+        "gui",
+        "native",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "full-integration-matrix",
+      "title": "Full GUI/framework/YAML/Bicep/Hermes/XCore/cross-LLM integration matrix",
+      "command": "python3 scripts/integrations/full_integration_matrix.py",
+      "paths": [
+        "src/**",
+        "scripts/**",
+        "config/**",
+        "infra/**",
+        ".github/**",
+        "ai-integration/**",
+        "HERMES_SWIFT_*.md"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "azure",
+        "github",
+        "gui",
+        "native",
+        "security",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "super-branch-unification",
+      "title": "Single super branch unification and safe merge plan",
+      "command": "python3 scripts/analysis/super_branch_unification.py",
+      "paths": [
+        ".git/refs/**",
+        "scripts/analysis/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "analysis",
+        "github",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "deep-agent-readiness",
+      "title": "Deep GUI/MCP/GitHub/Hermes agent readiness",
+      "command": "python3 scripts/integrations/deep_agent_readiness.py",
+      "paths": [
+        "scripts/integrations/**",
+        "scripts/agents/**",
+        "scripts/codex/**",
+        "scripts/github/**",
+        "scripts/web/**",
+        "src/gui/**",
+        "src/core/**",
+        "config/**"
+      ],
+      "tags": [
+        "ai",
+        "github",
+        "gui",
+        "control",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "super-stack-readiness",
+      "title": "Super stack readiness across GUI/server/vault/Hermes/XCore/cloud",
+      "command": "python3 scripts/integrations/super_stack_readiness.py",
+      "paths": [
+        "src/**",
+        "scripts/**",
+        "config/**",
+        "infra/**",
+        ".github/**",
+        "ai-integration/**"
+      ],
+      "tags": [
+        "analysis",
+        "ai",
+        "azure",
+        "gui",
+        "native",
+        "security",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "azure-connection-pipeline",
+      "title": "Azure connection pipeline",
+      "command": "python3 scripts/azure/azure_connection_pipeline.py --stage all",
+      "paths": [
+        "scripts/azure/**",
+        "infra/azure/**"
+      ],
+      "tags": [
+        "azure",
+        "setup",
+        "quick"
+      ],
+      "timeoutSeconds": 180
+    },
+    {
+      "id": "finish-root-command",
+      "title": "Root one-command finish setup validation",
+      "command": "bash -n finish.sh",
+      "paths": [
+        "finish.sh"
+      ],
+      "tags": [
+        "setup",
+        "apply",
+        "quick"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "finish-easy-setup-shell",
+      "title": "Finish easy setup shell validation",
+      "command": "bash -n scripts/setup/finish-easy-setup.sh",
+      "paths": [
+        "scripts/setup/finish-easy-setup.sh"
+      ],
+      "tags": [
+        "setup",
+        "apply",
+        "quick"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "finish-apply-plan",
+      "title": "Finish readiness safe apply plan",
+      "command": "python3 scripts/apply/finish_readiness_apply.py",
+      "paths": [
+        "scripts/apply/**",
+        "scripts/integrations/readiness_score.py",
+        "scripts/build_graph/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "apply",
+        "analysis",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "finish-tasks",
+      "title": "Generated finish task backlog",
+      "command": "python3 scripts/apply/generate_finish_tasks.py",
+      "paths": [
+        "scripts/apply/**",
+        "reports/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "apply",
+        "analysis",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "build-graph-unit-tests",
+      "title": "Build graph unit tests",
+      "command": "python3 -m unittest tests/scripts/test_build_graph.py",
+      "paths": [
+        "scripts/build_graph/**",
+        "tests/scripts/test_build_graph.py"
+      ],
+      "tags": [
+        "python",
+        "critical",
+        "quick"
+      ],
+      "critical": true,
+      "timeoutSeconds": 60
+    },
+    {
+      "id": "toolchain-ready",
+      "title": "Local toolchain readiness",
+      "command": "python3 -c \"import shutil,sys; missing=[t for t in ['git','python3'] if shutil.which(t) is None]; print('missing: '+', '.join(missing) if missing else 'toolchain ready'); sys.exit(1 if missing else 0)\"",
+      "paths": [
+        "scripts/setup/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "setup",
+        "quick"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "dotnet-ready",
+      "title": ".NET SDK readiness",
+      "command": "python3 -c \"import shutil,sys; print('dotnet ready' if shutil.which('dotnet') else 'dotnet not found'); sys.exit(0 if shutil.which('dotnet') else 1)\"",
+      "paths": [
+        "src/**",
+        "tests/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "setup",
+        "dotnet"
+      ],
+      "dependsOn": [
+        "toolchain-ready"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "cmake-ready",
+      "title": "CMake readiness",
+      "command": "python3 -c \"import shutil,sys; print('cmake ready' if shutil.which('cmake') else 'cmake not found'); sys.exit(0 if shutil.which('cmake') else 1)\"",
+      "paths": [
+        "src/native/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "setup",
+        "native",
+        "cpp"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "azure-cli-ready",
+      "title": "Azure CLI readiness",
+      "command": "python3 -c \"import shutil,sys; print('az ready' if shutil.which('az') else 'az not found'); sys.exit(0 if shutil.which('az') else 1)\"",
+      "paths": [
+        "infra/azure/**",
+        "scripts/azure/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "azure",
+        "setup"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "azure-auth-ready",
+      "title": "Azure authentication readiness",
+      "command": "python3 scripts/azure/azure_connection_pipeline.py --stage auth",
+      "paths": [
+        "infra/azure/**",
+        "scripts/azure/**"
+      ],
+      "tags": [
+        "azure"
+      ],
+      "dependsOn": [
+        "azure-cli-ready"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "azure-what-if",
+      "title": "Azure Bicep what-if",
+      "command": "python3 scripts/azure/azure_what_if.py",
+      "paths": [
+        "infra/azure/**",
+        "scripts/azure/**"
+      ],
+      "tags": [
+        "azure",
+        "dry-run"
+      ],
+      "dependsOn": [
+        "azure-cli-ready",
+        "azure-auth-ready",
+        "azure-bicep"
+      ],
+      "timeoutSeconds": 180
+    },
+    {
+      "id": "secret-preflight",
+      "title": "Local secret preflight",
+      "command": "python3 scripts/security/secret_preflight.py",
+      "paths": [
+        "**/*"
+      ],
+      "tags": [
+        "security",
+        "critical",
+        "quick"
+      ],
+      "critical": true,
+      "timeoutSeconds": 120
+    },
+    {
+      "id": "merge-prune-report",
+      "title": "Branch merge/prune recommendation report",
+      "command": "python3 scripts/analysis/merge_prune_recommendations.py",
+      "paths": [
+        "scripts/analysis/**",
+        ".git/refs/**"
+      ],
+      "tags": [
+        "branch",
+        "analysis",
+        "quick"
+      ],
+      "timeoutSeconds": 90
+    },
+    {
+      "id": "finish-readiness",
+      "title": "Finish readiness score",
+      "command": "python3 scripts/integrations/readiness_score.py",
+      "paths": [
+        "reports/**",
+        "scripts/integrations/readiness_score.py",
+        "scripts/build_graph/**",
+        "scripts/security/**",
+        "scripts/agents/**"
+      ],
+      "tags": [
+        "analysis",
+        "critical",
+        "dashboard",
+        "quick"
+      ],
+      "timeoutSeconds": 60,
+      "critical": true
+    },
+    {
+      "id": "apply-gate-preflight",
+      "title": "Safe apply gate preflight",
+      "command": "python3 scripts/security/apply_gate_preflight.py",
+      "paths": [
+        "scripts/**",
+        ".github/workflows/**",
+        "infra/**"
+      ],
+      "tags": [
+        "security",
+        "critical",
+        "quick"
+      ],
+      "critical": true,
+      "timeoutSeconds": 120
+    },
+    {
+      "id": "hermes-fleet-readiness",
+      "title": "Hermes/Fleet executable readiness",
+      "command": "python3 scripts/agents/hermes_fleet_readiness.py",
+      "paths": [
+        "scripts/agents/**",
+        "config/hermes-fleet.example.json",
+        "ai-integration/**",
+        "HERMES_SWIFT_*.md"
+      ],
+      "tags": [
+        "hermes",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
       "id": "workflow-validation",
       "title": "GitHub workflow validation without PyYAML",
       "command": "python3 scripts/control/validate_workflows.py",
       "paths": [
         ".github/workflows/**",
         "scripts/control/validate_workflows.py"
+      ],
+      "tags": [
+        "ci",
+        "critical",
+        "python",
+        "security"
       ]
     },
     {
@@ -16,7 +1081,12 @@
       "paths": [
         "scripts/github/update-pr-from-reports.py",
         "reports/**"
-      ]
+      ],
+      "tags": [
+        "dry-run",
+        "github"
+      ],
+      "dryRunIsPass": true
     },
     {
       "id": "doctor",
@@ -24,6 +1094,11 @@
       "command": "python3 scripts/control/doctor.py",
       "paths": [
         "scripts/control/doctor.py"
+      ],
+      "tags": [
+        "control",
+        "quick",
+        "setup"
       ]
     },
     {
@@ -33,6 +1108,11 @@
       "paths": [
         "scripts/integrations/readiness_score.py",
         "reports/**"
+      ],
+      "tags": [
+        "ai",
+        "analysis",
+        "quick"
       ]
     },
     {
@@ -43,6 +1123,14 @@
         "scripts/dashboard/generate-gui.py",
         "status-site/**",
         "reports/**"
+      ],
+      "tags": [
+        "dashboard",
+        "gui",
+        "quick"
+      ],
+      "dependsOn": [
+        "finish-readiness"
       ]
     },
     {
@@ -52,6 +1140,11 @@
       "paths": [
         "config/cross-access-profiles.example.json",
         "config/secrets-map.example.json"
+      ],
+      "tags": [
+        "ai",
+        "analysis",
+        "quick"
       ]
     },
     {
@@ -61,6 +1154,11 @@
       "paths": [
         "config/hybrid-integration-roadmap.json",
         "reports/project-inventory/**"
+      ],
+      "tags": [
+        "ai",
+        "analysis",
+        "quick"
       ]
     },
     {
@@ -69,23 +1167,40 @@
       "command": "python3 scripts/analysis/repo_inventory.py",
       "paths": [
         "**/*"
+      ],
+      "tags": [
+        "analysis"
       ]
     },
     {
       "id": "python-static",
       "title": "Python static compile checks",
-      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py",
+      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py tests/scripts/test_build_graph.py scripts/apply/finish_readiness_apply.py scripts/apply/generate_finish_tasks.py scripts/azure/azure_connection_pipeline.py scripts/integrations/super_stack_readiness.py scripts/integrations/deep_agent_readiness.py scripts/integrations/full_integration_matrix.py scripts/analysis/super_branch_unification.py scripts/analysis/deep_branch_code_score.py scripts/agents/branch_fix_agents.py scripts/agents/agent_specialization_matrix.py scripts/analysis/commit_window_unification.py scripts/analysis/code_learning_atlas.py scripts/analysis/recover_missing_branch_work.py scripts/analysis/language_role_optimizer.py scripts/analysis/module_submodule_test_matrix.py scripts/analysis/knowledge_absorption_engine.py scripts/analysis/language_decision_matrix.py scripts/analysis/control_plane_knowledge_matrix.py scripts/analysis/document_code_absorption_ranker.py scripts/analysis/language_engine_catalog.py scripts/analysis/agent_language_framework.py scripts/agents/agent_fleet_control_catalog.py scripts/agents/agent_fleet_autopilot.py scripts/integrations/aihub_super_shell.py scripts/integrations/aihub_connectivity_guide.py scripts/integrations/aihub_full_framework.py scripts/analysis/legacy_algorithm_recovery.py scripts/integrations/aihub_learning_rules.py scripts/agents/branch_test_autofix_plan.py scripts/integrations/aihub_live_flags.py",
       "paths": [
         "scripts/**/*.py"
+      ],
+      "tags": [
+        "ci",
+        "critical",
+        "python",
+        "security"
       ]
     },
     {
       "id": "analytics-tests",
       "title": "F# analytics tests",
-      "command": "dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-restore",
+      "command": "dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
       "paths": [
         "src/analytics/**",
         "tests/analytics/**"
+      ],
+      "tags": [
+        "ci",
+        "dotnet",
+        "fsharp"
+      ],
+      "dependsOn": [
+        "dotnet-ready"
       ]
     },
     {
@@ -94,6 +1209,14 @@
       "command": "cmake -S src/native/HELIOS.Native.Performance -B .build/native",
       "paths": [
         "src/native/**"
+      ],
+      "tags": [
+        "ci",
+        "cpp",
+        "native"
+      ],
+      "dependsOn": [
+        "cmake-ready"
       ]
     },
     {
@@ -102,6 +1225,14 @@
       "command": "cmake --build .build/native",
       "paths": [
         "src/native/**"
+      ],
+      "tags": [
+        "ci",
+        "cpp",
+        "native"
+      ],
+      "dependsOn": [
+        "native-configure"
       ]
     },
     {
@@ -111,6 +1242,10 @@
       "paths": [
         "scripts/analysis/**",
         "docs/integration/remote-manifest.json"
+      ],
+      "tags": [
+        "analysis",
+        "branch"
       ]
     },
     {
@@ -120,7 +1255,13 @@
       "paths": [
         "scripts/graphs/**",
         "reports/branch-intelligence/**"
-      ]
+      ],
+      "tags": [
+        "dashboard",
+        "gui",
+        "quick"
+      ],
+      "dependsOn": []
     },
     {
       "id": "control-summary",
@@ -129,14 +1270,25 @@
       "paths": [
         "scripts/control/**",
         "config/*.json"
+      ],
+      "tags": [
+        "control",
+        "quick"
       ]
     },
     {
       "id": "azure-bicep",
       "title": "Azure Bicep build",
-      "command": "az bicep build --file infra/azure/main.bicep",
+      "command": "python3 scripts/azure/azure_connection_pipeline.py --stage bicep",
       "paths": [
         "infra/azure/**"
+      ],
+      "tags": [
+        "azure",
+        "ci"
+      ],
+      "dependsOn": [
+        "azure-cli-ready"
       ]
     },
     {
@@ -146,6 +1298,14 @@
       "paths": [
         "src/**",
         "tests/**"
+      ],
+      "tags": [
+        "dotnet",
+        "gui",
+        "maui"
+      ],
+      "dependsOn": [
+        "dotnet-ready"
       ]
     },
     {
@@ -154,6 +1314,14 @@
       "command": "dotnet --info",
       "paths": [
         "src/**"
+      ],
+      "tags": [
+        "dotnet",
+        "gui",
+        "maui"
+      ],
+      "dependsOn": [
+        "dotnet-ready"
       ]
     },
     {
@@ -162,7 +1330,13 @@
       "command": "python3 -c \"print('Visual Studio/MAUI readiness is documented; install VS with .NET MAUI workload on Windows/macOS.')\"",
       "paths": [
         "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md"
-      ]
+      ],
+      "tags": [
+        "dotnet",
+        "gui",
+        "maui"
+      ],
+      "dependsOn": []
     },
     {
       "id": "app-automation-readiness",
@@ -178,6 +1352,11 @@
         "scripts/integrations/app_automation.py",
         "config/integrations.example.json",
         "config/secrets-map.example.json"
+      ],
+      "tags": [
+        "ai",
+        "analysis",
+        "quick"
       ]
     },
     {
@@ -187,6 +1366,10 @@
       "paths": [
         "scripts/local-app/**",
         "docs/integration/LOCAL_APP_SHELL.md"
+      ],
+      "tags": [
+        "gui",
+        "quick"
       ]
     }
   ]

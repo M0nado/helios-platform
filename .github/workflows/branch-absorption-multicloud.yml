@@ -1,0 +1,81 @@
+name: Branch Absorption Multicloud Plan
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Local/cloud lane to model in the generated GUI text.
+        default: github-runner
+        type: choice
+        options:
+          - local
+          - wsl2
+          - codespaces
+          - github-runner
+          - azure-hybrid
+          - cloud-shell
+      agents:
+        description: Requested Hermes/XCore planning count for report text.
+        default: '128'
+        type: string
+      publish_dashboard:
+        description: Upload dashboard artifact; Pages publish is still controlled by repo settings/live flags.
+        default: true
+        type: boolean
+  schedule:
+    - cron: '31 7 * * *'
+
+permissions:
+  contents: read
+  actions: read
+  issues: read
+  pull-requests: read
+  pages: read
+
+concurrency:
+  group: branch-absorption-multicloud-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  branch-absorption-plan:
+    runs-on: ubuntu-latest
+    env:
+      AIHUB_MODE: ${{ inputs.mode || 'github-runner' }}
+      AIHUB_AGENT_COUNT: ${{ inputs.agents || '128' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate branch absorption multicloud UI plan
+        run: |
+          python3 -m py_compile scripts/analysis/branch_absorption_multicloud_plan.py scripts/analysis/simple_build_center.py scripts/analysis/complex_code_grading.py scripts/analysis/module_submodule_organizer.py scripts/analysis/aihub_learning_feedback_loop.py scripts/dashboard/generate-gui.py
+          python3 scripts/analysis/branch_absorption_multicloud_plan.py
+          python3 scripts/agents/branch_test_autofix_plan.py
+          python3 scripts/analysis/document_code_absorption_ranker.py
+          python3 scripts/analysis/merge_prune_recommendations.py
+          python3 scripts/analysis/complex_code_grading.py
+          python3 scripts/agents/branch_fix_agents.py --max-branches 88
+          python3 scripts/analysis/simple_build_center.py
+          python3 scripts/analysis/module_submodule_organizer.py
+          python3 scripts/analysis/aihub_learning_feedback_loop.py
+          python3 scripts/dashboard/generate-gui.py
+      - name: Validate build graph JSON
+        run: python3 -m json.tool config/build-graph.json >/dev/null
+      - name: Upload branch absorption reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-absorption-multicloud-plan
+          path: |
+            reports/branch-intelligence/branch-absorption-multicloud-plan.*
+            reports/branch-agents/branch-test-autofix-plan.*
+            reports/learning/document-code-absorption-ranker.*
+            reports/branch-intelligence/merge-prune-recommendations.*
+            reports/learning/complex-code-grading.*
+            reports/learning/module-submodule-organizer.*
+            reports/learning/aihub-learning-feedback-loop.*
+            reports/branch-agents/branch-fix-agents.*
+            reports/build-graph/simple-build-center.*
+            status-site/index.html

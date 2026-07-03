@@ -108,11 +108,77 @@ def local_status() -> dict[str, Any]:
     }
 
 
+def hermes_fleet_status() -> dict[str, Any]:
+    cfg_path = ROOT / "config" / "hermes-fleet.example.json"
+    report_path = ROOT / "reports" / "hermes-fleet" / "latest.json"
+    cfg: dict[str, Any] = {}
+    if cfg_path.exists():
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except json.JSONDecodeError as exc:
+            return {
+                "available": True,
+                "ok": False,
+                "fleetName": "hermes-fleet-production",
+                "detail": f"invalid config JSON: {exc}",
+                "safeCommands": ["python3 scripts/agents/hermes_fleet_readiness.py"],
+            }
+    latest: dict[str, Any] = {}
+    if report_path.exists():
+        try:
+            latest = json.loads(report_path.read_text())
+        except json.JSONDecodeError as exc:
+            latest = {"ok": False, "detail": f"invalid readiness JSON: {exc}"}
+    checks = latest.get("checks", {}) if isinstance(latest, dict) else {}
+    required_checks = ["config", "python", "git", "dryRunMode"]
+    ready_required = sum(1 for name in required_checks if checks.get(name, {}).get("ok"))
+    return {
+        "available": cfg_path.exists(),
+        "ok": bool(latest.get("ok", False)) if latest else cfg.get("mode", "dry-run") == "dry-run",
+        "fleetName": latest.get("fleetName") or cfg.get("fleetName", "hermes-fleet-production"),
+        "mode": latest.get("mode") or cfg.get("mode", "dry-run"),
+        "generatedUtc": latest.get("generatedUtc"),
+        "readyRequiredChecks": f"{ready_required}/{len(required_checks)}" if checks else "not generated",
+        "detail": latest.get("detail") or "report-first fleet lane; run readiness to refresh live checks",
+        "nextActions": latest.get("nextActions", [
+            "Run hermes_fleet_readiness before live agent routing.",
+            "Keep fleet mode dry-run until apply gates and vault handoff pass.",
+        ]),
+        "safeCommands": [
+            "python3 scripts/agents/hermes_fleet_readiness.py",
+            "python3 scripts/agents/agent_fleet_control_catalog.py",
+            "python3 scripts/agents/agent_fleet_autopilot.py --agents 128 --mode hybrid-cloud",
+        ],
+    }
+
+
+def build_graph_status() -> dict[str, Any]:
+    path = ROOT / "reports" / "build-graph" / "latest.json"
+    if not path.exists():
+        return {"available": False, "ok": False, "detail": "missing build graph report", "safeCommands": ["python3 scripts/build_graph/build_graph.py run --profile quick"]}
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        return {"available": True, "ok": False, "detail": f"invalid JSON: {exc}"}
+    counts = data.get("counts", {})
+    failed = [r.get("id") for r in data.get("results", []) if r.get("status") == "failed"]
+    return {
+        "available": True,
+        "ok": not failed,
+        "generatedUtc": data.get("generatedUtc"),
+        "counts": counts,
+        "failedNodes": failed,
+        "nextFixes": data.get("nextFixes", [])[:5],
+        "metadata": data.get("metadata", {}),
+    }
+
 def collect(scope: str) -> dict[str, Any]:
     report: dict[str, Any] = {
         "generatedUtc": datetime.now(timezone.utc).isoformat(),
         "scope": scope,
         "local": local_status(),
+        "buildGraph": build_graph_status(),
+        "hermesFleet": hermes_fleet_status(),
     }
     if scope in {"all", "github"}:
         report["github"] = github_status()
@@ -137,6 +203,29 @@ def write_report(report: dict[str, Any]) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     SUMMARY_JSON.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     lines = ["# HELIOS Control Plane Summary", "", f"Generated: `{report['generatedUtc']}`", "", "## Local quick start", "", "```bash", "scripts/setup/helios-dev.sh --serve", "```", ""]
+    bg = report.get("buildGraph", {})
+    lines.extend(["## Build Graph", ""])
+    if bg.get("available") is False:
+        lines.append("- ⚠️ Missing build graph report; run `python3 scripts/build_graph/build_graph.py run --profile quick`.")
+    else:
+        lines.append(f"- {'✅' if bg.get('ok') else '⚠️'} Generated: `{bg.get('generatedUtc')}`")
+        lines.append(f"- Counts: `{bg.get('counts')}`")
+        for fix in bg.get("nextFixes", []):
+            lines.append(f"- Fix `{fix.get('node')}`: `{fix.get('command')}` ({fix.get('reason')})")
+    lines.append("")
+    fleet = report.get("hermesFleet", {})
+    lines.extend(["## Hermes Fleet Production", ""])
+    lines.append(f"- {'✅' if fleet.get('ok') else '⚠️'} Fleet: `{fleet.get('fleetName', 'hermes-fleet-production')}` mode `{fleet.get('mode', 'unknown')}`")
+    lines.append(f"- Required checks: `{fleet.get('readyRequiredChecks', 'not generated')}`")
+    if fleet.get("generatedUtc"):
+        lines.append(f"- Readiness generated: `{fleet.get('generatedUtc')}`")
+    lines.append("### Safe commands")
+    lines.append("")
+    for command in fleet.get("safeCommands", []):
+        lines.append(f"- `{command}`")
+    for action in fleet.get("nextActions", []):
+        lines.append(f"- {action}")
+    lines.append("")
     for section in ["github", "azure", "ai"]:
         if section not in report:
             continue
@@ -160,7 +249,7 @@ def write_report(report: dict[str, Any]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="HELIOS GitHub/Azure/AI/Codex control-plane status and command guide.")
-    parser.add_argument("scope", nargs="?", default="all", choices=["all", "github", "azure", "ai"], help="Control-plane area to inspect.")
+    parser.add_argument("scope", nargs="?", default="all", choices=["all", "github", "azure", "ai", "fleet"], help="Control-plane area to inspect; fleet refreshes Hermes/XCore readiness metadata in the summary.")
     parser.add_argument("--json", action="store_true", help="Print JSON report to stdout.")
     args = parser.parse_args()
     report = collect(args.scope)

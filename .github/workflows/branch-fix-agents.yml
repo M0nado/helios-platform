@@ -1,0 +1,61 @@
+name: Branch Fix Agents
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_branches:
+        description: Maximum branch agent packets to generate
+        required: false
+        default: '88'
+      scan_origin:
+        description: Scan origin heads with git ls-remote
+        required: false
+        default: 'true'
+  schedule:
+    - cron: '23 10 * * 1-5'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  branch-fix-agents:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate branch fix agent packets
+        run: |
+          SCAN_FLAG=""
+          if [[ "${{ github.event.inputs.scan_origin || 'true' }}" == "true" ]]; then
+            SCAN_FLAG="--scan-origin"
+          fi
+          python3 scripts/agents/branch_fix_agents.py --max-branches "${{ github.event.inputs.max_branches || '88' }}" $SCAN_FLAG
+          python3 scripts/analysis/super_branch_unification.py
+          python3 scripts/analysis/deep_branch_code_score.py
+      - name: Summarize branch agents
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          path=pathlib.Path('reports/branch-agents/branch-fix-agents.json')
+          print('## Branch Fix Agents')
+          if not path.exists():
+              print('No branch-agent report was generated.')
+          else:
+              data=json.loads(path.read_text())
+              print(f"Target branch: `{data.get('targetBranch')}`")
+              print(f"Packets: **{data.get('branchPacketCount')}**")
+              for packet in data.get('packets', [])[:20]:
+                  print(f"- `{packet.get('branch')}` → {packet.get('primarySpecialist')} ({packet.get('action')})")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: branch-fix-agent-packets
+          path: reports/branch-agents/

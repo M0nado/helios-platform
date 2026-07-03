@@ -12,6 +12,7 @@
     <Compile Include="Statistics/AnalyticsWorkloads.fs" />
     <Compile Include="Prediction/PredictionWorkloads.fs" />
     <Compile Include="ParallelWorkloads.fs" />
+    <Compile Include="AIHub/AiHubLearningEngine.fs" />
     <Compile Include="PublicApi.fs" />
   </ItemGroup>
 
