@@ -236,3 +236,7 @@ The deep-control layer adds a standalone GUI and report generators for the next 
 - `python3 scripts/automation/helios_store.py` renders a HELIOS store of agents, models, capabilities, and GUI commands.
 - `python3 scripts/automation/deep_setup_all.py plan` sequences the deep setup surface safely.
 - `python3 scripts/security/automation_audit.py --command "audit latest"` records an audit event.
+
+## Agent party GUI overhaul
+
+The deep GUI now includes JRPG-style agent party cards with fleet XP, levels, class/job names, abilities, setup-shop buttons, model-store buttons, and report sources. Generate the backing report with `python3 scripts/learning/agent_party.py` or `./tools/helios.ps1 agents party`, then open `tools/gui/helios-control-center/index.html`.

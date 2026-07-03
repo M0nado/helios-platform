@@ -160,7 +160,7 @@ Commands in integration order:
   start plan|verify|apply            Run the shortest ASAP start/merge sequence.
   ideas super|specialties          Rank next additions or render specialization matrix.
   llm plan                         Render multi-LLM cross-optimization routing plan.
-  agents list|validate|runtime|xp|run       Inspect and run registered HELIOS agents.
+  agents list|validate|runtime|xp|party|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
   test csharp|security|fsharp|fsharp-report|native|native-benchmark|python-aihub|all
   reports latest                 Show latest generated report.
@@ -668,6 +668,11 @@ function Invoke-AgentsCommand {
             $Registry.agents | ForEach-Object { Write-Host "$($_.name) :: $($_.responsibility)" }
             New-HeliosReport -Name 'agents-list' -Status 'completed' -Checks @([ordered]@{ name = 'agents:list'; status = 'ok'; message = "agents=$($Registry.agents.Count)" })
         }
+        'party' {
+            $ScriptPath = Join-Path $RepoRoot 'scripts/learning/agent_party.py'
+            Invoke-ExternalCommand python3 @($ScriptPath)
+            New-HeliosReport -Name 'agents-party' -Status 'completed' -Checks @([ordered]@{ name = 'agents:party'; status = 'ok'; message = 'agent party generated' }) -Commands @("python3 $ScriptPath")
+        }
         'xp' {
             $ScriptPath = Join-Path $RepoRoot 'scripts/learning/agent_xp.py'
             Invoke-ExternalCommand python3 @($ScriptPath)
@@ -704,7 +709,7 @@ function Invoke-AgentsCommand {
             New-HeliosReport -Name "agent-$AgentName" -Status 'completed' -Checks @([ordered]@{ name = "agent:$AgentName"; status = 'ok'; message = 'agent command completed' }) -Commands @($Agent.command)
         }
         default {
-            throw "Unknown agents action '$SubAction'. Use list, validate, runtime, xp, or run."
+            throw "Unknown agents action '$SubAction'. Use list, validate, runtime, xp, party, or run."
         }
     }
 }
