@@ -174,10 +174,13 @@ def score_branch(ref: dict[str, Any], files: list[str], manifest: dict[str, Any]
     return {**ref, "score": total, "recommendedAction": action, "fileCount": len(files), "modules": modules, "ci": live_ci, "heuristicCiCloseness": heuristic_ci_closeness}
 
 
-def rank_branches(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+def rank_branches(manifest: dict[str, Any], remote_filters: list[str] | None = None) -> list[dict[str, Any]]:
     target = manifest.get("targetBranch", "work")
+    filters = tuple(f"{name}/" for name in (remote_filters or []) if name)
     ranked = []
     for ref in branch_refs():
+        if filters and not ref["name"].startswith(filters):
+            continue
         files = changed_files_for_ref(ref["name"], target)
         ranked.append(score_branch(ref, files, manifest))
     return sorted(ranked, key=lambda item: item["score"], reverse=True)
@@ -442,7 +445,9 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--configure-remotes", action="store_true", help="Add enabled remotes with configured URLs.")
-    parser.add_argument("--fetch", action="store_true", help="Run git fetch --all --prune --tags.")
+    parser.add_argument("--fetch", "--fetch-remotes", dest="fetch", action="store_true", help="Run git fetch --all --prune --tags.")
+    parser.add_argument("--remote", action="append", default=[], help="Limit branch ranking to refs from a named remote. Repeat for multiple remotes.")
+    parser.add_argument("--remote-inventory-only", action="store_true", help="Only inventory/rank matching remote branches; do not change remote configuration or fetch.")
     parser.add_argument("--enrich-ideas", action="store_true", help="Mark ideas for optional AI enrichment when credentials are configured.")
     parser.add_argument("--hermes-jsonl", action="append", type=Path, default=[], help="Optional Hermes fleet JSONL event input.")
     args = parser.parse_args()
@@ -450,7 +455,7 @@ def main() -> int:
     manifest = load_manifest(args.manifest)
     remote_actions = configure_remotes(manifest, apply=args.configure_remotes)
     fetch_result = fetch_remotes(apply=args.fetch)
-    ranked = rank_branches(manifest)
+    ranked = rank_branches(manifest, args.remote)
     ideas = extract_ideas(manifest)
     hermes_events = read_hermes_jsonl(args.hermes_jsonl)
     ideas.extend(hermes_ideas(hermes_events))
