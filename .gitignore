@@ -142,3 +142,6 @@ status-site/wiki-export/**
 
 # Local HELIOS app shell/private workspace
 .helios/
+
+# Repo-local developer tools
+.tools/
