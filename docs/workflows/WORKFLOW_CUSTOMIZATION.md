@@ -128,7 +128,7 @@ jobs:
       
       - name: Upload Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: results
           path: results/
@@ -172,7 +172,7 @@ jobs:
       
       - name: Upload Report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: validation-report
           path: validation-report.json
@@ -534,7 +534,7 @@ jobs:
       - run: npm run build
       - run: npm test
       
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-node-${{ matrix.version }}

@@ -45,7 +45,7 @@ jobs:
 
 # 2. Skip cache (clear cache first)
 - name: Setup with fresh cache
-  uses: actions/cache@v3
+  uses: actions/cache@v4
   with:
     path: ~/.npm
     key: ${{ runner.os }}-npm-${{ github.run_id }}
@@ -101,7 +101,7 @@ Disk full
 
 # 2. Reduce artifact size
 - name: Upload Artifact
-  uses: actions/upload-artifact@v3
+  uses: actions/upload-artifact@v4
   with:
     path: dist/
     if-no-files-found: ignore
@@ -113,7 +113,7 @@ Disk full
   run: tar -czf artifact.tar.gz dist/
   
 - name: Upload Compressed
-  uses: actions/upload-artifact@v3
+  uses: actions/upload-artifact@v4
   with:
     path: artifact.tar.gz
 ```
@@ -147,7 +147,7 @@ git commit -m "Add lock file"
 # GitHub UI → Actions → Caches → Delete all
 
 # 3. Fix cache key
-- uses: actions/cache@v3
+- uses: actions/cache@v4
   with:
     path: ~/.npm
     # Ensure this hash changes when dependencies change

@@ -524,7 +524,7 @@ jobs:
   sync-project:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Parse metrics and update project
         run: |
           # Script to read COMPONENT_METRICS.json

@@ -56,7 +56,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Deploy
         env:
           API_KEY: ${{ secrets.API_KEY }}
@@ -366,7 +366,7 @@ jobs:
         language: [ 'javascript' ]
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2

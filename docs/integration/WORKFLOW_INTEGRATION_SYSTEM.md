@@ -55,7 +55,7 @@ runs-on: ubuntu-latest
 jobs:
   lint:
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run all linters
         run: ./scripts/lint-all.sh
       - name: Post results
@@ -120,8 +120,8 @@ strategy:
 runs-on: windows-latest
 
 steps:
-  - uses: actions/checkout@v3
-  - uses: actions/setup-dotnet@v3
+  - uses: actions/checkout@v4
+  - uses: actions/setup-dotnet@v4
     with:
       dotnet-version: '7.0.x'
   - name: Restore
@@ -129,7 +129,7 @@ steps:
   - name: Build
     run: dotnet build --configuration ${{ matrix.configuration }} --platform ${{ matrix.platform }}
   - name: Upload artifacts
-    uses: actions/upload-artifact@v3
+    uses: actions/upload-artifact@v4
     with:
       name: build-${{ matrix.configuration }}-${{ matrix.platform }}
       path: ./bin/${{ matrix.configuration }}/
@@ -203,7 +203,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Run unit tests
         run: dotnet test --logger trx --collect:"XPlat Code Coverage"
       - name: Run integration tests
@@ -301,7 +301,7 @@ jobs:
     environment: staging
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Deploy to staging
         run: ./scripts/deploy-staging.sh
       - name: Run smoke tests
@@ -313,7 +313,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Deploy to production
         run: ./scripts/deploy-production.sh
       - name: Post-deployment tests
@@ -398,8 +398,8 @@ jobs:
   publish-nuget:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
       - name: Build
         run: dotnet build -c Release
       - name: Pack
@@ -484,7 +484,7 @@ jobs:
     if: github.event.schedule == '0 9 * * *'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Code analysis
         run: ./scripts/daily-analysis.sh
       - name: Security scan
@@ -494,7 +494,7 @@ jobs:
     if: github.event.schedule == '0 9 * * 1'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Performance test
         run: ./scripts/perf-test.sh
       - name: Full E2E tests

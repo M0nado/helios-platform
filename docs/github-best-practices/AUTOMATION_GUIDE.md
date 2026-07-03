@@ -51,10 +51,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       
@@ -121,10 +121,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -137,7 +137,7 @@ jobs:
       
       - name: Upload artifacts
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.node-version }}
           path: dist/
@@ -155,14 +155,14 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci && npm run lint
   
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci && npm test
   
   deploy:
@@ -171,7 +171,7 @@ jobs:
     needs: [lint, test]  # Wait for lint and test
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci && npm run deploy
 ```
 
@@ -226,7 +226,7 @@ jobs:
       github.base_ref == 'develop'
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm ci && npm run build
 ```
 
@@ -243,7 +243,7 @@ steps:
   
   # Upload build artifacts
   - name: Upload build artifacts
-    uses: actions/upload-artifact@v3
+    uses: actions/upload-artifact@v4
     if: always()
     with:
       name: build-${{ github.run_id }}
@@ -260,7 +260,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: npm run build
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: build-output
           path: dist/
@@ -270,7 +270,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: build-output
           path: dist/
@@ -418,9 +418,9 @@ steps:
 
 ```yaml
 steps:
-  - uses: actions/checkout@v3
+  - uses: actions/checkout@v4
   
-  - uses: actions/setup-node@v3
+  - uses: actions/setup-node@v4
     with:
       node-version: '18'
       cache: 'npm'
@@ -464,8 +464,8 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm test
@@ -505,8 +505,8 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
       
       - run: npm ci
       - run: npm run lint
@@ -531,8 +531,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
       
       - run: npm ci
       - run: npm run build

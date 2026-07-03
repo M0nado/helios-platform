@@ -260,7 +260,7 @@ report-status:
 ```yaml
 - name: Setup Build Cache
   if: github.event.inputs.clean_build != 'true'
-  uses: actions/cache@v3
+  uses: actions/cache@v4
   with:
     path: |
       ${{ matrix.module }}/node_modules
@@ -442,7 +442,7 @@ coverage/
 ```yaml
 - name: Upload Coverage Reports
   if: always()
-  uses: actions/upload-artifact@v3
+  uses: actions/upload-artifact@v4
   with:
     name: coverage-${{ matrix.module }}
     path: ${{ matrix.module }}/coverage/
@@ -459,7 +459,7 @@ coverage/
 ```yaml
 - name: Upload Build Artifacts
   if: always()
-  uses: actions/upload-artifact@v3
+  uses: actions/upload-artifact@v4
   with:
     name: build-artifacts-${{ matrix.module }}
     path: |

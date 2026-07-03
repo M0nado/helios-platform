@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   ai-security-review:
     runs-on: ubuntu-latest
@@ -223,6 +227,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Add Review Comments
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     
     steps:
       - uses: actions/checkout@v4
