@@ -1,6 +1,20 @@
 {
   "nodes": [
     {
+      "id": "finish-root-command",
+      "title": "Root one-command finish setup validation",
+      "command": "bash -n finish.sh",
+      "paths": [
+        "finish.sh"
+      ],
+      "tags": [
+        "setup",
+        "apply",
+        "quick"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
       "id": "finish-easy-setup-shell",
       "title": "Finish easy setup shell validation",
       "command": "bash -n scripts/setup/finish-easy-setup.sh",
