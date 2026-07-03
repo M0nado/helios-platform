@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../src/HELIOS.Platform/HELIOS.Platform.csproj" />
+    <ProjectReference Include="../core/HELIOS.Platform/HELIOS.Platform.csproj" />
   </ItemGroup>
 
 </Project>
