@@ -281,3 +281,21 @@ The final architecture now has concrete scaffolding for the next 10 steps:
 8. The final gate includes report-contract validation, language-owned check enforcement, and Edge readiness.
 9. `./tools/helios.ps1 browser edge` renders browser readiness for the GUI/operator flow.
 10. Python remains report/provider glue while C#, F#, and C++ own UI/core, analytics, and hot-path acceleration.
+
+## Detailed four-language optimization matrix
+
+The language split is intentionally more nuanced than "Python glue only" or "C++ everywhere":
+
+- **C#** remains the very small, reliable object frame: UI, CLI, contracts, orchestration, safety, approvals, report validation, and communication between all engines.
+- **C++** is used where C# is not needed for object safety and where speed/memory/CPU/GPU/data/rendering wins are measurable: diff matrices, native graphics helpers, vector math, rendering buffers, hot-path internet/data scanning, and benchmarkable acceleration.
+- **F#** owns mathematical and asynchronous analytics: scoring, ranking, prediction, learning summaries, model selection, branch clustering, confidence, and multi-objective optimization.
+- **Python** is still valuable where its ecosystem wins: AIHub/provider glue, Linux runner scripts, OpenAI/Hermes/XCore adapters, LangChain-style prototypes, geometry/data libraries, report generation, and experiments before promotion to F#/C++/C#.
+- **YAML/JSON/Bicep** are declarative system languages: YAML for GitHub runner state, JSON for registries/reports/contracts, and Bicep for Azure infrastructure.
+
+Generate the full decision matrix with:
+
+```powershell
+python3 scripts/automation/language_optimization_matrix.py
+```
+
+The report is written to `reports/language-ownership/language-optimization-matrix.json` and `.md`, and the final gate now validates that this matrix can be rendered.
