@@ -1,0 +1,69 @@
+name: Build Graph Automation
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/build_graph/**'
+      - 'scripts/security/**'
+      - 'scripts/agents/**'
+      - 'scripts/azure/**'
+      - 'scripts/control/**'
+      - 'scripts/integrations/**'
+      - 'config/build-graph.json'
+      - 'config/hermes-fleet.example.json'
+      - 'config/security-preflight-allowlist.json'
+      - 'tests/scripts/**'
+      - '.github/workflows/build-graph-automation.yml'
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-graph-automation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Static Python and shell checks
+        run: |
+          python3 -m py_compile scripts/build_graph/build_graph.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py scripts/dashboard/generate-gui.py scripts/control/helios-control.py scripts/integrations/readiness_score.py tests/scripts/test_build_graph.py
+          python3 -m json.tool config/build-graph.json >/dev/null
+          python3 -m json.tool config/security-preflight-allowlist.json >/dev/null
+          bash -n scripts/setup/helios-dev.sh
+      - name: Unit tests
+        run: python3 -m unittest tests/scripts/test_build_graph.py
+      - name: Generate safe reports
+        run: |
+          python3 scripts/security/secret_preflight.py
+          python3 scripts/security/apply_gate_preflight.py
+          python3 scripts/agents/hermes_fleet_readiness.py
+          python3 scripts/build_graph/build_graph.py run --profile quick --changed-only --max-workers 4
+      - name: Summarize build graph
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          path=pathlib.Path('reports/build-graph/latest.json')
+          if not path.exists():
+              print('## Build graph\n\nNo build graph report generated.')
+          else:
+              data=json.loads(path.read_text())
+              print('## Build graph')
+              print('\n### Counts')
+              for key,value in data.get('counts',{}).items():
+                  print(f'- {key}: {value}')
+              print('\n### Next fixes')
+              for fix in data.get('nextFixes',[])[:10]:
+                  print(f"- `{fix.get('node')}`: `{fix.get('command')}` ({fix.get('reason')})")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-graph-automation-reports
+          path: reports/
