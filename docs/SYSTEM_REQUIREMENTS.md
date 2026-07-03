@@ -80,7 +80,7 @@
 | **PowerShell** | 7.4.2+ | Latest 7.4.x |
 | **.NET SDK** | 8.0.0+ | Desktop + Runtime |
 | **Docker Desktop** | 24.0+ | Latest stable |
-| **Azure CLI** | 2.53+ | Latest stable |
+| **Azure CLI** | 2.53+ | Latest stable with bundled Bicep support; CI verifies `az --version`, `az bicep version`, and `infra/azure/main.bicep` build on `ubuntu-latest` |
 
 ### Additional Software
 

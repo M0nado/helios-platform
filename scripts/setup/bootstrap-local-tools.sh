@@ -41,10 +41,26 @@ else
   echo "Azure CLI already installed at $AZ_DIR"
 fi
 
+BICEP_BIN="$TOOLS_DIR/bin/bicep"
+mkdir -p "$TOOLS_DIR/bin"
+if [ ! -x "$BICEP_BIN" ]; then
+  echo "Installing Bicep CLI into $BICEP_BIN"
+  case "$(uname -m)" in
+    x86_64) BICEP_ARCH="x64" ;;
+    aarch64|arm64) BICEP_ARCH="arm64" ;;
+    *) echo "Unsupported Bicep architecture: $(uname -m)" >&2; exit 1 ;;
+  esac
+  curl -fsSL "https://github.com/Azure/bicep/releases/latest/download/bicep-linux-${BICEP_ARCH}" -o "$BICEP_BIN"
+  chmod +x "$BICEP_BIN"
+else
+  echo "Bicep CLI already installed at $BICEP_BIN"
+fi
+"$AZ_DIR/bin/az" config set bicep.use_binary_from_path=true >/dev/null
+
 cat <<PATHINFO
 
 Add these tools to your shell:
-export PATH="$DOTNET_DIR:$GH_DIR/bin:$AZ_DIR/bin:\$PATH"
+export PATH="$DOTNET_DIR:$GH_DIR/bin:$AZ_DIR/bin:$TOOLS_DIR/bin:\$PATH"
 
 Authenticate as needed:
 gh auth login

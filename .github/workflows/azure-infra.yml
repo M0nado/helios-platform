@@ -29,20 +29,22 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify Azure CLI and Bicep
+        run: |
+          az --version
+          az bicep version
       - name: Build Bicep
-        run: az bicep build --file infra/azure/main.bicep
+        run: python3 scripts/azure/bicep_report.py build
       - name: Validate deployment
-        run: |
-          az deployment group validate \
-            --resource-group "${{ github.event.inputs.resource_group }}" \
-            --template-file infra/azure/main.bicep \
-            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+        env:
+          HELIOS_AZURE_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
+          HELIOS_AZURE_LOCATION: ${{ github.event.inputs.location }}
+        run: python3 scripts/azure/bicep_report.py validate
       - name: What-if
-        run: |
-          az deployment group what-if \
-            --resource-group "${{ github.event.inputs.resource_group }}" \
-            --template-file infra/azure/main.bicep \
-            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+        env:
+          HELIOS_AZURE_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
+          HELIOS_AZURE_LOCATION: ${{ github.event.inputs.location }}
+        run: python3 scripts/azure/bicep_report.py what-if
       - name: Deploy
         if: ${{ github.event.inputs.deploy == 'true' }}
         run: |

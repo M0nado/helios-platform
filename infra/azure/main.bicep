@@ -2,9 +2,11 @@
 param location string = resourceGroup().location
 
 @description('Environment name, e.g. dev, test, prod.')
+@minLength(1)
 param environmentName string = 'dev'
 
 @description('Prefix used for globally named resources.')
+@minLength(1)
 param namePrefix string = 'helios'
 
 module storage 'modules/storage.bicep' = {

@@ -1,5 +1,7 @@
 param location string
+@minLength(1)
 param namePrefix string
+@minLength(1)
 param environmentName string
 
 var vnetName = take(toLower('${namePrefix}-${environmentName}-hybrid-vnet'), 64)

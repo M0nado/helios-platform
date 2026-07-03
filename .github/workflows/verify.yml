@@ -111,9 +111,21 @@ jobs:
             fi
           done
 
+  azure-bicep-build:
+    name: Azure Bicep Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Azure CLI and Bicep
+        run: |
+          az --version
+          az bicep version
+      - name: Build Azure Bicep template
+        run: python3 scripts/azure/bicep_report.py build
+
   generate-status-report:
     name: Generate Status Report
-    needs: [health-check, metrics-validation]
+    needs: [health-check, metrics-validation, azure-bicep-build]
     runs-on: ubuntu-latest
     if: always()
     steps:

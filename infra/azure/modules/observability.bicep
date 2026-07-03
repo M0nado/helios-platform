@@ -1,5 +1,7 @@
 param location string
+@minLength(1)
 param namePrefix string
+@minLength(1)
 param environmentName string
 
 resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
