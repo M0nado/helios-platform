@@ -387,7 +387,7 @@
     {
       "id": "analytics-tests",
       "title": "F# analytics tests",
-      "command": "dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-restore",
+      "command": "dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
       "paths": [
         "src/analytics/**",
         "tests/analytics/**"
