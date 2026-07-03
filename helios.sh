@@ -14,7 +14,9 @@ case "$cmd" in
   prune-generated) exec python3 scripts/analysis/prune_generated_artifacts.py "$@" ;;
   branches) exec python3 scripts/analysis/branch_intelligence.py "$@" ;;
   build) exec python3 scripts/build_graph/build_graph.py "$@" ;;
-  verify) exec python3 scripts/build_graph/build_graph.py run --changed-only "$@" ;;
+  verify) exec python3 scripts/build_graph/build_graph.py run --changed-only --include-readiness "$@" ;;
+  readiness-full|doctor-full) exec python3 scripts/integrations/full_stack_readiness.py "$@" ;;
+  remote-priority) exec python3 scripts/analysis/branch_intelligence.py --remote helios-control --remote hermes-fleet-production "$@" ;;
   codex) exec python3 scripts/codex/generate-codex-tasks.py "$@" ;;
   recommendations) exec python3 scripts/analysis/merge_prune_recommendations.py "$@" ;;
   profiles) exec python3 scripts/integrations/cross_access_profiles.py "$@" ;;
@@ -95,7 +97,9 @@ Commands:
   prune-generated   Delete generated report/dashboard artifacts from the working tree
   branches          Branch intelligence reports
   build             Build graph report or runner
-  verify            Run changed-only build graph quality gates
+  verify            Run changed-only quality gates plus full-stack readiness
+  readiness-full    Check Python, .NET, CMake, Azure, Bicep, Git, native, analytics, and remote readiness
+  remote-priority   Rank helios-control and hermes-fleet-production remote branches
   codex             Generate Codex task packets
   recommendations   Branch merge/prune recommendations
   profiles          Cross-access profile readiness

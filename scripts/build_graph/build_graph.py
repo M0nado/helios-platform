@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
+import os
+import shlex
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -11,14 +13,21 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from scripts.common.tool_resolver import path_with_repo_tools
 CFG = ROOT / "config/build-graph.json"
 OUT = ROOT / "reports/build-graph/latest.json"
 MD = ROOT / "reports/build-graph/latest.md"
 LEGACY_OUT = ROOT / "reports/build-graph/build-graph.json"
 LEGACY_MD = ROOT / "reports/build-graph/build-graph.md"
+IGNORED_CHANGED_PATTERNS = ["reports/**", "status-site/**", ".build/**", ".tools/**", "**/bin/**", "**/obj/**", "**/__pycache__/**"]
 
 
-def git_changed_files() -> set[str]:
+def is_ignored_generated(path: str) -> bool:
+    return any(fnmatch.fnmatch(path, pattern) for pattern in IGNORED_CHANGED_PATTERNS)
+
+
+def git_changed_files(include_generated: bool = False) -> set[str]:
     files: set[str] = set()
     for cmd in (["git", "diff", "--name-only"], ["git", "diff", "--name-only", "--cached"]):
         proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True)
@@ -27,7 +36,9 @@ def git_changed_files() -> set[str]:
     proc = subprocess.run(["git", "ls-files", "--others", "--exclude-standard"], cwd=ROOT, text=True, capture_output=True)
     if proc.returncode == 0:
         files.update(line.strip() for line in proc.stdout.splitlines() if line.strip())
-    return files
+    if include_generated:
+        return files
+    return {path for path in files if not is_ignored_generated(path)}
 
 
 def load_nodes() -> list[dict[str, Any]]:
@@ -80,8 +91,11 @@ def select_nodes(nodes: list[dict[str, Any]], args: argparse.Namespace) -> list[
             raise SystemExit(f"No matching build graph node(s): {', '.join(sorted(missing))}")
         return expand_dependencies(nodes, selected)
     if args.changed_only:
-        changed = git_changed_files()
-        return expand_dependencies(nodes, [node for node in nodes if matches_changed(node, changed)])
+        changed = git_changed_files(include_generated=args.include_generated)
+        selected = [node for node in nodes if matches_changed(node, changed)]
+        if args.include_readiness:
+            selected.extend(node for node in nodes if node["id"] == "full-stack-readiness" and node not in selected)
+        return expand_dependencies(nodes, selected)
     if args.all or args.command in {"run", "graph"}:
         return expand_dependencies(nodes, nodes)
     return []
@@ -89,7 +103,9 @@ def select_nodes(nodes: list[dict[str, Any]], args: argparse.Namespace) -> list[
 
 def run_node(node: dict[str, Any], timeout: int) -> dict[str, Any]:
     started = datetime.now(timezone.utc)
-    proc = subprocess.run(node["command"], cwd=ROOT, text=True, capture_output=True, shell=True, timeout=timeout)
+    env = os.environ.copy()
+    env["PATH"] = path_with_repo_tools(env.get("PATH"))
+    proc = subprocess.run(node["command"], cwd=ROOT, text=True, capture_output=True, shell=True, timeout=timeout, env=env)
     ended = datetime.now(timezone.utc)
     output = (proc.stdout + proc.stderr).splitlines()
     return {
@@ -104,6 +120,24 @@ def run_node(node: dict[str, Any], timeout: int) -> dict[str, Any]:
     }
 
 
+def next_fixes(results: list[dict[str, Any]]) -> list[dict[str, str]]:
+    fixes: list[dict[str, str]] = []
+    for result in results:
+        if result.get("ok"):
+            continue
+        tail = "\n".join(str(line) for line in result.get("tail", []))
+        command = result.get("command", "")
+        suggestion = "Inspect the command output and rerun this node."
+        if "dotnet" in command or "dotnet" in tail.lower():
+            suggestion = "Run scripts/setup/bootstrap-local-tools.sh or install .NET 8 SDK."
+        elif "az" in command or "bicep" in command or "azure" in tail.lower():
+            suggestion = "Run scripts/setup/bootstrap-local-tools.sh, az login, and configure Azure resource group/secrets."
+        elif "cmake" in command or "cmake" in tail.lower():
+            suggestion = "Install CMake 3.22+ and rerun native-configure."
+        fixes.append({"node": str(result.get("id")), "command": suggestion, "reason": tail[-500:]})
+    return fixes
+
+
 def write(nodes: list[dict[str, Any]], selected: list[dict[str, Any]], results: list[dict[str, Any]], dry_run: bool) -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -114,6 +148,7 @@ def write(nodes: list[dict[str, Any]], selected: list[dict[str, Any]], results: 
         "nodes": nodes,
         "results": results,
         "ok": all(result.get("ok", False) for result in results) if results else True,
+        "nextFixes": next_fixes(results),
     }
     text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     OUT.write_text(text, encoding="utf-8")
@@ -123,6 +158,12 @@ def write(nodes: list[dict[str, Any]], selected: list[dict[str, Any]], results: 
     lines.extend(f"| `{node['id']}` | {node.get('title', node['id'])} | `{node['command']}` |" for node in nodes)
     if selected:
         lines.extend(["", "## Selected", "", ", ".join(f"`{node['id']}`" for node in selected)])
+    fixes = payload["nextFixes"]
+    if fixes:
+        lines.extend(["", "## Fix first", "", "| Node | Suggested command | Reason |", "| --- | --- | --- |"])
+        for fix in fixes:
+            reason = str(fix["reason"]).replace("|", "\\|").replace("\n", "<br>")
+            lines.append(f"| `{fix['node']}` | `{fix['command']}` | {reason} |")
     if results:
         lines.extend(["", "## Results", "", "| Node | Exit | Tail |", "| --- | --- | --- |"])
         for result in results:
@@ -138,6 +179,8 @@ def main() -> int:
     parser.add_argument("--node", action="append", help="Run one node by id; can be provided multiple times.")
     parser.add_argument("--all", action="store_true", help="Run all nodes.")
     parser.add_argument("--changed-only", action="store_true", help="Run nodes whose path patterns match current git changes.")
+    parser.add_argument("--include-generated", action="store_true", help="Include generated reports/build outputs in changed-only matching.")
+    parser.add_argument("--include-readiness", action="store_true", help="Always include full-stack-readiness in the selected node set.")
     parser.add_argument("--dry-run", action="store_true", help="Write selected nodes without executing commands.")
     parser.add_argument("--timeout", type=int, default=180, help="Timeout per node in seconds.")
     args = parser.parse_args()
@@ -151,6 +194,12 @@ def main() -> int:
     write(nodes, selected, results, args.dry_run)
     print(f"Wrote {OUT.relative_to(ROOT)}")
     print(f"Wrote {MD.relative_to(ROOT)}")
+    if results:
+        fixes = next_fixes(results)
+        if fixes:
+            print("Fix first:")
+            for fix in fixes:
+                print(f"- {fix['node']}: {fix['command']}")
     if args.command == "list":
         for node in nodes:
             print(f"{node['id']}: {node.get('title', node['id'])}")
