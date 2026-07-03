@@ -5,6 +5,7 @@ cd "$ROOT_DIR"
 
 SERVE_DASHBOARD="false"
 SERVE_STALE="false"
+APPLY_SAFE="false"
 PROFILE="quick"
 BUILD_GRAPH_ARGS=()
 
@@ -13,6 +14,7 @@ while [[ $# -gt 0 ]]; do
     --serve|serve) SERVE_DASHBOARD="true"; shift ;;
     --serve-stale) SERVE_DASHBOARD="true"; SERVE_STALE="true"; shift ;;
     --profile) PROFILE="${2:-quick}"; shift 2 ;;
+    --apply-safe) APPLY_SAFE="true"; shift ;;
     --full) PROFILE="full"; shift ;;
     --changed-only) BUILD_GRAPH_ARGS+=("--changed-only"); shift ;;
     --tag) BUILD_GRAPH_ARGS+=("--tag" "${2:?missing tag}"); shift 2 ;;
@@ -53,6 +55,10 @@ mkdir -p reports/local-setup
   echo
   echo '```'
 } | tee reports/local-setup/helios-dev-summary.md
+
+if [[ "$APPLY_SAFE" == "true" ]]; then
+  python3 scripts/apply/finish_readiness_apply.py --apply
+fi
 
 if python3 scripts/build_graph/build_graph.py run --profile "$PROFILE" "${BUILD_GRAPH_ARGS[@]}"; then
   BUILD_GRAPH_OK="true"
