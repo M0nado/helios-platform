@@ -39,12 +39,12 @@ jobs:
         env:
           HELIOS_AZURE_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
           HELIOS_AZURE_LOCATION: ${{ github.event.inputs.location }}
-        run: python3 scripts/azure/bicep_report.py validate
+        run: python3 scripts/azure/bicep_report.py validate --strict-online
       - name: What-if
         env:
           HELIOS_AZURE_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
           HELIOS_AZURE_LOCATION: ${{ github.event.inputs.location }}
-        run: python3 scripts/azure/bicep_report.py what-if
+        run: python3 scripts/azure/bicep_report.py what-if --strict-online
       - name: Deploy
         if: ${{ github.event.inputs.deploy == 'true' }}
         run: |
