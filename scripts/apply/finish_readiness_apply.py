@@ -13,6 +13,7 @@ SAFE_STEPS=[
     {'id':'hermes-fleet-readiness','command':'python3 scripts/agents/hermes_fleet_readiness.py','mutates':'reports only','apply':True},
     {'id':'azure-what-if-plan','command':'python3 scripts/azure/azure_what_if.py','mutates':'reports only; Azure what-if when authenticated','apply':True},
     {'id':'finish-readiness','command':'python3 scripts/integrations/readiness_score.py','mutates':'reports only','apply':True},
+    {'id':'super-branch-unification','command':'python3 scripts/analysis/super_branch_unification.py','mutates':'reports only; no branch merge/delete/push','apply':True},
     {'id':'full-integration-matrix','command':'python3 scripts/integrations/full_integration_matrix.py','mutates':'reports only','apply':True},
     {'id':'dashboard','command':'python3 scripts/dashboard/generate-gui.py','mutates':'status-site dashboard only','apply':True},
     {'id':'build-graph-quick','command':'python3 scripts/build_graph/build_graph.py run --profile quick --changed-only --max-workers 4','mutates':'reports only','apply':True},
