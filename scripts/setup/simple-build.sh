@@ -62,6 +62,7 @@ case "$mode" in
     python3 scripts/analysis/aihub_learning_feedback_loop.py
     python3 scripts/analysis/aihub_self_learning_notes.py
     python3 scripts/integrations/aihub_learning_knowledge_store.py
+    python3 scripts/integrations/aihub_command_ide.py
     python3 scripts/dashboard/generate-gui.py
     ;;
   finish)
@@ -77,10 +78,12 @@ case "$mode" in
     python3 scripts/analysis/aihub_learning_feedback_loop.py
     python3 scripts/analysis/aihub_self_learning_notes.py
     python3 scripts/integrations/aihub_learning_knowledge_store.py
+    python3 scripts/integrations/aihub_command_ide.py
     python3 scripts/dashboard/generate-gui.py
     ;;
   save-run)
     python3 scripts/integrations/aihub_learning_knowledge_store.py
+    python3 scripts/integrations/aihub_command_ide.py
     python3 scripts/dashboard/generate-gui.py
     scripts/setup/save-run-bundle.sh
     ;;
