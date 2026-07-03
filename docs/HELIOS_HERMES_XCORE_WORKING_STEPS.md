@@ -266,3 +266,18 @@ python3 scripts/analytics/fsharp_category_report.py
 ```
 
 Use `./tools/helios.ps1 github language-score` and `./tools/helios.ps1 github merge-decision` to generate language-aware candidate rankings before branch apply. The final gate now includes language ownership, ML model registry, party formations, F# category reporting, language-aware merge scoring, and the mixed-language merge decision pipeline before merge readiness is accepted.
+
+## Practical mixed-language implementation path
+
+The final architecture now has concrete scaffolding for the next 10 steps:
+
+1. `src/tools/HELIOS.Cli` is the C# command shell that can call language-aware scoring, merge decisions, report validation, and final-gate plans.
+2. `src/core/HELIOS.Platform.Orchestration/ReportContractValidator.cs` defines the C# report-contract validation surface.
+3. `src/analytics/HELIOS.Analytics.FSharp/Learning/LearningSummary.fs` starts the F# learning summary layer for event-driven optimization.
+4. `scripts/native/benchmark_native.py` now writes a native merge-analysis benchmark baseline and validates the C++ native-performance project.
+5. `scripts/browser/edge_mode_readiness.py` records Microsoft Edge / IE Mode readiness without automating retired Internet Explorer.
+6. `scripts/automation/language_required_checks.py` fails when language-owned required checks are missing from the final gate.
+7. `scripts/automation/validate_report_contracts.py` validates key JSON reports against the C# contract expectations.
+8. The final gate includes report-contract validation, language-owned check enforcement, and Edge readiness.
+9. `./tools/helios.ps1 browser edge` renders browser readiness for the GUI/operator flow.
+10. Python remains report/provider glue while C#, F#, and C++ own UI/core, analytics, and hot-path acceleration.

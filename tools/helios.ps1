@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'security', 'dashboard', 'connect', 'openai', 'models', 'hermes', 'm365', 'audit', 'fleet', 'learning', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'security', 'browser', 'dashboard', 'connect', 'openai', 'models', 'hermes', 'm365', 'audit', 'fleet', 'learning', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -156,6 +156,7 @@ Commands in integration order:
   learning core                   Render core AI learning recommendations.
   connect plan|verify|apply       Run one-command local/cloud autoconnect setup.
   security vault                  Verify vault/secrets readiness without printing secrets.
+  browser edge                    Check Microsoft Edge / IE Mode readiness safely.
   fix plan|branch|apply|verify|pr|automerge|csharp|center
                                   Run gated autofix lifecycle or parse code blockers.
   policy check                       Run safety policy checks before apply/deploy/merge.
@@ -527,6 +528,16 @@ function Invoke-PolicyCommand {
     New-HeliosReport -Name 'policy-check' -Status 'completed' -Checks @([ordered]@{ name = 'policy:check'; status = 'ok'; message = 'policy gate completed' }) -Commands @("python3 $($Args -join ' ')")
 }
 
+
+function Invoke-BrowserCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "browser $SubAction"
+    if ($SubAction -ne 'edge' -and $SubAction -ne 'default') { throw "Unknown browser action '$SubAction'. Use edge." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/browser/edge_mode_readiness.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'browser-edge' -Status 'completed' -Checks @([ordered]@{ name = 'browser:edge'; status = 'ok'; message = 'Edge IE Mode readiness generated' }) -Commands @("python3 $ScriptPath")
+}
+
 function Invoke-DashboardCommand {
     param([string]$SubAction)
     Write-HeliosHeader "dashboard $SubAction"
@@ -881,6 +892,7 @@ switch ($Command) {
     'fix' { Invoke-FixCommand $Action }
     'policy' { Invoke-PolicyCommand $Action }
     'security' { Invoke-SecurityCommand $Action }
+    'browser' { Invoke-BrowserCommand $Action }
     'dashboard' { Invoke-DashboardCommand $Action }
     'connect' { Invoke-ConnectCommand $Action }
     'openai' { Invoke-OpenAiCommand $Action }

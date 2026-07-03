@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../core/HELIOS.Platform.Orchestration/HELIOS.Platform.Orchestration.csproj" />
+    <ProjectReference Include="../../analytics/HELIOS.Analytics.FSharp/HELIOS.Analytics.FSharp.fsproj" />
+  </ItemGroup>
+</Project>
