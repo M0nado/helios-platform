@@ -223,6 +223,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Add Review Comments
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     
     steps:
       - uses: actions/checkout@v4
