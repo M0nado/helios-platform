@@ -145,9 +145,9 @@ Commands in integration order:
   github conflict-forecast           Forecast merge conflict risk before branch apply.
   github repo-verify|repo-setup|connect-plan|connect-verify|connect-apply
                                   Verify/apply GitHub repository automation setup and connection.
-  dashboard render                Render local/hybrid HTML operator dashboard.
+  dashboard render|serve           Render dashboard or run safe command bridge list.
   openai run                      Generate OpenAI Responses API dry-run report.
-  models list                     Render the HELIOS model store.
+  models list|health|optimize       Render model store, provider health, or cost/speed optimizer.
   hermes models                   Verify Hermes/XCore model packs.
   m365 copilot                    Verify Copilot/Microsoft 365 readiness.
   audit latest                    Record/read automation audit events.
@@ -155,7 +155,8 @@ Commands in integration order:
   learning core                   Render core AI learning recommendations.
   connect plan|verify|apply       Run one-command local/cloud autoconnect setup.
   security vault                  Verify vault/secrets readiness without printing secrets.
-  fix plan|apply|csharp|center              Plan/apply autofix tasks or parse C# build blockers.
+  fix plan|branch|apply|verify|pr|automerge|csharp|center
+                                  Run gated autofix lifecycle or parse code blockers.
   policy check                       Run safety policy checks before apply/deploy/merge.
   upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
   finish plan|verify|apply           Run the full setup finisher and final reports.
@@ -493,8 +494,8 @@ function Invoke-FixCommand {
         New-HeliosReport -Name 'fix-csharp' -Status 'completed' -Checks @([ordered]@{ name = 'fix:csharp'; status = 'ok'; message = 'C# compile classifier completed' }) -Commands @("python3 $ScriptPath")
         return
     }
-    if ($Mode -notin @('plan', 'apply')) {
-        throw "Unknown fix action '$SubAction'. Use plan, apply, csharp, or center."
+    if ($Mode -notin @('plan', 'branch', 'apply', 'verify', 'pr', 'automerge')) {
+        throw "Unknown fix action '$SubAction'. Use plan, branch, apply, verify, pr, automerge, csharp, or center."
     }
     $ScriptPath = Join-Path $RepoRoot 'scripts/automation/autofix_loop.py'
     Invoke-ExternalCommand python3 @($ScriptPath, $Mode)
@@ -516,7 +517,13 @@ function Invoke-PolicyCommand {
 function Invoke-DashboardCommand {
     param([string]$SubAction)
     Write-HeliosHeader "dashboard $SubAction"
-    if ($SubAction -ne 'render' -and $SubAction -ne 'default') { throw "Unknown dashboard action '$SubAction'. Use render." }
+    if ($SubAction -eq 'serve') {
+        $ScriptPath = Join-Path $RepoRoot 'scripts/automation/gui_runner_bridge.py'
+        Invoke-ExternalCommand python3 @($ScriptPath, 'list')
+        New-HeliosReport -Name 'dashboard-serve' -Status 'completed' -Checks @([ordered]@{ name = 'dashboard:serve'; status = 'ok'; message = 'GUI runner bridge command list generated' }) -Commands @("python3 $ScriptPath list")
+        return
+    }
+    if ($SubAction -ne 'render' -and $SubAction -ne 'default') { throw "Unknown dashboard action '$SubAction'. Use render or serve." }
     $ScriptPath = Join-Path $RepoRoot 'scripts/automation/render_operator_dashboard.py'
     Invoke-ExternalCommand python3 @($ScriptPath)
     New-HeliosReport -Name 'dashboard-render' -Status 'completed' -Checks @([ordered]@{ name = 'dashboard:render'; status = 'ok'; message = 'operator dashboard rendered' }) -Commands @("python3 $ScriptPath")
@@ -553,10 +560,15 @@ function Invoke-OpenAiCommand {
 function Invoke-ModelsCommand {
     param([string]$SubAction)
     Write-HeliosHeader "models $SubAction"
-    if ($SubAction -ne 'list' -and $SubAction -ne 'default') { throw "Unknown models action '$SubAction'. Use list." }
-    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/model_store_report.py'
+    $Mode = if ($SubAction -eq 'default') { 'list' } else { $SubAction }
+    switch ($Mode) {
+        'list' { $ScriptPath = Join-Path $RepoRoot 'scripts/automation/model_store_report.py' }
+        'health' { $ScriptPath = Join-Path $RepoRoot 'scripts/automation/provider_health.py' }
+        'optimize' { $ScriptPath = Join-Path $RepoRoot 'scripts/automation/model_cost_speed_optimizer.py' }
+        default { throw "Unknown models action '$SubAction'. Use list, health, or optimize." }
+    }
     Invoke-ExternalCommand python3 @($ScriptPath)
-    New-HeliosReport -Name 'models-list' -Status 'completed' -Checks @([ordered]@{ name = 'models:list'; status = 'ok'; message = 'model store generated' }) -Commands @("python3 $ScriptPath")
+    New-HeliosReport -Name "models-$Mode" -Status 'completed' -Checks @([ordered]@{ name = "models:$Mode"; status = 'ok'; message = 'model report generated' }) -Commands @("python3 $ScriptPath")
 }
 
 function Invoke-HermesCommand {
