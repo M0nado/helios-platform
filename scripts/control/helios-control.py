@@ -108,11 +108,33 @@ def local_status() -> dict[str, Any]:
     }
 
 
+
+def build_graph_status() -> dict[str, Any]:
+    path = ROOT / "reports" / "build-graph" / "latest.json"
+    if not path.exists():
+        return {"available": False, "ok": False, "detail": "missing build graph report", "safeCommands": ["python3 scripts/build_graph/build_graph.py run --profile quick"]}
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        return {"available": True, "ok": False, "detail": f"invalid JSON: {exc}"}
+    counts = data.get("counts", {})
+    failed = [r.get("id") for r in data.get("results", []) if r.get("status") == "failed"]
+    return {
+        "available": True,
+        "ok": not failed,
+        "generatedUtc": data.get("generatedUtc"),
+        "counts": counts,
+        "failedNodes": failed,
+        "nextFixes": data.get("nextFixes", [])[:5],
+        "metadata": data.get("metadata", {}),
+    }
+
 def collect(scope: str) -> dict[str, Any]:
     report: dict[str, Any] = {
         "generatedUtc": datetime.now(timezone.utc).isoformat(),
         "scope": scope,
         "local": local_status(),
+        "buildGraph": build_graph_status(),
     }
     if scope in {"all", "github"}:
         report["github"] = github_status()
@@ -137,6 +159,16 @@ def write_report(report: dict[str, Any]) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     SUMMARY_JSON.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     lines = ["# HELIOS Control Plane Summary", "", f"Generated: `{report['generatedUtc']}`", "", "## Local quick start", "", "```bash", "scripts/setup/helios-dev.sh --serve", "```", ""]
+    bg=report.get("buildGraph", {})
+    lines.extend(["## Build Graph", ""])
+    if bg.get("available") is False:
+        lines.append("- ⚠️ Missing build graph report; run `python3 scripts/build_graph/build_graph.py run --profile quick`.")
+    else:
+        lines.append(f"- {'✅' if bg.get('ok') else '⚠️'} Generated: `{bg.get('generatedUtc')}`")
+        lines.append(f"- Counts: `{bg.get('counts')}`")
+        for fix in bg.get("nextFixes", []):
+            lines.append(f"- Fix `{fix.get('node')}`: `{fix.get('command')}` ({fix.get('reason')})")
+    lines.append("")
     for section in ["github", "azure", "ai"]:
         if section not in report:
             continue

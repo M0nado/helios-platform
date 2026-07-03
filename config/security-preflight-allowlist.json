@@ -1,0 +1,20 @@
+{
+  "secretPreflight": {
+    "pathPrefixes": [
+      "docs/",
+      "tests/",
+      "ai-integration/",
+      "cloud-integration/",
+      "PHASE_",
+      "scripts/ai-services/"
+    ],
+    "notes": "Known docs, examples, generated phase guides, and tests can contain placeholder-looking key names. Production strict mode can reduce this allowlist over time."
+  },
+  "applyGatePreflight": {
+    "pathPrefixes": [
+      "docs/",
+      "tests/"
+    ],
+    "notes": "Documentation examples are reported only when included by a future strict docs scan."
+  }
+}

@@ -75,9 +75,17 @@ def changed_files(base):
             return [line.strip() for line in p.stdout.splitlines() if line.strip()]
     return []
 
-def path_matches(node, paths):
+def match_details(node, paths):
     globs=node.get('paths') or ['**/*']
-    return any(fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch('/'+path, pattern) for path in paths for pattern in globs)
+    matches=[]
+    for path in paths:
+        for pattern in globs:
+            if fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch('/'+path, pattern):
+                matches.append({'path':path,'pattern':pattern})
+    return matches
+
+def path_matches(node, paths):
+    return bool(match_details(node, paths))
 
 
 def expand_dependencies(selected, all_nodes):
@@ -102,13 +110,24 @@ def select_nodes(nodes, args):
     if args.tag:
         requested=set(args.tag)
         selected=[n for n in selected if node_tags(n)&requested or (args.include_critical and n.get('critical'))]
-    changed=[]
+    changed=[]; selection_reasons={}
     if args.changed_only:
         changed=changed_files(args.base)
-        selected_ids={n['id'] for n in selected if path_matches(n, changed) or (args.include_critical and n.get('critical'))}
+        selected_ids=set()
+        for n in selected:
+            matches=match_details(n, changed)
+            if matches:
+                selected_ids.add(n['id']); selection_reasons[n['id']]={'reason':'changed-path','matches':matches[:10]}
+            elif args.include_critical and n.get('critical'):
+                selected_ids.add(n['id']); selection_reasons[n['id']]={'reason':'critical','matches':[]}
+            else:
+                selection_reasons[n['id']]={'reason':'skipped/no-change','matches':[]}
         selected=[n for n in selected if n['id'] in selected_ids]
+    before_deps={n['id'] for n in selected}
     selected=expand_dependencies(selected,nodes)
-    return selected, changed
+    for n in selected:
+        selection_reasons.setdefault(n['id'], {'reason':'dependency' if n['id'] not in before_deps else 'selected','matches':[]})
+    return selected, changed, selection_reasons
 
 def skip_result(node, status, reason):
     return {'id':node['id'],'command':node.get('command',''),'exitCode':0,'tail':[reason],'status':status,'durationSeconds':0.0,'tags':node.get('tags',[])}
@@ -161,6 +180,12 @@ def write(nodes,results=None,metadata=None):
     lines += [f"- **{status}**: {count}" for status,count in counts.items() if count]
     if metadata.get('changedFiles') is not None:
         lines += ['', '## Changed files', ''] + [f"- `{p}`" for p in metadata.get('changedFiles',[])[:100]]
+        reasons=metadata.get('selectionReasons',{})
+        if reasons:
+            lines += ['', '## Selection reasons', '', '| Node | Reason | Match |', '| --- | --- | --- |']
+            for node_id, detail in sorted(reasons.items()):
+                match=', '.join(f"{m.get('path')} ⇢ {m.get('pattern')}" for m in detail.get('matches',[])[:3])
+                lines.append(f"| `{node_id}` | {detail.get('reason')} | `{match}` |")
     lines += ['', '## Nodes','','| Node | Title | Tags | Command |','| --- | --- | --- | --- |']+[f"| `{n['id']}` | {n['title']} | `{','.join(n.get('tags',[]))}` | `{n['command']}` |" for n in nodes]
     if ordered:
         lines+=['','## Results','','| Status | Node | Exit | Seconds | Tail |','| --- | --- | --- | --- | --- |']
@@ -185,10 +210,10 @@ def main():
     ap.add_argument('--node'); ap.add_argument('--all',action='store_true'); ap.add_argument('--profile',choices=sorted(PROFILES)); ap.add_argument('--tag',action='append')
     ap.add_argument('--parallel',action='store_true',default=True); ap.add_argument('--max-workers',type=int,default=int(os.environ.get('HELIOS_BUILD_GRAPH_WORKERS','4')))
     ap.add_argument('--changed-only',action='store_true'); ap.add_argument('--base',default='origin/main'); ap.add_argument('--include-critical',action='store_true',default=True)
-    args=ap.parse_args(); nodes=load(); selected, changed=select_nodes(nodes,args); results=[]
+    args=ap.parse_args(); nodes=load(); selected, changed, selection_reasons=select_nodes(nodes,args); results=[]
     if args.command=='run':
         if not selected: raise SystemExit('No matching node; use --node <id>, --all, --profile, or --tag')
         results=run_nodes(selected,args.max_workers)
-    metadata={'selectedNodes':[n['id'] for n in selected], 'changedFiles':changed if args.changed_only else None, 'profile':args.profile, 'tags':args.tag or []}
+    metadata={'selectedNodes':[n['id'] for n in selected], 'changedFiles':changed if args.changed_only else None, 'selectionReasons':selection_reasons, 'profile':args.profile, 'tags':args.tag or []}
     ordered, fixes=write(selected if args.command=='run' else nodes,results,metadata); print(f'Wrote {OUT.relative_to(ROOT)}'); print(f'Wrote {MD.relative_to(ROOT)}'); print_summary(ordered, fixes)
 if __name__=='__main__': main()
