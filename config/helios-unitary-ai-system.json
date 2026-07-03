@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "principle": "Codex, ChatGPT, Microsoft Copilot, Microsoft 365 Copilot, Copilot Pro, Azure AI Foundry, Azure CLI, Hermes, XCore, local models, and HELIOS agents share one C# safety/orchestration core, one policy/audit layer, one learning event store, and language-specialized engines for performance, analytics, provider glue, and UI reliability.",
+  "coreDna": {
+    "identity": "one agent/model/task ontology across local and cloud providers",
+    "safety": "policy gate, audit trail, secret-name-only readiness, and disabled mutating actions until explicit apply gates pass",
+    "learning": "all providers and agents emit comparable success, failure, cost, latency, quality, and risk events",
+    "optimization": "route each task to the cheapest fast-enough safe-enough model/agent/language combination, then promote repeated hot paths into C++ or F# and stable orchestration into C#"
+  },
+  "providerFamilies": [
+    {
+      "id": "codex",
+      "role": "codebase editing, branch tasks, local agent handoffs, test/fix loops",
+      "connectsThrough": ["csharp-orchestration-core", "python-provider-glue", "git-reports"],
+      "signals": ["patch success", "test pass rate", "review comments", "changed paths"]
+    },
+    {
+      "id": "chatgpt-openai",
+      "role": "planning, report summarization, tool-using agent calls, dashboard explanations, handoff packets",
+      "connectsThrough": ["OpenAI Responses API", "MCP/App surface", "model store"],
+      "signals": ["summary quality", "tool-call success", "latency", "token/cost tier"]
+    },
+    {
+      "id": "github-copilot",
+      "role": "developer IDE assistance and PR/code suggestions",
+      "connectsThrough": ["GitHub status", "repo policies", "handoff packets"],
+      "signals": ["suggestion acceptance", "compile/test result", "PR feedback"]
+    },
+    {
+      "id": "microsoft-copilot-365-pro",
+      "role": "Teams/SharePoint/OneDrive/M365 context surfaces, operator summaries, enterprise knowledge connectors",
+      "connectsThrough": ["Graph connector readiness", "tenant/app registration", "audit scope policy"],
+      "signals": ["connector readiness", "allowed data scopes", "audit completeness"]
+    },
+    {
+      "id": "azure-ai-foundry",
+      "role": "managed model deployments, evaluation, prompt/model operations, cloud-hosted AI workflows",
+      "connectsThrough": ["Azure CLI", "Azure OpenAI", "Key Vault", "Bicep readiness"],
+      "signals": ["deployment readiness", "evaluation result", "what-if risk", "secret presence"]
+    },
+    {
+      "id": "hermes-xcore-local-cloud",
+      "role": "specialized local/cloud models, offline fallback, cost-controlled batch work, domain agents",
+      "connectsThrough": ["Hermes/XCore model packs", "local endpoints", "provider health"],
+      "signals": ["endpoint health", "fallback success", "local latency", "quality tier"]
+    }
+  ],
+  "unitaryLearningSignals": [
+    "agentId", "providerFamily", "modelId", "languageOwner", "taskType", "riskTier", "costTier", "latencyMs", "tokensIn", "tokensOut", "compileResult", "testResult", "securityResult", "mergeOutcome", "humanApproval", "rollbackNeeded", "qualityScore"
+  ],
+  "routingHeuristics": [
+    "Use C# to coordinate provider calls, approvals, typed contracts, UI state, and report validation.",
+    "Use F# to rank agents/models/branches and learn from unitary provider telemetry.",
+    "Use C++ when telemetry shows repeated hot paths in diffing, indexing, rendering, vector math, or scanning.",
+    "Use Python for provider SDKs, AIHub, Linux runner glue, OpenAI/Hermes/XCore adapters, and mature AI/ML libraries.",
+    "Use Azure CLI/Bicep for cloud state changes only after what-if, policy, vault, and audit gates pass.",
+    "Treat Codex, ChatGPT, Copilot, M365 Copilot, Copilot Pro, Azure Foundry, Hermes, XCore, and local models as interchangeable providers behind the same learning/audit schema, not as separate silos."
+  ],
+  "deepSetupOrder": [
+    "tool and shell readiness",
+    "GitHub/Codex readiness",
+    "OpenAI/ChatGPT readiness",
+    "Microsoft Copilot/M365/Copilot Pro readiness",
+    "Azure CLI/Foundry/Bicep readiness",
+    "Hermes/XCore/local model readiness",
+    "language ownership and optimization matrix",
+    "provider health and cost/speed optimizer",
+    "agent XP, party, fleet deployment, and learning summary",
+    "policy/audit/final gate/dashboard rendering"
+  ]
+}

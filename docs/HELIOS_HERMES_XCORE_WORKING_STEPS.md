@@ -299,3 +299,16 @@ python3 scripts/automation/language_optimization_matrix.py
 ```
 
 The report is written to `reports/language-ownership/language-optimization-matrix.json` and `.md`, and the final gate now validates that this matrix can be rendered.
+
+
+## Unitary AI/provider learning system
+
+HELIOS treats Codex, ChatGPT/OpenAI, GitHub Copilot, Microsoft Copilot, Microsoft 365 Copilot, Copilot Pro, Azure AI Foundry, Azure CLI, Hermes, XCore, and local models as provider families behind one learning and safety architecture instead of disconnected tools. The C# core owns typed contracts, UI/CLI coordination, approvals, report validation, and safe orchestration; F# ranks providers, agents, branches, and model/cost/speed tradeoffs; C++ accelerates repeated hot paths such as diff matrices, indexing, vector math, scanning, and rendering helpers; Python keeps provider SDKs, AIHub, Linux runner glue, mature AI/ML libraries, and report generation moving quickly.
+
+Generate the provider architecture and readiness report with:
+
+```powershell
+python3 scripts/automation/unitary_ai_system.py
+```
+
+The report writes `reports/ai-system/unitary-ai-system.json` and `.md`, and the deep setup plan runs it first so every provider, agent, model, safety gate, and language engine shares the same optimization DNA.
