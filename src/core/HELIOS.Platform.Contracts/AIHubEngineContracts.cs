@@ -228,3 +228,78 @@ public static class AIHubSelfLearningBackbone
     private static double Value(IReadOnlyDictionary<string, double> signals, string key) =>
         signals.TryGetValue(key, out var value) ? Math.Clamp(value, 0.0, 1.0) : 0.0;
 }
+/// <summary>
+/// C# knowledge-baked memory item used by code fixing, dashboard recall, SQL/vector retrieval, and safe apply planning.
+/// </summary>
+public sealed record AIHubKnowledgeFact(
+    string Id,
+    string KnowledgeType,
+    string Subject,
+    string Summary,
+    double Confidence,
+    double Freshness,
+    string SecurityLabel,
+    IReadOnlyList<string> EvidenceRefs,
+    IReadOnlyList<string> VectorRefs,
+    IReadOnlyList<string> SqlRefs);
+
+/// <summary>
+/// A report-only code-fix candidate that links a concrete file to remembered knowledge and validation commands.
+/// </summary>
+public sealed record AIHubCodeFixCandidate(
+    string Path,
+    string Issue,
+    AIHubEngineKind OwnerEngine,
+    double Priority,
+    IReadOnlyList<AIHubKnowledgeFact> Knowledge,
+    IReadOnlyList<string> SuggestedCommands,
+    IReadOnlyList<string> Guardrails);
+
+/// <summary>
+/// C# optimizer that fuses SQL/vector knowledge with engine routes so code fixing is ranked before any live apply.
+/// </summary>
+public static class AIHubKnowledgeBakedCodeFixPlanner
+{
+    public static IReadOnlyList<AIHubCodeFixCandidate> RankFixes(
+        IEnumerable<string> changedPaths,
+        IEnumerable<AIHubKnowledgeFact> facts,
+        IReadOnlyDictionary<string, double> signals)
+    {
+        var factList = facts.ToArray();
+        var routes = new AIHubDefaultOrchestrationPlanner().RankRoutes("knowledge-baked-code-fix", signals);
+        return changedPaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => BuildCandidate(path, factList, routes, signals))
+            .OrderByDescending(candidate => candidate.Priority)
+            .ToArray();
+    }
+
+    private static AIHubCodeFixCandidate BuildCandidate(
+        string path,
+        IReadOnlyList<AIHubKnowledgeFact> facts,
+        IReadOnlyList<AIHubEngineRoute> routes,
+        IReadOnlyDictionary<string, double> signals)
+    {
+        var matched = facts
+            .Where(fact => path.Contains(fact.Subject, StringComparison.OrdinalIgnoreCase) || fact.EvidenceRefs.Any(path.Contains))
+            .DefaultIfEmpty(new AIHubKnowledgeFact("fallback", "repo", path, "No exact memory match; use current reports and tests.", 0.45, 0.50, "internal", [], [], []))
+            .OrderByDescending(fact => (fact.Confidence * 0.65) + (fact.Freshness * 0.35))
+            .Take(5)
+            .ToArray();
+
+        var route = routes.OrderByDescending(r => r.Score).First();
+        var knowledgeScore = matched.Average(fact => (fact.Confidence * 0.70) + (fact.Freshness * 0.30));
+        var testSignal = signals.TryGetValue("tests", out var tests) ? Math.Clamp(tests, 0.0, 1.0) : 0.5;
+        var safetySignal = signals.TryGetValue("safety", out var safety) ? Math.Clamp(safety, 0.0, 1.0) : 0.5;
+        var priority = Math.Clamp((knowledgeScore * 0.42) + (route.Score * 0.28) + (testSignal * 0.18) + (safetySignal * 0.12), 0.0, 1.0);
+
+        return new AIHubCodeFixCandidate(
+            path,
+            "knowledge-backed repair candidate",
+            route.Engine,
+            priority,
+            matched,
+            ["python3 scripts/integrations/aihub_learning_knowledge_store.py", "python3 scripts/dashboard/generate-gui.py", .. route.RequiredChecks],
+            ["report-only by default", "cite knowledge/evidence before patching", "run required checks before apply", "keep C# orchestration as the safety frame"]);
+    }
+}

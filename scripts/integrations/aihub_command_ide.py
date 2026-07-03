@@ -18,6 +18,7 @@ ACTIONS=[
     {'label':'Codex + Copilot + Azure readiness','command':'codex --help && gh auth status && gh extension list | rg copilot && az account show','lanes':['codex','github-copilot','azure']},
     {'label':'Plan with Codex, suggest with Copilot, validate Azure','command':'codex --model gpt-5.5 && gh copilot suggest "make a safe HELIOS build fix" && python3 scripts/azure/azure_what_if.py','lanes':['codex','github-copilot','azure']},
     {'label':'API bridge inventory','command':'python3 scripts/integrations/aihub_connectivity_guide.py && python3 scripts/integrations/aihub_super_shell.py','lanes':['apis']},
+    {'label':'Knowledge-baked code fix refresh','command':'python3 scripts/integrations/aihub_learning_knowledge_store.py && python3 scripts/analysis/complex_code_grading.py && python3 scripts/build_graph/build_graph.py run --profile quick --changed-only --max-workers 2','lanes':['codex','apis']},
     {'label':'Full safe refresh','command':'python3 scripts/agents/agent_fleet_autopilot.py --agents 128 --mode hybrid-cloud && python3 scripts/integrations/aihub_command_ide.py && python3 scripts/dashboard/generate-gui.py','lanes':['codex','github-copilot','azure','apis']},
 ]
 
@@ -28,7 +29,7 @@ def main():
     parser=argparse.ArgumentParser(description='Single command IDE mesh for Codex + GitHub Copilot + Azure + APIs.')
     parser.add_argument('--print-command', action='store_true', help='Print the recommended all-in-one safe command.')
     args=parser.parse_args()
-    payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'principle':'One command IDE means one GUI/report surface that groups Codex, GitHub Copilot, Azure, and API bridges into copyable safe commands; it does not store secrets or run live mutations by default.','tools':tool_state(),'lanes':LANES,'actions':ACTIONS,'recommendedCommand':' && '.join([ACTIONS[0]['command'], 'python3 scripts/dashboard/generate-gui.py']),'secretPolicy':['Do not paste API keys into the static GUI.','Use Key Vault, environment variables, or provider CLIs.','Run live Azure/GitHub operations only after auth and live flags.']}
+    payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'principle':'One command IDE means one GUI/report surface that groups Codex, GitHub Copilot, Azure, APIs, and knowledge-baked code fixing into copyable safe commands; it does not store secrets or run live mutations by default.','tools':tool_state(),'lanes':LANES,'actions':ACTIONS,'recommendedCommand':' && '.join([ACTIONS[0]['command'], 'python3 scripts/dashboard/generate-gui.py']),'secretPolicy':['Do not paste API keys into the static GUI.','Use Key Vault, environment variables, or provider CLIs.','Run live Azure/GitHub operations only after auth and live flags.']}
     OUT.parent.mkdir(parents=True,exist_ok=True)
     OUT.write_text(json.dumps(payload,indent=2)+'\n')
     md=['# AIHub Single Command IDE','',f"Generated: `{payload['generatedUtc']}`",'',payload['principle'],'','## Lanes']

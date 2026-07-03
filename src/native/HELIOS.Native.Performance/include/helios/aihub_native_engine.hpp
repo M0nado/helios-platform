@@ -210,3 +210,39 @@ constexpr std::string_view self_learning_native_label(const SelfLearningNativeSi
 }
 
 }  // namespace helios::aihub
+namespace helios::aihub {
+
+struct KnowledgeVectorSignals {
+  double sqlConfidence{};
+  double vectorSimilarity{};
+  double graphNeighborhood{};
+  double freshness{};
+  double failingTestPressure{};
+  double safetyPenalty{};
+};
+
+constexpr double knowledge_baked_fix_priority(const KnowledgeVectorSignals& signals) noexcept {
+  return clamp01((signals.sqlConfidence * 0.20) +
+                 (signals.vectorSimilarity * 0.28) +
+                 (signals.graphNeighborhood * 0.18) +
+                 (signals.freshness * 0.14) +
+                 (signals.failingTestPressure * 0.16) -
+                 (signals.safetyPenalty * 0.18));
+}
+
+constexpr bool should_use_knowledge_baked_native_fix(const KnowledgeVectorSignals& signals) noexcept {
+  return knowledge_baked_fix_priority(signals) >= 0.60;
+}
+
+constexpr std::string_view knowledge_baked_fix_label(const KnowledgeVectorSignals& signals) noexcept {
+  const auto score = knowledge_baked_fix_priority(signals);
+  if (score >= 0.84) {
+    return "native-vector-sql-fix-hot-path";
+  }
+  if (score >= 0.60) {
+    return "native-assisted-knowledge-fix";
+  }
+  return "managed-knowledge-fix-first";
+}
+
+}  // namespace helios::aihub
