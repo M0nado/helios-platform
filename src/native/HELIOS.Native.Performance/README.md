@@ -10,6 +10,18 @@ This module is the planned landing zone for C++/XCore performance backends. It k
 - GPU or hardware-assisted performance probes
 - Interop surfaces consumed through shared C# contracts
 
+## ABI v1
+
+The first optional native ABI is declared in `include/helios_native_performance.h` and implemented in `src/helios_native_performance.cpp`.
+
+Exported functions:
+
+- `helios_native_abi_version()` returns the ABI version.
+- `helios_vector_sum(const double* values, size_t length)` returns a safe sum and treats null/empty input as `0.0`.
+- `helios_vector_mean(const double* values, size_t length)` returns a safe mean and treats null/empty input as `0.0`.
+
+`HELIOSNativePerformanceBenchmark` is intentionally small: it verifies that the optional native library can compile, link, and execute before any C#/F#/Python caller is required to depend on it.
+
 ## Safety policy
 
 1. Managed C# and F# implementations remain the default.

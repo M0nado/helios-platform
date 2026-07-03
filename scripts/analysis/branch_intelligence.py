@@ -47,6 +47,30 @@ def write_text(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def remote_inventory(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    priority = {"helios-control": 100, "hermes-fleet-production": 100, "xcore": 85, "origin": 60}
+    _, existing_out, _ = run(["git", "remote"])
+    existing = set(existing_out.splitlines()) if existing_out else set()
+    for remote in manifest.get("remotes", []):
+        name = remote.get("name", "")
+        url_env = remote.get("urlEnv", "")
+        configured_url = remote.get("url", "") or os.environ.get(url_env, "")
+        rows.append({
+            "name": name,
+            "role": remote.get("role", ""),
+            "focus": remote.get("focus", []),
+            "enabled": bool(remote.get("enabled")),
+            "urlEnv": url_env,
+            "urlConfigured": bool(configured_url),
+            "gitRemoteExists": name in existing,
+            "defaultBranch": remote.get("defaultBranch", "main"),
+            "priority": priority.get(name, 50),
+            "recommendedNextAction": "fetch-and-rank" if configured_url and name in existing else "configure-url-env" if not configured_url else "add-remote-dry-run",
+        })
+    return sorted(rows, key=lambda item: item["priority"], reverse=True)
+
+
 def configure_remotes(manifest: dict[str, Any], apply: bool) -> list[dict[str, Any]]:
     _, existing_out, _ = run(["git", "remote"])
     existing = set(existing_out.splitlines()) if existing_out else set()
@@ -385,7 +409,7 @@ def markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
     return "\n".join(out)
 
 
-def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[str, Any]], idea_summary: list[dict[str, Any]], agent_queue: list[dict[str, Any]], conn: dict[str, Any], remote_actions: list[dict[str, Any]], fetch_result: dict[str, Any]) -> None:
+def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[str, Any]], idea_summary: list[dict[str, Any]], agent_queue: list[dict[str, Any]], conn: dict[str, Any], remote_actions: list[dict[str, Any]], fetch_result: dict[str, Any], remotes: list[dict[str, Any]]) -> None:
     save_json(out_dir / "branch-ranking.json", ranked)
     save_json(out_dir / "idea-impact.json", ideas)
     save_json(out_dir / "idea-impact-summary.json", idea_summary)
@@ -393,12 +417,14 @@ def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[
     save_json(out_dir / "analytics-metrics.json", analytics_metrics(ranked, idea_summary))
     save_json(out_dir / "connectivity.json", conn)
     save_json(out_dir / "remote-actions.json", {"remoteActions": remote_actions, "fetch": fetch_result})
+    save_json(out_dir / "remote-inventory.json", {"remotes": remotes})
 
     branch_rows = [[b["name"], b["score"], b["recommendedAction"], b["fileCount"], ", ".join(list(b["modules"].keys())[:6])] for b in ranked]
     idea_rows = [[i["category"], i["module"], i.get("dedupeKey", ""), i.get("occurrences", 1), i["recommendedAction"], i["bonusImpact"]] for i in idea_summary[:50]]
     queue_rows = [[q["taskType"], q["branch"], q["module"], q["priorityScore"], q["expectedOutput"]] for q in agent_queue[:30]]
     conn_rows = [[c["name"], c["available"], c["authenticated"], c["detail"]] for c in conn["checks"]]
     remote_rows = [[r["name"], r["enabled"], r["urlConfigured"], r["action"], r["result"]] for r in remote_actions]
+    inventory_rows = [[r["name"], r["role"], ", ".join(r["focus"]), r["urlEnv"], r["urlConfigured"], r["gitRemoteExists"], r["recommendedNextAction"]] for r in remotes]
 
     full_idea_rows = [[i["category"], i["module"], f"{i['path']}:{i['line']}", i["recommendedAction"], i["bonusImpact"]] for i in ideas[:50]]
     write_text(out_dir / "branch-ranking.md", "# Branch Ranking\n\n" + markdown_table(["Branch", "Score", "Action", "Files", "Modules"], branch_rows) + "\n")
@@ -406,6 +432,7 @@ def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[
     write_text(out_dir / "idea-impact-summary.md", "# Idea Impact Summary\n\n" + markdown_table(["Category", "Module", "Key", "Occurrences", "Action", "How it affects us"], idea_rows) + "\n")
     write_text(out_dir / "agent-work-queue.md", "# Agent Work Queue\n\n" + markdown_table(["Task", "Branch", "Module", "Priority", "Expected output"], queue_rows) + "\n")
     write_text(out_dir / "connectivity.md", "# Local/CI Connectivity\n\n" + markdown_table(["Tool", "Available", "Authenticated", "Detail"], conn_rows) + "\n")
+    write_text(out_dir / "remote-inventory.md", "# Remote Inventory\n\n" + markdown_table(["Remote", "Role", "Focus", "URL env", "URL configured", "Git remote exists", "Next action"], inventory_rows) + "\n")
     dashboard = "\n".join([
         "# HELIOS Branch Intelligence Dashboard",
         "",
@@ -413,6 +440,9 @@ def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[
         "",
         "## Remote setup",
         markdown_table(["Remote", "Enabled", "URL configured", "Action", "Result"], remote_rows),
+        "",
+        "## Remote inventory priority",
+        markdown_table(["Remote", "Role", "Focus", "URL env", "URL configured", "Git remote exists", "Next action"], inventory_rows),
         "",
         "## Branch ranking",
         markdown_table(["Branch", "Score", "Action", "Files", "Modules"], branch_rows[:20]),
@@ -443,13 +473,15 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--configure-remotes", action="store_true", help="Add enabled remotes with configured URLs.")
     parser.add_argument("--fetch", action="store_true", help="Run git fetch --all --prune --tags.")
+    parser.add_argument("--fetch-remotes", action="store_true", help="Alias for --fetch; explicit opt-in network operation.")
     parser.add_argument("--enrich-ideas", action="store_true", help="Mark ideas for optional AI enrichment when credentials are configured.")
     parser.add_argument("--hermes-jsonl", action="append", type=Path, default=[], help="Optional Hermes fleet JSONL event input.")
     args = parser.parse_args()
 
     manifest = load_manifest(args.manifest)
+    remotes = remote_inventory(manifest)
     remote_actions = configure_remotes(manifest, apply=args.configure_remotes)
-    fetch_result = fetch_remotes(apply=args.fetch)
+    fetch_result = fetch_remotes(apply=args.fetch or args.fetch_remotes)
     ranked = rank_branches(manifest)
     ideas = extract_ideas(manifest)
     hermes_events = read_hermes_jsonl(args.hermes_jsonl)
@@ -458,7 +490,7 @@ def main() -> int:
     idea_summary = dedupe_ideas(ideas)
     agent_queue = build_agent_queue(ranked, idea_summary)
     conn = connectivity()
-    write_reports(args.out, ranked, ideas, idea_summary, agent_queue, conn, remote_actions, fetch_result)
+    write_reports(args.out, ranked, ideas, idea_summary, agent_queue, conn, remote_actions, fetch_result, remotes)
     print(f"Wrote branch intelligence reports to {args.out.relative_to(ROOT)}")
     return 0
 

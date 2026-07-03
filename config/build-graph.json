@@ -106,11 +106,12 @@
     },
     {
       "id": "branch-intelligence",
-      "title": "Branch intelligence reports",
+      "title": "Branch and remote intelligence reports",
       "command": "python3 scripts/analysis/branch_intelligence.py",
       "paths": [
         "scripts/analysis/**",
-        "docs/integration/remote-manifest.json"
+        "docs/integration/remote-manifest.json",
+        "reports/branch-intelligence/**"
       ]
     },
     {
@@ -134,7 +135,7 @@
     {
       "id": "azure-bicep",
       "title": "Azure Bicep build",
-      "command": "az bicep build --file infra/azure/main.bicep",
+      "command": "python3 scripts/azure/bicep_report.py build",
       "paths": [
         "infra/azure/**"
       ]
@@ -187,6 +188,33 @@
       "paths": [
         "scripts/local-app/**",
         "docs/integration/LOCAL_APP_SHELL.md"
+      ]
+    },
+    {
+      "id": "remote-inventory",
+      "title": "Safe remote inventory for helios-control/hermes-fleet-production/xcore",
+      "command": "python3 scripts/analysis/branch_intelligence.py",
+      "paths": [
+        "docs/integration/remote-manifest.json",
+        "scripts/analysis/branch_intelligence.py"
+      ]
+    },
+    {
+      "id": "repository-analytics",
+      "title": "F# repository analytics bridge for branch and Hermes scores",
+      "command": "dotnet run --project src/tools/HELIOS.RepositoryAnalytics/HELIOS.RepositoryAnalytics.csproj",
+      "paths": [
+        "src/tools/HELIOS.RepositoryAnalytics/**",
+        "src/analytics/**",
+        "reports/branch-intelligence/analytics-metrics.json"
+      ]
+    },
+    {
+      "id": "native-benchmark",
+      "title": "Native/XCore C++ benchmark smoke test",
+      "command": "cmake --build .build/native --target HELIOSNativePerformanceBenchmark && .build/native/HELIOSNativePerformanceBenchmark",
+      "paths": [
+        "src/native/**"
       ]
     }
   ]

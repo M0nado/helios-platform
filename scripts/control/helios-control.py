@@ -59,7 +59,10 @@ def azure_status() -> dict[str, Any]:
         "safeCommands": [
             "az login",
             "az group create --name <resource-group> --location <region>",
-            "az deployment group what-if --resource-group <resource-group> --template-file infra/azure/main.bicep --parameters @infra/azure/parameters/dev.json",
+            "python3 scripts/azure/bicep_report.py build",
+            "python3 scripts/azure/bicep_report.py validate",
+            "python3 scripts/azure/bicep_report.py what-if",
+            "python3 scripts/azure/bicep_report.py validate --strict-online",
             "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run",
         ],
     }
