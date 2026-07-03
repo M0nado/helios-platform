@@ -50,3 +50,35 @@ Then open <http://127.0.0.1:8080/>.
 - Do not paste secrets into the static dashboard.
 - Use `az login`, `gh auth login`, Key Vault, or environment variables only when you intentionally enable live cloud/repo lanes.
 - `save-run` archives generated reports and the static dashboard; it does not create databases or mutate GitHub/Azure.
+
+## 7. Build a runnable EXE bundle
+
+```bash
+scripts/setup/simple-build.sh exe
+```
+
+That command runs the finish/save flow, publishes framework-dependent runnable builds to `.run/helios-exe-<UTC timestamp>/`, and records the latest path in `.run/latest-helios-exe.txt`.
+
+To build only the EXE bundle without rerunning the finish reports:
+
+```bash
+SKIP_FINISH=1 scripts/setup/build-run-exe.sh
+```
+
+Run the Windows executable from the generated bundle:
+
+```cmd
+run-helios.cmd
+```
+
+Or run it directly:
+
+```cmd
+win-x64\HELIOS.Platform.exe
+```
+
+On Linux/WSL, run:
+
+```bash
+./run-helios.sh
+```

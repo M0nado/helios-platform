@@ -87,6 +87,9 @@ case "$mode" in
     python3 scripts/dashboard/generate-gui.py
     scripts/setup/save-run-bundle.sh
     ;;
+  exe)
+    scripts/setup/build-run-exe.sh
+    ;;
   module)
     python3 -m py_compile scripts/analysis/aihub_module_blueprint.py
     python3 scripts/analysis/aihub_module_blueprint.py
@@ -108,7 +111,7 @@ case "$mode" in
     git status --short
     ;;
   *)
-    echo "Usage: scripts/setup/simple-build.sh [module|quick|full|clean|absorb|notes|organize|organize-scaffold-plan|organize-delete-plan|organize-full|learn|finish|save-run]" >&2
+    echo "Usage: scripts/setup/simple-build.sh [module|quick|full|clean|absorb|notes|organize|organize-scaffold-plan|organize-delete-plan|organize-full|learn|finish|save-run|exe]" >&2
     exit 2
     ;;
 esac
