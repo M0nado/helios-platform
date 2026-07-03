@@ -452,12 +452,15 @@ def main() -> int:
     parser.add_argument("--hermes-jsonl", action="append", type=Path, default=[], help="Optional Hermes fleet JSONL event input.")
     args = parser.parse_args()
 
+    if args.remote_inventory_only and (args.configure_remotes or args.fetch):
+        parser.error("--remote-inventory-only cannot be combined with --configure-remotes or --fetch-remotes")
+
     manifest = load_manifest(args.manifest)
     remote_actions = configure_remotes(manifest, apply=args.configure_remotes)
     fetch_result = fetch_remotes(apply=args.fetch)
     ranked = rank_branches(manifest, args.remote)
-    ideas = extract_ideas(manifest)
-    hermes_events = read_hermes_jsonl(args.hermes_jsonl)
+    ideas = [] if args.remote_inventory_only else extract_ideas(manifest)
+    hermes_events = [] if args.remote_inventory_only else read_hermes_jsonl(args.hermes_jsonl)
     ideas.extend(hermes_ideas(hermes_events))
     ideas = enrich_ideas(ideas, args.enrich_ideas)
     idea_summary = dedupe_ideas(ideas)
