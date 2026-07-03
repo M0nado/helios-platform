@@ -4,9 +4,22 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 SERVE_DASHBOARD="false"
-if [[ "${1:-}" == "--serve" || "${1:-}" == "serve" ]]; then
-  SERVE_DASHBOARD="true"
-fi
+SERVE_STALE="false"
+PROFILE="quick"
+BUILD_GRAPH_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --serve|serve) SERVE_DASHBOARD="true"; shift ;;
+    --serve-stale) SERVE_DASHBOARD="true"; SERVE_STALE="true"; shift ;;
+    --profile) PROFILE="${2:-quick}"; shift 2 ;;
+    --full) PROFILE="full"; shift ;;
+    --changed-only) BUILD_GRAPH_ARGS+=("--changed-only"); shift ;;
+    --tag) BUILD_GRAPH_ARGS+=("--tag" "${2:?missing tag}"); shift 2 ;;
+    --max-workers) BUILD_GRAPH_ARGS+=("--max-workers" "${2:?missing worker count}"); shift 2 ;;
+    *) BUILD_GRAPH_ARGS+=("$1"); shift ;;
+  esac
+done
 
 scripts/setup/bootstrap-local-tools.sh
 TOOLS_DIR="${HELIOS_TOOLS_DIR:-$ROOT_DIR/.tools}"
@@ -18,8 +31,10 @@ mkdir -p reports/local-setup
   echo
   echo "Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
   echo
+  echo "Profile: \`$PROFILE\`"
+  echo
   echo "## Tool status"
-  for tool in git gh az dotnet python3; do
+  for tool in git gh az dotnet python3 cmake; do
     if command -v "$tool" >/dev/null 2>&1; then
       echo "- ✅ $tool: $($tool --version 2>&1 | head -1)"
     else
@@ -31,37 +46,26 @@ mkdir -p reports/local-setup
   gh auth status >/tmp/helios-gh-auth.txt 2>&1 && echo "- ✅ GitHub CLI authenticated" || echo "- ⚠️ GitHub CLI needs: gh auth login"
   az account show >/tmp/helios-az-auth.json 2>&1 && echo "- ✅ Azure CLI authenticated" || echo "- ⚠️ Azure CLI needs: az login"
   echo
-  echo "## Next commands"
+  echo "## Build graph command"
   echo '```bash'
-  echo 'python3 scripts/analysis/branch_intelligence.py'
-  echo 'python3 scripts/web/helios-web.py'
-  echo 'scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run'
-  echo 'python3 scripts/control/helios-control.py'
-  echo 'python3 scripts/control/validate_workflows.py'
-  echo './helios.sh apps'
-  echo 'dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj'
+  printf 'python3 scripts/build_graph/build_graph.py run --profile %q' "$PROFILE"
+  printf ' %q' "${BUILD_GRAPH_ARGS[@]}"
+  echo
   echo '```'
 } | tee reports/local-setup/helios-dev-summary.md
 
-python3 scripts/analysis/branch_intelligence.py
-python3 scripts/graphs/generate_graphs.py
-python3 scripts/github/update-wiki-from-reports.py
-python3 scripts/ai/enrich-ideas.py
-python3 scripts/control/helios-control.py
-python3 scripts/github/github-inventory.py
-python3 scripts/azure/azure-inventory.py
-python3 scripts/analysis/merge_prune_recommendations.py
-python3 scripts/build_graph/build_graph.py
-python3 scripts/codex/generate-codex-tasks.py
-python3 scripts/dashboard/generate-actions.py
-python3 scripts/integrations/check-connections.py
-python3 scripts/integrations/cross_access_profiles.py
-python3 scripts/integrations/readiness_score.py
-python3 scripts/integrations/app_automation.py
-python3 scripts/control/doctor.py
-python3 scripts/control/validate_workflows.py
-python3 scripts/dashboard/generate-gui.py
+if python3 scripts/build_graph/build_graph.py run --profile "$PROFILE" "${BUILD_GRAPH_ARGS[@]}"; then
+  BUILD_GRAPH_OK="true"
+else
+  BUILD_GRAPH_OK="false"
+fi
 
 if [[ "$SERVE_DASHBOARD" == "true" ]]; then
-  exec python3 scripts/web/helios-web.py --no-rebuild
+  if [[ "$BUILD_GRAPH_OK" == "true" || "$SERVE_STALE" == "true" ]]; then
+    exec python3 scripts/web/helios-web.py --no-rebuild
+  fi
+  echo "Dashboard generation failed; rerun with --serve-stale to serve the previous dashboard." >&2
+  exit 1
 fi
+
+[[ "$BUILD_GRAPH_OK" == "true" ]]

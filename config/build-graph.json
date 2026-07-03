@@ -1,12 +1,145 @@
 {
   "nodes": [
     {
+      "id": "toolchain-ready",
+      "title": "Local toolchain readiness",
+      "command": "python3 -c \"import shutil,sys; missing=[t for t in ['git','python3'] if shutil.which(t) is None]; print('missing: '+', '.join(missing) if missing else 'toolchain ready'); sys.exit(1 if missing else 0)\"",
+      "paths": [
+        "scripts/setup/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "setup",
+        "quick"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "dotnet-ready",
+      "title": ".NET SDK readiness",
+      "command": "python3 -c \"import shutil,sys; print('dotnet ready' if shutil.which('dotnet') else 'dotnet not found'); sys.exit(0 if shutil.which('dotnet') else 1)\"",
+      "paths": [
+        "src/**",
+        "tests/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "setup",
+        "dotnet"
+      ],
+      "dependsOn": [
+        "toolchain-ready"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "cmake-ready",
+      "title": "CMake readiness",
+      "command": "python3 -c \"import shutil,sys; print('cmake ready' if shutil.which('cmake') else 'cmake not found'); sys.exit(0 if shutil.which('cmake') else 1)\"",
+      "paths": [
+        "src/native/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "setup",
+        "native",
+        "cpp"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "azure-cli-ready",
+      "title": "Azure CLI readiness",
+      "command": "python3 -c \"import shutil,sys; print('az ready' if shutil.which('az') else 'az not found'); sys.exit(0 if shutil.which('az') else 1)\"",
+      "paths": [
+        "infra/azure/**",
+        "scripts/azure/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "azure",
+        "setup"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "azure-auth-ready",
+      "title": "Azure authentication readiness",
+      "command": "az account show",
+      "paths": [
+        "infra/azure/**",
+        "scripts/azure/**"
+      ],
+      "tags": [
+        "azure"
+      ],
+      "dependsOn": [
+        "azure-cli-ready"
+      ],
+      "timeoutSeconds": 30
+    },
+    {
+      "id": "secret-preflight",
+      "title": "Local secret preflight",
+      "command": "python3 scripts/security/secret_preflight.py",
+      "paths": [
+        "**/*"
+      ],
+      "tags": [
+        "security",
+        "critical",
+        "quick"
+      ],
+      "critical": true,
+      "timeoutSeconds": 120
+    },
+    {
+      "id": "apply-gate-preflight",
+      "title": "Safe apply gate preflight",
+      "command": "python3 scripts/security/apply_gate_preflight.py",
+      "paths": [
+        "scripts/**",
+        ".github/workflows/**",
+        "infra/**"
+      ],
+      "tags": [
+        "security",
+        "critical",
+        "quick"
+      ],
+      "critical": true,
+      "timeoutSeconds": 120
+    },
+    {
+      "id": "hermes-fleet-readiness",
+      "title": "Hermes/Fleet executable readiness",
+      "command": "python3 scripts/agents/hermes_fleet_readiness.py",
+      "paths": [
+        "scripts/agents/**",
+        "config/hermes-fleet.example.json",
+        "ai-integration/**",
+        "HERMES_SWIFT_*.md"
+      ],
+      "tags": [
+        "hermes",
+        "ai",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
       "id": "workflow-validation",
       "title": "GitHub workflow validation without PyYAML",
       "command": "python3 scripts/control/validate_workflows.py",
       "paths": [
         ".github/workflows/**",
         "scripts/control/validate_workflows.py"
+      ],
+      "tags": [
+        "ci",
+        "critical",
+        "python",
+        "security"
       ]
     },
     {
@@ -16,6 +149,10 @@
       "paths": [
         "scripts/github/update-pr-from-reports.py",
         "reports/**"
+      ],
+      "tags": [
+        "dry-run",
+        "github"
       ]
     },
     {
@@ -24,6 +161,11 @@
       "command": "python3 scripts/control/doctor.py",
       "paths": [
         "scripts/control/doctor.py"
+      ],
+      "tags": [
+        "control",
+        "quick",
+        "setup"
       ]
     },
     {
@@ -33,6 +175,11 @@
       "paths": [
         "scripts/integrations/readiness_score.py",
         "reports/**"
+      ],
+      "tags": [
+        "ai",
+        "analysis",
+        "quick"
       ]
     },
     {
@@ -43,6 +190,11 @@
         "scripts/dashboard/generate-gui.py",
         "status-site/**",
         "reports/**"
+      ],
+      "tags": [
+        "dashboard",
+        "gui",
+        "quick"
       ]
     },
     {
@@ -52,6 +204,11 @@
       "paths": [
         "config/cross-access-profiles.example.json",
         "config/secrets-map.example.json"
+      ],
+      "tags": [
+        "ai",
+        "analysis",
+        "quick"
       ]
     },
     {
@@ -61,6 +218,11 @@
       "paths": [
         "config/hybrid-integration-roadmap.json",
         "reports/project-inventory/**"
+      ],
+      "tags": [
+        "ai",
+        "analysis",
+        "quick"
       ]
     },
     {
@@ -69,6 +231,9 @@
       "command": "python3 scripts/analysis/repo_inventory.py",
       "paths": [
         "**/*"
+      ],
+      "tags": [
+        "analysis"
       ]
     },
     {
@@ -77,6 +242,12 @@
       "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py",
       "paths": [
         "scripts/**/*.py"
+      ],
+      "tags": [
+        "ci",
+        "critical",
+        "python",
+        "security"
       ]
     },
     {
@@ -86,6 +257,14 @@
       "paths": [
         "src/analytics/**",
         "tests/analytics/**"
+      ],
+      "tags": [
+        "ci",
+        "dotnet",
+        "fsharp"
+      ],
+      "dependsOn": [
+        "dotnet-ready"
       ]
     },
     {
@@ -94,6 +273,14 @@
       "command": "cmake -S src/native/HELIOS.Native.Performance -B .build/native",
       "paths": [
         "src/native/**"
+      ],
+      "tags": [
+        "ci",
+        "cpp",
+        "native"
+      ],
+      "dependsOn": [
+        "cmake-ready"
       ]
     },
     {
@@ -102,6 +289,14 @@
       "command": "cmake --build .build/native",
       "paths": [
         "src/native/**"
+      ],
+      "tags": [
+        "ci",
+        "cpp",
+        "native"
+      ],
+      "dependsOn": [
+        "native-configure"
       ]
     },
     {
@@ -111,6 +306,9 @@
       "paths": [
         "scripts/analysis/**",
         "docs/integration/remote-manifest.json"
+      ],
+      "tags": [
+        "analysis"
       ]
     },
     {
@@ -120,6 +318,11 @@
       "paths": [
         "scripts/graphs/**",
         "reports/branch-intelligence/**"
+      ],
+      "tags": [
+        "dashboard",
+        "gui",
+        "quick"
       ]
     },
     {
@@ -129,6 +332,10 @@
       "paths": [
         "scripts/control/**",
         "config/*.json"
+      ],
+      "tags": [
+        "control",
+        "quick"
       ]
     },
     {
@@ -137,6 +344,13 @@
       "command": "az bicep build --file infra/azure/main.bicep",
       "paths": [
         "infra/azure/**"
+      ],
+      "tags": [
+        "azure",
+        "ci"
+      ],
+      "dependsOn": [
+        "azure-cli-ready"
       ]
     },
     {
@@ -146,6 +360,14 @@
       "paths": [
         "src/**",
         "tests/**"
+      ],
+      "tags": [
+        "dotnet",
+        "gui",
+        "maui"
+      ],
+      "dependsOn": [
+        "dotnet-ready"
       ]
     },
     {
@@ -154,6 +376,14 @@
       "command": "dotnet --info",
       "paths": [
         "src/**"
+      ],
+      "tags": [
+        "dotnet",
+        "gui",
+        "maui"
+      ],
+      "dependsOn": [
+        "dotnet-ready"
       ]
     },
     {
@@ -162,7 +392,13 @@
       "command": "python3 -c \"print('Visual Studio/MAUI readiness is documented; install VS with .NET MAUI workload on Windows/macOS.')\"",
       "paths": [
         "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md"
-      ]
+      ],
+      "tags": [
+        "dotnet",
+        "gui",
+        "maui"
+      ],
+      "dependsOn": []
     },
     {
       "id": "app-automation-readiness",
@@ -178,6 +414,11 @@
         "scripts/integrations/app_automation.py",
         "config/integrations.example.json",
         "config/secrets-map.example.json"
+      ],
+      "tags": [
+        "ai",
+        "analysis",
+        "quick"
       ]
     },
     {
@@ -187,6 +428,10 @@
       "paths": [
         "scripts/local-app/**",
         "docs/integration/LOCAL_APP_SHELL.md"
+      ],
+      "tags": [
+        "gui",
+        "quick"
       ]
     }
   ]
