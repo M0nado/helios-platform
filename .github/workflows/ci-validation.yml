@@ -25,8 +25,7 @@ jobs:
             $file = $_.FullName
             Write-Host "Checking: $file"
             try {
-              $content = Get-Content -Path $file
-              [scriptblock]::Create($content) | Out-Null
+              $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content -Path $file), [ref]$null)
               Write-Host "✅ OK" -ForegroundColor Green
             } catch {
               Write-Host "❌ FAILED: $_" -ForegroundColor Red
@@ -37,6 +36,7 @@ jobs:
             Write-Host "Syntax check failed for $failures files" -ForegroundColor Red
             exit 1
           }
+        shell: pwsh
 
   markdown-check:
     runs-on: ubuntu-latest
