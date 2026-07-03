@@ -133,7 +133,7 @@ jobs:
           PYTHON_EOF
 
       - name: Upload Snippet Registry
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: snippet-registry
           path: .registry/
@@ -178,7 +178,7 @@ jobs:
           echo "**Compression Ratio**: ${RATIO}x" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Compressed Registry
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: registry-compressed
           path: .registry-compressed/
