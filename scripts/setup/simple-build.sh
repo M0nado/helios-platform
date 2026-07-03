@@ -95,6 +95,9 @@ case "$mode" in
     bundle="$(cat .run/latest-helios-exe.txt)"
     echo "Open $bundle/web-sandbox/index.html or run: $bundle/serve-web-sandbox.sh"
     ;;
+  auto-exe)
+    scripts/setup/auto-exe-web.sh
+    ;;
   module)
     python3 -m py_compile scripts/analysis/aihub_module_blueprint.py
     python3 scripts/analysis/aihub_module_blueprint.py
@@ -116,7 +119,7 @@ case "$mode" in
     git status --short
     ;;
   *)
-    echo "Usage: scripts/setup/simple-build.sh [module|quick|full|clean|absorb|notes|organize|organize-scaffold-plan|organize-delete-plan|organize-full|learn|finish|save-run|exe|exe-web]" >&2
+    echo "Usage: scripts/setup/simple-build.sh [module|quick|full|clean|absorb|notes|organize|organize-scaffold-plan|organize-delete-plan|organize-full|learn|finish|save-run|exe|exe-web|auto-exe]" >&2
     exit 2
     ;;
 esac

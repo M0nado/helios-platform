@@ -103,3 +103,25 @@ For a faster sandbox refresh that skips the finish/save report pass:
 SKIP_FINISH=1 scripts/setup/build-run-exe.sh
 "$(cat .run/latest-helios-exe.txt)/serve-web-sandbox.sh"
 ```
+
+## 9. One-command automatic EXE sandbox
+
+```bash
+scripts/setup/simple-build.sh auto-exe
+```
+
+This is the easiest path: it builds the latest HELIOS EXE web sandbox into `.run/helios-auto-exe`, starts a local HTTP server, records the URL in `.run/latest-helios-exe-url.txt`, and tries to open the sandbox page automatically.
+
+Use these environment switches when needed:
+
+```bash
+PORT=8899 scripts/setup/simple-build.sh auto-exe
+HELIOS_AUTO_OPEN=0 scripts/setup/simple-build.sh auto-exe
+HELIOS_AUTO_SERVE=0 scripts/setup/simple-build.sh auto-exe
+```
+
+By default, `auto-exe` sets `SKIP_FINISH=1` so the web sandbox refresh is fast. To force a full finish/save pass first:
+
+```bash
+SKIP_FINISH=0 scripts/setup/simple-build.sh auto-exe
+```
