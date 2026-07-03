@@ -1,0 +1,92 @@
+name: Windows Shell Build
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'HELIOS.Platform.csproj'
+      - 'HELIOS.Platform.Tray/**'
+      - 'HELIOS.Platform.SystemIntegration/**'
+      - 'HELIOS.Platform.ShellExtension/**'
+      - 'HELIOS.Platform.Installer/**'
+      - 'docs/ui-xenoblade/**'
+      - '.github/workflows/windows-shell-build.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'HELIOS.Platform.csproj'
+      - 'HELIOS.Platform.Tray/**'
+      - 'HELIOS.Platform.SystemIntegration/**'
+      - 'HELIOS.Platform.ShellExtension/**'
+      - 'HELIOS.Platform.Installer/**'
+      - 'docs/ui-xenoblade/**'
+      - '.github/workflows/windows-shell-build.yml'
+  workflow_dispatch:
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_MULTILEVEL_LOOKUP: false
+
+jobs:
+  wpf-winui-shell:
+    name: Build WPF/WinUI shell projects
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - HELIOS.Platform.csproj
+          - docs/ui-xenoblade/HELIOS.WPF.csproj
+          - HELIOS.Platform.Tray/HELIOS.Platform.Tray.csproj
+          - HELIOS.Platform.SystemIntegration/HELIOS.Platform.SystemIntegration.csproj
+          - HELIOS.Platform.ShellExtension/HELIOS.Platform.ShellExtension.csproj
+          - HELIOS.Platform.Installer/HELIOS.Platform.Installer.csproj
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore NuGet Cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('HELIOS.Platform.csproj', 'HELIOS.Platform.*/*.csproj', 'docs/ui-xenoblade/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+            nuget-
+
+      - name: Restore ${{ matrix.project }}
+        shell: pwsh
+        run: dotnet restore '${{ matrix.project }}'
+
+      - name: Build ${{ matrix.project }}
+        shell: pwsh
+        run: |
+          dotnet build '${{ matrix.project }}' `
+            --configuration Release `
+            --no-restore `
+            -p:TreatWarningsAsErrors=false
+
+  final-status:
+    name: Windows shell final gate
+    if: always()
+    needs: [wpf-winui-shell]
+    runs-on: windows-latest
+    steps:
+      - name: Check Windows shell gate status
+        shell: pwsh
+        run: |
+          $shellStatus = '${{ needs.wpf-winui-shell.result }}'
+          Write-Host "Windows WPF/WinUI Shell Build: $shellStatus"
+          if ($shellStatus -eq 'success') {
+            Write-Host '✅ Windows shell gate passed'
+            exit 0
+          }
+
+          Write-Host '❌ Windows shell gate failed'
+          exit 1
