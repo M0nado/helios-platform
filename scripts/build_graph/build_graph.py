@@ -33,7 +33,7 @@ def classify_result(result):
     if result['exitCode'] != 0:
         return 'failed'
     command=result.get('command','').lower(); tail='\n'.join(result.get('tail',[])).lower()
-    if 'dry-run' in command or 'dry run' in tail or 'dry-run' in tail:
+    if ('dry-run' in command or 'dry run' in tail or 'dry-run' in tail) and not result.get('dryRunIsPass'):
         return 'skipped/dry-run'
     return 'passed'
 
@@ -136,10 +136,10 @@ def run_node(n):
     start=time.monotonic(); timeout=int(n.get('timeoutSeconds',180))
     try:
         p=subprocess.run(n['command'],cwd=ROOT,text=True,capture_output=True,shell=True,timeout=timeout)
-        result={'id':n['id'],'command':n['command'],'exitCode':p.returncode,'tail':(p.stdout+p.stderr).splitlines()[-10:],'durationSeconds':round(time.monotonic()-start,3),'tags':n.get('tags',[])}
+        result={'id':n['id'],'command':n['command'],'exitCode':p.returncode,'tail':(p.stdout+p.stderr).splitlines()[-10:],'durationSeconds':round(time.monotonic()-start,3),'tags':n.get('tags',[]),'dryRunIsPass':n.get('dryRunIsPass',False)}
     except subprocess.TimeoutExpired as exc:
         output=((exc.stdout or '')+(exc.stderr or '')) if isinstance(exc.stdout,str) or isinstance(exc.stderr,str) else ''
-        result={'id':n['id'],'command':n['command'],'exitCode':124,'tail':(output.splitlines()+[f'timed out after {timeout}s'])[-10:],'durationSeconds':round(time.monotonic()-start,3),'tags':n.get('tags',[])}
+        result={'id':n['id'],'command':n['command'],'exitCode':124,'tail':(output.splitlines()+[f'timed out after {timeout}s'])[-10:],'durationSeconds':round(time.monotonic()-start,3),'tags':n.get('tags',[]),'dryRunIsPass':n.get('dryRunIsPass',False)}
     result['status']=classify_result(result)
     return result
 
