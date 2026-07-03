@@ -9,17 +9,22 @@ MD=ROOT/'reports/azure/what-if.md'
 
 def main():
     parser=argparse.ArgumentParser(description='Safe Azure Bicep what-if wrapper.')
-    parser.add_argument('--resource-group', default=os.environ.get('HELIOS_AZURE_RESOURCE_GROUP',''))
+    parser.add_argument('--resource-group', default=os.environ.get('HELIOS_AZURE_RESOURCE_GROUP','helios-dev-rg'))
     parser.add_argument('--parameters', default='infra/azure/parameters/dev.json')
     parser.add_argument('--template-file', default='infra/azure/main.bicep')
     parser.add_argument('--plan-only', action='store_true', help='write the planned what-if command without requiring az login')
     args=parser.parse_args()
     cmd=['az','deployment','group','what-if','--resource-group',args.resource_group,'--template-file',args.template_file,'--parameters',f'@{args.parameters}']
-    if args.plan_only or shutil.which('az') is None or not args.resource_group:
+    az_path=shutil.which('az')
+    auth_ok=False
+    if az_path and not args.plan_only:
+        auth=subprocess.run(['az','account','show'],cwd=ROOT,text=True,capture_output=True,timeout=30)
+        auth_ok=auth.returncode==0
+    if args.plan_only or not az_path or not auth_ok:
         status='planned'
         missing=[]
-        if shutil.which('az') is None: missing.append('az not found; run scripts/setup/bootstrap-local-tools.sh')
-        if not args.resource_group: missing.append('resource group missing; set HELIOS_AZURE_RESOURCE_GROUP or pass --resource-group')
+        if not az_path: missing.append('az not found; run scripts/setup/bootstrap-local-tools.sh')
+        elif not auth_ok: missing.append('Azure CLI installed but not authenticated; run az login')
         detail='what-if command planned without Azure mutation' + (': ' + '; '.join(missing) if missing else '')
     else:
         p=subprocess.run(cmd,cwd=ROOT,text=True,capture_output=True,timeout=120)
