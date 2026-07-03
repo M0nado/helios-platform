@@ -221,3 +221,18 @@ Run these in the requested order when turning the automation into a full local/c
 13. Native benchmark baseline: `python3 scripts/native/benchmark_native.py` or `./tools/helios.ps1 test native-benchmark`.
 14. F# analytics test categorization: `python3 scripts/analytics/fsharp_test_report.py` or `./tools/helios.ps1 test fsharp-report`.
 15. Python AIHub smoke harness: `python3 tools/aihub/smoke-test.py` or `./tools/helios.ps1 test python-aihub`.
+
+## Deep control GUI, model store, and takeover extensions
+
+The deep-control layer adds a standalone GUI and report generators for the next automation surface:
+
+- `tools/gui/helios-control-center/index.html` provides a standalone control page for setup, GitHub takeover, agents, models, Copilot/M365, Hermes/XCore, and audit commands.
+- `python3 scripts/learning/agent_xp.py` renders agent XP and specialization progression.
+- `python3 scripts/automation/model_store_report.py` renders the multi-provider model store.
+- `python3 scripts/github/github_takeover_status.py` reports GitHub takeover readiness.
+- `python3 scripts/microsoft365/copilot_m365_readiness.py` reports Copilot/Microsoft 365 readiness without printing secrets.
+- `python3 scripts/automation/hermes_xcore_model_setup.py` reports Hermes/XCore model pack readiness.
+- `python3 scripts/automation/openai_responses_runner.py` creates a dry-run OpenAI Responses API task report.
+- `python3 scripts/automation/helios_store.py` renders a HELIOS store of agents, models, capabilities, and GUI commands.
+- `python3 scripts/automation/deep_setup_all.py plan` sequences the deep setup surface safely.
+- `python3 scripts/security/automation_audit.py --command "audit latest"` records an audit event.

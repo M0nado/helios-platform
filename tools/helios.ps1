@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'security', 'dashboard', 'connect', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'security', 'dashboard', 'connect', 'openai', 'models', 'hermes', 'm365', 'audit', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -146,6 +146,11 @@ Commands in integration order:
   github repo-verify|repo-setup|connect-plan|connect-verify|connect-apply
                                   Verify/apply GitHub repository automation setup and connection.
   dashboard render                Render local/hybrid HTML operator dashboard.
+  openai run                      Generate OpenAI Responses API dry-run report.
+  models list                     Render the HELIOS model store.
+  hermes models                   Verify Hermes/XCore model packs.
+  m365 copilot                    Verify Copilot/Microsoft 365 readiness.
+  audit latest                    Record/read automation audit events.
   connect plan|verify|apply       Run one-command local/cloud autoconnect setup.
   security vault                  Verify vault/secrets readiness without printing secrets.
   fix plan|apply|csharp              Plan/apply autofix tasks or parse C# build blockers.
@@ -155,7 +160,7 @@ Commands in integration order:
   start plan|verify|apply            Run the shortest ASAP start/merge sequence.
   ideas super|specialties          Rank next additions or render specialization matrix.
   llm plan                         Render multi-LLM cross-optimization routing plan.
-  agents list|validate|runtime|run       Inspect and run registered HELIOS agents.
+  agents list|validate|runtime|xp|run       Inspect and run registered HELIOS agents.
   build contracts|csharp|fsharp|native|frontend|all
   test csharp|security|fsharp|fsharp-report|native|native-benchmark|python-aihub|all
   reports latest                 Show latest generated report.
@@ -180,7 +185,11 @@ function Invoke-SetupCommand {
         'default' { Invoke-ExternalCommand python3 @($ScriptPath, 'verify') }
         'verify' { Invoke-ExternalCommand python3 @($ScriptPath, 'verify') }
         'all' { Invoke-ExternalCommand python3 @($ScriptPath, 'setup', '--apply') }
-        default { throw "Unknown setup action '$SubAction'. Use verify or all." }
+        'deep-all' {
+            $DeepPath = Join-Path $RepoRoot 'scripts/automation/deep_setup_all.py'
+            Invoke-ExternalCommand python3 @($DeepPath, 'verify')
+        }
+        default { throw "Unknown setup action '$SubAction'. Use verify, all, or deep-all." }
     }
     New-HeliosReport -Name "setup-$SubAction" -Status 'completed' -Checks @([ordered]@{ name = "setup:$SubAction"; status = 'ok'; message = 'capability setup command completed' }) -Commands @("python3 $ScriptPath $SubAction")
 }
@@ -417,6 +426,12 @@ function Invoke-GitHubCommand {
     if (-not (Test-Path $ScriptPath)) {
         throw "Mass integration script not found: $ScriptPath"
     }
+    if ($SubAction -eq 'takeover') {
+        $TakeoverPath = Join-Path $RepoRoot 'scripts/github/github_takeover_status.py'
+        Invoke-ExternalCommand python3 @($TakeoverPath)
+        New-HeliosReport -Name 'github-takeover' -Status 'completed' -Checks @([ordered]@{ name = 'github:takeover'; status = 'ok'; message = 'GitHub takeover status completed' }) -Commands @("python3 $TakeoverPath")
+        return
+    }
     if ($SubAction -in @('connect-plan', 'connect-verify', 'connect-apply')) {
         $ConnectPath = Join-Path $RepoRoot 'scripts/github/connect_github.py'
         $ConnectModeMap = @{ 'connect-plan' = 'plan'; 'connect-verify' = 'verify'; 'connect-apply' = 'apply' }
@@ -451,7 +466,7 @@ function Invoke-GitHubCommand {
         'mass-all' = 'all'
     }
     if (-not $ModeMap.ContainsKey($SubAction)) {
-        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, connect-plan, connect-verify, connect-apply, conflict-forecast, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
+        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, takeover, connect-plan, connect-verify, connect-apply, conflict-forecast, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
     }
     $Mode = $ModeMap[$SubAction]
     $Args = @($ScriptPath, $Mode) + $RemainingArgs
@@ -516,6 +531,51 @@ function Invoke-SecurityCommand {
     $ScriptPath = Join-Path $RepoRoot 'scripts/security/vault_readiness.py'
     Invoke-ExternalCommand python3 @($ScriptPath, 'verify')
     New-HeliosReport -Name 'security-vault' -Status 'completed' -Checks @([ordered]@{ name = 'security:vault'; status = 'ok'; message = 'vault readiness completed' }) -Commands @("python3 $ScriptPath verify")
+}
+
+function Invoke-OpenAiCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "openai $SubAction"
+    if ($SubAction -ne 'run' -and $SubAction -ne 'default') { throw "Unknown openai action '$SubAction'. Use run." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/openai_responses_runner.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'openai-run' -Status 'completed' -Checks @([ordered]@{ name = 'openai:run'; status = 'ok'; message = 'OpenAI dry-run report generated' }) -Commands @("python3 $ScriptPath")
+}
+
+function Invoke-ModelsCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "models $SubAction"
+    if ($SubAction -ne 'list' -and $SubAction -ne 'default') { throw "Unknown models action '$SubAction'. Use list." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/model_store_report.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'models-list' -Status 'completed' -Checks @([ordered]@{ name = 'models:list'; status = 'ok'; message = 'model store generated' }) -Commands @("python3 $ScriptPath")
+}
+
+function Invoke-HermesCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "hermes $SubAction"
+    if ($SubAction -ne 'models' -and $SubAction -ne 'default') { throw "Unknown hermes action '$SubAction'. Use models." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/automation/hermes_xcore_model_setup.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'hermes-models' -Status 'completed' -Checks @([ordered]@{ name = 'hermes:models'; status = 'ok'; message = 'Hermes/XCore models generated' }) -Commands @("python3 $ScriptPath")
+}
+
+function Invoke-M365Command {
+    param([string]$SubAction)
+    Write-HeliosHeader "m365 $SubAction"
+    if ($SubAction -ne 'copilot' -and $SubAction -ne 'default') { throw "Unknown m365 action '$SubAction'. Use copilot." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/microsoft365/copilot_m365_readiness.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'm365-copilot' -Status 'completed' -Checks @([ordered]@{ name = 'm365:copilot'; status = 'ok'; message = 'Copilot/M365 readiness generated' }) -Commands @("python3 $ScriptPath")
+}
+
+function Invoke-AuditCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "audit $SubAction"
+    if ($SubAction -ne 'latest' -and $SubAction -ne 'default') { throw "Unknown audit action '$SubAction'. Use latest." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/security/automation_audit.py'
+    Invoke-ExternalCommand python3 @($ScriptPath, '--command', 'audit latest')
+    New-HeliosReport -Name 'audit-latest' -Status 'completed' -Checks @([ordered]@{ name = 'audit:latest'; status = 'ok'; message = 'audit latest generated' }) -Commands @("python3 $ScriptPath --command 'audit latest'")
 }
 
 function Invoke-UpgradeCommand {
@@ -608,6 +668,11 @@ function Invoke-AgentsCommand {
             $Registry.agents | ForEach-Object { Write-Host "$($_.name) :: $($_.responsibility)" }
             New-HeliosReport -Name 'agents-list' -Status 'completed' -Checks @([ordered]@{ name = 'agents:list'; status = 'ok'; message = "agents=$($Registry.agents.Count)" })
         }
+        'xp' {
+            $ScriptPath = Join-Path $RepoRoot 'scripts/learning/agent_xp.py'
+            Invoke-ExternalCommand python3 @($ScriptPath)
+            New-HeliosReport -Name 'agents-xp' -Status 'completed' -Checks @([ordered]@{ name = 'agents:xp'; status = 'ok'; message = 'agent XP generated' }) -Commands @("python3 $ScriptPath")
+        }
         'runtime' {
             $ScriptPath = Join-Path $RepoRoot 'scripts/automation/agent_runtime_matrix.py'
             Invoke-ExternalCommand python3 @($ScriptPath)
@@ -639,7 +704,7 @@ function Invoke-AgentsCommand {
             New-HeliosReport -Name "agent-$AgentName" -Status 'completed' -Checks @([ordered]@{ name = "agent:$AgentName"; status = 'ok'; message = 'agent command completed' }) -Commands @($Agent.command)
         }
         default {
-            throw "Unknown agents action '$SubAction'. Use list, validate, runtime, or run."
+            throw "Unknown agents action '$SubAction'. Use list, validate, runtime, xp, or run."
         }
     }
 }
@@ -762,6 +827,11 @@ switch ($Command) {
     'security' { Invoke-SecurityCommand $Action }
     'dashboard' { Invoke-DashboardCommand $Action }
     'connect' { Invoke-ConnectCommand $Action }
+    'openai' { Invoke-OpenAiCommand $Action }
+    'models' { Invoke-ModelsCommand $Action }
+    'hermes' { Invoke-HermesCommand $Action }
+    'm365' { Invoke-M365Command $Action }
+    'audit' { Invoke-AuditCommand $Action }
     'upgrade' { Invoke-UpgradeCommand $Action }
     'finish' { Invoke-FinishCommand $Action }
     'start' { Invoke-StartCommand $Action }
