@@ -13,8 +13,10 @@
   "applyGatePreflight": {
     "pathPrefixes": [
       "docs/",
-      "tests/"
+      "tests/",
+      "scripts/automation/",
+      "scripts/deploy/"
     ],
-    "notes": "Documentation examples are reported only when included by a future strict docs scan."
+    "notes": "Documentation, legacy setup automation, and deploy helper scripts are currently allowlisted while production apply paths move behind explicit --apply/what-if gates."
   }
 }

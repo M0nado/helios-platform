@@ -40,7 +40,7 @@ def main():
             if MUTATING.search(line) and not SAFE.search(context):
                 findings.append({'path':str(path.relative_to(ROOT)),'line':no,'pattern':'mutating-command-without-explicit-safety-gate'})
     OUT.parent.mkdir(parents=True,exist_ok=True)
-    payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'ok':not findings,'allowlistPathPrefixes':prefixes,'findings':findings}
+    payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'ok':not findings,'allowlistPathPrefixes':prefixes,'findings':findings,'triage':'allowlisted prefixes are excluded before matching; run with a reduced allowlist and --strict to ratchet enforcement'}
     OUT.write_text(json.dumps(payload,indent=2)+'\n')
     lines=['# Apply Gate Preflight','',f"Generated: `{payload['generatedUtc']}`",'',f"Status: {'PASS' if payload['ok'] else 'FAIL'}"]
     if findings:
