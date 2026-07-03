@@ -1,5 +1,8 @@
 name: Build Graph Automation
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     paths:
