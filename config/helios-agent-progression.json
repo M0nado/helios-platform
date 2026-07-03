@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "fleet": {"name": "HELIOS Hermes XCore Fleet", "xpPerLevel": 100, "defaultRole": "Vanguard"},
+  "classes": [
+    {"classId": "csharp-vanguard", "label": "C# Vanguard", "specializations": ["contracts", "core-build", "security"], "abilities": ["Compile Break", "Namespace Mend", "Contract Guard"]},
+    {"classId": "azure-oracle", "label": "Azure Oracle", "specializations": ["bicep", "key-vault", "observability"], "abilities": ["What-If Sight", "Vault Seal", "Deploy Ward"]},
+    {"classId": "merge-ronin", "label": "Merge Ronin", "specializations": ["branch-score", "conflict-forecast", "auto-pr"], "abilities": ["Safe Merge", "Conflict Sense", "Auto-PR"]},
+    {"classId": "xcore-sage", "label": "Hermes/XCore Sage", "specializations": ["model-routing", "local-models", "aihub"], "abilities": ["Model Swap", "Token Aura", "Local Fallback"]}
+  ],
+  "partySlots": ["leader", "builder", "guardian", "scout"],
+  "shop": [
+    {"itemId": "deep-setup", "label": "Deep Setup All", "cost": 0, "command": "./tools/helios.ps1 setup deep-all"},
+    {"itemId": "model-store", "label": "Model Store", "cost": 0, "command": "./tools/helios.ps1 models list"},
+    {"itemId": "github-takeover", "label": "GitHub Takeover Status", "cost": 0, "command": "./tools/helios.ps1 github takeover"},
+    {"itemId": "m365-copilot", "label": "Copilot/M365 Readiness", "cost": 0, "command": "./tools/helios.ps1 m365 copilot"}
+  ]
+}

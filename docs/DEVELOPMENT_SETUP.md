@@ -75,7 +75,17 @@ docker run hello-world
 # Install from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows
 # Verify
 az --version
+
+# Bootstrap HELIOS Hermes XCore Azure CLI extensions, defaults, and optional resource group
+./tools/azure/setup-helios-azure-cli.ps1 `
+  -SubscriptionId '<subscription-id>' `
+  -TenantId '<tenant-id>' `
+  -CreateResourceGroup
 ```
+
+The HELIOS bootstrap script installs and updates the Azure CLI extensions used by the integration toolchain (`azure-devops`, `containerapp`, `ml`, and `resource-graph`), selects the target subscription, sets default location/resource group values, and exports `HELIOS_*` session variables for Hermes XCore services.
+
+For the full branch-integration, Azure, mixed-language build, security, performance, F# analytics, C++ backend, and Python AIHub sequence, follow [HELIOS Hermes XCore: best steps to get everything working](./HELIOS_HERMES_XCORE_WORKING_STEPS.md).
 
 **6. Code Editor** (choose one)
 ```powershell
