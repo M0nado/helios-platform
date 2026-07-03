@@ -1,0 +1,13 @@
+{
+  "fleetName": "hermes-fleet-production",
+  "mode": "dry-run",
+  "providers": {
+    "openai": { "env": "OPENAI_API_KEY", "required": false },
+    "azureOpenAI": { "endpointEnv": "AZURE_OPENAI_ENDPOINT", "keyEnv": "AZURE_OPENAI_API_KEY", "required": false }
+  },
+  "automation": {
+    "requiresAzureLogin": false,
+    "requiresGitHubLogin": false,
+    "reportsDir": "reports/hermes-fleet"
+  }
+}

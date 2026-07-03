@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "mode": "plan-only",
+  "principle": "Store every learning event once as canonical JSON, then project it into SQL rows, vector embeddings, graph edges, blob snapshots, and search indexes without losing provenance.",
+  "stores": {
+    "canonicalLedger": {
+      "type": "jsonl",
+      "path": "reports/learning/knowledge-ledger/events.jsonl",
+      "purpose": "Append-only source of truth for repo, branch, agent, model, test, and operator learning events."
+    },
+    "sql": {
+      "engines": ["sqlite", "postgresql", "azure-sql"],
+      "schema": "aihub_learning",
+      "tables": ["knowledge_items", "knowledge_observations", "knowledge_edges", "agent_memory", "model_runs", "retrieval_feedback"]
+    },
+    "vector": {
+      "providers": ["pgvector", "azure-ai-search-vector", "qdrant", "sqlite-vec"],
+      "embeddingDimensions": 1536,
+      "indexes": ["knowledge_semantic", "code_semantic", "agent_memory_semantic"]
+    },
+    "document": {
+      "providers": ["cosmos-db", "mongodb", "json-files"],
+      "partitionKeys": ["tenantId", "repoId", "knowledgeType"]
+    },
+    "graph": {
+      "providers": ["cosmos-gremlin", "neo4j", "networkx-json"],
+      "edgeTypes": ["derived_from", "contradicts", "supersedes", "validates", "routes_to", "owned_by_agent", "uses_tool"]
+    },
+    "blob": {
+      "providers": ["azure-blob", "local-filesystem"],
+      "artifacts": ["reports", "screenshots", "prompt-packs", "test-logs", "build-logs"]
+    }
+  },
+  "retention": {
+    "rawEventsDays": 365,
+    "summariesDays": 1825,
+    "deleteRequiresLiveFlag": true
+  },
+  "safety": {
+    "secretFields": ["apiKey", "token", "password", "connectionString"],
+    "redaction": "hash-and-drop-secret-value",
+    "defaultAccess": "read-report-only"
+  }
+}

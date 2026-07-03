@@ -1,0 +1,87 @@
+name: AIHub Self Learning Growth
+
+on:
+  workflow_dispatch:
+    inputs:
+      growth_lane:
+        description: Report-only learning lane to model for growing notes, grading, and module placement.
+        default: report-only
+        type: choice
+        options:
+          - report-only
+          - local-review
+          - ci-review
+          - hermes-xcore-review
+      publish_dashboard:
+        description: Upload dashboard and learning reports as artifacts.
+        default: true
+        type: boolean
+  schedule:
+    - cron: '17 6 * * 1,4'
+  pull_request:
+    paths:
+      - 'scripts/analysis/aihub_self_learning_notes.py'
+      - 'scripts/analysis/aihub_learning_feedback_loop.py'
+      - 'scripts/analysis/complex_code_grading.py'
+      - 'scripts/analysis/module_submodule_organizer.py'
+      - 'scripts/dashboard/generate-gui.py'
+      - 'src/analytics/HELIOS.Analytics.FSharp/**'
+      - 'src/native/HELIOS.Native.Performance/include/helios/aihub_native_engine.hpp'
+      - '.github/workflows/aihub-self-learning-growth.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: aihub-self-learning-growth-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  self-learning-growth:
+    runs-on: ubuntu-latest
+    env:
+      AIHUB_GROWTH_LANE: ${{ inputs.growth_lane || 'report-only' }}
+      AIHUB_LIVE_MUTATION: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate growing self-learning reports
+        run: |
+          python3 -m py_compile scripts/analysis/aihub_self_learning_notes.py scripts/analysis/aihub_learning_feedback_loop.py scripts/analysis/complex_code_grading.py scripts/analysis/module_submodule_organizer.py scripts/dashboard/generate-gui.py
+          python3 scripts/analysis/complex_code_grading.py
+          python3 scripts/analysis/module_submodule_organizer.py
+          python3 scripts/analysis/aihub_learning_feedback_loop.py
+          python3 scripts/analysis/aihub_self_learning_notes.py
+          python3 scripts/dashboard/generate-gui.py
+      - name: Summarize growth notes
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          path = pathlib.Path('reports/learning/aihub-self-learning-notes.json')
+          print('## AIHub self-learning growth')
+          if not path.exists():
+              print('\nNo self-learning notes report was generated.')
+          else:
+              data = json.loads(path.read_text())
+              print(f"\n- Lane: `{data.get('growthLane', 'report-only')}`")
+              print(f"- Note tiers: {len(data.get('noteTiers', []))}")
+              print(f"- Situation variables: {len(data.get('situationVariables', []))}")
+              print(f"- Cross-file connections: {len(data.get('crossFileConnections', []))}")
+          PY
+      - name: Upload self-learning growth artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aihub-self-learning-growth
+          path: |
+            reports/learning/aihub-self-learning-notes.*
+            reports/learning/aihub-learning-feedback-loop.*
+            reports/learning/complex-code-grading.*
+            reports/learning/module-submodule-organizer.*
+            status-site/index.html

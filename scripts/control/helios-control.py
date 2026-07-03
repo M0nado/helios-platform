@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+import argparse
+import json
+import os
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[2]
+OUT_DIR = ROOT / "reports" / "control-plane"
+SUMMARY_JSON = OUT_DIR / "control-summary.json"
+SUMMARY_MD = OUT_DIR / "control-summary.md"
+
+
+def run(cmd: list[str], timeout: int = 30) -> dict[str, Any]:
+    if shutil.which(cmd[0]) is None:
+        return {"command": cmd, "available": False, "ok": False, "detail": f"{cmd[0]} not found"}
+    try:
+        proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, timeout=timeout)
+        text = (proc.stdout or proc.stderr).strip()
+        return {
+            "command": cmd,
+            "available": True,
+            "ok": proc.returncode == 0,
+            "exitCode": proc.returncode,
+            "detail": text.splitlines()[:8],
+        }
+    except subprocess.TimeoutExpired:
+        return {"command": cmd, "available": True, "ok": False, "detail": "timed out"}
+
+
+def env_flags(names: list[str]) -> dict[str, bool]:
+    return {name: bool(os.environ.get(name)) for name in names}
+
+
+def github_status() -> dict[str, Any]:
+    return {
+        "auth": run(["gh", "auth", "status"]),
+        "repo": run(["gh", "repo", "view", "--json", "nameWithOwner,defaultBranchRef,url"], timeout=20),
+        "workflows": run(["gh", "workflow", "list", "--limit", "25"], timeout=20),
+        "secrets": run(["gh", "secret", "list"], timeout=20),
+        "safeCommands": [
+            "gh auth login",
+            "gh workflow run helios-control-plane.yml -f publish_pages=false -f update_wiki=true",
+            "gh run list --limit 10",
+        ],
+    }
+
+
+def azure_status() -> dict[str, Any]:
+    return {
+        "account": run(["az", "account", "show"], timeout=20),
+        "bicep": run(["az", "bicep", "version"], timeout=20),
+        "groups": run(["az", "group", "list", "--query", "[].{name:name,location:location}", "-o", "table"], timeout=20),
+        "safeCommands": [
+            "az login",
+            "az group create --name <resource-group> --location <region>",
+            "az deployment group what-if --resource-group <resource-group> --template-file infra/azure/main.bicep --parameters @infra/azure/parameters/dev.json",
+            "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run",
+        ],
+    }
+
+
+def ai_status() -> dict[str, Any]:
+    return {
+        "openai": env_flags(["OPENAI_API_KEY"]),
+        "azureOpenAI": env_flags(["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY"]),
+        "claude": env_flags(["ANTHROPIC_API_KEY"]),
+        "codex": {
+            "cli": run(["codex", "--version"], timeout=10),
+            "homeSet": bool(os.environ.get("CODEX_HOME")),
+        },
+        "microsoft365": env_flags(["M365_TENANT_ID", "M365_CLIENT_ID"]),
+        "slack": env_flags(["SLACK_WEBHOOK_URL"]),
+        "safeCommands": [
+            "python3 scripts/ai/enrich-ideas.py",
+            "python3 scripts/integrations/check-connections.py",
+            "python3 scripts/control/helios-control.py ai",
+            "scripts/azure/sync-keyvault-secrets.sh --vault <vault-name> --dry-run",
+        ],
+        "notes": "This status check never prints secret values and does not call OpenAI, Azure OpenAI, Slack, or Microsoft 365 APIs.",
+    }
+
+
+def local_status() -> dict[str, Any]:
+    return {
+        "tools": {name: shutil.which(name) for name in ["git", "gh", "az", "dotnet", "python3", "cmake", "codex", "claude"]},
+        "paths": {path: (ROOT / path).exists() for path in [
+            "scripts/setup/helios-dev.sh",
+            "scripts/web/helios-web.py",
+            "scripts/analysis/branch_intelligence.py",
+            "scripts/ai/enrich-ideas.py",
+            "infra/azure/main.bicep",
+            ".github/workflows/helios-control-plane.yml",
+            "status-site/index.md",
+            "config/execution-order.json",
+            "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md",
+            "docs/architecture/AZURE_HYBRID_ARCHITECTURE.md",
+        ]},
+        "safeCommands": [
+            "scripts/setup/helios-dev.sh --serve",
+            "curl -X POST http://127.0.0.1:8787/rebuild",
+        ],
+    }
+
+
+def hermes_fleet_status() -> dict[str, Any]:
+    cfg_path = ROOT / "config" / "hermes-fleet.example.json"
+    report_path = ROOT / "reports" / "hermes-fleet" / "latest.json"
+    cfg: dict[str, Any] = {}
+    if cfg_path.exists():
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except json.JSONDecodeError as exc:
+            return {
+                "available": True,
+                "ok": False,
+                "fleetName": "hermes-fleet-production",
+                "detail": f"invalid config JSON: {exc}",
+                "safeCommands": ["python3 scripts/agents/hermes_fleet_readiness.py"],
+            }
+    latest: dict[str, Any] = {}
+    if report_path.exists():
+        try:
+            latest = json.loads(report_path.read_text())
+        except json.JSONDecodeError as exc:
+            latest = {"ok": False, "detail": f"invalid readiness JSON: {exc}"}
+    checks = latest.get("checks", {}) if isinstance(latest, dict) else {}
+    required_checks = ["config", "python", "git", "dryRunMode"]
+    ready_required = sum(1 for name in required_checks if checks.get(name, {}).get("ok"))
+    return {
+        "available": cfg_path.exists(),
+        "ok": bool(latest.get("ok", False)) if latest else cfg.get("mode", "dry-run") == "dry-run",
+        "fleetName": latest.get("fleetName") or cfg.get("fleetName", "hermes-fleet-production"),
+        "mode": latest.get("mode") or cfg.get("mode", "dry-run"),
+        "generatedUtc": latest.get("generatedUtc"),
+        "readyRequiredChecks": f"{ready_required}/{len(required_checks)}" if checks else "not generated",
+        "detail": latest.get("detail") or "report-first fleet lane; run readiness to refresh live checks",
+        "nextActions": latest.get("nextActions", [
+            "Run hermes_fleet_readiness before live agent routing.",
+            "Keep fleet mode dry-run until apply gates and vault handoff pass.",
+        ]),
+        "safeCommands": [
+            "python3 scripts/agents/hermes_fleet_readiness.py",
+            "python3 scripts/agents/agent_fleet_control_catalog.py",
+            "python3 scripts/agents/agent_fleet_autopilot.py --agents 128 --mode hybrid-cloud",
+        ],
+    }
+
+
+def build_graph_status() -> dict[str, Any]:
+    path = ROOT / "reports" / "build-graph" / "latest.json"
+    if not path.exists():
+        return {"available": False, "ok": False, "detail": "missing build graph report", "safeCommands": ["python3 scripts/build_graph/build_graph.py run --profile quick"]}
+    try:
+        data = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        return {"available": True, "ok": False, "detail": f"invalid JSON: {exc}"}
+    counts = data.get("counts", {})
+    failed = [r.get("id") for r in data.get("results", []) if r.get("status") == "failed"]
+    return {
+        "available": True,
+        "ok": not failed,
+        "generatedUtc": data.get("generatedUtc"),
+        "counts": counts,
+        "failedNodes": failed,
+        "nextFixes": data.get("nextFixes", [])[:5],
+        "metadata": data.get("metadata", {}),
+    }
+
+def collect(scope: str) -> dict[str, Any]:
+    report: dict[str, Any] = {
+        "generatedUtc": datetime.now(timezone.utc).isoformat(),
+        "scope": scope,
+        "local": local_status(),
+        "buildGraph": build_graph_status(),
+        "hermesFleet": hermes_fleet_status(),
+    }
+    if scope in {"all", "github"}:
+        report["github"] = github_status()
+    if scope in {"all", "azure"}:
+        report["azure"] = azure_status()
+    if scope in {"all", "ai"}:
+        report["ai"] = ai_status()
+    return report
+
+
+def status_icon(value: Any) -> str:
+    if isinstance(value, dict) and value.get("ok") is True:
+        return "✅"
+    if isinstance(value, dict) and value.get("available") is False:
+        return "❌"
+    if isinstance(value, dict) and value.get("ok") is False:
+        return "⚠️"
+    return "ℹ️"
+
+
+def write_report(report: dict[str, Any]) -> None:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    SUMMARY_JSON.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    lines = ["# HELIOS Control Plane Summary", "", f"Generated: `{report['generatedUtc']}`", "", "## Local quick start", "", "```bash", "scripts/setup/helios-dev.sh --serve", "```", ""]
+    bg = report.get("buildGraph", {})
+    lines.extend(["## Build Graph", ""])
+    if bg.get("available") is False:
+        lines.append("- ⚠️ Missing build graph report; run `python3 scripts/build_graph/build_graph.py run --profile quick`.")
+    else:
+        lines.append(f"- {'✅' if bg.get('ok') else '⚠️'} Generated: `{bg.get('generatedUtc')}`")
+        lines.append(f"- Counts: `{bg.get('counts')}`")
+        for fix in bg.get("nextFixes", []):
+            lines.append(f"- Fix `{fix.get('node')}`: `{fix.get('command')}` ({fix.get('reason')})")
+    lines.append("")
+    fleet = report.get("hermesFleet", {})
+    lines.extend(["## Hermes Fleet Production", ""])
+    lines.append(f"- {'✅' if fleet.get('ok') else '⚠️'} Fleet: `{fleet.get('fleetName', 'hermes-fleet-production')}` mode `{fleet.get('mode', 'unknown')}`")
+    lines.append(f"- Required checks: `{fleet.get('readyRequiredChecks', 'not generated')}`")
+    if fleet.get("generatedUtc"):
+        lines.append(f"- Readiness generated: `{fleet.get('generatedUtc')}`")
+    lines.append("### Safe commands")
+    lines.append("")
+    for command in fleet.get("safeCommands", []):
+        lines.append(f"- `{command}`")
+    for action in fleet.get("nextActions", []):
+        lines.append(f"- {action}")
+    lines.append("")
+    for section in ["github", "azure", "ai"]:
+        if section not in report:
+            continue
+        lines.extend([f"## {section.title()} Control", ""])
+        for key, value in report[section].items():
+            if key == "safeCommands":
+                lines.append("### Safe commands")
+                lines.append("")
+                for command in value:
+                    lines.append(f"- `{command}`")
+                lines.append("")
+            elif isinstance(value, dict) and ("ok" in value or "available" in value):
+                lines.append(f"- {status_icon(value)} **{key}**: {value.get('detail')}")
+            elif isinstance(value, dict):
+                ready = sum(1 for item in value.values() if item)
+                total = len(value)
+                lines.append(f"- ℹ️ **{key}**: {ready}/{total} configured")
+        lines.append("")
+    SUMMARY_MD.write_text("\n".join(lines).rstrip() + "\n")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="HELIOS GitHub/Azure/AI/Codex control-plane status and command guide.")
+    parser.add_argument("scope", nargs="?", default="all", choices=["all", "github", "azure", "ai", "fleet"], help="Control-plane area to inspect; fleet refreshes Hermes/XCore readiness metadata in the summary.")
+    parser.add_argument("--json", action="store_true", help="Print JSON report to stdout.")
+    args = parser.parse_args()
+    report = collect(args.scope)
+    write_report(report)
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print(f"Wrote {SUMMARY_JSON.relative_to(ROOT)}")
+        print(f"Wrote {SUMMARY_MD.relative_to(ROOT)}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

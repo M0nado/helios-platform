@@ -1,0 +1,13 @@
+{
+  "mode": "plan-only",
+  "allowLocalAutofix": true,
+  "allowGitPush": false,
+  "allowWikiPublish": false,
+  "allowPagesPublish": false,
+  "allowBranchDelete": false,
+  "allowAzureMutation": false,
+  "allowRunnerRegistration": false,
+  "maxCloudCostUsd": 0,
+  "requiredChecks": ["secret-preflight", "apply-gate-preflight", "build-graph-full"],
+  "rollbackRequired": true
+}

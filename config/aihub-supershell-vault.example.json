@@ -1,0 +1,18 @@
+{
+  "mode": "plan-only",
+  "vault": {
+    "provider": "azure-key-vault",
+    "name": "helios-aihub-kv",
+    "resourceGroup": "helios-aihub-rg",
+    "location": "eastus"
+  },
+  "profiles": ["local", "wsl2", "codespaces", "github-runner", "azure-hybrid"],
+  "secrets": ["OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "GITHUB_TOKEN", "ANTHROPIC_API_KEY", "OLLAMA_HOST"],
+  "liveFlags": {
+    "allowLocalAutofix": true,
+    "allowGitPush": false,
+    "allowWikiPagesPublish": false,
+    "allowAzureMutation": false,
+    "requireRollbackPlan": true
+  }
+}
