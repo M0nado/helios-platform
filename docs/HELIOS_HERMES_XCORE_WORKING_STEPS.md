@@ -240,3 +240,7 @@ The deep-control layer adds a standalone GUI and report generators for the next 
 ## Agent party GUI overhaul
 
 The deep GUI now includes JRPG-style agent party cards with fleet XP, levels, class/job names, abilities, setup-shop buttons, model-store buttons, and report sources. Generate the backing report with `python3 scripts/learning/agent_party.py` or `./tools/helios.ps1 agents party`, then open `tools/gui/helios-control-center/index.html`.
+
+## Fleet deploy, core AI learning, and code fix center
+
+The agent party now has a buy/deploy shop and multi-language fix center. Use `python3 scripts/learning/fleet_deploy.py` or `./tools/helios.ps1 fleet deploy` to render deployable agent types for C#, C++, F#, Python AIHub, Azure, and GitHub. Use `python3 scripts/learning/core_ai_learning.py` or `./tools/helios.ps1 learning core` to summarize learning recommendations. Use `python3 scripts/automation/code_fix_center.py` or `./tools/helios.ps1 fix center` to render C#, C++, F#, Python, and Azure fix commands.

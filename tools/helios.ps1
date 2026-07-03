@@ -11,7 +11,7 @@
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'security', 'dashboard', 'connect', 'openai', 'models', 'hermes', 'm365', 'audit', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
+    [ValidateSet('help', 'setup', 'status', 'azure', 'branches', 'github', 'fix', 'policy', 'security', 'dashboard', 'connect', 'openai', 'models', 'hermes', 'm365', 'audit', 'fleet', 'learning', 'upgrade', 'finish', 'start', 'ideas', 'llm', 'agents', 'build', 'test', 'reports', 'gate')]
     [string]$Command = 'help',
 
     [Parameter(Position = 1)]
@@ -151,9 +151,11 @@ Commands in integration order:
   hermes models                   Verify Hermes/XCore model packs.
   m365 copilot                    Verify Copilot/Microsoft 365 readiness.
   audit latest                    Record/read automation audit events.
+  fleet deploy                    Render buy/deploy-ready fleet agent types.
+  learning core                   Render core AI learning recommendations.
   connect plan|verify|apply       Run one-command local/cloud autoconnect setup.
   security vault                  Verify vault/secrets readiness without printing secrets.
-  fix plan|apply|csharp              Plan/apply autofix tasks or parse C# build blockers.
+  fix plan|apply|csharp|center              Plan/apply autofix tasks or parse C# build blockers.
   policy check                       Run safety policy checks before apply/deploy/merge.
   upgrade plan|verify|gui|apply      Plan, report, render GUI, or execute deep auto-upgrade.
   finish plan|verify|apply           Run the full setup finisher and final reports.
@@ -479,6 +481,12 @@ function Invoke-FixCommand {
     param([string]$SubAction)
     Write-HeliosHeader "fix $SubAction"
     $Mode = if ($SubAction -eq 'default') { 'plan' } else { $SubAction }
+    if ($Mode -eq 'center') {
+        $ScriptPath = Join-Path $RepoRoot 'scripts/automation/code_fix_center.py'
+        Invoke-ExternalCommand python3 @($ScriptPath)
+        New-HeliosReport -Name 'fix-center' -Status 'completed' -Checks @([ordered]@{ name = 'fix:center'; status = 'ok'; message = 'code fix center completed' }) -Commands @("python3 $ScriptPath")
+        return
+    }
     if ($Mode -eq 'csharp') {
         $ScriptPath = Join-Path $RepoRoot 'scripts/automation/fix_csharp_compile.py'
         Invoke-ExternalCommand python3 @($ScriptPath)
@@ -486,7 +494,7 @@ function Invoke-FixCommand {
         return
     }
     if ($Mode -notin @('plan', 'apply')) {
-        throw "Unknown fix action '$SubAction'. Use plan, apply, or csharp."
+        throw "Unknown fix action '$SubAction'. Use plan, apply, csharp, or center."
     }
     $ScriptPath = Join-Path $RepoRoot 'scripts/automation/autofix_loop.py'
     Invoke-ExternalCommand python3 @($ScriptPath, $Mode)
@@ -576,6 +584,24 @@ function Invoke-AuditCommand {
     $ScriptPath = Join-Path $RepoRoot 'scripts/security/automation_audit.py'
     Invoke-ExternalCommand python3 @($ScriptPath, '--command', 'audit latest')
     New-HeliosReport -Name 'audit-latest' -Status 'completed' -Checks @([ordered]@{ name = 'audit:latest'; status = 'ok'; message = 'audit latest generated' }) -Commands @("python3 $ScriptPath --command 'audit latest'")
+}
+
+function Invoke-FleetCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "fleet $SubAction"
+    if ($SubAction -ne 'deploy' -and $SubAction -ne 'default') { throw "Unknown fleet action '$SubAction'. Use deploy." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/learning/fleet_deploy.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'fleet-deploy' -Status 'completed' -Checks @([ordered]@{ name = 'fleet:deploy'; status = 'ok'; message = 'fleet deploy generated' }) -Commands @("python3 $ScriptPath")
+}
+
+function Invoke-LearningCommand {
+    param([string]$SubAction)
+    Write-HeliosHeader "learning $SubAction"
+    if ($SubAction -ne 'core' -and $SubAction -ne 'default') { throw "Unknown learning action '$SubAction'. Use core." }
+    $ScriptPath = Join-Path $RepoRoot 'scripts/learning/core_ai_learning.py'
+    Invoke-ExternalCommand python3 @($ScriptPath)
+    New-HeliosReport -Name 'learning-core' -Status 'completed' -Checks @([ordered]@{ name = 'learning:core'; status = 'ok'; message = 'core AI learning generated' }) -Commands @("python3 $ScriptPath")
 }
 
 function Invoke-UpgradeCommand {
@@ -837,6 +863,8 @@ switch ($Command) {
     'hermes' { Invoke-HermesCommand $Action }
     'm365' { Invoke-M365Command $Action }
     'audit' { Invoke-AuditCommand $Action }
+    'fleet' { Invoke-FleetCommand $Action }
+    'learning' { Invoke-LearningCommand $Action }
     'upgrade' { Invoke-UpgradeCommand $Action }
     'finish' { Invoke-FinishCommand $Action }
     'start' { Invoke-StartCommand $Action }
