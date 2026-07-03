@@ -1,0 +1,65 @@
+name: Azure Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: 'Target resource group'
+        required: true
+      location:
+        description: 'Azure location'
+        required: false
+        default: 'eastus'
+      deploy:
+        description: 'Deploy after validation and what-if'
+        required: false
+        default: 'false'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preflight Azure inputs
+        env:
+          AZURE_CLIENT_ID_PRESENT: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID_PRESENT: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID_PRESENT: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
+        run: |
+          test -n "$AZURE_CLIENT_ID_PRESENT" && echo "AZURE_CLIENT_ID configured" || (echo "AZURE_CLIENT_ID missing" && exit 1)
+          test -n "$AZURE_TENANT_ID_PRESENT" && echo "AZURE_TENANT_ID configured" || (echo "AZURE_TENANT_ID missing" && exit 1)
+          test -n "$AZURE_SUBSCRIPTION_ID_PRESENT" && echo "AZURE_SUBSCRIPTION_ID configured" || (echo "AZURE_SUBSCRIPTION_ID missing" && exit 1)
+          test -n "$RESOURCE_GROUP" && echo "resource_group input configured" || (echo "resource_group input missing" && exit 1)
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify Azure CLI and Bicep
+        run: |
+          az --version
+          az bicep version
+      - name: Build Bicep
+        run: python3 scripts/azure/bicep_report.py build
+      - name: Validate deployment
+        env:
+          HELIOS_AZURE_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
+          HELIOS_AZURE_LOCATION: ${{ github.event.inputs.location }}
+        run: python3 scripts/azure/bicep_report.py validate --strict-online
+      - name: What-if
+        env:
+          HELIOS_AZURE_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
+          HELIOS_AZURE_LOCATION: ${{ github.event.inputs.location }}
+        run: python3 scripts/azure/bicep_report.py what-if --strict-online
+      - name: Deploy
+        if: ${{ github.event.inputs.deploy == 'true' }}
+        run: |
+          az deployment group create \
+            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --template-file infra/azure/main.bicep \
+            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"

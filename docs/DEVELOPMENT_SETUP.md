@@ -70,11 +70,26 @@ docker --version
 docker run hello-world
 ```
 
-**5. Azure CLI**
+**5. Azure CLI + Bicep**
 ```powershell
-# Install from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows
+# Windows: install from https://learn.microsoft.com/cli/azure/install-azure-cli-windows
+# Linux/container: ./scripts/setup/bootstrap-local-tools.sh or Microsoft's apt installer
 # Verify
 az --version
+az bicep version
+az bicep build --file infra/azure/main.bicep
+```
+
+For Azure validation/what-if runs, sign in and set the target group before using the shared report helper. If these values are missing on a local workstation, the helper falls back to an offline Bicep build and exits successfully; use `--strict-online` when online Azure validation must be enforced:
+
+```powershell
+az login
+$env:HELIOS_AZURE_RESOURCE_GROUP = '<resource-group>'
+$env:HELIOS_AZURE_LOCATION = 'eastus'
+python3 scripts/azure/bicep_report.py validate
+python3 scripts/azure/bicep_report.py what-if
+python3 scripts/azure/bicep_report.py validate --strict-online
+python3 scripts/azure/bicep_report.py what-if --strict-online
 ```
 
 **6. Code Editor** (choose one)
