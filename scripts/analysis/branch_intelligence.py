@@ -68,6 +68,26 @@ def configure_remotes(manifest: dict[str, Any], apply: bool) -> list[dict[str, A
     return actions
 
 
+def inventory_remotes(manifest: dict[str, Any], remote_filters: list[str] | None = None) -> list[dict[str, Any]]:
+    """Report configured remote state without adding or changing remotes."""
+    _, existing_out, _ = run(["git", "remote"])
+    existing = set(existing_out.splitlines()) if existing_out else set()
+    filters = set(remote_filters or [])
+    actions: list[dict[str, Any]] = []
+    for remote in manifest.get("remotes", []):
+        name = remote.get("name", "")
+        if filters and name not in filters:
+            continue
+        url = remote.get("url", "") or os.environ.get(remote.get("urlEnv", ""), "")
+        actions.append({
+            "name": name,
+            "urlConfigured": bool(url),
+            "enabled": bool(remote.get("enabled")),
+            "action": "inventory",
+            "result": "configured" if name in existing else "not configured",
+        })
+    return actions
+
 def fetch_remotes(apply: bool) -> dict[str, Any]:
     if not apply:
         return {"executed": False, "result": "dry-run"}
@@ -456,8 +476,12 @@ def main() -> int:
         parser.error("--remote-inventory-only cannot be combined with --configure-remotes or --fetch-remotes")
 
     manifest = load_manifest(args.manifest)
-    remote_actions = configure_remotes(manifest, apply=args.configure_remotes)
-    fetch_result = fetch_remotes(apply=args.fetch)
+    if args.remote_inventory_only:
+        remote_actions = inventory_remotes(manifest, args.remote)
+        fetch_result = {"executed": False, "result": "remote-inventory-only"}
+    else:
+        remote_actions = configure_remotes(manifest, apply=args.configure_remotes)
+        fetch_result = fetch_remotes(apply=args.fetch)
     ranked = rank_branches(manifest, args.remote)
     ideas = [] if args.remote_inventory_only else extract_ideas(manifest)
     hermes_events = [] if args.remote_inventory_only else read_hermes_jsonl(args.hermes_jsonl)
