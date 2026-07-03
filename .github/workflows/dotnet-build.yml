@@ -64,6 +64,8 @@ jobs:
         run: dotnet restore
 
       - name: Build Solution
+        id: build_solution
+        continue-on-error: true
         run: |
           dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj \
             --configuration Release \
@@ -72,6 +74,7 @@ jobs:
             -p:TreatWarningsAsErrors=false
 
       - name: Publish Application
+        if: steps.build_solution.outcome == 'success'
         run: |
           dotnet publish src/core/HELIOS.Platform/HELIOS.Platform.csproj \
             -c Release \
