@@ -142,7 +142,8 @@ Commands in integration order:
   branches fetch|list|integrate  Fetch, inspect, and integrate HELIOS/Hermes branches.
   github mass-score|mass-plan|mass-branch|mass-pr|mass-merge|mass-all
                                   Score, branch, PR, and auto-merge mass integration.
-  github conflict-forecast           Forecast merge conflict risk before branch apply.
+  github conflict-forecast|language-score|merge-decision
+                                  Forecast risk and score candidates by language ownership.
   github repo-verify|repo-setup|connect-plan|connect-verify|connect-apply
                                   Verify/apply GitHub repository automation setup and connection.
   dashboard render|serve           Render dashboard or run safe command bridge list.
@@ -449,6 +450,18 @@ function Invoke-GitHubCommand {
         New-HeliosReport -Name 'github-conflict-forecast' -Status 'completed' -Checks @([ordered]@{ name = 'github:conflict-forecast'; status = 'ok'; message = 'conflict forecast completed' }) -Commands @("python3 $ForecastPath")
         return
     }
+    if ($SubAction -eq 'language-score') {
+        $LanguagePath = Join-Path $RepoRoot 'scripts/github/language_aware_score.py'
+        Invoke-ExternalCommand python3 @($LanguagePath)
+        New-HeliosReport -Name 'github-language-score' -Status 'completed' -Checks @([ordered]@{ name = 'github:language-score'; status = 'ok'; message = 'language-aware merge score completed' }) -Commands @("python3 $LanguagePath")
+        return
+    }
+    if ($SubAction -eq 'merge-decision') {
+        $DecisionPath = Join-Path $RepoRoot 'scripts/github/merge_decision_pipeline.py'
+        Invoke-ExternalCommand python3 @($DecisionPath)
+        New-HeliosReport -Name 'github-merge-decision' -Status 'completed' -Checks @([ordered]@{ name = 'github:merge-decision'; status = 'ok'; message = 'mixed-language merge decision pipeline completed' }) -Commands @("python3 $DecisionPath")
+        return
+    }
     if ($SubAction -eq 'repo-verify' -or $SubAction -eq 'repo-setup') {
         $RepoSetupPath = Join-Path $RepoRoot 'scripts/github/setup_repository.py'
         if (-not (Test-Path $RepoSetupPath)) {
@@ -469,7 +482,7 @@ function Invoke-GitHubCommand {
         'mass-all' = 'all'
     }
     if (-not $ModeMap.ContainsKey($SubAction)) {
-        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, takeover, connect-plan, connect-verify, connect-apply, conflict-forecast, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
+        throw "Unknown github action '$SubAction'. Use repo-verify, repo-setup, takeover, connect-plan, connect-verify, connect-apply, conflict-forecast, language-score, merge-decision, mass-score, mass-plan, mass-branch, mass-pr, mass-merge, or mass-all."
     }
     $Mode = $ModeMap[$SubAction]
     $Args = @($ScriptPath, $Mode) + $RemainingArgs

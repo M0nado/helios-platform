@@ -244,3 +244,25 @@ The deep GUI now includes JRPG-style agent party cards with fleet XP, levels, cl
 ## Fleet deploy, core AI learning, and code fix center
 
 The agent party now has a buy/deploy shop and multi-language fix center. Use `python3 scripts/learning/fleet_deploy.py` or `./tools/helios.ps1 fleet deploy` to render deployable agent types for C#, C++, F#, Python AIHub, Azure, and GitHub. Use `python3 scripts/learning/core_ai_learning.py` or `./tools/helios.ps1 learning core` to summarize learning recommendations. Use `python3 scripts/automation/code_fix_center.py` or `./tools/helios.ps1 fix center` to render C#, C++, F#, Python, and Azure fix commands.
+
+## Mixed-language ownership and ML merge decisions
+
+HELIOS should keep Python as the AIHub/provider/report glue layer while durable product logic moves to the strongest language for each subsystem:
+
+- **C#** owns the frontend, orchestration core, contracts, GitHub/Azure service wrappers, and project-aware compile fixing.
+- **F#** owns merge scoring, agent XP/ranking, model-cost optimization, branch prediction, and ML-style analytics.
+- **C++** owns native diff/merge acceleration, benchmark baselines, and performance-sensitive local runtime helpers.
+- **Python** remains for AIHub/provider integration, report rendering, compatibility wrappers, and prototype automation.
+
+New registries and reports:
+
+```powershell
+python3 scripts/automation/language_ownership_report.py
+python3 scripts/learning/ml_model_registry.py
+python3 scripts/learning/party_formations.py
+python3 scripts/github/language_aware_score.py
+python3 scripts/github/merge_decision_pipeline.py
+python3 scripts/analytics/fsharp_category_report.py
+```
+
+Use `./tools/helios.ps1 github language-score` and `./tools/helios.ps1 github merge-decision` to generate language-aware candidate rankings before branch apply. The final gate now includes language ownership, ML model registry, party formations, F# category reporting, language-aware merge scoring, and the mixed-language merge decision pipeline before merge readiness is accepted.
