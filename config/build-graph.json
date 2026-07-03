@@ -14,8 +14,7 @@
       "title": "Generated PR update body",
       "command": "python3 scripts/github/update-pr-from-reports.py --dry-run",
       "paths": [
-        "scripts/github/update-pr-from-reports.py",
-        "reports/**"
+        "scripts/github/update-pr-from-reports.py"
       ]
     },
     {
@@ -31,8 +30,7 @@
       "title": "Readiness score",
       "command": "python3 scripts/integrations/readiness_score.py",
       "paths": [
-        "scripts/integrations/readiness_score.py",
-        "reports/**"
+        "scripts/integrations/readiness_score.py"
       ]
     },
     {
@@ -41,8 +39,7 @@
       "command": "python3 scripts/dashboard/generate-gui.py",
       "paths": [
         "scripts/dashboard/generate-gui.py",
-        "status-site/**",
-        "reports/**"
+        "status-site/**"
       ]
     },
     {
