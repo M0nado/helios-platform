@@ -25,11 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Preflight Azure inputs
+        env:
+          AZURE_CLIENT_ID_PRESENT: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID_PRESENT: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID_PRESENT: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
         run: |
-          test -n "${{ secrets.AZURE_CLIENT_ID }}" && echo "AZURE_CLIENT_ID configured" || (echo "AZURE_CLIENT_ID missing" && exit 1)
-          test -n "${{ secrets.AZURE_TENANT_ID }}" && echo "AZURE_TENANT_ID configured" || (echo "AZURE_TENANT_ID missing" && exit 1)
-          test -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}" && echo "AZURE_SUBSCRIPTION_ID configured" || (echo "AZURE_SUBSCRIPTION_ID missing" && exit 1)
-          test -n "${{ github.event.inputs.resource_group }}" && echo "resource_group input configured" || (echo "resource_group input missing" && exit 1)
+          test -n "$AZURE_CLIENT_ID_PRESENT" && echo "AZURE_CLIENT_ID configured" || (echo "AZURE_CLIENT_ID missing" && exit 1)
+          test -n "$AZURE_TENANT_ID_PRESENT" && echo "AZURE_TENANT_ID configured" || (echo "AZURE_TENANT_ID missing" && exit 1)
+          test -n "$AZURE_SUBSCRIPTION_ID_PRESENT" && echo "AZURE_SUBSCRIPTION_ID configured" || (echo "AZURE_SUBSCRIPTION_ID missing" && exit 1)
+          test -n "$RESOURCE_GROUP" && echo "resource_group input configured" || (echo "resource_group input missing" && exit 1)
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}

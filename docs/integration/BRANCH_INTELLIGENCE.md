@@ -97,3 +97,13 @@ python3 scripts/analysis/branch_intelligence.py --fetch-remotes
 ```
 
 Do not enable merge or prune work from remote branches until the dashboard recommends a safe action and the branch-specific quality gates have passed.
+
+To focus branch ranking on the two highest-priority external lanes after fetch, run:
+
+```bash
+python3 scripts/analysis/branch_intelligence.py \
+  --remote helios-control \
+  --remote hermes-fleet-production
+```
+
+This keeps all merge/delete decisions manual while producing focused ranking, idea impact, agent queue, and F# analytics inputs for those remotes.

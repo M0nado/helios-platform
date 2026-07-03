@@ -230,8 +230,9 @@
     {
       "id": "native-csharp-smoke",
       "title": "C# Native/XCore interop smoke project build",
-      "command": "dotnet build samples/native-interop/HELIOS.NativeInterop.Sample.csproj",
+      "command": "dotnet build samples/native-interop/HELIOS.NativeInterop.Sample.csproj && LD_LIBRARY_PATH=$PWD/.build/native dotnet run --project samples/native-interop/HELIOS.NativeInterop.Sample.csproj --no-build",
       "dependsOn": [
+        "native-configure",
         "native-build"
       ],
       "paths": [
@@ -242,10 +243,24 @@
     {
       "id": "native-python-smoke",
       "title": "Python Native/XCore ctypes smoke script syntax",
-      "command": "python3 -m py_compile scripts/native/native_smoke.py",
+      "command": "python3 -m py_compile scripts/native/native_smoke.py && python3 scripts/native/native_smoke.py",
       "paths": [
         "scripts/native/native_smoke.py",
         "src/native/**"
+      ],
+      "dependsOn": [
+        "native-configure",
+        "native-build"
+      ]
+    },
+    {
+      "id": "full-stack-readiness",
+      "title": "Full-stack tool and path readiness report",
+      "command": "python3 scripts/integrations/full_stack_readiness.py",
+      "paths": [
+        "scripts/integrations/full_stack_readiness.py",
+        "config/build-graph.json",
+        "docs/integration/remote-manifest.json"
       ]
     }
   ]

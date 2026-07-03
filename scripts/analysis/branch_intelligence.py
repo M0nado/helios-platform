@@ -496,6 +496,7 @@ def main() -> int:
     parser.add_argument("--fetch", action="store_true", help="Run git fetch --all --prune --tags.")
     parser.add_argument("--fetch-remotes", action="store_true", help="Alias for --fetch; explicit opt-in network operation.")
     parser.add_argument("--remote-inventory-only", action="store_true", help="Only write remote inventory reports and skip branch/idea scoring.")
+    parser.add_argument("--remote", action="append", default=[], help="Limit branch ranking to one or more remote names after fetching, e.g. helios-control.")
     parser.add_argument("--enrich-ideas", action="store_true", help="Mark ideas for optional AI enrichment when credentials are configured.")
     parser.add_argument("--hermes-jsonl", action="append", type=Path, default=[], help="Optional Hermes fleet JSONL event input.")
     args = parser.parse_args()
@@ -512,6 +513,9 @@ def main() -> int:
         print(f"Wrote remote inventory reports to {args.out.relative_to(ROOT)}")
         return 0
     ranked = rank_branches(manifest)
+    if args.remote:
+        prefixes = tuple(f"{name}/" for name in args.remote)
+        ranked = [branch for branch in ranked if branch.get("name", "").startswith(prefixes)]
     ideas = extract_ideas(manifest)
     hermes_events = read_hermes_jsonl(args.hermes_jsonl)
     ideas.extend(hermes_ideas(hermes_events))
