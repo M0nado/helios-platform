@@ -54,7 +54,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       
@@ -124,7 +124,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -420,7 +420,7 @@ steps:
 steps:
   - uses: actions/checkout@v4
   
-  - uses: actions/setup-node@v3
+  - uses: actions/setup-node@v4
     with:
       node-version: '18'
       cache: 'npm'
@@ -465,7 +465,7 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm test
@@ -506,7 +506,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
       
       - run: npm ci
       - run: npm run lint
@@ -532,7 +532,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
       
       - run: npm ci
       - run: npm run build
