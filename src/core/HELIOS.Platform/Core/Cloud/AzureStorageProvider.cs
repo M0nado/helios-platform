@@ -3,6 +3,7 @@ namespace HELIOS.Platform.Core.Cloud;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Identity;
+using HELIOS.Platform.Core.Logging;
 
 /// <summary>
 /// Azure Blob Storage provider implementation.

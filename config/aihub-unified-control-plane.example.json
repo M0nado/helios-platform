@@ -1,0 +1,115 @@
+{
+  "id": "aihub-unified-control-plane-template",
+  "mode": "report-only",
+  "generatedBy": "scripts/integrations/aihub_unified_control_plane.py",
+  "csharpBackbone": {
+    "contract": "src/core/HELIOS.Platform.Contracts/AIHubEngineContracts.cs",
+    "owns": [
+      "identity-policy",
+      "gui-state",
+      "typed-api-contracts",
+      "route-decisions",
+      "safe-dispatch"
+    ]
+  },
+  "engineRoutes": [
+    {
+      "engine": "FSharpLearning",
+      "source": "src/analytics/HELIOS.Analytics.FSharp/AIHub/AiHubLearningEngine.fs",
+      "purpose": "score fusion, ranking, prediction, branch/module learning"
+    },
+    {
+      "engine": "CppNativePerformance",
+      "source": "src/native/HELIOS.Native.Performance/include/helios/aihub_native_engine.hpp",
+      "purpose": "hot-path comparison and native assist only when C# recommends it"
+    },
+    {
+      "engine": "PythonIntegration",
+      "source": "scripts/integrations/aihub_unified_control_plane.py",
+      "purpose": "report ingestion, provider/tool readiness, CLI glue, dashboard artifacts"
+    },
+    {
+      "engine": "YamlAutomation",
+      "source": ".github/workflows/aihub-self-learning-growth.yml",
+      "purpose": "scheduled and manual report-only automation"
+    }
+  ],
+  "selfLearningBackboneBridge": {
+    "reportSource": "reports/learning/aihub-self-learning-notes.json",
+    "outputJson": "reports/integrations/aihub-unified-control-plane.json",
+    "outputMarkdown": "reports/integrations/aihub-unified-control-plane.md",
+    "safeCommands": [
+      "python3 scripts/analysis/aihub_self_learning_notes.py",
+      "python3 scripts/integrations/aihub_unified_control_plane.py",
+      "python3 scripts/dashboard/generate-gui.py"
+    ]
+  },
+  "guardrails": [
+    "report-only until explicit live flags are enabled",
+    "no secret values in generated JSON or Markdown",
+    "delete/prune actions remain suggestions until apply gates pass",
+    "GitHub and Azure mutation requires authenticated CLI plus live flag review"
+  ],
+  "controlLanes": [
+    {
+      "id": "self-learning-growth",
+      "workflow": ".github/workflows/aihub-self-learning-growth.yml",
+      "reports": [
+        "reports/learning/aihub-self-learning-notes.json",
+        "reports/learning/complex-code-grading.json",
+        "reports/learning/module-submodule-organizer.json"
+      ],
+      "purpose": "grow reusable notes, scoring context, and module placement guidance without mutation"
+    },
+    {
+      "id": "branch-absorption-multicloud",
+      "workflow": ".github/workflows/branch-absorption-multicloud.yml",
+      "reports": [
+        "reports/branch-intelligence/branch-absorption-multicloud-plan.json",
+        "reports/branch-agents/branch-test-autofix-plan.json"
+      ],
+      "purpose": "compare branches, preserve unique work, prune redundant suggestions, and model Azure/GitHub lanes"
+    },
+    {
+      "id": "agent-fleet-autopilot",
+      "workflow": ".github/workflows/branch-fix-agents.yml",
+      "reports": [
+        "reports/branch-agents/agent-fleet-control-catalog.json",
+        "reports/branch-agents/agent-fleet-autopilot.json"
+      ],
+      "purpose": "assign Hermes/XCore specialists to report-only branch, build, cloud, and GUI tasks"
+    },
+    {
+      "id": "build-graph-automation",
+      "workflow": ".github/workflows/build-graph-automation.yml",
+      "reports": [
+        "reports/build-graph/latest.json",
+        "reports/security/secret-preflight.json",
+        "reports/security/apply-gate-preflight.json"
+      ],
+      "purpose": "run static checks, dependency-aware build graph nodes, and next-fix suggestions"
+    }
+  ],
+  "dashboardLinks": [
+    "status-site/index.html",
+    "reports/integrations/aihub-unified-control-plane.md",
+    "reports/learning/aihub-self-learning-notes.md",
+    "reports/branch-intelligence/branch-absorption-multicloud-plan.md",
+    "reports/branch-agents/agent-fleet-autopilot.md"
+  ],
+  "liveFlagPolicy": {
+    "default": "plan-only",
+    "allowedLevels": [
+      "plan-only",
+      "auto-local",
+      "repo-live",
+      "cloud-live",
+      "full-live"
+    ],
+    "requires": [
+      "config/aihub-live-flags.example.json",
+      "scripts/security/secret_preflight.py",
+      "scripts/security/apply_gate_preflight.py"
+    ]
+  }
+}

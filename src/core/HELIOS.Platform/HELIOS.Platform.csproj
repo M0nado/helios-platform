@@ -2,8 +2,9 @@
 
   <!-- Framework Configuration -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <OutputType>Exe</OutputType>
+    <UseWPF>true</UseWPF>
     <RootNamespace>HELIOS.Platform</RootNamespace>
     <AssemblyName>HELIOS.Platform</AssemblyName>
     <LangVersion>latest</LangVersion>
@@ -129,8 +130,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.17.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
     
     <!-- Monitoring & Observability -->
     <PackageReference Include="Serilog" Version="4.3.1" />
@@ -165,6 +168,7 @@
     
     <!-- Testing -->
     <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="Moq" Version="4.20.70" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -177,6 +181,8 @@
   <ItemGroup>
     <Compile Remove="Phase10/BootEnvironment/Channel3USBBootInstallation.cs" />
     <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
+    <Compile Remove="**/Tests/**/*.cs" />
+    <Compile Remove="**/*Tests.cs" />
   </ItemGroup>
 
 </Project>

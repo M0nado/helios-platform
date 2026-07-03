@@ -1,4 +1,5 @@
 namespace HELIOS.Platform.Core.Cloud;
+using HELIOS.Platform.Core.Logging;
 
 /// <summary>
 /// Factory for creating cloud storage provider instances.

@@ -2,6 +2,7 @@ namespace HELIOS.Platform.Core.Cloud;
 
 using System.Collections.Concurrent;
 using System.Data.SQLite;
+using HELIOS.Platform.Core.Logging;
 
 /// <summary>
 /// Synchronization engine for cloud storage operations.

@@ -1,0 +1,33 @@
+{
+  "principle": "C# is the secure front-facing backbone and orchestrator. It keeps GUI, identity, vault, safety flags, online/Fabric/hybrid coordination, typed APIs, reliability, and clean object-shaped service boundaries simple. C++ is the high-speed partner for security-sensitive native helpers, performance, reactive profiles, memory, CPU, GPU, rendering, internet/download optimization, and algorithms that need low overhead. F# is the deep learning, analytics, scoring, prediction, optimization, and mathematical decision engine shared by everyone. Python is used deliberately for AIHub, LLM agents, Linux/WSL2, LangChain-style ecosystems, geometry/ML libraries, and provider glue, then hands results back through C# so all engines can use them.",
+  "profiles": [
+    {
+      "language": "C#",
+      "role": "front-facing secure orchestration backbone",
+      "hundredWordGuide": "Use C# for the main GUI, WinUI3 shell, secure API boundaries, vault integration, permissions, live automation flags, online and hybrid control, GitHub/Azure/Fabric coordination, object-shaped service contracts, reliability, configuration, state management, and every place where complexity needs to be hidden behind simple typed interfaces. C# should decide where work goes, keep the system understandable, prevent redundant paths, and make every engine easy to use. It should call F# for learning, C++ for hot paths, and Python for AIHub/provider/Linux libraries while keeping data contracts clean and safe.",
+      "skills": ["WinUI3 GUI", "typed service contracts", "vault access", "policy gates", "hybrid orchestration", "GitHub/Azure command routing", "object models", "dependency injection", "safe APIs", "settings UX", "security boundaries", "cross-engine dispatch"],
+      "rankOn": ["security", "reliability", "maintainability", "operator clarity", "API shape", "vault safety", "hybrid readiness", "testability"]
+    },
+    {
+      "language": "C++",
+      "role": "native performance/security/rendering/hot-path engine",
+      "hundredWordGuide": "Use C++ whenever HELIOS needs low-cost, high-performance work that benefits from native memory control, predictable CPU usage, SIMD/vectorization, fast graph comparison, rendering overlays, GPU-adjacent pipelines, checksums, download or network throughput helpers, profiling, secure memory wiping, partition/device validation, and reactive desktop profile calculations. C++ should not replace the C# framework; it should act as a powerful engine called by C# through clean boundaries. It is ideal for hot algorithms, desktop rendering performance, memory-sensitive security helpers, large commit/repository graph scoring, and any repeated operation where Python or managed code would waste CPU or memory.",
+      "skills": ["SIMD/vectorization", "memory control", "rendering overlays", "GPU-adjacent batching", "secure buffers", "checksums", "network throughput", "download optimization", "large graph comparison", "profile kernels", "partition validation", "native scoring"],
+      "rankOn": ["latency", "CPU cost", "memory pressure", "GPU/render load", "security sensitivity", "repeat count", "data size", "interop safety"]
+    },
+    {
+      "language": "F#",
+      "role": "deep learning analytics prediction scoring engine",
+      "hundredWordGuide": "Use F# as the shared intelligence engine for deep learning style scoring, analytics, predictions, ranking, search, async queries, mathematical modeling, anomaly detection, optimization, natural-selection style prompt and tool scoring, branch/commit issue priority, security/performance tradeoff analysis, cost-quality-speed balancing, module/submodule fit, and fleet XP progression. F# should be present throughout AIHub because it turns raw outcomes into decisions everyone can reuse. C# calls it through stable contracts, C++ supplies fast numeric or graph inputs when needed, and Python supplies specialized AI library outputs. F# makes all engines smarter together.",
+      "skills": ["prediction", "ranking", "statistical scoring", "async queries", "optimization", "anomaly detection", "agent XP analytics", "cost-quality-speed fusion", "module fit", "branch priority", "security analytics", "performance analytics"],
+      "rankOn": ["prediction confidence", "learning value", "math clarity", "score explainability", "parallelism", "signal quality", "reuse", "decision impact"]
+    },
+    {
+      "language": "Python",
+      "role": "AIHub LLM agent Linux and special-library bridge",
+      "hundredWordGuide": "Use Python when the best capability comes from AIHub provider libraries, LLM agent frameworks, local model tooling, Linux/WSL2 automation, LangChain-style ecosystems, geometry or machine learning libraries, report generation, quick automation, and provider adapters for OpenAI, Claude, Ollama, Codex, Copilot, or other tools. Python should not become the core orchestrator when C#, F#, or C++ are better. It should gather external intelligence, run specialized libraries, and pass structured results back to C# so F# can score them and C++ can accelerate repeated hot work. Python remains valuable but intentionally focused.",
+      "skills": ["OpenAI adapters", "Claude adapters", "Ollama/local models", "LangChain-style tools", "Linux automation", "WSL2", "special ML libraries", "geometry libraries", "report generation", "provider glue", "agent prompts", "API probes"],
+      "rankOn": ["library advantage", "provider coverage", "Linux need", "agent/LLM fit", "speed to automate", "handoff quality", "dependency risk", "replaceability"]
+    }
+  ]
+}
