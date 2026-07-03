@@ -156,10 +156,12 @@
       ],
       "tags": [
         "analysis",
+        "critical",
         "dashboard",
         "quick"
       ],
-      "timeoutSeconds": 60
+      "timeoutSeconds": 60,
+      "critical": true
     },
     {
       "id": "apply-gate-preflight",
