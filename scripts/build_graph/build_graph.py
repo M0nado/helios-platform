@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+import argparse,fnmatch,json,subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[2]; CFG=ROOT/'config/build-graph.json'; OUT=ROOT/'reports/build-graph/build-graph.json'; MD=ROOT/'reports/build-graph/build-graph.md'
+READINESS_NODE={
+    'id':'full-stack-readiness',
+    'title':'Full-stack readiness verification',
+    'command':'python3 scripts/integrations/readiness_score.py',
+    'paths':['scripts/integrations/readiness_score.py','reports/**','config/**'],
+}
+def load(): return json.loads(CFG.read_text())['nodes']
+def write(nodes,results=None):
+    OUT.parent.mkdir(parents=True,exist_ok=True); payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'nodes':nodes,'results':results or []}; OUT.write_text(json.dumps(payload,indent=2)+'\n')
+    lines=['# HELIOS Build Graph','','| Node | Title | Command |','| --- | --- | --- |']+[f"| `{n['id']}` | {n['title']} | `{n['command']}` |" for n in nodes]
+    if results:
+        lines+=['','## Results','','| Node | Exit | Tail |','| --- | --- | --- |']+[f"| `{r['id']}` | {r['exitCode']} | `{str(r['tail'])[:160]}` |" for r in results]
+    MD.write_text('\n'.join(lines)+'\n')
+def run_node(n,dry_run=False):
+    if dry_run:
+        return {'id':n['id'],'exitCode':0,'tail':[f"DRY-RUN: {n['command']}"]}
+    p=subprocess.run(n['command'],cwd=ROOT,text=True,capture_output=True,shell=True,timeout=180)
+    return {'id':n['id'],'exitCode':p.returncode,'tail':(p.stdout+p.stderr).splitlines()[-10:]}
+def changed_files():
+    commands=[['git','diff','--name-only','HEAD'],['git','diff','--name-only','--cached']]
+    changed=[]
+    for cmd in commands:
+        p=subprocess.run(cmd,cwd=ROOT,text=True,capture_output=True,check=False)
+        if p.returncode==0:
+            changed.extend(line.strip() for line in p.stdout.splitlines() if line.strip())
+    return sorted(set(changed))
+def path_matches(pattern,path):
+    return fnmatch.fnmatch(path,pattern) or fnmatch.fnmatch('/'+path,pattern)
+def node_matches_changed(node,changed):
+    patterns=node.get('paths') or []
+    return any(path_matches(pattern,path) for pattern in patterns for path in changed)
+def append_readiness(selected,nodes):
+    if any(n['id']=='full-stack-readiness' for n in selected):
+        return selected
+    readiness=next((n for n in nodes if n['id']=='full-stack-readiness'),None) or READINESS_NODE
+    return selected+[readiness]
+def main():
+    ap=argparse.ArgumentParser(); ap.add_argument('command',nargs='?',default='list',choices=['list','run','graph']); ap.add_argument('--node'); ap.add_argument('--all',action='store_true'); ap.add_argument('--changed-only',action='store_true',help='run only nodes whose configured paths have local changes'); ap.add_argument('--include-readiness',action='store_true',help='include the full-stack-readiness node in the selected run set'); ap.add_argument('--dry-run',action='store_true',help='show selected node commands without executing them'); a=ap.parse_args(); nodes=load(); results=[]
+    if a.command=='run':
+        if a.all:
+            selected=nodes
+        elif a.changed_only:
+            changed=changed_files(); selected=[n for n in nodes if node_matches_changed(n,changed)]
+        else:
+            selected=[n for n in nodes if n['id']==a.node]
+        if a.include_readiness:
+            selected=append_readiness(selected,nodes)
+        if not selected: raise SystemExit('No matching node; use --node <id>, --all, --changed-only, or --include-readiness')
+        for n in selected: results.append(run_node(n,a.dry_run))
+    write(nodes,results); print(f'Wrote {OUT.relative_to(ROOT)}'); print(f'Wrote {MD.relative_to(ROOT)}')
+if __name__=='__main__': main()
