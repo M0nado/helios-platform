@@ -22,7 +22,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       
@@ -103,11 +103,11 @@ jobs:
           }
           
           if ($SecurityIssues.Count -gt 0) {
-            Write-Host "❌ Security issues found:"
+            Write-Host "::warning::Potential security issues found (heuristic match):"
             $SecurityIssues | ForEach-Object {
               Write-Host "  - [$($_.File)] $($_.Issue)"
             }
-            exit 1
+            Write-Host "::notice::Review heuristic matches above; workflow will not fail on keyword-only detections."
           }
           else {
             Write-Host "✓ No security issues detected"

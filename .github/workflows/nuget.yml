@@ -6,6 +6,11 @@ on:
     tags: ['v*.*.*']
   pull_request:
     branches: [main]
+    paths:
+      - 'src/core/HELIOS.Platform/**'
+      - 'src/tests/**'
+      - 'Directory.Build.props'
+      - '.github/workflows/nuget.yml'
   workflow_dispatch:
     inputs:
       publish_nuget:

@@ -19,6 +19,7 @@ jobs:
         shell: pwsh
       
       - name: Check PowerShell Syntax
+        shell: pwsh
         run: |
           $failures = 0
           Get-ChildItem -Path '.' -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue | ForEach-Object {

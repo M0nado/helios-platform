@@ -23,6 +23,7 @@ on:
 permissions:
   contents: read
   checks: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -112,6 +113,17 @@ jobs:
         with:
           node-version: ${{ matrix.platform.node }}
 
+      - name: Detect Node project
+        id: node_project
+        shell: bash
+        run: |
+          if [ -f package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No package.json found at repository root; skipping Node variant steps."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Display Configuration
         run: |
           echo "===== Build Configuration ====="
@@ -125,6 +137,8 @@ jobs:
           echo "==============================="
 
       - name: Install Dependencies
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -133,24 +147,33 @@ jobs:
           fi
 
       - name: Build for ${{ matrix.variant.name }}
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           npm run build:${{ matrix.variant.name }}
 
       - name: Run Tests
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           npm test -- --testTimeout=30000
 
       - name: Generate Coverage
-        if: matrix.variant.name == 'test'
+        if: steps.node_project.outputs.exists == 'true' && matrix.variant.name == 'test'
+        shell: bash
         run: |
           npm run test:coverage
 
       - name: Validate Build Output
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           ls -la dist/ || echo "No dist directory"
           echo "Build output size: $(du -sh dist 2>/dev/null || echo 'N/A')"
 
       - name: Performance Check
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           if [ -f "dist/bundle.js" ]; then
             SIZE=$(stat -f%z "dist/bundle.js" 2>/dev/null || stat -c%s "dist/bundle.js" 2>/dev/null)
