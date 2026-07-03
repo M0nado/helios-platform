@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
 
-add_library(HELIOSNativePerformance src/helios_native_performance.cpp)
+add_library(HELIOSNativePerformance SHARED src/helios_native_performance.cpp)
 target_compile_definitions(HELIOSNativePerformance PRIVATE HELIOS_NATIVE_PERFORMANCE_EXPORTS)
 target_include_directories(HELIOSNativePerformance PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

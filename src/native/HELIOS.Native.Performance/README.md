@@ -28,3 +28,17 @@ Exported functions:
 2. Native code must include benchmarks and tests before becoming required runtime code.
 3. Interop boundaries should be documented and versioned.
 4. Branch intelligence should rank native/XCore branches separately under `src/native`.
+
+## Optional interop smoke tests
+
+- C# sample: `samples/native-interop/HELIOS.NativeInterop.Sample.csproj`
+- Python ctypes sample: `scripts/native/native_smoke.py`
+
+Build the native library first:
+
+```bash
+cmake -S src/native/HELIOS.Native.Performance -B .build/native
+cmake --build .build/native
+```
+
+Then run optional consumers with the platform-specific shared library on the library search path. The default Linux build emits `.build/native/libHELIOSNativePerformance.so`.

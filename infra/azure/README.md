@@ -30,3 +30,20 @@ python3 scripts/azure/bicep_report.py what-if --strict-online
 ```
 
 `bicep_report.py` emits a small JSON summary for local logs and CI artifacts. Deployment should be gated through `.github/workflows/azure-infra.yml`.
+
+## Strict online CI prerequisites
+
+The strict validation path in `.github/workflows/azure-infra.yml` requires these GitHub secrets to be configured for OIDC login:
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+
+The workflow dispatch input `resource_group` must point to an existing resource group. `location` defaults to `eastus` and is forwarded to `scripts/azure/bicep_report.py` through `HELIOS_AZURE_LOCATION`.
+
+Use local offline mode for syntax/build validation and strict mode only when Azure authentication and the target resource group are ready:
+
+```bash
+python3 scripts/azure/bicep_report.py validate
+python3 scripts/azure/bicep_report.py validate --strict-online
+```

@@ -102,6 +102,9 @@
       "command": "cmake --build .build/native",
       "paths": [
         "src/native/**"
+      ],
+      "dependsOn": [
+        "native-configure"
       ]
     },
     {
@@ -207,6 +210,9 @@
         "src/tools/HELIOS.RepositoryAnalytics/**",
         "src/analytics/**",
         "reports/branch-intelligence/analytics-metrics.json"
+      ],
+      "dependsOn": [
+        "branch-intelligence"
       ]
     },
     {
@@ -214,6 +220,31 @@
       "title": "Native/XCore C++ benchmark smoke test",
       "command": "cmake --build .build/native --target HELIOSNativePerformanceBenchmark && .build/native/HELIOSNativePerformanceBenchmark",
       "paths": [
+        "src/native/**"
+      ],
+      "dependsOn": [
+        "native-configure",
+        "native-build"
+      ]
+    },
+    {
+      "id": "native-csharp-smoke",
+      "title": "C# Native/XCore interop smoke project build",
+      "command": "dotnet build samples/native-interop/HELIOS.NativeInterop.Sample.csproj",
+      "dependsOn": [
+        "native-build"
+      ],
+      "paths": [
+        "samples/native-interop/**",
+        "src/native/**"
+      ]
+    },
+    {
+      "id": "native-python-smoke",
+      "title": "Python Native/XCore ctypes smoke script syntax",
+      "command": "python3 -m py_compile scripts/native/native_smoke.py",
+      "paths": [
+        "scripts/native/native_smoke.py",
         "src/native/**"
       ]
     }

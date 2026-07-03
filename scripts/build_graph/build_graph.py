@@ -45,6 +45,32 @@ def matches_changed(node: dict[str, Any], changed: set[str]) -> bool:
     return False
 
 
+def expand_dependencies(nodes: list[dict[str, Any]], selected: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_id = {node["id"]: node for node in nodes}
+    expanded: list[dict[str, Any]] = []
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(node_id: str) -> None:
+        if node_id in visited:
+            return
+        if node_id in visiting:
+            raise SystemExit(f"Build graph dependency cycle at {node_id}")
+        if node_id not in by_id:
+            raise SystemExit(f"Build graph dependency not found: {node_id}")
+        visiting.add(node_id)
+        node = by_id[node_id]
+        for dependency in node.get("dependsOn", []):
+            visit(dependency)
+        visiting.remove(node_id)
+        visited.add(node_id)
+        expanded.append(node)
+
+    for node in selected:
+        visit(node["id"])
+    return expanded
+
+
 def select_nodes(nodes: list[dict[str, Any]], args: argparse.Namespace) -> list[dict[str, Any]]:
     if args.node:
         wanted = set(args.node)
@@ -52,12 +78,12 @@ def select_nodes(nodes: list[dict[str, Any]], args: argparse.Namespace) -> list[
         missing = wanted.difference(node["id"] for node in selected)
         if missing:
             raise SystemExit(f"No matching build graph node(s): {', '.join(sorted(missing))}")
-        return selected
+        return expand_dependencies(nodes, selected)
     if args.changed_only:
         changed = git_changed_files()
-        return [node for node in nodes if matches_changed(node, changed)]
+        return expand_dependencies(nodes, [node for node in nodes if matches_changed(node, changed)])
     if args.all or args.command in {"run", "graph"}:
-        return nodes
+        return expand_dependencies(nodes, nodes)
     return []
 
 

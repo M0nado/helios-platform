@@ -366,12 +366,33 @@ def build_agent_queue(ranked: list[dict[str, Any]], ideas: list[dict[str, Any]])
     return sorted(queue, key=lambda item: item["priorityScore"], reverse=True)
 
 
-def analytics_metrics(ranked: list[dict[str, Any]], ideas: list[dict[str, Any]]) -> dict[str, Any]:
+def hermes_numeric_metrics(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    blocked = {"prompt", "content", "message", "secret", "token", "key"}
+    metrics: list[dict[str, Any]] = []
+    for item in events:
+        event = item.get("event", {})
+        values = {
+            key: value for key, value in event.items()
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and not any(word in key.lower() for word in blocked)
+        }
+        if values:
+            metrics.append({
+                "path": item.get("path"),
+                "line": item.get("line"),
+                "agentType": event.get("agentType", event.get("type", "agent")),
+                "status": event.get("status", "unknown"),
+                "metrics": values,
+            })
+    return metrics
+
+
+def analytics_metrics(ranked: list[dict[str, Any]], ideas: list[dict[str, Any]], hermes_events: list[dict[str, Any]]) -> dict[str, Any]:
     return {
-        "schema": "HELIOS.BranchIntelligence.AnalyticsMetrics.v1",
+        "schema": "HELIOS.BranchIntelligence.AnalyticsMetrics.v2",
         "branchScores": [{"name": b["name"], "score": b["score"], "fileCount": b["fileCount"]} for b in ranked],
         "ideaScores": [{"key": i.get("dedupeKey"), "category": i["category"], "score": i.get("impactScore", 0), "occurrences": i.get("occurrences", 1)} for i in ideas],
-        "intendedConsumer": "src/analytics/HELIOS.Analytics.FSharp via future HELIOS.RepositoryAnalytics tool",
+        "hermesFleetEvents": hermes_numeric_metrics(hermes_events),
+        "intendedConsumer": "src/tools/HELIOS.RepositoryAnalytics",
     }
 
 def check_tool(name: str, command: list[str]) -> dict[str, Any]:
@@ -409,12 +430,12 @@ def markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
     return "\n".join(out)
 
 
-def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[str, Any]], idea_summary: list[dict[str, Any]], agent_queue: list[dict[str, Any]], conn: dict[str, Any], remote_actions: list[dict[str, Any]], fetch_result: dict[str, Any], remotes: list[dict[str, Any]]) -> None:
+def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[str, Any]], idea_summary: list[dict[str, Any]], agent_queue: list[dict[str, Any]], conn: dict[str, Any], remote_actions: list[dict[str, Any]], fetch_result: dict[str, Any], remotes: list[dict[str, Any]], hermes_events: list[dict[str, Any]]) -> None:
     save_json(out_dir / "branch-ranking.json", ranked)
     save_json(out_dir / "idea-impact.json", ideas)
     save_json(out_dir / "idea-impact-summary.json", idea_summary)
     save_json(out_dir / "agent-work-queue.json", agent_queue)
-    save_json(out_dir / "analytics-metrics.json", analytics_metrics(ranked, idea_summary))
+    save_json(out_dir / "analytics-metrics.json", analytics_metrics(ranked, idea_summary, hermes_events))
     save_json(out_dir / "connectivity.json", conn)
     save_json(out_dir / "remote-actions.json", {"remoteActions": remote_actions, "fetch": fetch_result})
     save_json(out_dir / "remote-inventory.json", {"remotes": remotes})
@@ -474,6 +495,7 @@ def main() -> int:
     parser.add_argument("--configure-remotes", action="store_true", help="Add enabled remotes with configured URLs.")
     parser.add_argument("--fetch", action="store_true", help="Run git fetch --all --prune --tags.")
     parser.add_argument("--fetch-remotes", action="store_true", help="Alias for --fetch; explicit opt-in network operation.")
+    parser.add_argument("--remote-inventory-only", action="store_true", help="Only write remote inventory reports and skip branch/idea scoring.")
     parser.add_argument("--enrich-ideas", action="store_true", help="Mark ideas for optional AI enrichment when credentials are configured.")
     parser.add_argument("--hermes-jsonl", action="append", type=Path, default=[], help="Optional Hermes fleet JSONL event input.")
     args = parser.parse_args()
@@ -482,6 +504,13 @@ def main() -> int:
     remotes = remote_inventory(manifest)
     remote_actions = configure_remotes(manifest, apply=args.configure_remotes)
     fetch_result = fetch_remotes(apply=args.fetch or args.fetch_remotes)
+    if args.remote_inventory_only:
+        args.out.mkdir(parents=True, exist_ok=True)
+        save_json(args.out / "remote-inventory.json", {"remotes": remotes})
+        inventory_rows = [[r["name"], r["role"], ", ".join(r["focus"]), r["urlEnv"], r["urlConfigured"], r["gitRemoteExists"], r["recommendedNextAction"]] for r in remotes]
+        write_text(args.out / "remote-inventory.md", "# Remote Inventory\n\n" + markdown_table(["Remote", "Role", "Focus", "URL env", "URL configured", "Git remote exists", "Next action"], inventory_rows) + "\n")
+        print(f"Wrote remote inventory reports to {args.out.relative_to(ROOT)}")
+        return 0
     ranked = rank_branches(manifest)
     ideas = extract_ideas(manifest)
     hermes_events = read_hermes_jsonl(args.hermes_jsonl)
@@ -490,7 +519,7 @@ def main() -> int:
     idea_summary = dedupe_ideas(ideas)
     agent_queue = build_agent_queue(ranked, idea_summary)
     conn = connectivity()
-    write_reports(args.out, ranked, ideas, idea_summary, agent_queue, conn, remote_actions, fetch_result, remotes)
+    write_reports(args.out, ranked, ideas, idea_summary, agent_queue, conn, remote_actions, fetch_result, remotes, hermes_events)
     print(f"Wrote branch intelligence reports to {args.out.relative_to(ROOT)}")
     return 0
 

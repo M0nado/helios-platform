@@ -17,12 +17,13 @@ using var document = JsonDocument.Parse(File.ReadAllText(inputPath));
 var branchScores = ReadScores(document.RootElement, "branchScores", "score");
 var ideaScores = ReadScores(document.RootElement, "ideaScores", "score");
 var hermesScores = ReadCategoryScores(document.RootElement, "ideaScores", "hermes", "score");
+var hermesFleetMetricValues = ReadHermesFleetMetrics(document.RootElement);
 
 var engine = new AnalyticsEngine();
 var allScores = branchScores.Concat(ideaScores).DefaultIfEmpty(0.0).ToArray();
 var branchArray = branchScores.DefaultIfEmpty(0.0).ToArray();
 var ideaArray = ideaScores.DefaultIfEmpty(0.0).ToArray();
-var hermesArray = hermesScores.DefaultIfEmpty(0.0).ToArray();
+var hermesArray = hermesScores.Concat(hermesFleetMetricValues).DefaultIfEmpty(0.0).ToArray();
 
 var report = new
 {
@@ -36,6 +37,7 @@ var report = new
     branchForecast = ToPrediction(engine.LinearForecast(branchArray)),
     ideaForecast = ToPrediction(engine.MovingAverageForecast(ideaArray, Math.Min(3, ideaArray.Length))),
     anomalies = engine.DetectAnomalies(allScores, 1.5).Select(a => new { a.Value, a.Score }).ToArray(),
+    hermesFleetAnomalies = engine.DetectAnomalies(hermesArray, 1.5).Select(a => new { a.Value, a.Score }).ToArray(),
 };
 
 var jsonPath = Path.Combine(outDir, "fsharp-ranked-health.json");
@@ -63,6 +65,8 @@ Branch forecast: `{report.branchForecast.Model}` predicts `{report.branchForecas
 Idea forecast: `{report.ideaForecast.Model}` predicts `{report.ideaForecast.PredictedValue:F2}` with confidence `{report.ideaForecast.Confidence:F2}`.
 
 Anomalies detected: `{report.anomalies.Length}`
+
+Hermes fleet anomalies detected: `{report.hermesFleetAnomalies.Length}`
 """);
 
 Console.WriteLine($"Wrote {Path.GetRelativePath(root, jsonPath)}");
@@ -104,6 +108,31 @@ static IReadOnlyList<double> ReadCategoryScores(JsonElement root, string propert
         .Where(item => item.TryGetProperty("category", out var cat) && string.Equals(cat.GetString(), category, StringComparison.OrdinalIgnoreCase))
         .Select(item => item.TryGetProperty(scoreProperty, out var score) && score.TryGetDouble(out var value) ? value : 0.0)
         .ToArray();
+}
+
+static IReadOnlyList<double> ReadHermesFleetMetrics(JsonElement root)
+{
+    if (!root.TryGetProperty("hermesFleetEvents", out var events) || events.ValueKind != JsonValueKind.Array)
+    {
+        return Array.Empty<double>();
+    }
+
+    var values = new List<double>();
+    foreach (var item in events.EnumerateArray())
+    {
+        if (!item.TryGetProperty("metrics", out var metrics) || metrics.ValueKind != JsonValueKind.Object)
+        {
+            continue;
+        }
+        foreach (var metric in metrics.EnumerateObject())
+        {
+            if (metric.Value.TryGetDouble(out var value))
+            {
+                values.Add(value);
+            }
+        }
+    }
+    return values;
 }
 
 static SummaryDto ToSummary(IStatisticalSummary summary) => new(

@@ -77,3 +77,23 @@ Generated reports are written to `reports/branch-intelligence/`:
 - `connectivity.json` / `.md`
 - `remote-actions.json`
 - `dashboard.md`
+
+## Safe remote activation
+
+Remote inventory is safe by default. Keep remote URLs out of git and provide them through environment variables only:
+
+```bash
+export HELIOS_CONTROL_REMOTE_URL=<helios-control-git-url>
+export HERMES_FLEET_REMOTE_URL=<hermes-fleet-production-git-url>
+export XCORE_REMOTE_URL=<xcore-git-url>
+python3 scripts/analysis/branch_intelligence.py --remote-inventory-only
+```
+
+To add configured remotes, first review `reports/branch-intelligence/remote-inventory.md`, then opt in explicitly:
+
+```bash
+python3 scripts/analysis/branch_intelligence.py --configure-remotes
+python3 scripts/analysis/branch_intelligence.py --fetch-remotes
+```
+
+Do not enable merge or prune work from remote branches until the dashboard recommends a safe action and the branch-specific quality gates have passed.
