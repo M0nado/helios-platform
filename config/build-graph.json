@@ -18,6 +18,22 @@
       "timeoutSeconds": 60
     },
     {
+      "id": "finish-tasks",
+      "title": "Generated finish task backlog",
+      "command": "python3 scripts/apply/generate_finish_tasks.py",
+      "paths": [
+        "scripts/apply/**",
+        "reports/**",
+        "config/build-graph.json"
+      ],
+      "tags": [
+        "apply",
+        "analysis",
+        "quick"
+      ],
+      "timeoutSeconds": 60
+    },
+    {
       "id": "build-graph-unit-tests",
       "title": "Build graph unit tests",
       "command": "python3 -m unittest tests/scripts/test_build_graph.py",
@@ -329,7 +345,7 @@
     {
       "id": "python-static",
       "title": "Python static compile checks",
-      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py tests/scripts/test_build_graph.py scripts/apply/finish_readiness_apply.py",
+      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py tests/scripts/test_build_graph.py scripts/apply/finish_readiness_apply.py scripts/apply/generate_finish_tasks.py",
       "paths": [
         "scripts/**/*.py"
       ],

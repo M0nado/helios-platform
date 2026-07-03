@@ -15,6 +15,7 @@ SAFE_STEPS=[
     {'id':'finish-readiness','command':'python3 scripts/integrations/readiness_score.py','mutates':'reports only','apply':True},
     {'id':'dashboard','command':'python3 scripts/dashboard/generate-gui.py','mutates':'status-site dashboard only','apply':True},
     {'id':'build-graph-quick','command':'python3 scripts/build_graph/build_graph.py run --profile quick --changed-only --max-workers 4','mutates':'reports only','apply':True},
+    {'id':'finish-tasks','command':'python3 scripts/apply/generate_finish_tasks.py','mutates':'reports only','apply':True},
 ]
 
 def tool_path_env():
