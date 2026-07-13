@@ -1,0 +1,14 @@
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+network_access = false
+allow_login_shell = false
+
+[agents]
+max_threads = 4
+max_depth = 1
+
+[limits]
+job_max_runtime_seconds = 1800
+
+[project]
+instructions = "Read AGENTS.md and .github/copilot-instructions.md before changing files. M0nado/helios-platform is the canonical product platform. Use scoped issues, branches, tests, and pull requests. Never add secrets, direct-to-main automation, destructive workstation changes, tenant-wide permission grants, or unreviewed Azure deployment."
