@@ -3,14 +3,14 @@ name: HELIOS enterprise Bicep
 on:
   pull_request:
     paths:
-      - 'infra/bicep/**'
-      - '.github/workflows/enterprise-bicep.yml'
+      - infra/bicep/**
+      - .github/workflows/enterprise-bicep.yml
   workflow_dispatch:
     inputs:
       environment_name:
         required: true
         type: choice
-        options: [dev, test, prod]
+        options: [dev, test]
       apply:
         required: true
         type: boolean
@@ -18,55 +18,129 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+
+env:
+  BICEP_VERSION: v0.45.6
 
 jobs:
   compile:
+    name: Compile enterprise Bicep
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-bicep@v2
-      - name: Build Bicep
-        run: bicep build infra/bicep/enterprise/main.bicep --outfile main.json
-      - uses: actions/upload-artifact@v4
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          name: enterprise-bicep
+          persist-credentials: false
+      - name: Install and build Bicep
+        run: |
+          set -euo pipefail
+          az bicep install --version "$BICEP_VERSION"
+          az bicep version
+          az bicep build --file infra/bicep/enterprise/main.bicep --outfile main.json
+          python -m json.tool main.json >/dev/null
+      - name: Upload compiled template
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: enterprise-bicep-${{ github.sha }}
           path: main.json
+          if-no-files-found: error
+          retention-days: 7
 
   what-if:
-    if: github.event_name == 'workflow_dispatch'
+    name: What-if ${{ inputs.environment_name }}
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: compile
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: helios-${{ inputs.environment_name }}-what-if
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/login@v2
+      - name: Require exact environment configuration
+        run: |
+          set -euo pipefail
+          for name in AZURE_CLIENT_ID AZURE_RESOURCE_GROUP AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required environment variable: $name" >&2
+              exit 1
+            fi
+          done
+      - name: Download compiled template
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          name: enterprise-bicep-${{ github.sha }}
+      - name: Sign in with environment-bound OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify Azure scope
+        run: |
+          set -euo pipefail
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          az group show --name "$AZURE_RESOURCE_GROUP" --query '{id:id,location:location}' --output json
       - name: Azure what-if
-        run: >-
-          az deployment group what-if
-          --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}"
-          --template-file infra/bicep/enterprise/main.bicep
-          --parameters environmentName="${{ inputs.environment_name }}"
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "helios-${{ inputs.environment_name }}-${{ github.run_id }}" \
+            --template-file main.json \
+            --parameters environmentName="${{ inputs.environment_name }}"
 
   deploy:
-    if: github.event_name == 'workflow_dispatch' && inputs.apply
+    name: Deploy ${{ inputs.environment_name }}
+    if: github.event_name == 'workflow_dispatch' && inputs.apply == true && github.ref == 'refs/heads/main'
     needs: what-if
     runs-on: [self-hosted, linux, x64, helios-azure]
+    timeout-minutes: 45
     environment: helios-${{ inputs.environment_name }}-deploy
+    concurrency:
+      group: enterprise-bicep-${{ inputs.environment_name }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/login@v2
+      - name: Require exact environment configuration
+        run: |
+          set -euo pipefail
+          for name in AZURE_CLIENT_ID AZURE_RESOURCE_GROUP AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required environment variable: $name" >&2
+              exit 1
+            fi
+          done
+      - name: Download reviewed template
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          name: enterprise-bicep-${{ github.sha }}
+      - name: Sign in with deployment-bound OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
       - name: Deploy approved template
-        run: >-
-          az deployment group create
-          --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}"
-          --template-file infra/bicep/enterprise/main.bicep
-          --parameters environmentName="${{ inputs.environment_name }}"
+        run: |
+          set -euo pipefail
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          az deployment group create \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "helios-${{ inputs.environment_name }}-${{ github.run_id }}" \
+            --template-file main.json \
+            --parameters environmentName="${{ inputs.environment_name }}" \
+            --only-show-errors
