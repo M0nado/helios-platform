@@ -6,6 +6,7 @@ on:
       - 'agents/**'
       - 'config/agents/**'
       - 'config/plugins/**'
+      - 'config/toolchains/**'
       - 'skills/**'
       - 'docs/agents/**'
       - 'src/agents/**'
@@ -16,6 +17,7 @@ on:
       - 'agents/**'
       - 'config/agents/**'
       - 'config/plugins/**'
+      - 'config/toolchains/**'
       - 'skills/**'
       - 'docs/agents/**'
       - 'src/agents/**'
@@ -44,17 +46,18 @@ jobs:
           dotnet-version: '8.0.x'
       - name: Build typed enterprise agent contracts
         run: dotnet build src/agents/HELIOS.EnterpriseAgents/HELIOS.EnterpriseAgents.csproj --configuration Release
-      - name: Validate fleet and connection registries
+      - name: Validate fleet, subagent, toolchain, and connection registries
         shell: bash
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          fleet_path = Path('config/agents/enterprise-deployment-agent-fleet.v1.json')
-          connections_path = Path('config/plugins/custom-connections.v1.json')
-          fleet = json.loads(fleet_path.read_text(encoding='utf-8'))
-          connections = json.loads(connections_path.read_text(encoding='utf-8'))
+          fleet = json.loads(Path('config/agents/enterprise-deployment-agent-fleet.v1.json').read_text(encoding='utf-8'))
+          subagents = json.loads(Path('config/agents/enterprise-deployment-subagents.v1.json').read_text(encoding='utf-8'))
+          connections = json.loads(Path('config/plugins/custom-connections.v1.json').read_text(encoding='utf-8'))
+          supplemental = json.loads(Path('config/plugins/microsoft-copilot-xcore-connections.v1.json').read_text(encoding='utf-8'))
+          toolchain = json.loads(Path('config/toolchains/azure-microsoft-copilot-toolchain.v1.json').read_text(encoding='utf-8'))
 
           required_fleet = {
               'schemaVersion', 'fleetId', 'canonicalRepository', 'parentIssue',
@@ -68,9 +71,9 @@ jobs:
           assert fleet['productionEnabled'] is False, 'Production must remain disabled while issue #162 is open.'
 
           agents = fleet['agents']
-          assert len(agents) == 20, f'Expected 20 agents, found {len(agents)}'
+          assert len(agents) == 20, f'Expected 20 core agents, found {len(agents)}'
           agent_ids = [agent['id'] for agent in agents]
-          assert len(agent_ids) == len(set(agent_ids)), 'Duplicate agent IDs detected.'
+          assert len(agent_ids) == len(set(agent_ids)), 'Duplicate core agent IDs detected.'
 
           required_agent = {'id', 'name', 'runtime', 'purpose', 'allowed', 'denied', 'requiresApprovalFor'}
           for agent in agents:
@@ -91,6 +94,31 @@ jobs:
           assert 'OPENAI_API_KEY' in provider.get('secretReferences', [])
           assert 'api-key-readback' in provider['denied']
 
+          required_subagent_fields = {
+              'id', 'name', 'parentAgent', 'runtime', 'purpose', 'allowed', 'denied',
+              'requiresApprovalFor', 'healthChecks', 'evidence'
+          }
+          assert subagents['parentFleet'] == fleet['fleetId']
+          assert subagents['productionBlockerIssue'] == fleet['productionBlockerIssue']
+          subagent_items = subagents['subagents']
+          assert len(subagent_items) == 3, f'Expected 3 explicit subagents, found {len(subagent_items)}'
+          subagent_ids = [item['id'] for item in subagent_items]
+          assert set(subagent_ids) == {'xcore-runtime', 'microsoft-copilot', 'azure-toolchain'}
+          assert len(subagent_ids) == len(set(subagent_ids)), 'Duplicate subagent IDs detected.'
+          for item in subagent_items:
+              missing = sorted(required_subagent_fields - set(item))
+              assert not missing, f"Subagent {item.get('id')} missing: {missing}"
+              assert item['parentAgent'] in agent_ids, f"Unknown parent agent for {item['id']}"
+              assert item['allowed'] and item['denied'] and item['healthChecks'] and item['evidence']
+
+          xcore = next(item for item in subagent_items if item['id'] == 'xcore-runtime')
+          assert 'azure-production-apply' in xcore['denied']
+          assert 'raw-private-memory-publish' in xcore['denied']
+          copilot = next(item for item in subagent_items if item['id'] == 'microsoft-copilot')
+          assert 'graph-admin-consent' in copilot['requiresApprovalFor']
+          azure_tools = next(item for item in subagent_items if item['id'] == 'azure-toolchain')
+          assert 'silent-tenant-login' in azure_tools['denied']
+
           required_connections = {'schemaVersion', 'registryId', 'defaultPolicy', 'connections'}
           missing = sorted(required_connections - set(connections))
           assert not missing, f'Missing connection fields: {missing}'
@@ -109,14 +137,50 @@ jobs:
               assert item['auth'].get('mode'), f"Connection {item['id']} lacks auth mode."
               assert item['healthCheck'], f"Connection {item['id']} lacks health check."
 
+          assert supplemental['defaultPolicy'] == 'deny-undeclared'
+          supplemental_items = supplemental['connections']
+          supplemental_ids = [item['id'] for item in supplemental_items]
+          assert set(supplemental_ids) == {
+              'xcore-runtime-mcp',
+              'microsoft-copilot-agent-plane',
+              'azure-toolchain-control'
+          }
+          for item in supplemental_items:
+              missing = sorted(required_connection - set(item))
+              assert not missing, f"Supplemental connection {item.get('id')} missing: {missing}"
+              assert item['writeTools'] and item['approvalRequired']
+
+          assert toolchain['toolchainId'] == 'helios-azure-microsoft-copilot'
+          assert toolchain['productionDeployment'] is False
+          assert toolchain['pathRepairFirst'] is True
+          tools = toolchain['tools']
+          tool_ids = [item['id'] for item in tools]
+          required_tools = {
+              'azure-cli', 'azure-developer-cli', 'bicep-cli',
+              'azure-functions-core-tools', 'power-platform-cli',
+              'microsoft-365-agents-toolkit', 'github-cli', 'powershell-7',
+              'dotnet-sdk-8', 'docker-desktop', 'nodejs-lts', 'visual-studio-code'
+          }
+          assert required_tools <= set(tool_ids), f'Missing required tools: {sorted(required_tools - set(tool_ids))}'
+          assert len(tool_ids) == len(set(tool_ids)), 'Duplicate tool IDs detected.'
+          for item in tools:
+              assert item.get('verify'), f"Tool {item['id']} lacks verification commands."
+
           summary = {
               'fleetId': fleet['fleetId'],
-              'agentCount': len(agents),
+              'coreAgentCount': len(agents),
+              'subagentCount': len(subagent_items),
+              'totalOperationalRoles': len(agents) + len(subagent_items),
               'connectionCount': len(items),
+              'supplementalConnectionCount': len(supplemental_items),
+              'toolCount': len(tools),
               'productionEnabled': fleet['productionEnabled'],
               'productionBlockerIssue': fleet['productionBlockerIssue'],
               'agentIds': agent_ids,
+              'subagentIds': subagent_ids,
               'connectionIds': connection_ids,
+              'supplementalConnectionIds': supplemental_ids,
+              'toolIds': tool_ids,
           }
           out = Path('artifacts/agent-fleet')
           out.mkdir(parents=True, exist_ok=True)
@@ -146,4 +210,4 @@ jobs:
             exit 1
           }
       - name: Production readiness confirmed
-        run: echo 'Registry validated, protected environment approved, and Issue #162 is closed. No Azure apply is performed by this workflow.'
+        run: echo 'Core agents, XCore, Microsoft Copilot, Azure toolchain, protected environment, and Issue #162 gates passed. No Azure apply is performed by this workflow.'
