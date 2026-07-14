@@ -92,7 +92,8 @@ def all_refs(include_remote_scan: bool) -> list[str]:
 def changed_files(ref: str, target: str) -> list[str]:
     if ref == target:
         if shutil.which('rg'):
-            out = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True).stdout
+            proc = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
+            out = proc.stdout if proc.returncode in (0, 1) else git(['ls-files'])
         else:
             out = git(['ls-files'])
     else:

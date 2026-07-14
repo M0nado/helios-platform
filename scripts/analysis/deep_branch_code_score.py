@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json, subprocess
+import json, shutil, subprocess
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -57,10 +57,12 @@ def refs() -> list[str]:
     return sorted(set(found or [current]))
 
 def repo_files() -> list[str]:
-    proc = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
-    if proc.returncode in (0, 1):
-        return [line for line in proc.stdout.splitlines() if line]
-    return []
+    if shutil.which('rg'):
+        proc = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
+        if proc.returncode in (0, 1):
+            return [line for line in proc.stdout.splitlines() if line]
+    proc = subprocess.run(['git', 'ls-files'], cwd=ROOT, text=True, capture_output=True)
+    return [line for line in proc.stdout.splitlines() if line] if proc.returncode == 0 else []
 
 def branch_files(ref: str, target: str, all_files: list[str]) -> list[str]:
     if ref == target:

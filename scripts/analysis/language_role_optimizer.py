@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json, subprocess
+import json, shutil, subprocess
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,8 +13,12 @@ TEST_HINTS = ['test', 'tests', 'spec', 'validation']
 MODULE_ROOTS = ['src/core', 'src/gui', 'src/native', 'src/analytics', 'scripts', 'ai-integration', 'infra/azure', '.github/workflows']
 
 def rg_files() -> list[str]:
-    p = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
-    return [line for line in p.stdout.splitlines() if line]
+    if shutil.which('rg'):
+        p = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
+        if p.returncode in (0, 1):
+            return [line for line in p.stdout.splitlines() if line]
+    p = subprocess.run(['git', 'ls-files'], cwd=ROOT, text=True, capture_output=True)
+    return [line for line in p.stdout.splitlines() if line] if p.returncode == 0 else []
 
 def strategy() -> dict:
     return json.loads(CONFIG.read_text())

@@ -14,10 +14,12 @@ BAD_TERMS=['todo','fixme','deprecated','duplicate','generated','temp','backup','
 def rg_files():
  if shutil.which('rg'):
   p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
-  candidates=p.stdout.splitlines()
+  candidates=p.stdout.splitlines() if p.returncode in (0,1) else []
  else:
+  candidates=[]
+ if not candidates:
   p=subprocess.run(['git','ls-files'],cwd=ROOT,text=True,capture_output=True)
-  candidates=p.stdout.splitlines()
+  candidates=p.stdout.splitlines() if p.returncode==0 else []
  return [x for x in candidates if Path(x).suffix.lower() in EXTS]
 
 def read(path):

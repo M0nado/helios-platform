@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json, subprocess
+import json, shutil, subprocess
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,8 +11,12 @@ TERMS=['optimization','algorithm','parallel','cache','retry','backoff','chaos','
 KINDS={'.cs':'csharp','.fs':'fsharp','.cpp':'cpp','.hpp':'cpp','.h':'cpp','.py':'python','.md':'markdown','.yml':'yaml','.yaml':'yaml','.bicep':'bicep','.json':'json','.ps1':'powershell'}
 
 def files():
- p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
- return p.stdout.splitlines()
+ if shutil.which('rg'):
+  p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
+  if p.returncode in (0,1):
+   return [x for x in p.stdout.splitlines() if x]
+ p=subprocess.run(['git','ls-files'],cwd=ROOT,text=True,capture_output=True)
+ return [x for x in p.stdout.splitlines() if x] if p.returncode==0 else []
 
 def safe_text(path):
  try:
