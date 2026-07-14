@@ -1,6 +1,15 @@
 name: Branch Absorption Multicloud Plan
 
 on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'scripts/analysis/**'
+      - 'scripts/agents/**'
+      - 'scripts/dashboard/**'
+      - 'scripts/setup/simple-build.sh'
+      - 'config/build-graph.json'
+      - '.github/workflows/branch-absorption-multicloud.yml'
   workflow_dispatch:
     inputs:
       mode:
@@ -42,16 +51,49 @@ jobs:
     env:
       AIHUB_MODE: ${{ inputs.mode || 'github-runner' }}
       AIHUB_AGENT_COUNT: ${{ inputs.agents || '128' }}
+      LEARNING_REFERENCE_REPOSITORY: ${{ vars.LEARNING_REFERENCE_REPOSITORY || github.repository }}
+      LEARNING_REFERENCE_REF: ${{ vars.LEARNING_REFERENCE_REF || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Checkout learning reference repository
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.LEARNING_REFERENCE_REPOSITORY }}
+          ref: ${{ env.LEARNING_REFERENCE_REF }}
+          path: learning-reference-repo
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Prepare dual-repo isolated copies
+        run: |
+          rm -rf /tmp/helios-primary-copy /tmp/helios-learning-copy
+          cp -a . /tmp/helios-primary-copy
+          if [ -d learning-reference-repo/.git ]; then
+            cp -a learning-reference-repo /tmp/helios-learning-copy
+          else
+            cp -a . /tmp/helios-learning-copy
+          fi
+          chmod -R a-w /tmp/helios-learning-copy || true
+          echo "PRIMARY_REPO_COPY=/tmp/helios-primary-copy" >> "$GITHUB_ENV"
+          echo "LEARNING_REPO_COPY=/tmp/helios-learning-copy" >> "$GITHUB_ENV"
+      - name: Fleet pre-absorption test lane
+        continue-on-error: true
+        run: |
+          dotnet build HELIOS.Platform.slnx -v minimal
+          dotnet test HELIOS.Platform.slnx -v minimal
+      - name: Dual-repo learning preflight
+        run: |
+          python3 scripts/analysis/dual_repo_learning_preflight.py --primary "$PRIMARY_REPO_COPY" --secondary "$LEARNING_REPO_COPY"
+          python3 scripts/analysis/knowledge_absorption_engine.py
+          python3 scripts/analysis/aihub_learning_feedback_loop.py
       - name: Generate branch absorption multicloud UI plan
         run: |
-          python3 -m py_compile scripts/analysis/branch_absorption_multicloud_plan.py scripts/analysis/simple_build_center.py scripts/analysis/complex_code_grading.py scripts/analysis/module_submodule_organizer.py scripts/analysis/aihub_learning_feedback_loop.py scripts/dashboard/generate-gui.py
+          python3 -m py_compile scripts/analysis/branch_absorption_multicloud_plan.py scripts/analysis/simple_build_center.py scripts/analysis/complex_code_grading.py scripts/analysis/module_submodule_organizer.py scripts/analysis/aihub_learning_feedback_loop.py scripts/analysis/dual_repo_learning_preflight.py scripts/dashboard/generate-gui.py
           python3 scripts/analysis/branch_absorption_multicloud_plan.py
           python3 scripts/agents/branch_test_autofix_plan.py
           python3 scripts/analysis/document_code_absorption_ranker.py
@@ -72,6 +114,7 @@ jobs:
             reports/branch-intelligence/branch-absorption-multicloud-plan.*
             reports/branch-agents/branch-test-autofix-plan.*
             reports/learning/document-code-absorption-ranker.*
+            reports/learning/dual-repo-learning-preflight.*
             reports/branch-intelligence/merge-prune-recommendations.*
             reports/learning/complex-code-grading.*
             reports/learning/module-submodule-organizer.*
