@@ -125,6 +125,26 @@ jobs:
         run: uv pip check --python services/helios-deployment-agent/.venv/bin/python
       - name: Build deployment-agent container
         run: docker build --tag helios-deployment-agent:ci services/helios-deployment-agent
+      - name: Smoke deployment-agent container
+        run: |
+          set -euo pipefail
+          docker run --detach --name helios-deployment-agent-ci \
+            --publish 127.0.0.1:8080:8080 \
+            --env OPENAI_API_KEY=ci-presence-check-only \
+            --env HELIOS_PLANNER_BEARER_TOKEN=ci-local-check-only \
+            helios-deployment-agent:ci
+          trap 'docker logs helios-deployment-agent-ci; docker rm --force helios-deployment-agent-ci' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error http://127.0.0.1:8080/health/live >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 20 ]; then
+              exit 1
+            fi
+            sleep 1
+          done
+          curl --fail --silent --show-error http://127.0.0.1:8080/health/ready >/dev/null
+          test "$(docker inspect --format '{{.Config.User}}' helios-deployment-agent-ci)" = "10001:10001"
 
   required:
     name: HELIOS CI / required
