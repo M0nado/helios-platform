@@ -18,6 +18,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Registry: Read-only inspection of approved HKLM/HKCU startup, Device Guard,
+# vulnerable-driver blocklist, and LSA configuration. This script performs no
+# registry writes, so rollback is not applicable.
+
 function Invoke-HeliosSafeCheck {
     param(
         [Parameter(Mandatory)][string]$Name,
