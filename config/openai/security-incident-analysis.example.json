@@ -1,0 +1,10 @@
+{
+  "enabled": false,
+  "apiKeyEnvironmentVariable": "OPENAI_API_KEY",
+  "modelEnvironmentVariable": "OPENAI_SECURITY_MODEL",
+  "inputPolicy": "redacted-summary-only",
+  "allowRawEventLogs": false,
+  "allowSecrets": false,
+  "operatorApprovalRequired": true,
+  "purpose": "Optional AIHub summarization of sanitized HELIOS security posture and incident reports."
+}
