@@ -574,26 +574,47 @@ jobs:
             --name "$control_name" \
             --resource-type Microsoft.App/containerApps \
             --api-version 2024-03-01 \
-            --query '{name:name,provisioningState:properties.provisioningState,latestReadyRevisionName:properties.latestReadyRevisionName,image:properties.template.containers[0].image}' \
+            --query '{name:name,provisioningState:properties.provisioningState,latestRevisionName:properties.latestRevisionName,latestReadyRevisionName:properties.latestReadyRevisionName}' \
             --output json > evidence/release-resource.json
-          python - <<'PY'
+          latest_ready_revision_name=$(python - <<'PY'
           import json
-          import os
 
           with open("evidence/release-resource.json", encoding="utf-8") as handle:
               evidence = json.load(handle)
           if evidence["provisioningState"] != "Succeeded":
               raise SystemExit("Container App provisioning did not succeed")
-          if not evidence["latestReadyRevisionName"]:
+          if not evidence["latestRevisionName"] or not evidence["latestReadyRevisionName"]:
               raise SystemExit("Container App has no ready revision")
-          if evidence["image"] != os.environ["IMAGE_REFERENCE"]:
-              raise SystemExit("ready Container App image does not match the reviewed digest")
+          if evidence["latestRevisionName"] != evidence["latestReadyRevisionName"]:
+              raise SystemExit("latest Container App revision is not the latest ready revision")
+          print(evidence["latestReadyRevisionName"])
+          PY
+          )
+          test -n "$latest_ready_revision_name"
+          az containerapp revision show \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$control_name" \
+            --revision "$latest_ready_revision_name" \
+            --query '{name:name,active:properties.active,provisioningState:properties.provisioningState,healthState:properties.healthState,image:properties.template.containers[0].image}' \
+            --output json > evidence/release-revision.json
+          python - <<'PY'
+          import json
+          import os
+
+          with open("evidence/release-resource.json", encoding="utf-8") as handle:
+              resource = json.load(handle)
+          with open("evidence/release-revision.json", encoding="utf-8") as handle:
+              revision = json.load(handle)
+          if revision["name"] != resource["latestReadyRevisionName"]:
+              raise SystemExit("revision evidence does not match the latest ready revision")
+          if revision["image"] != os.environ["IMAGE_REFERENCE"]:
+              raise SystemExit("latest ready Container App image does not match the reviewed digest")
           PY
 
       - name: Upload release verification evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: helios-azure-release-evidence-${{ github.sha }}
-          path: evidence/release-resource.json
+          path: evidence/
           if-no-files-found: error
           retention-days: 30
