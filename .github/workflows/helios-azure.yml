@@ -1,0 +1,599 @@
+name: HELIOS Azure
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/helios-azure.yml
+      - integration/hermes-xcore-monado-azure/**
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Plan and deploy the reviewed main branch to azure-dev
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: helios-azure-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BICEP_VERSION: v0.45.6
+  SLICE_PATH: integration/hermes-xcore-monado-azure
+
+jobs:
+  validate:
+    name: Validate Bicep, API, and container
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Install and compile Bicep
+        run: |
+          set -euo pipefail
+          az bicep install --version "$BICEP_VERSION"
+          az bicep version
+          az bicep build --file "$SLICE_PATH/infra/main.bicep"
+
+      - name: Compile and smoke the control center
+        run: |
+          set -euo pipefail
+          python -m py_compile "$SLICE_PATH/services/control-api/app.py"
+          python -m py_compile "$SLICE_PATH/scripts/plan_evidence.py"
+          python "$SLICE_PATH/scripts/plan_evidence.py" --help >/dev/null
+          docker build --tag helios-monado-control:ci "$SLICE_PATH/services/control-api"
+          docker run --detach --name helios-monado-control-ci \
+            --env XCORE_TRAINING_ENABLED=true \
+            --publish 127.0.0.1:8080:8080 \
+            helios-monado-control:ci
+          trap 'docker logs helios-monado-control-ci; docker rm --force helios-monado-control-ci' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error http://127.0.0.1:8080/health/live >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 20 ]; then
+              exit 1
+            fi
+            sleep 1
+          done
+          curl --fail --silent --show-error http://127.0.0.1:8080/health/ready >/dev/null
+          python - <<'PY'
+          import json
+          from urllib.request import urlopen
+
+          with urlopen("http://127.0.0.1:8080/api/status", timeout=3) as response:
+              payload = json.load(response)
+          assert payload["status"] == "standby"
+          assert payload["hermes"]["status"] == "unbound"
+          assert payload["xcore"]["status"] == "safe-standby"
+          assert payload["xcore"]["trainingEnabled"] is False
+          PY
+          test "$(curl --path-as-is --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/%2e%2e/%2e%2e/etc/passwd)" = "404"
+          test "$(docker inspect --format '{{.Config.User}}' helios-monado-control-ci)" = "10001:10001"
+
+  foundation_plan:
+    name: Plan azure-dev foundation
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy == true && github.repository == 'M0nado/helios-platform' && github.ref == 'refs/heads/main' && github.ref_protected == true
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: azure-dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+    steps:
+      - name: Require exact environment configuration
+        run: |
+          set -euo pipefail
+          for name in AZURE_CLIENT_ID AZURE_RESOURCE_GROUP AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required azure-dev variable: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Check out reviewed main
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Install Bicep
+        run: az bicep install --version "$BICEP_VERSION"
+
+      - name: Sign in with the azure-dev federated identity
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure scope
+        run: |
+          set -euo pipefail
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query tenantId --output tsv)" = "$AZURE_TENANT_ID"
+          az group show --name "$AZURE_RESOURCE_GROUP" --query '{id:id,location:location}' --output json
+
+      - name: Produce foundation what-if evidence
+        run: |
+          set -euo pipefail
+          mkdir -p plans
+          az deployment group what-if \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name helios-dev-foundation \
+            --template-file "$SLICE_PATH/infra/main.bicep" \
+            --parameters environmentName=dev deployControl=false \
+            --mode Incremental \
+            --no-prompt true \
+            --result-format FullResourcePayloads \
+            --no-pretty-print \
+            --output json > plans/foundation.raw.json
+          python "$SLICE_PATH/scripts/plan_evidence.py" create \
+            --phase foundation \
+            --source-sha "$GITHUB_SHA" \
+            --template "$SLICE_PATH/infra/main.bicep" \
+            --raw plans/foundation.raw.json \
+            --plan plans/foundation.json \
+            --manifest plans/foundation-manifest.json \
+            --parameter environmentName=dev \
+            --parameter deployControl=false
+
+      - name: Upload foundation plan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helios-azure-foundation-plan-${{ github.sha }}
+          path: plans/
+          if-no-files-found: error
+          retention-days: 7
+
+  foundation_apply:
+    name: Apply reviewed azure-dev foundation
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy == true && github.repository == 'M0nado/helios-platform' && github.ref == 'refs/heads/main' && github.ref_protected == true
+    needs: foundation_plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: azure-dev
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image_reference: ${{ steps.image.outputs.reference }}
+      principal_id: ${{ steps.foundation.outputs.principal_id }}
+      registry_id: ${{ steps.foundation.outputs.registry_id }}
+      subnet_id: ${{ steps.foundation.outputs.subnet_id }}
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+    steps:
+      - name: Require exact environment configuration
+        run: |
+          set -euo pipefail
+          for name in AZURE_CLIENT_ID AZURE_RESOURCE_GROUP AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required azure-dev variable: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Check out reviewed main
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Download reviewed foundation plan
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: helios-azure-foundation-plan-${{ github.sha }}
+          path: reviewed-foundation
+
+      - name: Verify foundation plan binding
+        run: |
+          set -euo pipefail
+          python "$SLICE_PATH/scripts/plan_evidence.py" verify \
+            --phase foundation \
+            --source-sha "$GITHUB_SHA" \
+            --template "$SLICE_PATH/infra/main.bicep" \
+            --plan reviewed-foundation/foundation.json \
+            --manifest reviewed-foundation/foundation-manifest.json \
+            --parameter environmentName=dev \
+            --parameter deployControl=false
+
+      - name: Install Bicep
+        run: az bicep install --version "$BICEP_VERSION"
+
+      - name: Sign in with the azure-dev federated identity
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure scope
+        run: |
+          set -euo pipefail
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query tenantId --output tsv)" = "$AZURE_TENANT_ID"
+          az group show --name "$AZURE_RESOURCE_GROUP" --query '{id:id,location:location}' --output json
+
+      - name: Reject foundation drift after approval
+        run: |
+          set -euo pipefail
+          mkdir -p current-foundation
+          az deployment group what-if \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name helios-dev-foundation \
+            --template-file "$SLICE_PATH/infra/main.bicep" \
+            --parameters environmentName=dev deployControl=false \
+            --mode Incremental \
+            --no-prompt true \
+            --result-format FullResourcePayloads \
+            --no-pretty-print \
+            --output json > current-foundation/foundation.raw.json
+          python "$SLICE_PATH/scripts/plan_evidence.py" compare \
+            --raw current-foundation/foundation.raw.json \
+            --reviewed reviewed-foundation/foundation.json \
+            --manifest reviewed-foundation/foundation-manifest.json \
+            --current current-foundation/foundation.json
+
+      - name: Apply reviewed foundation
+        id: foundation
+        run: |
+          set -euo pipefail
+          deployment=helios-dev-foundation
+          az deployment group create \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$deployment" \
+            --template-file "$SLICE_PATH/infra/main.bicep" \
+            --parameters environmentName=dev deployControl=false \
+            --mode Incremental \
+            --no-prompt true \
+            --only-show-errors
+          registry=$(az deployment group show --resource-group "$AZURE_RESOURCE_GROUP" --name "$deployment" --query properties.outputs.registryName.value --output tsv)
+          registry_id=$(az deployment group show --resource-group "$AZURE_RESOURCE_GROUP" --name "$deployment" --query properties.outputs.registryId.value --output tsv)
+          principal_id=$(az deployment group show --resource-group "$AZURE_RESOURCE_GROUP" --name "$deployment" --query properties.outputs.controlIdentityPrincipalId.value --output tsv)
+          subnet_id=$(az deployment group show --resource-group "$AZURE_RESOURCE_GROUP" --name "$deployment" --query properties.outputs.infrastructureSubnetId.value --output tsv)
+          test -n "$registry"
+          test -n "$registry_id"
+          test -n "$principal_id"
+          test -n "$subnet_id"
+          echo "registry=$registry" >> "$GITHUB_OUTPUT"
+          echo "registry_id=$registry_id" >> "$GITHUB_OUTPUT"
+          echo "principal_id=$principal_id" >> "$GITHUB_OUTPUT"
+          echo "subnet_id=$subnet_id" >> "$GITHUB_OUTPUT"
+
+      - name: Build and resolve immutable image
+        id: image
+        env:
+          REGISTRY_NAME: ${{ steps.foundation.outputs.registry }}
+        run: |
+          set -euo pipefail
+          repository=helios-control
+          az acr build \
+            --registry "$REGISTRY_NAME" \
+            --image "$repository:$GITHUB_SHA" \
+            "$SLICE_PATH/services/control-api"
+          digest=$(az acr repository show --name "$REGISTRY_NAME" --image "$repository:$GITHUB_SHA" --query digest --output tsv)
+          server=$(az acr show --resource-group "$AZURE_RESOURCE_GROUP" --name "$REGISTRY_NAME" --query loginServer --output tsv)
+          test -n "$digest"
+          test -n "$server"
+          echo "reference=$server/$repository@$digest" >> "$GITHUB_OUTPUT"
+
+  release_plan:
+    name: Plan immutable azure-dev release
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy == true && github.repository == 'M0nado/helios-platform' && github.ref == 'refs/heads/main' && github.ref_protected == true
+    needs: foundation_apply
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: azure-dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      CONTROL_IDENTITY_PRINCIPAL_ID: ${{ needs.foundation_apply.outputs.principal_id }}
+      IMAGE_REFERENCE: ${{ needs.foundation_apply.outputs.image_reference }}
+      INFRASTRUCTURE_SUBNET_ID: ${{ needs.foundation_apply.outputs.subnet_id }}
+      REGISTRY_ID: ${{ needs.foundation_apply.outputs.registry_id }}
+    steps:
+      - name: Require exact environment configuration and outputs
+        run: |
+          set -euo pipefail
+          for name in AZURE_CLIENT_ID AZURE_RESOURCE_GROUP AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID CONTROL_IDENTITY_PRINCIPAL_ID IMAGE_REFERENCE INFRASTRUCTURE_SUBNET_ID REGISTRY_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required release value: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Check out reviewed main
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Install Bicep
+        run: az bicep install --version "$BICEP_VERSION"
+
+      - name: Sign in with the azure-dev federated identity
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure scope and pre-provisioned ACR pull access
+        run: |
+          set -euo pipefail
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query tenantId --output tsv)" = "$AZURE_TENANT_ID"
+          az group show --name "$AZURE_RESOURCE_GROUP" --query '{id:id,location:location}' --output json
+          mkdir -p checks
+          az resource show \
+            --ids "$INFRASTRUCTURE_SUBNET_ID" \
+            --api-version 2023-11-01 \
+            --output json > checks/subnet.json
+          python - <<'PY'
+          import ipaddress
+          import json
+          import os
+
+          with open("checks/subnet.json", encoding="utf-8") as handle:
+              subnet = json.load(handle)
+          if subnet["id"].lower() != os.environ["INFRASTRUCTURE_SUBNET_ID"].lower():
+              raise SystemExit("resolved subnet does not match the reviewed infrastructure subnet")
+          properties = subnet["properties"]
+          prefix = properties.get("addressPrefix")
+          if not prefix or ipaddress.ip_network(prefix).prefixlen > 27:
+              raise SystemExit("Container Apps infrastructure subnet must be /27 or larger")
+          if not any(
+              item.get("properties", {}).get("serviceName") == "Microsoft.App/environments"
+              for item in properties.get("delegations", [])
+          ):
+              raise SystemExit("infrastructure subnet is not delegated to Microsoft.App/environments")
+          PY
+          assignment_count=$(az role assignment list \
+            --assignee-object-id "$CONTROL_IDENTITY_PRINCIPAL_ID" \
+            --scope "$REGISTRY_ID" \
+            --fill-principal-name false \
+            --fill-role-definition-name false \
+            --query "[?ends_with(roleDefinitionId, '/7f951dda-4ed3-4680-a7ca-43fe172d538d')]|length(@)" \
+            --output tsv)
+          if ! [[ "$assignment_count" =~ ^[0-9]+$ ]] || (( assignment_count < 1 )); then
+            echo "A separately approved exact-registry AcrPull assignment is required before release." >&2
+            exit 1
+          fi
+
+      - name: Produce release what-if evidence
+        run: |
+          set -euo pipefail
+          mkdir -p plans
+          az deployment group what-if \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name helios-dev-release \
+            --template-file "$SLICE_PATH/infra/main.bicep" \
+            --parameters environmentName=dev deployControl=true image="$IMAGE_REFERENCE" \
+            --mode Incremental \
+            --no-prompt true \
+            --result-format FullResourcePayloads \
+            --no-pretty-print \
+            --output json > plans/release.raw.json
+          python "$SLICE_PATH/scripts/plan_evidence.py" create \
+            --phase release \
+            --source-sha "$GITHUB_SHA" \
+            --template "$SLICE_PATH/infra/main.bicep" \
+            --raw plans/release.raw.json \
+            --plan plans/release.json \
+            --manifest plans/release-manifest.json \
+            --parameter environmentName=dev \
+            --parameter deployControl=true \
+            --parameter image="$IMAGE_REFERENCE" \
+            --binding controlIdentityPrincipalId="$CONTROL_IDENTITY_PRINCIPAL_ID" \
+            --binding infrastructureSubnetId="$INFRASTRUCTURE_SUBNET_ID" \
+            --binding registryId="$REGISTRY_ID"
+
+      - name: Upload release plan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helios-azure-release-plan-${{ github.sha }}
+          path: plans/
+          if-no-files-found: error
+          retention-days: 7
+
+  release_apply:
+    name: Apply reviewed immutable azure-dev release
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy == true && github.repository == 'M0nado/helios-platform' && github.ref == 'refs/heads/main' && github.ref_protected == true
+    needs:
+      - foundation_apply
+      - release_plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: azure-dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      CONTROL_IDENTITY_PRINCIPAL_ID: ${{ needs.foundation_apply.outputs.principal_id }}
+      IMAGE_REFERENCE: ${{ needs.foundation_apply.outputs.image_reference }}
+      INFRASTRUCTURE_SUBNET_ID: ${{ needs.foundation_apply.outputs.subnet_id }}
+      REGISTRY_ID: ${{ needs.foundation_apply.outputs.registry_id }}
+    steps:
+      - name: Require exact environment configuration and outputs
+        run: |
+          set -euo pipefail
+          for name in AZURE_CLIENT_ID AZURE_RESOURCE_GROUP AZURE_SUBSCRIPTION_ID AZURE_TENANT_ID CONTROL_IDENTITY_PRINCIPAL_ID IMAGE_REFERENCE INFRASTRUCTURE_SUBNET_ID REGISTRY_ID; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required release value: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Check out reviewed main
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Download reviewed release plan
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: helios-azure-release-plan-${{ github.sha }}
+          path: reviewed-release
+
+      - name: Verify release plan binding
+        run: |
+          set -euo pipefail
+          python "$SLICE_PATH/scripts/plan_evidence.py" verify \
+            --phase release \
+            --source-sha "$GITHUB_SHA" \
+            --template "$SLICE_PATH/infra/main.bicep" \
+            --plan reviewed-release/release.json \
+            --manifest reviewed-release/release-manifest.json \
+            --parameter environmentName=dev \
+            --parameter deployControl=true \
+            --parameter image="$IMAGE_REFERENCE" \
+            --binding controlIdentityPrincipalId="$CONTROL_IDENTITY_PRINCIPAL_ID" \
+            --binding infrastructureSubnetId="$INFRASTRUCTURE_SUBNET_ID" \
+            --binding registryId="$REGISTRY_ID"
+
+      - name: Install Bicep
+        run: az bicep install --version "$BICEP_VERSION"
+
+      - name: Sign in with the azure-dev federated identity
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Re-verify Azure scope and ACR pull access
+        run: |
+          set -euo pipefail
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query tenantId --output tsv)" = "$AZURE_TENANT_ID"
+          az group show --name "$AZURE_RESOURCE_GROUP" --query '{id:id,location:location}' --output json
+          mkdir -p checks
+          az resource show \
+            --ids "$INFRASTRUCTURE_SUBNET_ID" \
+            --api-version 2023-11-01 \
+            --output json > checks/subnet.json
+          python - <<'PY'
+          import ipaddress
+          import json
+          import os
+
+          with open("checks/subnet.json", encoding="utf-8") as handle:
+              subnet = json.load(handle)
+          if subnet["id"].lower() != os.environ["INFRASTRUCTURE_SUBNET_ID"].lower():
+              raise SystemExit("resolved subnet does not match the reviewed infrastructure subnet")
+          properties = subnet["properties"]
+          prefix = properties.get("addressPrefix")
+          if not prefix or ipaddress.ip_network(prefix).prefixlen > 27:
+              raise SystemExit("Container Apps infrastructure subnet must be /27 or larger")
+          if not any(
+              item.get("properties", {}).get("serviceName") == "Microsoft.App/environments"
+              for item in properties.get("delegations", [])
+          ):
+              raise SystemExit("infrastructure subnet is not delegated to Microsoft.App/environments")
+          PY
+          assignment_count=$(az role assignment list \
+            --assignee-object-id "$CONTROL_IDENTITY_PRINCIPAL_ID" \
+            --scope "$REGISTRY_ID" \
+            --fill-principal-name false \
+            --fill-role-definition-name false \
+            --query "[?ends_with(roleDefinitionId, '/7f951dda-4ed3-4680-a7ca-43fe172d538d')]|length(@)" \
+            --output tsv)
+          if ! [[ "$assignment_count" =~ ^[0-9]+$ ]] || (( assignment_count < 1 )); then
+            echo "A separately approved exact-registry AcrPull assignment is required before release." >&2
+            exit 1
+          fi
+
+      - name: Reject release drift after approval
+        run: |
+          set -euo pipefail
+          mkdir -p current-release
+          az deployment group what-if \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name helios-dev-release \
+            --template-file "$SLICE_PATH/infra/main.bicep" \
+            --parameters environmentName=dev deployControl=true image="$IMAGE_REFERENCE" \
+            --mode Incremental \
+            --no-prompt true \
+            --result-format FullResourcePayloads \
+            --no-pretty-print \
+            --output json > current-release/release.raw.json
+          python "$SLICE_PATH/scripts/plan_evidence.py" compare \
+            --raw current-release/release.raw.json \
+            --reviewed reviewed-release/release.json \
+            --manifest reviewed-release/release-manifest.json \
+            --current current-release/release.json
+
+      - name: Apply reviewed immutable revision
+        run: |
+          set -euo pipefail
+          deployment=helios-dev-release
+          az deployment group create \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$deployment" \
+            --template-file "$SLICE_PATH/infra/main.bicep" \
+            --parameters environmentName=dev deployControl=true image="$IMAGE_REFERENCE" \
+            --mode Incremental \
+            --no-prompt true \
+            --only-show-errors
+
+          control_name=$(az deployment group show \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$deployment" \
+            --query properties.outputs.controlName.value \
+            --output tsv)
+          test -n "$control_name"
+          mkdir -p evidence
+          az resource show \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$control_name" \
+            --resource-type Microsoft.App/containerApps \
+            --api-version 2024-03-01 \
+            --query '{name:name,provisioningState:properties.provisioningState,latestReadyRevisionName:properties.latestReadyRevisionName,image:properties.template.containers[0].image}' \
+            --output json > evidence/release-resource.json
+          python - <<'PY'
+          import json
+          import os
+
+          with open("evidence/release-resource.json", encoding="utf-8") as handle:
+              evidence = json.load(handle)
+          if evidence["provisioningState"] != "Succeeded":
+              raise SystemExit("Container App provisioning did not succeed")
+          if not evidence["latestReadyRevisionName"]:
+              raise SystemExit("Container App has no ready revision")
+          if evidence["image"] != os.environ["IMAGE_REFERENCE"]:
+              raise SystemExit("ready Container App image does not match the reviewed digest")
+          PY
+
+      - name: Upload release verification evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helios-azure-release-evidence-${{ github.sha }}
+          path: evidence/release-resource.json
+          if-no-files-found: error
+          retention-days: 30
