@@ -48,7 +48,6 @@ foreach ($file in $files) {
             status = 'passed'
             errors = @()
         })
-        Write-Host "PASS $relativePath" -ForegroundColor Green
         continue
     }
 
@@ -112,16 +111,23 @@ foreach ($result in $results) {
         continue
     }
 
-    $markdown.Add("## `$($result.path)`")
+    $markdown.Add(('## `{0}`' -f $result.path))
     $markdown.Add('')
     foreach ($detail in $result.errors) {
         $message = $detail.message.Replace('|', '\|').Replace("`r", ' ').Replace("`n", ' ')
-        $markdown.Add("- Line $($detail.line), column $($detail.column), `$($detail.errorId)`: $message")
+        $markdown.Add(('- Line {0}, column {1}, `{2}`: {3}' -f $detail.line, $detail.column, $detail.errorId, $message))
     }
     $markdown.Add('')
 }
 
 $markdown | Set-Content -LiteralPath $markdownPath -Encoding utf8
+
+Write-Host (
+    'PowerShell syntax scan checked {0} files: {1} failed file(s), {2} parse error(s).' -f
+    $summary.filesChecked,
+    $summary.failedFiles,
+    $summary.parseErrors
+)
 
 if ($errorCount -gt 0) {
     Write-Error "PowerShell syntax validation failed with $errorCount parse error(s) across $($summary.failedFiles) file(s)."
