@@ -178,32 +178,45 @@ on:
   pull_request:
     types: [opened, ready_for_review, converted_to_draft, closed]
 
+permissions:
+  contents: read
+
 jobs:
   update-status:
+    if: `${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
     steps:
       - name: Update Issue Status
         env:
           GITHUB_TOKEN: `${{ secrets.GITHUB_TOKEN }}
+          PR_BODY: `${{ github.event.pull_request.body }}
+          PR_DRAFT: `${{ github.event.pull_request.draft }}
+          PR_MERGED: `${{ github.event.pull_request.merged }}
+          PR_NUMBER: `${{ github.event.pull_request.number }}
         run: |
-          ISSUE_NUMBER=\$(grep -oP '#\K[0-9]+' <<< "`${{ github.event.pull_request.body }}" | head -1)
-          PR_NUMBER=`${{ github.event.pull_request.number }}
+          set -euo pipefail
+          ISSUE_NUMBER=`$(printf '%s\n' "`$PR_BODY" | grep -oE '#[0-9]+' | head -1 | tr -d '#' || true)
           
-          if [ -z "\$ISSUE_NUMBER" ]; then
+          if [ -z "`$ISSUE_NUMBER" ]; then
             echo "No linked issue found"
             exit 0
           fi
           
-          if [ "`${{ github.event.pull_request.merged }}" = "true" ]; then
+          if [ "`$PR_MERGED" = "true" ]; then
             STATUS="Done"
-          elif [ "`${{ github.event.pull_request.draft }}" = "true" ]; then
+          elif [ "`$PR_DRAFT" = "true" ]; then
             STATUS="In Progress"
           else
             STATUS="Review"
           fi
           
-          echo "Updating issue #\$ISSUE_NUMBER to status: \$STATUS"
-          gh issue comment \$ISSUE_NUMBER --body "PR #\$PR_NUMBER status updated to: \$STATUS"
+          echo "Updating issue #`$ISSUE_NUMBER to status: `$STATUS"
+          gh issue comment "`$ISSUE_NUMBER" --body "PR #`$PR_NUMBER status updated to: `$STATUS"
 "@
     
     Set-Content -Path "$WorkflowDir/auto-update-status.yml" -Value $AutoUpdateWorkflow

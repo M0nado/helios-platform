@@ -62,7 +62,7 @@ class BehaviorAnalyzer {
     [void] AnalyzeErrorPatterns() {
         Write-Host "Analyzing error patterns..." -ForegroundColor Cyan
         
-        $errorPatterns = @{
+        $detectedErrorPatterns = @{
             "TimeoutError" = @{
                 frequency = 12
                 affectedComponents = @("api-gateway", "database-layer")
@@ -95,9 +95,9 @@ class BehaviorAnalyzer {
             }
         }
         
-        $this.ErrorPatterns = $errorPatterns
+        $this.ErrorPatterns = $detectedErrorPatterns
         
-        Write-Host "✓ Identified $($errorPatterns.Count) error patterns" -ForegroundColor Green
+        Write-Host "✓ Identified $($detectedErrorPatterns.Count) error patterns" -ForegroundColor Green
     }
     
     [void] AnalyzePhaseMetrics() {
