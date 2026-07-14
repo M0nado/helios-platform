@@ -7,13 +7,14 @@
     Copies the reviewed security scripts into ProgramData and registers:
       - a SYSTEM startup posture audit;
       - a daily Defender quick scan;
-      - a weekly Defender full scan.
+      - an optional weekly Defender full scan.
     It never schedules an automatic offline/rootkit reboot scan.
 #>
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [string]$InstallRoot = "$env:ProgramData\HELIOS\Security",
     [string]$DailyQuickScanTime = '12:30',
+    [switch]$InstallWeeklyFullScan,
     [string]$WeeklyFullScanTime = '03:00',
     [ValidateSet('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday')]
     [string]$WeeklyFullScanDay = 'Sunday'
@@ -55,8 +56,8 @@ foreach ($file in $files) {
     }
 }
 
-$pwsh = (Get-Command pwsh.exe -ErrorAction SilentlyContinue).Source
-if (-not $pwsh) { $pwsh = (Get-Command powershell.exe -ErrorAction Stop).Source }
+$pwshCommand = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+$pwsh = if ($pwshCommand) { $pwshCommand.Source } else { (Get-Command powershell.exe -ErrorAction Stop).Source }
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 4)
 
@@ -68,14 +69,15 @@ $auditTrigger = New-ScheduledTaskTrigger -AtStartup
 $quickAction = New-ScheduledTaskAction -Execute $pwsh -Argument "-NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File `"$scanScript`" -Mode QuickScan -StateDirectory `"$stateRoot`""
 $quickTrigger = New-ScheduledTaskTrigger -Daily -At ([datetime]::ParseExact($DailyQuickScanTime, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture))
 
-$fullAction = New-ScheduledTaskAction -Execute $pwsh -Argument "-NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File `"$scanScript`" -Mode FullScan -StateDirectory `"$stateRoot`""
-$fullTrigger = New-ScheduledTaskTrigger -Weekly -WeeksInterval 1 -DaysOfWeek $WeeklyFullScanDay -At ([datetime]::ParseExact($WeeklyFullScanTime, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture))
+$tasks = [System.Collections.Generic.List[object]]::new()
+$tasks.Add([pscustomobject]@{ Name='HELIOS Boot Security Audit'; Action=$auditAction; Trigger=$auditTrigger })
+$tasks.Add([pscustomobject]@{ Name='HELIOS Defender Daily Quick Scan'; Action=$quickAction; Trigger=$quickTrigger })
 
-$tasks = @(
-    [pscustomobject]@{ Name='HELIOS Boot Security Audit'; Action=$auditAction; Trigger=$auditTrigger },
-    [pscustomobject]@{ Name='HELIOS Defender Daily Quick Scan'; Action=$quickAction; Trigger=$quickTrigger },
-    [pscustomobject]@{ Name='HELIOS Defender Weekly Full Scan'; Action=$fullAction; Trigger=$fullTrigger }
-)
+if ($InstallWeeklyFullScan) {
+    $fullAction = New-ScheduledTaskAction -Execute $pwsh -Argument "-NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File `"$scanScript`" -Mode FullScan -StateDirectory `"$stateRoot`""
+    $fullTrigger = New-ScheduledTaskTrigger -Weekly -WeeksInterval 1 -DaysOfWeek $WeeklyFullScanDay -At ([datetime]::ParseExact($WeeklyFullScanTime, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture))
+    $tasks.Add([pscustomobject]@{ Name='HELIOS Defender Weekly Full Scan'; Action=$fullAction; Trigger=$fullTrigger })
+}
 
 foreach ($task in $tasks) {
     if ($PSCmdlet.ShouldProcess("\HELIOS\Security\$($task.Name)", 'Register scheduled task')) {
@@ -87,6 +89,7 @@ foreach ($task in $tasks) {
     InstalledRoot = $InstallRoot
     PowerShellHost = $pwsh
     Tasks = @($tasks.Name)
+    WeeklyFullScanInstalled = [bool]$InstallWeeklyFullScan
     OfflineScanScheduled = $false
-    Note = 'Offline rootkit scanning remains an explicit operator action and is never scheduled automatically.'
+    Note = 'Daily quick scanning is the default. Full and offline scans remain explicit operator choices.'
 } | ConvertTo-Json -Depth 5
