@@ -150,6 +150,21 @@ No pipeline step can approve itself. Production jobs require a protected environ
 - Logs never include authorization headers, cookies, tokens, signing secrets, raw prompts, secret-bearing parameters, or unredacted personal data.
 - Recovery evidence identifies the last known-good commit and artifact digests, configuration version, schema compatibility, data migration status, recovery owner, target RTO/RPO, and validation result.
 
+## Azure staging intake
+
+The public personal-fork draft at `Yolkster64/helios-platform` PR #1 is an intake source, not a deployable canonical branch. Its reviewed Azure slice reached commit `44e6ffb` with a green Bicep/API/container validation run and a correctly skipped deployment job. No OIDC token was requested and no Azure resource changed.
+
+Promotion rules:
+
+- never merge the fork's stale `main` history into the canonical repository;
+- port only the reviewed slice delta onto a fresh branch from current canonical `M0nado/helios-platform` `main` after this contract and PR #174 are reconciled;
+- preserve internal Container Apps ingress, digest-pinned images, separate foundation/release what-if gates, truthful unbound Hermes status, and XCore safe standby;
+- replace the fork federation subject with the canonical repository's protected `azure-dev` environment subject; never authorize both subjects for the same deployment identity;
+- keep Azure environment variables, federated credentials, RBAC, APIM/Entra configuration, and private networking unconfigured until the canonical branch, reviewers, and least-privilege scope are final;
+- treat any access-controlled promotion mirror as downstream evidence only, never as a competing source of desired state.
+
+The staging slice does not satisfy the production ingress, broker, adapter, telemetry, approval, or rollback gates defined above.
+
 ## Acceptance gates
 
 Before production can be enabled, evidence must prove:
