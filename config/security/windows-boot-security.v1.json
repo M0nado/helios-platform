@@ -7,6 +7,12 @@
     "automaticOfflineScan": false,
     "reportDirectory": "%ProgramData%\\HELIOS\\Security\\Reports"
   },
+  "scheduledScans": {
+    "dailyQuickScan": true,
+    "dailyQuickScanTime": "12:30",
+    "weeklyFullScanDefault": false,
+    "fullScanRequiresExplicitOptIn": true
+  },
   "defender": {
     "realTimeProtection": true,
     "behaviorMonitoring": true,
