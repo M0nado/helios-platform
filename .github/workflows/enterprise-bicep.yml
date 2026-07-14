@@ -1,17 +1,21 @@
-name: HELIOS enterprise Bicep
+name: HELIOS enterprise Azure deployment
 
 on:
   pull_request:
     paths:
-      - 'infra/bicep/**'
+      - 'infra/bicep/enterprise/**'
       - '.github/workflows/enterprise-bicep.yml'
+      - 'azure-pipelines.yml'
+      - '.azuredevops/pipelines/**'
   workflow_dispatch:
     inputs:
       environment_name:
+        description: Azure environment
         required: true
         type: choice
         options: [dev, test, prod]
       apply:
+        description: Apply after what-if and protected approval
         required: true
         type: boolean
         default: false
@@ -20,22 +24,41 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: helios-azure-${{ github.event.inputs.environment_name || 'validation' }}
+  cancel-in-progress: false
+
+env:
+  BICEP_FILE: infra/bicep/enterprise/main.bicep
+  ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name || 'dev' }}
+
 jobs:
-  compile:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-bicep@v2
       - name: Build Bicep
-        run: bicep build infra/bicep/enterprise/main.bicep --outfile main.json
+        run: |
+          set -euo pipefail
+          bicep build "$BICEP_FILE" --outfile main.json
+          test -s main.json
+      - name: Validate Azure DevOps parity
+        run: |
+          set -euo pipefail
+          test -f azure-pipelines.yml
+          grep -q 'AzureCLI@2' azure-pipelines.yml
+          grep -q 'what-if' azure-pipelines.yml
+          grep -q 'workload identity federation' azure-pipelines.yml
       - uses: actions/upload-artifact@v4
         with:
-          name: enterprise-bicep
+          name: helios-enterprise-bicep
           path: main.json
+          retention-days: 30
 
   what-if:
     if: github.event_name == 'workflow_dispatch'
-    needs: compile
+    needs: validate
     runs-on: ubuntu-latest
     environment: helios-${{ inputs.environment_name }}-what-if
     steps:
@@ -45,12 +68,26 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Azure what-if
-        run: >-
-          az deployment group what-if
-          --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}"
-          --template-file infra/bicep/enterprise/main.bicep
-          --parameters environmentName="${{ inputs.environment_name }}"
+      - name: Verify target resource group
+        run: |
+          set -euo pipefail
+          test -n "${{ vars.AZURE_RESOURCE_GROUP }}"
+          az group show --name "${{ vars.AZURE_RESOURCE_GROUP }}" --output none
+      - name: Run Azure what-if
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --name "helios-${{ inputs.environment_name }}-${{ github.run_id }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file "$BICEP_FILE" \
+            --parameters environmentName="${{ inputs.environment_name }}" \
+            --result-format FullResourcePayloads \
+            --no-pretty-print | tee what-if.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helios-${{ inputs.environment_name }}-what-if
+          path: what-if.json
+          retention-days: 30
 
   deploy:
     if: github.event_name == 'workflow_dispatch' && inputs.apply
@@ -64,9 +101,17 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Deploy approved template
-        run: >-
-          az deployment group create
-          --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}"
-          --template-file infra/bicep/enterprise/main.bicep
-          --parameters environmentName="${{ inputs.environment_name }}"
+      - name: Deploy approved Bicep template
+        run: |
+          set -euo pipefail
+          az deployment group create \
+            --name "helios-${{ inputs.environment_name }}-${{ github.run_id }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --template-file "$BICEP_FILE" \
+            --parameters environmentName="${{ inputs.environment_name }}" \
+            --output json | tee deployment-result.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helios-${{ inputs.environment_name }}-deployment
+          path: deployment-result.json
+          retention-days: 90
