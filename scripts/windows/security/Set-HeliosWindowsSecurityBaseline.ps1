@@ -21,10 +21,31 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Registry: Enables the Microsoft vulnerable-driver blocklist and optional
+# Device Guard/HVCI/Credential Guard/LSA protections. Every affected HKLM key is
+# exported before mutation. Rollback uses the generated .reg files after review.
+
 function Test-IsAdministrator {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = [Security.Principal.WindowsPrincipal]::new($identity)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Export-HeliosRegistryKey {
+    param(
+        [Parameter(Mandatory)][string]$NativePath,
+        [Parameter(Mandatory)][string]$Destination
+    )
+
+    $regExe = Join-Path $env:SystemRoot 'System32\reg.exe'
+    $output = & $regExe export $NativePath $Destination /y 2>&1
+    [pscustomobject]@{
+        RegistryPath = $NativePath
+        Destination = $Destination
+        ExitCode = $LASTEXITCODE
+        Exported = ($LASTEXITCODE -eq 0)
+        Detail = ($output | Out-String).Trim()
+    }
 }
 
 if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
@@ -38,11 +59,15 @@ $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 New-Item -ItemType Directory -Path $BackupDirectory -Force | Out-Null
 $defenderBackup = Join-Path $BackupDirectory "defender-preferences-$timestamp.json"
 $firewallBackup = Join-Path $BackupDirectory "firewall-$timestamp.wfw"
-$registryBackup = Join-Path $BackupDirectory "security-registry-$timestamp.reg"
 
 Get-MpPreference | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $defenderBackup -Encoding UTF8
 & "$env:SystemRoot\System32\netsh.exe" advfirewall export $firewallBackup | Out-Null
-& "$env:SystemRoot\System32\reg.exe" export 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard' $registryBackup /y | Out-Null
+
+$registryBackups = @(
+    Export-HeliosRegistryKey -NativePath 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard' -Destination (Join-Path $BackupDirectory "deviceguard-$timestamp.reg")
+    Export-HeliosRegistryKey -NativePath 'HKLM\SYSTEM\CurrentControlSet\Control\CI\Config' -Destination (Join-Path $BackupDirectory "code-integrity-$timestamp.reg")
+    Export-HeliosRegistryKey -NativePath 'HKLM\SYSTEM\CurrentControlSet\Control\Lsa' -Destination (Join-Path $BackupDirectory "lsa-$timestamp.reg")
+)
 
 $asrRules = [ordered]@{
     '56a863a9-875e-4185-98a7-b882c64b5ce5' = 'Block abuse of exploited vulnerable signed drivers'
@@ -60,6 +85,7 @@ $asrRules = [ordered]@{
 
 $asrAction = if ($Profile -eq 'Strict') { 'Enabled' } else { 'AuditMode' }
 $cfaAction = if ($EnableControlledFolderAccessBlock -or $Profile -eq 'Strict') { 'Enabled' } else { 'AuditMode' }
+$tamperProtected = [bool](Get-MpComputerStatus).IsTamperProtected
 
 if ($PSCmdlet.ShouldProcess('Microsoft Defender Antivirus', "Apply $Profile HELIOS baseline")) {
     Set-MpPreference `
@@ -125,12 +151,15 @@ $result = [ordered]@{
     ControlledFolderAccess = $cfaAction
     MemoryIntegrityRequested = [bool]$EnableMemoryIntegrity
     CredentialGuardRequested = [bool]$EnableCredentialGuard
-    BackupFiles = @($defenderBackup, $firewallBackup, $registryBackup)
+    TamperProtectionDetected = $tamperProtected
+    DefenderBackup = $defenderBackup
+    FirewallBackup = $firewallBackup
+    RegistryBackups = $registryBackups
     RebootRecommended = [bool]($EnableMemoryIntegrity -or $EnableCredentialGuard)
     Notes = @(
         'Secure Boot and TPM are audited separately because firmware settings cannot be safely forced by this script.',
         'Memory integrity can expose incompatible drivers; use the audit workflow and recovery documentation before enabling it fleet-wide.',
-        'Tamper Protection is reported but is controlled by Windows Security or enterprise management rather than forced here.'
+        $(if ($tamperProtected) { 'Tamper Protection is enabled. Verify effective Defender settings after the run; enterprise-managed settings may require Intune or Defender portal policy.' } else { 'Tamper Protection was not reported as enabled.' })
     )
 }
-$result | ConvertTo-Json -Depth 6
+$result | ConvertTo-Json -Depth 8
