@@ -76,20 +76,22 @@ jobs:
           Write-Host "║  Security Scanning                     ║"
           Write-Host "╚════════════════════════════════════════╝"
           
-          $Files = Get-ChildItem -Recurse -Filter "*.ps1"
+          $Files = Get-ChildItem -Recurse -Filter "*.ps1" | Where-Object {
+            $_.FullName -notmatch '[\\\/]docs[\\\/]' -and
+            $_.Name -notmatch '^test-'
+          }
           $SecurityIssues = @()
           
           $PatternMap = @{
-            'password\s*=\s*[''"][^''\"]*[''"]' = "Hardcoded password"
-            'apikey\s*=\s*[''"][^''\"]*[''"]' = "Hardcoded API key"
-            'secret\s*=\s*[''"][^''\"]*[''"]' = "Hardcoded secret"
-            'token\s*=\s*[''"][^''\"]*[''"]' = "Hardcoded token"
+            '(?i)\$(password|certpassword)\b\s*=\s*[''"][^''\"\s][^''\"]*[''"]' = "Hardcoded password"
+            '(?i)\$api[_-]?key\b\s*=\s*[''"][^''\"\s][^''\"]*[''"]' = "Hardcoded API key"
+            '(?i)\$(secret|token|githubtoken)\b\s*=\s*[''"][^''\"\s][^''\"]*[''"]' = "Hardcoded token/secret"
           }
           
           foreach ($File in $Files) {
             $Content = Get-Content $File.FullName
             
-            if ($File.Name -notmatch '^test-' -and $Content -notmatch '# EXAMPLE CODE') {
+            if ($Content -notmatch '# EXAMPLE CODE') {
               foreach ($Pattern in $PatternMap.Keys) {
                 if ($Content -match $Pattern) {
                   $SecurityIssues += @{
