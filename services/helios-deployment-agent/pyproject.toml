@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "helios-deployment-agent"
+version = "0.1.0"
+description = "Policy-bounded OpenAI deployment planning service for HELIOS"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+  "fastapi>=0.115,<1",
+  "openai-agents>=0.3,<1",
+  "pydantic>=2.10,<3",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["helios_deployment_agent*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

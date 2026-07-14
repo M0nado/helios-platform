@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "publication_scope": "public-summary",
+  "generated_at": "2026-07-14T19:18:00Z",
+  "counts": {
+    "repositories": 33,
+    "visibility": {
+      "public": 12,
+      "private": 19,
+      "internal": 2
+    },
+    "branch_refs": 215,
+    "non_default_branch_refs": 186,
+    "observed_open_pull_requests": 94,
+    "targeted_divergence_records": 19,
+    "retrieval_errors": 0
+  },
+  "redacted_fields": [
+    "non_public_repository_names",
+    "non_public_repository_ids",
+    "non_public_repository_urls",
+    "non_public_branch_names",
+    "non_public_commit_shas",
+    "non_public_workflow_and_pull_request_metadata"
+  ],
+  "governance": {
+    "full_inventory_system": "access-controlled SharePoint governance",
+    "github_role": "public aggregate, policy, code, CI, and review evidence",
+    "archive_or_delete_requires_separate_approval": true,
+    "automatic_merge_or_deletion_enabled": false
+  },
+  "required_controls": [
+    "unique-delta evidence before retirement",
+    "reviewable pull request for persistent mutation",
+    "required checks and human approval before merge",
+    "OIDC and protected environment before production deployment",
+    "rollback and provenance evidence"
+  ]
+}
