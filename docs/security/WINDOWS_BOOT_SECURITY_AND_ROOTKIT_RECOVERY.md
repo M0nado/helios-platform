@@ -12,8 +12,8 @@ A Defender Offline scan is never scheduled at every boot. It restarts the comput
 ## Files
 
 - `Get-HeliosBootSecurityPosture.ps1` — report only.
-- `Set-HeliosWindowsSecurityBaseline.ps1` — Defender, firewall, ASR, driver blocklist, optional HVCI/Credential Guard.
-- `Install-HeliosBootSecurityTasks.ps1` — startup audit plus daily quick and weekly full scans.
+- `Set-HeliosWindowsSecurityBaseline.ps1` — Defender, firewall, ASR, driver blocklist, optional HVCI/Credential Guard, and rollback evidence.
+- `Install-HeliosBootSecurityTasks.ps1` — startup audit and daily quick scan; weekly full scan is explicit opt-in.
 - `Invoke-HeliosRootkitRecovery.ps1` — readiness, quick, full, and guarded offline scan.
 - `config/security/windows-boot-security.v1.json` — machine-readable policy.
 
@@ -31,8 +31,17 @@ pwsh -NoProfile -File .\scripts\windows\security\Set-HeliosWindowsSecurityBaseli
 # 3. Apply the audit-first baseline
 pwsh -NoProfile -File .\scripts\windows\security\Set-HeliosWindowsSecurityBaseline.ps1 -Profile Audit
 
-# 4. Install durable startup and scan tasks
+# 4. Install startup audit and daily quick scan
 pwsh -NoProfile -File .\scripts\windows\security\Install-HeliosBootSecurityTasks.ps1
+```
+
+A weekly full scan is available but is not installed by default:
+
+```powershell
+pwsh -NoProfile -File .\scripts\windows\security\Install-HeliosBootSecurityTasks.ps1 `
+  -InstallWeeklyFullScan `
+  -WeeklyFullScanDay Sunday `
+  -WeeklyFullScanTime '03:00'
 ```
 
 Enable compatibility-sensitive protections only after reviewing driver state and recovery access:
@@ -43,6 +52,8 @@ pwsh -NoProfile -File .\scripts\windows\security\Set-HeliosWindowsSecurityBaseli
   -EnableMemoryIntegrity `
   -EnableCredentialGuard
 ```
+
+The baseline writes Defender, firewall, Device Guard, Code Integrity, and LSA backups under `%ProgramData%\HELIOS\Security\Backups`. Registry rollback should be reviewed and imported from the corresponding `.reg` evidence file rather than applied blindly.
 
 ## Rootkit recovery
 
