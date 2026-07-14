@@ -1,0 +1,152 @@
+{
+  "schemaVersion": "1.0",
+  "registryId": "helios-enterprise-deployment-subagents",
+  "parentFleet": "helios-enterprise-deployment-fleet",
+  "parentIssue": 165,
+  "productionBlockerIssue": 162,
+  "defaultMode": "plan-and-validate",
+  "subagents": [
+    {
+      "id": "xcore-runtime",
+      "name": "XCore Runtime and Learning Subagent",
+      "parentAgent": "hermes-registration",
+      "runtime": "python+csharp+docker+wsl2",
+      "purpose": "Own XCore routing, worker topology, self-teaching cycles, vector and reinforcement memory contracts, engine specialization, and runtime health without receiving Azure production privileges.",
+      "allowed": [
+        "load-xcore-config",
+        "register-xcore-worker",
+        "route-bounded-task",
+        "run-approved-training-cycle",
+        "read-engine-catalog",
+        "write-evaluation-result",
+        "publish-runtime-health",
+        "recommend-capacity"
+      ],
+      "denied": [
+        "azure-production-apply",
+        "entra-or-rbac-write",
+        "secret-readback",
+        "raw-private-memory-publish",
+        "unbounded-self-modification",
+        "approval-bypass"
+      ],
+      "requiresApprovalFor": [
+        "production-training-cycle",
+        "fleet-capacity-change",
+        "new-engine-enable",
+        "memory-schema-migration"
+      ],
+      "healthChecks": [
+        "orchestrator-import",
+        "contextual-bandit-route-test",
+        "task-store-read-write-test",
+        "vector-memory-redaction-test",
+        "engine-catalog-load",
+        "docker-wsl2-hyperv-topology-check"
+      ],
+      "evidence": [
+        "routing-scorecard",
+        "training-cycle-result",
+        "engine-selection-report",
+        "runtime-topology-report"
+      ]
+    },
+    {
+      "id": "microsoft-copilot",
+      "name": "Microsoft Copilot and Copilot Studio Subagent",
+      "parentAgent": "microsoft-graph",
+      "runtime": "csharp+graph+power-platform-cli+agents-toolkit",
+      "purpose": "Build and govern Microsoft 365 Copilot agents, Copilot Studio solutions, Teams publishing packages, Graph-backed actions, and Foundry handoffs.",
+      "allowed": [
+        "agents-toolkit-readiness",
+        "copilot-studio-solution-plan",
+        "power-platform-auth-status",
+        "declarative-agent-validate",
+        "teams-app-package-validate",
+        "graph-action-contract-test",
+        "foundry-handoff-test",
+        "publish-plan"
+      ],
+      "denied": [
+        "tenant-wide-publish",
+        "unreviewed-graph-permission",
+        "broad-mailbox-access",
+        "automatic-admin-consent",
+        "credential-export",
+        "production-agent-publish-without-approval"
+      ],
+      "requiresApprovalFor": [
+        "copilot-studio-environment-write",
+        "graph-admin-consent",
+        "teams-app-publish",
+        "production-agent-publish",
+        "new-power-platform-connection-reference"
+      ],
+      "healthChecks": [
+        "pac-version",
+        "agents-toolkit-version",
+        "m365-tenant-readiness",
+        "copilot-studio-environment-resolve",
+        "teams-package-validation",
+        "graph-scopes-review"
+      ],
+      "evidence": [
+        "solution-export-manifest",
+        "teams-package-validation",
+        "graph-permission-summary",
+        "copilot-publish-plan"
+      ]
+    },
+    {
+      "id": "azure-toolchain",
+      "name": "Azure and Microsoft Toolchain Setup Subagent",
+      "parentAgent": "azure-cli-bootstrap",
+      "runtime": "powershell+winget+dotnet",
+      "purpose": "Install, update, verify, and report the approved Azure and Microsoft agent-development toolchain using manifest-driven, auditable operations.",
+      "allowed": [
+        "detect-tool",
+        "verify-package-source",
+        "install-approved-tool",
+        "upgrade-approved-tool",
+        "repair-user-path",
+        "version-report",
+        "extension-inventory",
+        "dependency-check",
+        "generate-install-plan"
+      ],
+      "denied": [
+        "silent-tenant-login",
+        "credential-capture",
+        "unapproved-package-source",
+        "disable-security-control",
+        "machine-wide-install-without-elevation",
+        "production-deployment"
+      ],
+      "requiresApprovalFor": [
+        "machine-wide-install",
+        "administrator-elevation",
+        "extension-install",
+        "tool-major-version-upgrade"
+      ],
+      "healthChecks": [
+        "az-version",
+        "azd-version",
+        "bicep-version",
+        "func-version",
+        "pac-version",
+        "dotnet-info",
+        "pwsh-version",
+        "docker-version",
+        "gh-version",
+        "node-version",
+        "path-resolution"
+      ],
+      "evidence": [
+        "toolchain-inventory",
+        "installation-plan",
+        "version-lock-report",
+        "path-health-report"
+      ]
+    }
+  ]
+}
