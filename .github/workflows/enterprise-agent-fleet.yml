@@ -1,0 +1,142 @@
+name: HELIOS Enterprise Agent Fleet
+
+on:
+  pull_request:
+    paths:
+      - 'agents/**'
+      - 'config/agents/**'
+      - 'config/plugins/**'
+      - 'skills/**'
+      - 'docs/agents/**'
+      - '.github/workflows/enterprise-agent-fleet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'agents/**'
+      - 'config/agents/**'
+      - 'config/plugins/**'
+      - 'skills/**'
+      - 'docs/agents/**'
+  workflow_dispatch:
+    inputs:
+      request_production_enablement:
+        description: Validate whether production enablement is allowed
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  validate-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate fleet and connection registries
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          fleet_path = Path('config/agents/enterprise-deployment-agent-fleet.v1.json')
+          connections_path = Path('config/plugins/custom-connections.v1.json')
+          fleet = json.loads(fleet_path.read_text(encoding='utf-8'))
+          connections = json.loads(connections_path.read_text(encoding='utf-8'))
+
+          required_fleet = {
+              'schemaVersion', 'fleetId', 'canonicalRepository', 'parentIssue',
+              'productionBlockerIssue', 'productionEnabled', 'defaultMode',
+              'forbiddenGlobalCapabilities', 'agents'
+          }
+          missing = sorted(required_fleet - set(fleet))
+          assert not missing, f'Missing fleet fields: {missing}'
+          assert fleet['canonicalRepository'] == 'M0nado/helios-platform'
+          assert fleet['productionBlockerIssue'] == 162
+          assert fleet['productionEnabled'] is False, 'Production must remain disabled while issue #162 is open.'
+
+          agents = fleet['agents']
+          assert len(agents) == 20, f'Expected 20 agents, found {len(agents)}'
+          agent_ids = [agent['id'] for agent in agents]
+          assert len(agent_ids) == len(set(agent_ids)), 'Duplicate agent IDs detected.'
+
+          required_agent = {'id', 'name', 'runtime', 'purpose', 'allowed', 'denied', 'requiresApprovalFor'}
+          for agent in agents:
+              missing = sorted(required_agent - set(agent))
+              assert not missing, f"Agent {agent.get('id')} missing: {missing}"
+              assert agent['allowed'], f"Agent {agent['id']} must declare allowed operations."
+              assert agent['denied'], f"Agent {agent['id']} must declare denied operations."
+
+          forbidden = set(fleet['forbiddenGlobalCapabilities'])
+          required_forbidden = {
+              'azure-owner-assignment', 'tenant-wide-graph-consent',
+              'long-lived-client-secret', 'plaintext-secret-output',
+              'unapproved-production-apply', 'persistent-data-destruction'
+          }
+          assert required_forbidden <= forbidden
+
+          provider = next(agent for agent in agents if agent['id'] == 'openai-provider')
+          assert 'OPENAI_API_KEY' in provider.get('secretReferences', [])
+          assert 'api-key-readback' in provider['denied']
+
+          required_connections = {'schemaVersion', 'registryId', 'defaultPolicy', 'connections'}
+          missing = sorted(required_connections - set(connections))
+          assert not missing, f'Missing connection fields: {missing}'
+          assert connections['defaultPolicy'] == 'deny-undeclared'
+
+          items = connections['connections']
+          connection_ids = [item['id'] for item in items]
+          assert len(connection_ids) == len(set(connection_ids)), 'Duplicate connection IDs detected.'
+          required_connection = {
+              'id', 'kind', 'environment', 'auth', 'readTools', 'writeTools',
+              'approvalRequired', 'healthCheck'
+          }
+          for item in items:
+              missing = sorted(required_connection - set(item))
+              assert not missing, f"Connection {item.get('id')} missing: {missing}"
+              assert item['auth'].get('mode'), f"Connection {item['id']} lacks auth mode."
+              assert item['healthCheck'], f"Connection {item['id']} lacks health check."
+
+          summary = {
+              'fleetId': fleet['fleetId'],
+              'agentCount': len(agents),
+              'connectionCount': len(items),
+              'productionEnabled': fleet['productionEnabled'],
+              'productionBlockerIssue': fleet['productionBlockerIssue'],
+              'agentIds': agent_ids,
+              'connectionIds': connection_ids,
+          }
+          out = Path('artifacts/agent-fleet')
+          out.mkdir(parents=True, exist_ok=True)
+          (out / 'validation-summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          print(json.dumps(summary, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helios-enterprise-agent-fleet-validation
+          path: artifacts/agent-fleet/validation-summary.json
+          retention-days: 30
+
+  production-readiness-gate:
+    if: github.event_name == 'workflow_dispatch' && inputs.request_production_enablement
+    needs: validate-registry
+    runs-on: ubuntu-latest
+    environment: helios-prod-agent-fleet-approval
+    steps:
+      - name: Require issue 162 to be closed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$(gh issue view 162 --repo M0nado/helios-platform --json state --jq .state)"
+          test "$state" = "CLOSED" || {
+            echo 'Production enablement blocked: Issue #162 is not closed.'
+            exit 1
+          }
+      - name: Production readiness confirmed
+        run: echo 'Registry validated, protected environment approved, and Issue #162 is closed. No Azure apply is performed by this workflow.'
