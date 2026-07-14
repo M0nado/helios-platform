@@ -1,0 +1,24 @@
+{
+  "version": 6,
+  "name": "HELIOS XTier/WinRE legacy absorption",
+  "mode": "report-first",
+  "canonicalRepository": "M0nado/helios-platform",
+  "controlPlaneRepository": "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
+  "pythonPackage": "python.aihub.legacy_bridge",
+  "legacyExecution": {
+    "enabled": false,
+    "promotionRequiresReview": true
+  },
+  "environmentRepair": {
+    "script": "scripts/windows/Repair-HeliosEnvironment.ps1",
+    "defaultMode": "audit",
+    "machineChangesRequireElevation": true
+  },
+  "aihub": {
+    "registry": "python/aihub/legacy_bridge/ml_registry.py",
+    "securityOptimizer": "python/aihub/legacy_bridge/security_optimizer.py",
+    "vmTopology": "python/aihub/legacy_bridge/vm_orchestrator.py",
+    "transcriptIntegrator": "python/aihub/legacy_bridge/winre_conversation_integrator.py",
+    "artifactBuilder": "python/aihub/legacy_bridge/build_super_outputs.py"
+  }
+}
