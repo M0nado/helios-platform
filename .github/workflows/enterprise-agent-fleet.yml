@@ -8,6 +8,7 @@ on:
       - 'config/plugins/**'
       - 'skills/**'
       - 'docs/agents/**'
+      - 'src/agents/**'
       - '.github/workflows/enterprise-agent-fleet.yml'
   push:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - 'config/plugins/**'
       - 'skills/**'
       - 'docs/agents/**'
+      - 'src/agents/**'
   workflow_dispatch:
     inputs:
       request_production_enablement:
@@ -37,6 +39,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build typed enterprise agent contracts
+        run: dotnet build src/agents/HELIOS.EnterpriseAgents/HELIOS.EnterpriseAgents.csproj --configuration Release
       - name: Validate fleet and connection registries
         shell: bash
         run: |
