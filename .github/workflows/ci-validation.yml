@@ -10,42 +10,33 @@ jobs:
   syntax-check:
     runs-on: ubuntu-latest
     name: PowerShell Syntax Validation
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Verify PowerShell
         run: $PSVersionTable.PSVersion
         shell: pwsh
-      
-      - name: Check PowerShell Syntax
+
+      - name: Check PowerShell syntax with AST parser
         shell: pwsh
-        run: |
-          $failures = 0
-          Get-ChildItem -Path '.' -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
-            $file = $_.FullName
-            Write-Host "Checking: $file"
-            try {
-              $content = Get-Content -Path $file
-              [scriptblock]::Create($content) | Out-Null
-              Write-Host "✅ OK" -ForegroundColor Green
-            } catch {
-              Write-Host "❌ FAILED: $_" -ForegroundColor Red
-              $failures++
-            }
-          }
-          if ($failures -gt 0) {
-            Write-Host "Syntax check failed for $failures files" -ForegroundColor Red
-            exit 1
-          }
+        run: ./scripts/validation/Test-PowerShellSyntax.ps1
+
+      - name: Upload PowerShell syntax inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: powershell-syntax-inventory
+          path: reports/powershell-syntax/
+          retention-days: 30
 
   markdown-check:
     runs-on: ubuntu-latest
     name: Markdown Validation
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Run markdownlint
         uses: nosborn/github-action-markdown-cli@v3.3.0
         with:
@@ -56,16 +47,16 @@ jobs:
   documentation-check:
     runs-on: ubuntu-latest
     name: Documentation Completeness
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Check Required Documentation
         run: |
           required_docs=(
             "README.md"
           )
-          
+
           missing=0
           for doc in "${required_docs[@]}"; do
             if [ ! -f "$doc" ]; then
@@ -75,7 +66,7 @@ jobs:
               echo "✅ Found: $doc"
             fi
           done
-          
+
           if [ $missing -eq 0 ]; then
             echo "✅ All required documentation present!"
           else
@@ -85,14 +76,14 @@ jobs:
   test-scripts:
     runs-on: ubuntu-latest
     name: Test PowerShell Scripts
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Verify PowerShell
         run: $PSVersionTable.PSVersion
         shell: pwsh
-      
+
       - name: Run Unit Tests
         run: |
           if (Test-Path -Path "src/tests" -ErrorAction SilentlyContinue) {
@@ -109,10 +100,10 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     name: Security Scanning
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Run Trivy Vulnerability Scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -121,7 +112,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
         continue-on-error: true
-      
+
       - name: Upload Trivy Results
         uses: github/codeql-action/upload-sarif@v2
         with:
@@ -131,17 +122,17 @@ jobs:
   file-integrity:
     runs-on: ubuntu-latest
     name: File Structure Validation
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Validate Directory Structure
         run: |
           required_dirs=(
             "src"
             "docs"
           )
-          
+
           missing=0
           for dir in "${required_dirs[@]}"; do
             if [ ! -d "$dir" ]; then
@@ -151,7 +142,7 @@ jobs:
               echo "✅ Found: $dir"
             fi
           done
-          
+
           if [ $missing -eq 0 ]; then
             echo "✅ Directory structure is valid!"
           else
