@@ -1,0 +1,34 @@
+type: Microsoft.App/jobs
+name: helios-hubspot-sync
+location: eastus
+properties:
+  environmentId: /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.App/managedEnvironments/<managed-environment>
+  configuration:
+    triggerType: Schedule
+    scheduleTriggerConfig:
+      cronExpression: '*/10 * * * *'
+      parallelism: 1
+      replicaCompletionCount: 1
+    secrets:
+      - name: hubspot-token
+        value: <hubspot-private-app-token>
+      - name: service-bus-connection
+        value: <service-bus-connection-string>
+  template:
+    containers:
+      - name: hubspot-sync
+        image: ghcr.io/m0nado/helios-platform/hubspot-sync:latest
+        env:
+          - name: APPINSIGHTS_CONNECTION_STRING
+            value: <application-insights-connection-string>
+          - name: SERVICEBUS_CONNECTION_STRING
+            secretRef: service-bus-connection
+          - name: HUBSPOT_BASE_URL
+            value: https://api.hubapi.com
+          - name: HUBSPOT_TOKEN
+            secretRef: hubspot-token
+          - name: HUBSPOT_SYNC_QUEUE
+            value: hubspot-sync
+        resources:
+          cpu: 0.5
+          memory: 1Gi

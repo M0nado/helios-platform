@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hubspot-sync
+  namespace: helios-platform
+spec:
+  schedule: '*/10 * * * *'
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: hubspot-sync
+            app.kubernetes.io/part-of: helios-platform
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: helios-platform-workload
+          containers:
+            - name: hubspot-sync
+              image: ghcr.io/m0nado/helios-platform/hubspot-sync:latest
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: APPINSIGHTS_CONNECTION_STRING
+                  valueFrom:
+                    secretKeyRef:
+                      name: helios-platform-observability
+                      key: appinsights-connection-string
+                - name: SERVICEBUS_NAMESPACE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: helios-platform-runtime
+                      key: servicebus-namespace
+                - name: HUBSPOT_BASE_URL
+                  value: https://api.hubapi.com
+                - name: HUBSPOT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: hubspot-credentials
+                      key: private-app-token
+                - name: HUBSPOT_SYNC_QUEUE
+                  value: hubspot-sync
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 256Mi
+                limits:
+                  cpu: '1'
+                  memory: 1Gi
