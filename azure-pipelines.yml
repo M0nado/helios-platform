@@ -1,19 +1,141 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# HELIOS Azure DevOps deployment pipeline
+# Authentication is provided by an Azure Resource Manager service connection
+# configured with workload identity federation. No client secret is stored here.
 
 trigger:
-- main
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infra/bicep/enterprise/**
+      - azure-pipelines.yml
+      - .azuredevops/pipelines/**
 
-pool:
-  vmImage: ubuntu-latest
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infra/bicep/enterprise/**
+      - azure-pipelines.yml
+      - .azuredevops/pipelines/**
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+parameters:
+  - name: environmentName
+    displayName: Azure environment
+    type: string
+    default: dev
+    values:
+      - dev
+      - test
+      - prod
+  - name: apply
+    displayName: Apply approved deployment
+    type: boolean
+    default: false
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+variables:
+  azureServiceConnection: helios-azure-wif-${{ parameters.environmentName }}
+  azureResourceGroup: rg-helios-${{ parameters.environmentName }}
+  azureLocation: eastus2
+  bicepFile: infra/bicep/enterprise/main.bicep
+  artifactName: helios-enterprise-bicep
+
+stages:
+  - stage: Validate
+    displayName: Validate Bicep and repository contract
+    jobs:
+      - job: ValidateBicep
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            clean: true
+          - task: AzureCLI@2
+            displayName: Build and lint Bicep
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                az bicep install
+                az bicep build --file "$(bicepFile)" --outfile "$(Build.ArtifactStagingDirectory)/main.json"
+                test -s "$(Build.ArtifactStagingDirectory)/main.json"
+          - publish: $(Build.ArtifactStagingDirectory)/main.json
+            artifact: $(artifactName)
+            displayName: Publish compiled template
+
+  - stage: WhatIf
+    displayName: Azure what-if
+    dependsOn: Validate
+    condition: succeeded()
+    jobs:
+      - deployment: WhatIf
+        displayName: Preview ${{ parameters.environmentName }} changes
+        pool:
+          vmImage: ubuntu-latest
+        environment: helios-${{ parameters.environmentName }}-what-if
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  clean: true
+                - task: AzureCLI@2
+                  displayName: Ensure resource group and run what-if
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      az group show --name "$(azureResourceGroup)" --output none
+                      az deployment group what-if \
+                        --name "helios-${{ parameters.environmentName }}-$(Build.BuildId)" \
+                        --resource-group "$(azureResourceGroup)" \
+                        --template-file "$(bicepFile)" \
+                        --parameters environmentName="${{ parameters.environmentName }}" location="$(azureLocation)" \
+                        --result-format FullResourcePayloads \
+                        --no-pretty-print | tee "$(Pipeline.Workspace)/what-if.json"
+                - publish: $(Pipeline.Workspace)/what-if.json
+                  artifact: helios-${{ parameters.environmentName }}-what-if
+                  displayName: Publish what-if evidence
+
+  - stage: Deploy
+    displayName: Approved Azure deployment
+    dependsOn: WhatIf
+    condition: and(succeeded(), eq('${{ parameters.apply }}', 'true'))
+    jobs:
+      - deployment: DeployEnterprise
+        displayName: Deploy ${{ parameters.environmentName }}
+        pool:
+          name: helios-azure
+          demands:
+            - Agent.OS -equals Linux
+        environment: helios-${{ parameters.environmentName }}-deploy
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  clean: true
+                - task: AzureCLI@2
+                  displayName: Deploy approved Bicep template
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      az deployment group create \
+                        --name "helios-${{ parameters.environmentName }}-$(Build.BuildId)" \
+                        --resource-group "$(azureResourceGroup)" \
+                        --template-file "$(bicepFile)" \
+                        --parameters environmentName="${{ parameters.environmentName }}" location="$(azureLocation)" \
+                        --output json | tee "$(Pipeline.Workspace)/deployment-result.json"
+                - publish: $(Pipeline.Workspace)/deployment-result.json
+                  artifact: helios-${{ parameters.environmentName }}-deployment
+                  displayName: Publish deployment evidence
