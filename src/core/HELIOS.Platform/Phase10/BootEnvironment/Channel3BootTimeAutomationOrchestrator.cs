@@ -370,7 +370,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                 var internetOK = await EstablishSecureInternetAsync(cancellationToken);
                 if (!internetOK)
                 {
-                    _logger.Warn("    ⚠ Internet not available - using local components only");
+                    _logger.Warning("    ⚠ Internet not available - using local components only");
                 }
                 else
                 {
@@ -498,7 +498,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                     }
                     catch (Exception ex)
                     {
-                        _logger.Warn($"      ⚠ {service.Key}: {ex.Message}");
+                        _logger.Warning($"      ⚠ {service.Key}: {ex.Message}");
                     }
                 }
 
@@ -1048,6 +1048,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
         public bool Success { get; set; }
         public int ItemsProcessed { get; set; }
         public Dictionary<string, string> DetectedHardware { get; set; } = new();
+        public string Details { get; set; }
         public Exception Error { get; set; }
     }
 
@@ -1057,6 +1058,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
         public bool Success { get; set; }
         public int ItemsProcessed { get; set; }
         public List<PartitionInfo> CreatedPartitions { get; set; } = new();
+        public string Details { get; set; }
         public Exception Error { get; set; }
     }
 
@@ -1075,6 +1077,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
         public bool Success { get; set; }
         public int ItemsProcessed { get; set; }
         public List<UserAccount> CreatedUsers { get; set; } = new();
+        public string Details { get; set; }
         public Exception Error { get; set; }
     }
 

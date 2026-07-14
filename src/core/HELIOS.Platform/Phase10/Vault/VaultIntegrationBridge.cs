@@ -289,11 +289,17 @@ namespace HELIOS.Platform.Phase10.Vault
         /// <summary>
         /// Configures scheduled backups through integration.
         /// </summary>
-        public async Task<bool> ConfigureScheduledBackupsAsync(int intervalHours = 24, bool incremental = true)
+        public async Task<bool> ConfigureScheduledBackupsAsync(int intervalHours = 24, bool incremental = false)
         {
             try
             {
                 _logger.Log($"Configuring scheduled backups: every {intervalHours} hours (incremental: {incremental})");
+
+                if (incremental)
+                {
+                    _logger.Log("Incremental vault backups are disabled; configure full backups instead.");
+                    return false;
+                }
 
                 var scheduleConfig = new
                 {

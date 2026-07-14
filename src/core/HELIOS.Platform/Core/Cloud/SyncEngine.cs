@@ -175,7 +175,7 @@ public class SyncEngine : ISyncEngine
         {
             if (_provider == null)
             {
-                result.ErrorMessage = "Provider not initialized";
+                result.Errors.Add("Provider not initialized");
                 result.Success = false;
                 return result;
             }
@@ -392,7 +392,7 @@ public class SyncEngine : ISyncEngine
             using var reader = await command.ExecuteReaderAsync();
             if (reader.Read())
             {
-                var state = new FileSyncState
+                var loadedState = new FileSyncState
                 {
                     FilePath = reader["FilePath"].ToString(),
                     LocalModifiedAt = DateTime.Parse(reader["LocalModifiedAt"].ToString() ?? DateTime.UtcNow.ToString()),
@@ -404,8 +404,8 @@ public class SyncEngine : ISyncEngine
                     LastSyncAt = DateTime.Parse(reader["LastSyncAt"].ToString() ?? DateTime.UtcNow.ToString())
                 };
 
-                _stateCache[filePath] = state;
-                return state;
+                _stateCache[filePath] = loadedState;
+                return loadedState;
             }
 
             return null;

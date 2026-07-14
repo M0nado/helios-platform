@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using CanonicalSecurityEvent = HELIOS.Platform.Core.AdvancedOptimization.Interfaces.SecurityEvent;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -7,7 +10,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
     /// Security Threat Analyzer implementation.
     /// Provides advanced threat detection and security analysis.
     /// </summary>
-    public class SecurityThreatAnalyzer : ISecurityThreatAnalyzer
+    public class SecurityThreatAnalyzer : Contracts.ISecurityThreatAnalyzer
     {
         private readonly ILogger<SecurityThreatAnalyzer> _logger;
         private readonly SemaphoreSlim _semaphore;
@@ -86,7 +89,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<ThreatAnalysisResult> AnalyzeThreatsAsync(List<SecurityEvent> securityData, CancellationToken cancellationToken = default)
+        public async Task<ThreatAnalysisResult> AnalyzeThreatsAsync(List<CanonicalSecurityEvent> securityData, CancellationToken cancellationToken = default)
         {
             await _semaphore.WaitAsync(cancellationToken);
             try
@@ -260,7 +263,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task RecordEventAsync(SecurityEvent securityEvent)
+        public async Task RecordEventAsync(CanonicalSecurityEvent securityEvent)
         {
             await _semaphore.WaitAsync();
             try
@@ -289,7 +292,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             return await Task.FromResult(results);
         }
 
-        private string ClassifyThreat(SecurityEvent evt)
+        private string ClassifyThreat(CanonicalSecurityEvent evt)
         {
             return evt.EventType switch
             {

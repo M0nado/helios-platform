@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HELIOS.Platform.Plugins.Interfaces;
 using Microsoft.Extensions.Logging;
+using PluginContract = HELIOS.Platform.Plugins.Interfaces.IPlugin;
 
 namespace HELIOS.Platform.Plugins.Loader
 {
@@ -76,7 +77,7 @@ namespace HELIOS.Platform.Plugins.Loader
             return results;
         }
 
-        public async Task<IPlugin> LoadPluginAsync(
+        public async Task<PluginContract> LoadPluginAsync(
             string pluginId,
             PluginLoadContext loadContext,
             CancellationToken cancellationToken = default)
@@ -124,14 +125,14 @@ namespace HELIOS.Platform.Plugins.Loader
 
                 // Create plugin instance
                 var pluginType = assembly.GetTypes()
-                    .FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface);
+                    .FirstOrDefault(t => typeof(PluginContract).IsAssignableFrom(t) && !t.IsInterface);
 
                 if (pluginType == null)
                 {
                     throw new PluginNotFoundException($"No IPlugin implementation found in {pluginId}");
                 }
 
-                var plugin = (IPlugin)Activator.CreateInstance(pluginType);
+                var plugin = (PluginContract)Activator.CreateInstance(pluginType);
 
                 // Store loaded plugin
                 lock (_lockObject)
@@ -185,7 +186,7 @@ namespace HELIOS.Platform.Plugins.Loader
             }
         }
 
-        public IReadOnlyDictionary<string, IPlugin> GetLoadedPlugins()
+        public IReadOnlyDictionary<string, PluginContract> GetLoadedPlugins()
         {
             lock (_lockObject)
             {
@@ -209,7 +210,7 @@ namespace HELIOS.Platform.Plugins.Loader
             {
                 var assembly = Assembly.LoadFrom(assemblyPath);
                 var pluginType = assembly.GetTypes()
-                    .FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface);
+                    .FirstOrDefault(t => typeof(PluginContract).IsAssignableFrom(t) && !t.IsInterface);
 
                 if (pluginType == null)
                     return null;
@@ -330,7 +331,7 @@ namespace HELIOS.Platform.Plugins.Loader
         Task<IEnumerable<PluginDiscoveryResult>> DiscoverPluginsAsync(
             CancellationToken cancellationToken = default);
 
-        Task<IPlugin> LoadPluginAsync(
+        Task<PluginContract> LoadPluginAsync(
             string pluginId,
             PluginLoadContext loadContext,
             CancellationToken cancellationToken = default);
@@ -339,7 +340,7 @@ namespace HELIOS.Platform.Plugins.Loader
             string pluginId,
             CancellationToken cancellationToken = default);
 
-        IReadOnlyDictionary<string, IPlugin> GetLoadedPlugins();
+        IReadOnlyDictionary<string, PluginContract> GetLoadedPlugins();
 
         bool IsPluginLoaded(string pluginId);
     }
@@ -392,7 +393,7 @@ namespace HELIOS.Platform.Plugins.Loader
     /// </summary>
     internal class LoadedPlugin
     {
-        public IPlugin Instance { get; set; }
+        public PluginContract Instance { get; set; }
         public string AssemblyPath { get; set; }
         public DateTime LoadedTime { get; set; }
         public PluginLoadContext LoadContext { get; set; }

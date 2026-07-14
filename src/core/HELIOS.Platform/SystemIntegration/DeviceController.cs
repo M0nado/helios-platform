@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Devices.Enumeration;
 using Windows.Devices.Power;
@@ -20,6 +22,13 @@ namespace HELIOS.Platform.SystemIntegration
         [DllImport("Kernel32.dll", SetLastError = true)]
         private static extern bool GetSystemPowerStatus(out SystemPowerStatus sps);
 
+        [DllImport("powrprof.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetSuspendState(
+            [MarshalAs(UnmanagedType.Bool)] bool hibernate,
+            [MarshalAs(UnmanagedType.Bool)] bool forceCritical,
+            [MarshalAs(UnmanagedType.Bool)] bool disableWakeEvent);
+
         [StructLayout(LayoutKind.Sequential)]
         private struct SystemPowerStatus
         {
@@ -35,13 +44,28 @@ namespace HELIOS.Platform.SystemIntegration
         private bool _disposed;
         private BatteryReport _batteryReport;
         private SystemMetrics _systemMetrics;
+        private readonly Func<PowerAction, bool> _powerActionAuthorizer;
+        private readonly Action<string> _powerActionAudit;
 
         public event EventHandler<DeviceStateChangedEventArgs> DeviceStateChanged;
         public event EventHandler<PowerStateChangedEventArgs> PowerStateChanged;
         public event EventHandler<ThermalThrottlingEventArgs> ThermalThrottlingDetected;
 
         public DeviceController()
+            : this(_ => false, message => Debug.WriteLine(message))
         {
+        }
+
+        /// <summary>
+        /// Creates a controller with an explicit authorization/confirmation boundary for
+        /// destructive power operations. The parameterless constructor denies them.
+        /// </summary>
+        public DeviceController(
+            Func<PowerAction, bool> powerActionAuthorizer,
+            Action<string>? powerActionAudit = null)
+        {
+            _powerActionAuthorizer = powerActionAuthorizer ?? throw new ArgumentNullException(nameof(powerActionAuthorizer));
+            _powerActionAudit = powerActionAudit ?? (message => Debug.WriteLine(message));
             _devices = new List<DeviceInfo>();
             _systemMetrics = new SystemMetrics();
             InitializeDeviceMonitoring();
@@ -124,7 +148,10 @@ namespace HELIOS.Platform.SystemIntegration
                     powerInfo.BatteryCapacityRemaining = _batteryReport.RemainingCapacityInMilliwattHours ?? 0;
                     powerInfo.BatteryCapacityFull = _batteryReport.FullChargeCapacityInMilliwattHours ?? 0;
                     powerInfo.BatteryPercentage = powerInfo.BatteryCapacityFull > 0
-                        ? (powerInfo.BatteryCapacityRemaining * 100) / powerInfo.BatteryCapacityFull
+                        ? (int)Math.Clamp(
+                            Math.Round((double)powerInfo.BatteryCapacityRemaining / powerInfo.BatteryCapacityFull * 100),
+                            0,
+                            100)
                         : 0;
                 }
 
@@ -230,32 +257,71 @@ namespace HELIOS.Platform.SystemIntegration
         /// <summary>
         /// Changes device power state (e.g., sleep, hibernate).
         /// </summary>
-        public async Task SetPowerStateAsync(PowerAction action)
+        public Task SetPowerStateAsync(PowerAction action)
         {
+            return SetPowerStateAsync(action, CancellationToken.None);
+        }
+
+        public async Task SetPowerStateAsync(PowerAction action, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!Enum.IsDefined(action))
+            {
+                throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown power action.");
+            }
+
+            if (!OperatingSystem.IsWindows())
+            {
+                throw new PlatformNotSupportedException("Power actions are supported only on Windows.");
+            }
+
+            if (!_powerActionAuthorizer(action))
+            {
+                _powerActionAudit($"[DeviceController] Denied power action: {action}");
+                throw new UnauthorizedAccessException(
+                    $"Power action '{action}' requires explicit host authorization and confirmation.");
+            }
+
+            _powerActionAudit($"[DeviceController] Authorized power action: {action}");
+
             try
             {
                 switch (action)
                 {
                     case PowerAction.Sleep:
-                        await ShutdownManager.BeginShutdownAsync(ShutdownKind.Sleep, TimeSpan.FromSeconds(0));
+                        await Task.Run(() => SuspendSystem(hibernate: false), cancellationToken);
                         break;
                     case PowerAction.Hibernate:
-                        await ShutdownManager.BeginShutdownAsync(ShutdownKind.Hibernate, TimeSpan.FromSeconds(0));
+                        await Task.Run(() => SuspendSystem(hibernate: true), cancellationToken);
                         break;
                     case PowerAction.Shutdown:
                         // Note: Shutdown requires admin privileges
-                        await ShutdownManager.BeginShutdownAsync(ShutdownKind.Shutdown, TimeSpan.FromSeconds(30));
+                        ShutdownManager.BeginShutdown(ShutdownKind.Shutdown, TimeSpan.FromSeconds(30));
                         break;
                     case PowerAction.Restart:
-                        await ShutdownManager.BeginShutdownAsync(ShutdownKind.Restart, TimeSpan.FromSeconds(30));
+                        ShutdownManager.BeginShutdown(ShutdownKind.Restart, TimeSpan.FromSeconds(30));
                         break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown power action.");
                 }
 
                 Debug.WriteLine($"[DeviceController] Power action initiated: {action}");
+                _powerActionAudit($"[DeviceController] Initiated power action: {action}");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[DeviceController] Error setting power state: {ex.Message}");
+                _powerActionAudit($"[DeviceController] Failed power action {action}: {ex.Message}");
+                throw;
+            }
+        }
+
+        private static void SuspendSystem(bool hibernate)
+        {
+            if (!SetSuspendState(hibernate, forceCritical: false, disableWakeEvent: false))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error());
             }
         }
 
@@ -263,10 +329,10 @@ namespace HELIOS.Platform.SystemIntegration
         {
             return category switch
             {
-                DeviceCategory.Audio => "System.Devices.AudioPlayout",
-                DeviceCategory.Camera => DeviceClass.VideoCapture.ToString(),
+                DeviceCategory.Audio => DeviceInformation.GetAqsFilterFromDeviceClass(DeviceClass.AudioRender),
+                DeviceCategory.Camera => DeviceInformation.GetAqsFilterFromDeviceClass(DeviceClass.VideoCapture),
                 DeviceCategory.Network => "System.Devices.NetworkDevice",
-                DeviceCategory.Storage => DeviceClass.DiskDrive.ToString(),
+                DeviceCategory.Storage => DeviceInformation.GetAqsFilterFromDeviceClass(DeviceClass.PortableStorageDevice),
                 _ => ""
             };
         }

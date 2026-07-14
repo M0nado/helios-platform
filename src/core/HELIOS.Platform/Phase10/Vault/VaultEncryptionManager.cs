@@ -83,7 +83,7 @@ namespace HELIOS.Platform.Phase10.Vault
                     return (false, null);
                 }
 
-                using (var aes = new AesGcm(key))
+                using (var aes = new AesGcm(key, tagSizeInBytes: 16))
                 {
                     byte[] nonce = new byte[12]; // 96-bit nonce
                     using (var rng = RandomNumberGenerator.Create())
@@ -141,7 +141,7 @@ namespace HELIOS.Platform.Phase10.Vault
                 Buffer.BlockCopy(encrypted, 12, tag, 0, 16);
                 Buffer.BlockCopy(encrypted, 28, ciphertext, 0, ciphertext.Length);
 
-                using (var aes = new AesGcm(key))
+                using (var aes = new AesGcm(key, tagSizeInBytes: 16))
                 {
                     byte[] plaintext = new byte[ciphertext.Length];
                     aes.Decrypt(nonce, ciphertext, tag, plaintext);
@@ -208,13 +208,13 @@ namespace HELIOS.Platform.Phase10.Vault
                 foreach (var keyFile in keyFiles)
                 {
                     var content = await File.ReadAllBytesAsync(keyFile);
-                    var encrypted = new byte[0];
+                    var encryptionResult = await EncryptDataAsync(content, backupKey);
 
-                    if (await EncryptDataAsync(content, backupKey, out encrypted))
+                    if (encryptionResult.Success)
                     {
                         var filename = Path.GetFileName(keyFile);
                         var backupFile = Path.Combine(backupPath, $"{filename}.encrypted");
-                        await File.WriteAllBytesAsync(backupFile, encrypted);
+                        await File.WriteAllBytesAsync(backupFile, encryptionResult.Encrypted);
                     }
                 }
 
@@ -241,15 +241,14 @@ namespace HELIOS.Platform.Phase10.Vault
                 }
 
                 var fileContent = await File.ReadAllBytesAsync(filePath);
-                byte[] encrypted;
-
-                if (!await EncryptDataAsync(fileContent, key, out encrypted))
+                var encryptionResult = await EncryptDataAsync(fileContent, key);
+                if (!encryptionResult.Success)
                 {
                     return false;
                 }
 
                 var encryptedPath = filePath + ".encrypted";
-                await File.WriteAllBytesAsync(encryptedPath, encrypted);
+                await File.WriteAllBytesAsync(encryptedPath, encryptionResult.Encrypted);
                 File.Delete(filePath);
 
                 _logger.Log($"File encrypted: {filePath}");
@@ -275,9 +274,8 @@ namespace HELIOS.Platform.Phase10.Vault
                 }
 
                 var encrypted = await File.ReadAllBytesAsync(encryptedFilePath);
-                byte[] decrypted;
-
-                if (!await DecryptDataAsync(encrypted, key, out decrypted))
+                var decryptionResult = await DecryptDataAsync(encrypted, key);
+                if (!decryptionResult.Success)
                 {
                     return false;
                 }
@@ -286,7 +284,7 @@ namespace HELIOS.Platform.Phase10.Vault
                     ? encryptedFilePath.Substring(0, encryptedFilePath.Length - 10)
                     : encryptedFilePath + ".decrypted";
                     
-                await File.WriteAllBytesAsync(originalPath, decrypted);
+                await File.WriteAllBytesAsync(originalPath, decryptionResult.Data);
 
                 _logger.Log($"File decrypted: {originalPath}");
                 return true;

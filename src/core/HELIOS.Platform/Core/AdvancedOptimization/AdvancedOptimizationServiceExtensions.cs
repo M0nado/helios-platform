@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -20,14 +21,14 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
                 throw new ArgumentNullException(nameof(services));
             }
 
-            services.AddSingleton<IAdvancedOptimizationEngine, AdvancedOptimizationEngine>();
-            services.AddSingleton<IIntelligentResourceAllocator, IntelligentResourceAllocator>();
-            services.AddSingleton<IAnomalyPredictionEngine, AnomalyPredictionEngine>();
-            services.AddSingleton<IServiceMeshOptimizer, ServiceMeshOptimizer>();
-            services.AddSingleton<ISecurityThreatAnalyzer, SecurityThreatAnalyzer>();
-            services.AddSingleton<IDataCompressionEngine, DataCompressionEngine>();
-            services.AddSingleton<IPerformancePredictorAI, PerformancePredictorAI>();
-            services.AddSingleton<IComplexEventProcessor, ComplexEventProcessor>();
+            services.AddSingleton<Contracts.IAdvancedOptimizationEngine, AdvancedOptimizationEngine>();
+            services.AddSingleton<Contracts.IIntelligentResourceAllocator, IntelligentResourceAllocator>();
+            services.AddSingleton<Contracts.IAnomalyPredictionEngine, AnomalyPredictionEngine>();
+            services.AddSingleton<Contracts.IServiceMeshOptimizer, ServiceMeshOptimizer>();
+            services.AddSingleton<Contracts.ISecurityThreatAnalyzer, SecurityThreatAnalyzer>();
+            services.AddSingleton<Contracts.IDataCompressionEngine, DataCompressionEngine>();
+            services.AddSingleton<Contracts.IPerformancePredictorAI, PerformancePredictorAI>();
+            services.AddSingleton<Contracts.IComplexEventProcessor, ComplexEventProcessor>();
 
             return services;
         }
@@ -45,14 +46,14 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
                 throw new ArgumentNullException(nameof(services));
             }
 
-            var engine = services.GetRequiredService<IAdvancedOptimizationEngine>();
-            var allocator = services.GetRequiredService<IIntelligentResourceAllocator>();
-            var anomaly = services.GetRequiredService<IAnomalyPredictionEngine>();
-            var mesh = services.GetRequiredService<IServiceMeshOptimizer>();
-            var security = services.GetRequiredService<ISecurityThreatAnalyzer>();
-            var compression = services.GetRequiredService<IDataCompressionEngine>();
-            var performance = services.GetRequiredService<IPerformancePredictorAI>();
-            var events = services.GetRequiredService<IComplexEventProcessor>();
+            var engine = services.GetRequiredService<Contracts.IAdvancedOptimizationEngine>();
+            var allocator = services.GetRequiredService<Contracts.IIntelligentResourceAllocator>();
+            var anomaly = services.GetRequiredService<Contracts.IAnomalyPredictionEngine>();
+            var mesh = services.GetRequiredService<Contracts.IServiceMeshOptimizer>();
+            var security = services.GetRequiredService<Contracts.ISecurityThreatAnalyzer>();
+            var compression = services.GetRequiredService<Contracts.IDataCompressionEngine>();
+            var performance = services.GetRequiredService<Contracts.IPerformancePredictorAI>();
+            var events = services.GetRequiredService<Contracts.IComplexEventProcessor>();
 
             await Task.WhenAll(
                 engine.InitializeAsync(cancellationToken),
@@ -79,14 +80,14 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
                 throw new ArgumentNullException(nameof(services));
             }
 
-            var engine = services.GetRequiredService<IAdvancedOptimizationEngine>();
-            var allocator = services.GetRequiredService<IIntelligentResourceAllocator>();
-            var anomaly = services.GetRequiredService<IAnomalyPredictionEngine>();
-            var mesh = services.GetRequiredService<IServiceMeshOptimizer>();
-            var security = services.GetRequiredService<ISecurityThreatAnalyzer>();
-            var compression = services.GetRequiredService<IDataCompressionEngine>();
-            var performance = services.GetRequiredService<IPerformancePredictorAI>();
-            var events = services.GetRequiredService<IComplexEventProcessor>();
+            var engine = services.GetRequiredService<Contracts.IAdvancedOptimizationEngine>();
+            var allocator = services.GetRequiredService<Contracts.IIntelligentResourceAllocator>();
+            var anomaly = services.GetRequiredService<Contracts.IAnomalyPredictionEngine>();
+            var mesh = services.GetRequiredService<Contracts.IServiceMeshOptimizer>();
+            var security = services.GetRequiredService<Contracts.ISecurityThreatAnalyzer>();
+            var compression = services.GetRequiredService<Contracts.IDataCompressionEngine>();
+            var performance = services.GetRequiredService<Contracts.IPerformancePredictorAI>();
+            var events = services.GetRequiredService<Contracts.IComplexEventProcessor>();
 
             await Task.WhenAll(
                 engine.StartAsync(cancellationToken),
@@ -113,14 +114,14 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
                 throw new ArgumentNullException(nameof(services));
             }
 
-            var engine = services.GetRequiredService<IAdvancedOptimizationEngine>();
-            var allocator = services.GetRequiredService<IIntelligentResourceAllocator>();
-            var anomaly = services.GetRequiredService<IAnomalyPredictionEngine>();
-            var mesh = services.GetRequiredService<IServiceMeshOptimizer>();
-            var security = services.GetRequiredService<ISecurityThreatAnalyzer>();
-            var compression = services.GetRequiredService<IDataCompressionEngine>();
-            var performance = services.GetRequiredService<IPerformancePredictorAI>();
-            var events = services.GetRequiredService<IComplexEventProcessor>();
+            var engine = services.GetRequiredService<Contracts.IAdvancedOptimizationEngine>();
+            var allocator = services.GetRequiredService<Contracts.IIntelligentResourceAllocator>();
+            var anomaly = services.GetRequiredService<Contracts.IAnomalyPredictionEngine>();
+            var mesh = services.GetRequiredService<Contracts.IServiceMeshOptimizer>();
+            var security = services.GetRequiredService<Contracts.ISecurityThreatAnalyzer>();
+            var compression = services.GetRequiredService<Contracts.IDataCompressionEngine>();
+            var performance = services.GetRequiredService<Contracts.IPerformancePredictorAI>();
+            var events = services.GetRequiredService<Contracts.IComplexEventProcessor>();
 
             await Task.WhenAll(
                 engine.StopAsync(cancellationToken),

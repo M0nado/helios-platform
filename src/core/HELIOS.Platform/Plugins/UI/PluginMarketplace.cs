@@ -12,6 +12,10 @@ using HELIOS.Platform.Plugins.Interfaces;
 using HELIOS.Platform.Plugins.Loader;
 using HELIOS.Platform.Plugins.Registry;
 using Microsoft.Extensions.Logging;
+using PluginContract = HELIOS.Platform.Plugins.Interfaces.IPlugin;
+using PluginLoaderContract = HELIOS.Platform.Plugins.Loader.IPluginLoader;
+using PluginRegistryContract = HELIOS.Platform.Plugins.Registry.IPluginRegistry;
+using RegistryPluginMetadata = HELIOS.Platform.Plugins.Registry.PluginMetadata;
 
 namespace HELIOS.Platform.Plugins.UI
 {
@@ -20,8 +24,8 @@ namespace HELIOS.Platform.Plugins.UI
     /// </summary>
     public class PluginMarketplace : IPluginMarketplace
     {
-        private readonly IPluginLoader _pluginLoader;
-        private readonly IPluginRegistry _pluginRegistry;
+        private readonly PluginLoaderContract _pluginLoader;
+        private readonly PluginRegistryContract _pluginRegistry;
         private readonly ILogger<PluginMarketplace> _logger;
         private readonly List<PluginListingViewModel> _availablePlugins;
         private readonly object _lockObject = new();
@@ -32,8 +36,8 @@ namespace HELIOS.Platform.Plugins.UI
         public event EventHandler<PluginInstallationEventArgs> UninstallationStarted;
 
         public PluginMarketplace(
-            IPluginLoader pluginLoader,
-            IPluginRegistry pluginRegistry,
+            PluginLoaderContract pluginLoader,
+            PluginRegistryContract pluginRegistry,
             ILogger<PluginMarketplace> logger)
         {
             _pluginLoader = pluginLoader ?? throw new ArgumentNullException(nameof(pluginLoader));
@@ -113,7 +117,7 @@ namespace HELIOS.Platform.Plugins.UI
                     new DefaultPluginContext(plugin),
                     cancellationToken);
 
-                var metadata = new PluginMetadata
+                var metadata = new RegistryPluginMetadata
                 {
                     Id = plugin.Id,
                     Name = plugin.Name,
@@ -402,9 +406,9 @@ namespace HELIOS.Platform.Plugins.UI
     /// </summary>
     public class DefaultPluginContext : IPluginContext
     {
-        private readonly IPlugin _plugin;
+        private readonly PluginContract _plugin;
 
-        public DefaultPluginContext(IPlugin plugin)
+        public DefaultPluginContext(PluginContract plugin)
         {
             _plugin = plugin;
         }

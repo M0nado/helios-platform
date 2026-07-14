@@ -31,7 +31,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private void InitializeUI()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10), Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10) };
 
             // Title
             panel.Children.Add(new TextBlock { Text = "Available Drives", FontWeight = System.Windows.FontWeights.Bold, FontSize = 14 });

@@ -60,7 +60,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Restore Windows application
-        run: dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj
+        run: dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj --locked-mode
       - name: Build Windows application
         run: dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
 

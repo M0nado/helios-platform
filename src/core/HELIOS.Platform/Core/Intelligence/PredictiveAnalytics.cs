@@ -12,7 +12,7 @@ namespace HELIOS.Platform.Core.Intelligence
     /// <summary>
     /// Provides predictive analytics and trend forecasting using statistical methods.
     /// </summary>
-    public class PredictiveAnalytics : IPredictiveAnalytics, IDisposable
+    public class PredictiveAnalytics : Interfaces.IPredictiveAnalytics, IDisposable
     {
         private readonly Dictionary<string, List<double>> _historicalData = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);

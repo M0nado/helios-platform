@@ -30,13 +30,13 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private void InitializeUI()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10), Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10) };
 
             // Title
             panel.Children.Add(new TextBlock { Text = "Choose Optimization Profile", FontWeight = System.Windows.FontWeights.Bold, FontSize = 14 });
 
             // Profiles container
-            _profilesPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 10, Margin = new Thickness(0, 10, 0, 10) };
+            _profilesPanel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(0, 10, 0, 10) };
             panel.Children.Add(_profilesPanel);
 
             // Preview section
@@ -98,7 +98,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
                             profile.IsRecommended ? System.Windows.Media.Colors.LimeGreen : System.Windows.Media.Colors.Gray)
                     };
 
-                    var profileContent = new StackPanel { Orientation = Orientation.Vertical, Spacing = 5 };
+                    var profileContent = new StackPanel { Orientation = Orientation.Vertical };
 
                     var radio = new RadioButton
                     {

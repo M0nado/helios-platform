@@ -12,7 +12,7 @@ namespace HELIOS.Platform.Core.Intelligence
     /// <summary>
     /// Fast in-memory time-series database for metric storage and retrieval.
     /// </summary>
-    public class InMemoryTimeSeriesDB : ITimeSeriesDB, IDisposable
+    public class InMemoryTimeSeriesDB : Interfaces.ITimeSeriesDB, IDisposable
     {
         private readonly Dictionary<string, List<(DateTime, double)>> _timeSeries = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);

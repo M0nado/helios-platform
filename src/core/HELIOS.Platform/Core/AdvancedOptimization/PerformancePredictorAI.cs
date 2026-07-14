@@ -1,5 +1,9 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using CanonicalPerformancePrediction = HELIOS.Platform.Core.AdvancedOptimization.Interfaces.PerformancePrediction;
+using CanonicalResourcePrediction = HELIOS.Platform.Core.AdvancedOptimization.Interfaces.ResourcePrediction;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -7,12 +11,12 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
     /// Performance Predictor AI implementation.
     /// Provides performance forecasting and resource prediction.
     /// </summary>
-    public class PerformancePredictorAI : IPerformancePredictorAI
+    public class PerformancePredictorAI : Contracts.IPerformancePredictorAI
     {
         private readonly ILogger<PerformancePredictorAI> _logger;
         private readonly SemaphoreSlim _semaphore;
         private readonly ConcurrentQueue<PerformanceDataPoint> _performanceHistory;
-        private readonly ConcurrentQueue<PerformancePrediction> _predictionHistory;
+        private readonly ConcurrentQueue<CanonicalPerformancePrediction> _predictionHistory;
         private bool _isRunning;
 
         /// <summary>
@@ -23,7 +27,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _semaphore = new SemaphoreSlim(1, 1);
             _performanceHistory = new ConcurrentQueue<PerformanceDataPoint>();
-            _predictionHistory = new ConcurrentQueue<PerformancePrediction>();
+            _predictionHistory = new ConcurrentQueue<CanonicalPerformancePrediction>();
             _isRunning = false;
         }
 
@@ -88,12 +92,12 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<PerformancePrediction> PredictPerformanceAsync(List<PerformanceDataPoint> historicalPerformance, int forecastMinutes, CancellationToken cancellationToken = default)
+        public async Task<CanonicalPerformancePrediction> PredictPerformanceAsync(List<PerformanceDataPoint> historicalPerformance, int forecastMinutes, CancellationToken cancellationToken = default)
         {
             await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                var prediction = new PerformancePrediction
+                var prediction = new CanonicalPerformancePrediction
                 {
                     PredictionTime = DateTime.UtcNow,
                     ForecastMinutes = forecastMinutes
@@ -202,12 +206,12 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<ResourcePrediction> PredictResourcesAsync(List<ResourceDataPoint> historicalResources, int forecastMinutes, CancellationToken cancellationToken = default)
+        public async Task<CanonicalResourcePrediction> PredictResourcesAsync(List<ResourceDataPoint> historicalResources, int forecastMinutes, CancellationToken cancellationToken = default)
         {
             await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                var prediction = new ResourcePrediction
+                var prediction = new CanonicalResourcePrediction
                 {
                     PredictionTime = DateTime.UtcNow,
                     ForecastMinutes = forecastMinutes
@@ -219,13 +223,13 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
                 }
 
                 var lastPoint = historicalResources.LastOrDefault();
-                if (lastPoint?.Resources != null)
+                if (lastPoint?.ResourceUsage != null)
                 {
-                    foreach (var resource in lastPoint.Resources)
+                    foreach (var resource in lastPoint.ResourceUsage)
                     {
                         var values = historicalResources
-                            .Where(r => r.Resources.ContainsKey(resource.Key))
-                            .Select(r => r.Resources[resource.Key])
+                            .Where(r => r.ResourceUsage.ContainsKey(resource.Key))
+                            .Select(r => r.ResourceUsage[resource.Key])
                             .ToList();
 
                         double predictedValue = ForecastValue(values, forecastMinutes);
@@ -273,9 +277,9 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<List<PerformancePrediction>> GetPredictionHistoryAsync(int limit = 100)
+        public async Task<List<CanonicalPerformancePrediction>> GetPredictionHistoryAsync(int limit = 100)
         {
-            var results = new List<PerformancePrediction>();
+            var results = new List<CanonicalPerformancePrediction>();
             int count = 0;
 
             foreach (var item in _predictionHistory.Reverse())

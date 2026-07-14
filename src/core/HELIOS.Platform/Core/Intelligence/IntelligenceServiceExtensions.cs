@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using HELIOS.Platform.Core.Intelligence.Interfaces;
+using Contracts = HELIOS.Platform.Core.Intelligence.Interfaces;
 
 namespace HELIOS.Platform.Core.Intelligence
 {
@@ -21,25 +22,25 @@ namespace HELIOS.Platform.Core.Intelligence
                 throw new ArgumentNullException(nameof(services));
 
             // Register services as singletons for consistent state
-            services.AddSingleton<IDataCollector>(sp =>
+            services.AddSingleton<Contracts.IDataCollector>(sp =>
                 new DataCollector(sp.GetRequiredService<ILogger<DataCollector>>()));
 
-            services.AddSingleton<IDataNormalizer>(sp =>
+            services.AddSingleton<Contracts.IDataNormalizer>(sp =>
                 new DataNormalizer(sp.GetRequiredService<ILogger<DataNormalizer>>()));
 
-            services.AddSingleton<IFeatureExtractor>(sp =>
+            services.AddSingleton<Contracts.IFeatureExtractor>(sp =>
                 new FeatureExtractor(sp.GetRequiredService<ILogger<FeatureExtractor>>()));
 
-            services.AddSingleton<ITimeSeriesDB>(sp =>
+            services.AddSingleton<Contracts.ITimeSeriesDB>(sp =>
                 new InMemoryTimeSeriesDB(sp.GetRequiredService<ILogger<InMemoryTimeSeriesDB>>()));
 
-            services.AddSingleton<IAnomalyDetector>(sp =>
+            services.AddSingleton<Contracts.IAnomalyDetector>(sp =>
                 new AnomalyDetector(sp.GetRequiredService<ILogger<AnomalyDetector>>()));
 
-            services.AddSingleton<IPredictiveAnalytics>(sp =>
+            services.AddSingleton<Contracts.IPredictiveAnalytics>(sp =>
                 new PredictiveAnalytics(sp.GetRequiredService<ILogger<PredictiveAnalytics>>()));
 
-            services.AddSingleton<IMLModelManager>(sp =>
+            services.AddSingleton<Contracts.IMLModelManager>(sp =>
                 new MLModelManager(sp.GetRequiredService<ILogger<MLModelManager>>()));
 
             return services;

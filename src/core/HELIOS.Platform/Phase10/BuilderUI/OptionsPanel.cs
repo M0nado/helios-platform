@@ -74,7 +74,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private async Task<Panel> GenerateWelcomeControlsAsync()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 15 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical };
 
             var systemCheckGroup = new GroupBox { Header = "System Check" };
             var systemCheckPanel = new StackPanel { Orientation = Orientation.Vertical };
@@ -103,7 +103,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private async Task<Panel> GenerateTargetSelectionControlsAsync()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical };
 
             var drives = await _service.GetAvailableDrivesAsync();
             var recommendedDrive = await _service.GetRecommendedDriveAsync();
@@ -140,7 +140,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private async Task<Panel> GenerateVersionSelectionControlsAsync()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical };
 
             var versions = await _service.GetWindowsVersionsAsync();
 
@@ -165,7 +165,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private async Task<Panel> GeneratePackageSelectionControlsAsync()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical };
 
             var packages = await _service.GetAllPackagesAsync();
             var categories = packages.Select(p => p.Category).Distinct();
@@ -213,7 +213,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private async Task<Panel> GenerateProfileSelectionControlsAsync()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical };
 
             var profiles = await _service.GetAvailableProfilesAsync();
 
@@ -249,7 +249,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private async Task<Panel> GenerateConfigurationControlsAsync()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical };
 
             var configGroup = new GroupBox { Header = "Advanced Configuration", Margin = new Thickness(5) };
             var configPanel = new StackPanel { Orientation = Orientation.Vertical };
@@ -270,7 +270,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private async Task<Panel> GenerateSummaryControlsAsync()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical };
 
             var summary = await _service.GetDeploymentSummaryAsync();
 

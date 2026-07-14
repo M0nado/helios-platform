@@ -5,6 +5,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using HELIOS.Platform.Phase11.GUI;
 using HELIOS.Platform.Phase11.UpdateSystem;
 
 namespace HELIOS.Platform.Interfaces

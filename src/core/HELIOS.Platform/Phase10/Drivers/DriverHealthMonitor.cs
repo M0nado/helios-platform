@@ -23,7 +23,7 @@ namespace HELIOS.Platform.Phase10.Drivers
         public DriverHealthMonitor()
         {
             _semaphore = new SemaphoreSlim(1);
-            _logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramData), "HELIOS", "DriverHealth");
+            _logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "HELIOS", "DriverHealth");
             _healthCache = new Dictionary<string, DriverHealthStatus>();
             Directory.CreateDirectory(_logDirectory);
         }
@@ -193,7 +193,7 @@ namespace HELIOS.Platform.Phase10.Drivers
                 {
                     var eventLog = new EventLog("System");
                     var entries = eventLog.Entries.Cast<EventLogEntry>()
-                        .Where(e => e.Type == EventLogEntryType.Error && 
+                        .Where(e => e.EntryType == EventLogEntryType.Error &&
                                    (e.Message.Contains("driver", StringComparison.OrdinalIgnoreCase) ||
                                     e.Message.Contains(driverId, StringComparison.OrdinalIgnoreCase)))
                         .OrderByDescending(e => e.TimeGenerated)
@@ -290,7 +290,7 @@ namespace HELIOS.Platform.Phase10.Drivers
 
                     foreach (var entry in entries)
                     {
-                        events.Add($"[{entry.TimeGenerated:yyyy-MM-dd HH:mm:ss}] {entry.Type}: {entry.Message.Substring(0, Math.Min(100, entry.Message.Length))}");
+                        events.Add($"[{entry.TimeGenerated:yyyy-MM-dd HH:mm:ss}] {entry.EntryType}: {entry.Message.Substring(0, Math.Min(100, entry.Message.Length))}");
                     }
                 }
                 catch (Exception ex)

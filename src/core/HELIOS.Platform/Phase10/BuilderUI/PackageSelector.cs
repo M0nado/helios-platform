@@ -31,7 +31,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private void InitializeUI()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10), Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10) };
 
             // Title
             panel.Children.Add(new TextBlock { Text = "Select Packages", FontWeight = System.Windows.FontWeights.Bold, FontSize = 14 });
@@ -53,21 +53,21 @@ namespace HELIOS.Platform.Phase10.BuilderUI
             panel.Children.Add(_totalSizeText);
 
             // Selection preset buttons
-            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(10) };
+            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(10) };
             
             var minimalButton = new Button { Content = "Minimal", Width = 80 };
             minimalButton.Click += async (s, e) => await SelectPresetAsync("minimal");
             buttonPanel.Children.Add(minimalButton);
 
-            var standardButton = new Button { Content = "Standard", Width = 80 };
+            var standardButton = new Button { Content = "Standard", Width = 80, Margin = new Thickness(10, 0, 0, 0) };
             standardButton.Click += async (s, e) => await SelectPresetAsync("standard");
             buttonPanel.Children.Add(standardButton);
 
-            var completeButton = new Button { Content = "Complete", Width = 80 };
+            var completeButton = new Button { Content = "Complete", Width = 80, Margin = new Thickness(10, 0, 0, 0) };
             completeButton.Click += async (s, e) => await SelectPresetAsync("complete");
             buttonPanel.Children.Add(completeButton);
 
-            var clearButton = new Button { Content = "Clear All", Width = 80 };
+            var clearButton = new Button { Content = "Clear All", Width = 80, Margin = new Thickness(10, 0, 0, 0) };
             clearButton.Click += ClearAll_Click;
             buttonPanel.Children.Add(clearButton);
 
@@ -108,7 +108,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
                         Padding = new Thickness(10)
                     };
 
-                    var categoryPanel = new StackPanel { Orientation = Orientation.Vertical, Spacing = 5 };
+                    var categoryPanel = new StackPanel { Orientation = Orientation.Vertical };
 
                     var categoryPackages = packages.Where(p => p.Category == category).OrderBy(p => p.Name);
                     foreach (var pkg in categoryPackages)

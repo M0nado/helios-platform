@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using CanonicalAnomalyPrediction = HELIOS.Platform.Core.AdvancedOptimization.Interfaces.AnomalyPrediction;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -7,7 +10,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
     /// Anomaly Prediction Engine implementation.
     /// Provides predictive anomaly detection using pattern recognition.
     /// </summary>
-    public class AnomalyPredictionEngine : IAnomalyPredictionEngine
+    public class AnomalyPredictionEngine : Contracts.IAnomalyPredictionEngine
     {
         private readonly ILogger<AnomalyPredictionEngine> _logger;
         private readonly SemaphoreSlim _semaphore;
@@ -116,7 +119,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
 
                         if (anomalyScore > 50)
                         {
-                            var anomaly = new AnomalyPrediction
+                            var anomaly = new CanonicalAnomalyPrediction
                             {
                                 MetricName = metric.Key,
                                 CurrentValue = metric.Value,
@@ -192,7 +195,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<List<AnomalyAlert>> GenerateAlertsAsync(List<AnomalyPrediction> anomalies, CancellationToken cancellationToken = default)
+        public async Task<List<AnomalyAlert>> GenerateAlertsAsync(List<CanonicalAnomalyPrediction> anomalies, CancellationToken cancellationToken = default)
         {
             await _semaphore.WaitAsync(cancellationToken);
             try
@@ -267,7 +270,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
             return Math.Sqrt(sumOfSquares / values.Count());
         }
 
-        private string GenerateRecommendation(AnomalyPrediction anomaly)
+        private string GenerateRecommendation(CanonicalAnomalyPrediction anomaly)
         {
             return anomaly.Severity switch
             {

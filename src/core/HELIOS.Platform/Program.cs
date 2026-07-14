@@ -62,7 +62,6 @@ namespace HELIOS.Platform
                 var automationServer = new AutomationServer(logger);
                 var aiCoordinator = new AILearningCoordinator(logger);
                 var vaultService = new SecurityVaultService(logger);
-                var performanceProfiler = new PerformanceProfiler(logger);
                 var backupService = new BackupService(logger);
                 var monitoringService = new ServerMonitoringService(logger);
                 var cloudService = new CloudIntegrationService(logger);
@@ -98,12 +97,7 @@ namespace HELIOS.Platform
                 var l1CacheService = new L1CacheService(logger);
                 var l2CacheService = new InMemoryL2Cache();
                 var advancedCacheService = new AdvancedCacheService(l1CacheService, l2CacheService, logger);
-                var queryOptimizer = new QueryOptimizationService(logger);
-                var memoryOptimizer = new MemoryOptimizationService(logger);
-                var connectionPoolService = new ConnectionPoolService(logger);
-                var databaseIndexService = new DatabaseIndexService(logger);
-                var efCoreOptimizer = new EFCoreQueryOptimizer(logger);
-                var connectionLifecycleService = new ConnectionLifecycleService(logger);
+                var memoryOptimizer = new MemoryOptimizationService();
                 
                 var resilienceService = new ResilienceService();
                 
@@ -147,7 +141,6 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IAutomationServer>(automationServer);
                 ServiceContainer.Instance.RegisterSingleton<IAILearningCoordinator>(aiCoordinator);
                 ServiceContainer.Instance.RegisterSingleton<ISecurityVaultService>(vaultService);
-                ServiceContainer.Instance.RegisterSingleton<IPerformanceProfiler>(performanceProfiler);
                 ServiceContainer.Instance.RegisterSingleton<IBackupService>(backupService);
                 ServiceContainer.Instance.RegisterSingleton<IServerMonitoringService>(monitoringService);
                 ServiceContainer.Instance.RegisterSingleton<ICloudIntegrationService>(cloudService);
@@ -192,6 +185,7 @@ namespace HELIOS.Platform
                 ServiceContainer.Instance.RegisterSingleton<IServiceFactory>(serviceFactory);
                 ServiceContainer.Instance.RegisterSingleton<IBatchOperationService>(batchOperationService);
                 ServiceContainer.Instance.RegisterSingleton<IAdvancedCacheService>(advancedCacheService);
+                ServiceContainer.Instance.RegisterSingleton<IMemoryOptimizationService>(memoryOptimizer);
                 ServiceContainer.Instance.RegisterSingleton<IResilienceService>(resilienceService);
                 
                 // Phase 3 Tier 4: Production Hardening Services Registration
@@ -950,8 +944,6 @@ namespace HELIOS.Platform
 
     }
 }
-
-
 
 
 
