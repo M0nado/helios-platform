@@ -26,15 +26,15 @@ jobs:
           pwsh -Command "
           \$scriptsFound = Get-ChildItem -Path './src', './scripts' -Recurse -Filter '*.ps1' -ErrorAction SilentlyContinue
           if (\$scriptsFound) {
-            Invoke-ScriptAnalyzer -Path './src', './scripts' -Recurse -Severity Error, Warning -OutVariable results
+            \$results = Invoke-ScriptAnalyzer -Path './src', './scripts' -Recurse -Severity Error, Warning
             if (\$results) {
               \$results | Tee-Object -FilePath ps-analysis.txt
+              exit 1
             }
           } else {
             Write-Host 'No PowerShell scripts found to analyze'
           }
           "
-        continue-on-error: true
       
       - name: Upload Analysis
         if: always()
@@ -55,7 +55,6 @@ jobs:
         with:
           files: .
           config_file: .markdownlint.json
-        continue-on-error: true
 
   json-validate:
     name: JSON Validation
@@ -66,20 +65,20 @@ jobs:
       - name: Validate JSON files
         run: |
           error_count=0
-          find . -name "*.json" -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
+          while IFS= read -r file; do
             echo "Validating $file"
             if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
               echo "❌ Invalid JSON: $file"
               error_count=$((error_count + 1))
             fi
-          done
+          done < <(find . -name "*.json" -not -path "./node_modules/*" -not -path "./.git/*")
           
           if [ $error_count -eq 0 ]; then
             echo "✅ All JSON files valid"
           else
-            echo "⚠️  Found $error_count invalid JSON files (non-blocking)"
+            echo "❌ Found $error_count invalid JSON files"
+            exit 1
           fi
-        continue-on-error: true
 
   security-scan:
     name: Security Scanning
@@ -95,10 +94,9 @@ jobs:
           VALIDATE_CSHARP: true
           VALIDATE_JSON: true
           VALIDATE_MARKDOWN: true
-        continue-on-error: true
 
   quality-summary:
-    name: Quality Check Summary
+    name: Quality Required Summary
     if: always()
     needs: [powershell-lint, markdown-lint, json-validate, security-scan]
     runs-on: ubuntu-latest
@@ -112,4 +110,21 @@ jobs:
           echo "- JSON Validation: ${{ needs.json-validate.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Quality checks completed"
+
+          failed=0
+          for result in \
+            "${{ needs.powershell-lint.result }}" \
+            "${{ needs.markdown-lint.result }}" \
+            "${{ needs.json-validate.result }}" \
+            "${{ needs.security-scan.result }}"; do
+            if [ "$result" != "success" ]; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "❌ One or more required quality checks failed"
+            exit 1
+          fi
+
+          echo "✅ All required quality checks passed"
