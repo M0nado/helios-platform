@@ -409,6 +409,11 @@ namespace HELIOS.Platform.Phase10.Users
                     LogMessage($"Error getting user groups: {ex.Message}", LogLevel.Error);
                 }
 
+                if (groups.Count == 0 && string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+                {
+                    groups.Add("Users");
+                }
+
                 return groups;
             });
         }

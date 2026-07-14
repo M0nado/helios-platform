@@ -73,6 +73,17 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 LogMessage($"Error initializing profile states: {ex.Message}", LogLevel.Warning);
             }
+
+            if (_profileStates.Count == 0 && !string.IsNullOrWhiteSpace(_currentUser))
+            {
+                _profileStates[_currentUser] = new ProfileState
+                {
+                    Username = _currentUser,
+                    IsActive = true,
+                    LastSwitchTime = DateTime.Now
+                };
+                LogMessage("Profile states initialized with current user fallback", LogLevel.Warning);
+            }
         }
 
         /// <summary>
