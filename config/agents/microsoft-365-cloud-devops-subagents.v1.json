@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0",
+  "registryId": "helios-microsoft-365-cloud-devops-subagents",
+  "parentFleet": "helios-enterprise-deployment-fleet",
+  "parentIssue": 165,
+  "productionBlockerIssue": 162,
+  "defaultMode": "plan-and-validate",
+  "subagents": [
+    {
+      "id": "m365-copilot-orchestrator",
+      "name": "Microsoft 365 Copilot Orchestrator",
+      "parentAgent": "microsoft-graph",
+      "runtime": "csharp+graph+copilot-studio+agents-toolkit",
+      "purpose": "Provide one normal Microsoft 365 Copilot front door that delegates bounded Outlook, Teams, SharePoint, OneDrive, Planner, Word, Excel, PowerPoint, and Copilot Studio tasks.",
+      "allowed": ["intent-classify", "delegate-m365-specialist", "readiness-check", "approval-request", "result-compose", "evidence-link"],
+      "denied": ["tenant-wide-agent-publish", "automatic-admin-consent", "bulk-user-data-export", "cross-user-impersonation", "secret-readback", "approval-bypass"],
+      "requiresApprovalFor": ["new-graph-scope", "production-agent-publish", "cross-site-write", "external-share"],
+      "healthChecks": ["graph-profile-read", "teams-resolve", "sharepoint-governance-resolve", "onedrive-root-read", "copilot-studio-environment-readiness"],
+      "evidence": ["delegation-trace", "graph-scope-summary", "m365-operation-links", "approval-record"]
+    },
+    {
+      "id": "m365-productivity-specialists",
+      "name": "Microsoft 365 Productivity Specialist Pool",
+      "parentAgent": "microsoft-graph",
+      "runtime": "graph+office-connectors",
+      "purpose": "Expose bounded Outlook, Teams, SharePoint, OneDrive, Planner, Word, Excel, PowerPoint, and Loop specialists behind the Copilot orchestrator.",
+      "allowed": ["outlook-draft", "teams-message", "sharepoint-publish", "onedrive-file-operation", "planner-task-operation", "office-document-plan", "loop-workspace-plan"],
+      "denied": ["send-without-explicit-request", "delete-user-content", "anonymous-share", "unscoped-tenant-search", "macro-execution", "credential-export"],
+      "requiresApprovalFor": ["email-send", "file-delete", "permission-change", "external-share", "planner-delete"],
+      "healthChecks": ["outlook-readiness", "teams-readiness", "sharepoint-readiness", "onedrive-readiness", "planner-readiness", "office-app-readiness"],
+      "evidence": ["operation-summary", "destination-links", "permission-diff", "correlation-id"]
+    },
+    {
+      "id": "edge-copilot-workspace",
+      "name": "Microsoft Edge Copilot Workspace Subagent",
+      "parentAgent": "custom-connection-manager",
+      "runtime": "edge+browser-policy+chatgpt-app+mcp",
+      "purpose": "Coordinate approved Edge workspaces and links for Microsoft 365 Copilot, Azure Portal, Cloud Shell, GitHub, Linear, SharePoint, Teams, and HELIOS GUI surfaces.",
+      "allowed": ["workspace-manifest", "approved-link-open", "browser-readiness", "edge-policy-read", "extension-readiness", "safe-deep-link"],
+      "denied": ["private-browser-data-export", "silent-extension-install", "arbitrary-page-script", "cross-profile-access", "credential-readback"],
+      "requiresApprovalFor": ["extension-install", "browser-policy-write", "workspace-share"],
+      "healthChecks": ["edge-version", "profile-resolution", "approved-url-validation", "m365-copilot-url-readiness", "azure-portal-url-readiness"],
+      "evidence": ["workspace-manifest", "policy-readiness-report", "validated-links"]
+    },
+    {
+      "id": "azure-cloud-shell",
+      "name": "Azure Cloud Shell Subagent",
+      "parentAgent": "azure-cli-bootstrap",
+      "runtime": "azure-cloud-shell+az+pwsh+bash",
+      "purpose": "Provide a zero-local-install Azure command surface for discovery, Bicep compilation, what-if, logs, and approved deployment operations.",
+      "allowed": ["cloud-shell-readiness", "az-account-show", "subscription-list", "bicep-build", "what-if", "resource-read", "log-query", "artifact-upload-plan"],
+      "denied": ["implicit-subscription-selection", "credential-export", "owner-role-grant", "unapproved-production-apply", "persistent-data-delete", "shell-secret-write"],
+      "requiresApprovalFor": ["subscription-selection", "rbac-write", "production-apply", "resource-delete"],
+      "healthChecks": ["cloud-shell-launch", "az-version", "pwsh-version", "storage-mount-readiness", "tenant-context", "subscription-context"],
+      "evidence": ["cloud-shell-session-metadata", "command-plan", "what-if-link", "azure-correlation-id"]
+    },
+    {
+      "id": "azure-devops-control",
+      "name": "Azure DevOps Control Subagent",
+      "parentAgent": "custom-connection-manager",
+      "runtime": "azure-devops-cli+mcp+rest",
+      "purpose": "Connect HELIOS to Azure DevOps projects, repositories, pipelines, boards, artifacts, environments, and service connections while GitHub remains canonical.",
+      "allowed": ["org-readiness", "project-inventory", "repo-read", "pipeline-read", "board-read", "artifact-read", "service-connection-plan", "mirror-plan"],
+      "denied": ["canonical-source-replacement", "pipeline-run-without-approval", "secret-export", "organization-admin-grant", "force-push", "history-delete"],
+      "requiresApprovalFor": ["pipeline-run", "service-connection-write", "repo-mirror-write", "environment-approval-change"],
+      "healthChecks": ["az-devops-extension", "organization-resolve", "project-resolve", "pipeline-list", "service-connection-readiness"],
+      "evidence": ["organization-inventory", "pipeline-links", "service-connection-plan", "mirror-map"]
+    },
+    {
+      "id": "github-enterprise-control",
+      "name": "GitHub Enterprise Repository Control Subagent",
+      "parentAgent": "deployment-supervisor",
+      "runtime": "github-app+actions+codespaces+copilot",
+      "purpose": "Govern the HELIOS hierarchy across Yolkster64 integration repositories, M0nado canonical repositories, and reviewed enterprise mirrors through pull-request promotion.",
+      "allowed": ["repository-inventory", "classify-repository", "issue-link", "pr-create", "workflow-read", "codespace-config-plan", "copilot-instruction-plan", "promotion-map"],
+      "denied": ["blind-archive", "direct-enterprise-mirror-push", "force-push-protected-branch", "secret-copy", "bypass-required-checks", "delete-repository"],
+      "requiresApprovalFor": ["merge", "archive-repository", "protected-branch-change", "enterprise-promotion", "codespace-secret-change"],
+      "healthChecks": ["canonical-repo-read", "companion-fleet-repo-read", "branch-protection-readiness", "actions-readiness", "codespaces-config-readiness"],
+      "evidence": ["repository-classification", "promotion-chain", "workflow-status", "immutable-source-sha"]
+    },
+    {
+      "id": "foundry-agent-service",
+      "name": "Microsoft Foundry Agent Service Subagent",
+      "parentAgent": "foundry-platform",
+      "runtime": "azure-ai-foundry+agent-service+entra-agent-id",
+      "purpose": "Manage Foundry project readiness, Agent Service definitions, Entra Agent identities, model deployments, evaluations, tool connections, tracing, and approved publication handoffs.",
+      "allowed": ["project-readiness", "agent-definition-validate", "model-deployment-plan", "tool-connection-plan", "evaluation-run", "trace-read", "entra-agent-registration-plan"],
+      "denied": ["unapproved-model-deploy", "unbounded-tool-connection", "tenant-wide-agent-registration", "credential-inline", "production-publish-without-review"],
+      "requiresApprovalFor": ["model-deploy", "agent-publish", "new-tool-connection", "entra-agent-registration", "capacity-change"],
+      "healthChecks": ["foundry-project-resolve", "model-catalog-read", "agent-service-readiness", "evaluation-readiness", "application-insights-trace-readiness"],
+      "evidence": ["agent-definition", "model-policy-summary", "evaluation-report", "trace-link"]
+    },
+    {
+      "id": "unified-cli-control",
+      "name": "Unified HELIOS CLI Control Subagent",
+      "parentAgent": "azure-toolchain",
+      "runtime": "pwsh+dotnet-tool+node-cli+python-cli",
+      "purpose": "Expose one easy HELIOS command surface that routes to az, azd, Bicep, Functions, PAC, M365, GitHub, Azure DevOps, Docker, .NET, Node, Python, and XCore tools.",
+      "allowed": ["tool-discover", "version-report", "command-plan", "dry-run", "route-to-specialist", "collect-output", "open-documentation"],
+      "denied": ["arbitrary-shell", "credential-echo", "implicit-production", "unsafe-command-concatenation", "unapproved-package-install", "destructive-default"],
+      "requiresApprovalFor": ["elevated-command", "write-command", "production-command", "package-install", "extension-install"],
+      "healthChecks": ["toolchain-manifest-load", "command-router-test", "argument-escaping-test", "dry-run-test", "secret-redaction-test"],
+      "evidence": ["command-plan", "tool-version-map", "redacted-execution-result", "approval-record"]
+    }
+  ]
+}
