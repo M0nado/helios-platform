@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
-using System.Text;
+using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HELIOS.CloudIntegration.Auth
 {
@@ -26,9 +26,9 @@ namespace HELIOS.CloudIntegration.Auth
     public class AuthenticationResult
     {
         public bool Success { get; set; }
-        public string Token { get; set; }
+        public string? Token { get; set; }
         public DateTime ExpiresAt { get; set; }
-        public string ErrorMessage { get; set; }
+        public string? ErrorMessage { get; set; }
         public Dictionary<string, object> Metadata { get; set; } = new();
     }
 
@@ -48,7 +48,12 @@ namespace HELIOS.CloudIntegration.Auth
 
         public ICloudAuthenticator CreateAuthenticator(string serviceName, Dictionary<string, string> config)
         {
-            return serviceName.ToLower() switch
+            if (string.IsNullOrWhiteSpace(serviceName))
+            {
+                throw new ArgumentException("Service name is required.", nameof(serviceName));
+            }
+
+            return serviceName.Trim().ToLowerInvariant() switch
             {
                 "azure" => new AzureAuthenticator(_httpClient, _credentialStore, config),
                 "openai" => new APIKeyAuthenticator(_credentialStore, config),
@@ -70,7 +75,7 @@ namespace HELIOS.CloudIntegration.Auth
         private readonly HttpClient _httpClient;
         private readonly ICredentialStore _credentialStore;
         private readonly Dictionary<string, string> _config;
-        private AuthenticationResult _cachedResult;
+        private AuthenticationResult? _cachedResult;
 
         public string ServiceName => "Azure";
 
@@ -89,31 +94,41 @@ namespace HELIOS.CloudIntegration.Auth
                 var clientId = _credentialStore.GetSecret("AZURE_CLIENT_ID");
                 var clientSecret = _credentialStore.GetSecret("AZURE_CLIENT_SECRET");
 
-                var tokenUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
+                var missing = AuthenticationHelpers.GetMissingSecrets(("AZURE_TENANT_ID", tenantId), ("AZURE_CLIENT_ID", clientId), ("AZURE_CLIENT_SECRET", clientSecret));
+                if (missing.Count > 0)
+                {
+                    return AuthenticationHelpers.AuthenticationFailure($"Azure authentication is missing required secret(s): {string.Join(", ", missing)}");
+                }
+
+                var tokenUrl = $"https://login.microsoftonline.com/{Uri.EscapeDataString(tenantId!)}/oauth2/v2.0/token";
 
                 var request = new Dictionary<string, string>
                 {
                     { "grant_type", "client_credentials" },
-                    { "client_id", clientId },
-                    { "client_secret", clientSecret },
+                    { "client_id", clientId! },
+                    { "client_secret", clientSecret! },
                     { "scope", "https://management.azure.com/.default" }
                 };
 
                 var content = new FormUrlEncodedContent(request);
-                var response = await _httpClient.PostAsync(tokenUrl, content);
+                var response = await _httpClient.PostAsync(tokenUrl, content).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var tokenResponse = await response.Content.ReadAsAsync<AzureTokenResponse>();
+                    var tokenResponse = await AuthenticationHelpers.DeserializeTokenResponseAsync<AzureTokenResponse>(response).ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(tokenResponse?.AccessToken))
+                    {
+                        return AuthenticationHelpers.AuthenticationFailure("Azure authentication succeeded but no access token was returned.");
+                    }
                     _cachedResult = new AuthenticationResult
                     {
                         Success = true,
-                        Token = tokenResponse.access_token,
-                        ExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.expires_in),
+                        Token = tokenResponse.AccessToken,
+                        ExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
                         Metadata = new Dictionary<string, object>
                         {
-                            { "token_type", tokenResponse.token_type },
-                            { "scope", tokenResponse.scope }
+                            { "token_type", tokenResponse.TokenType ?? "Bearer" },
+                            { "scope", tokenResponse.Scope ?? string.Empty }
                         }
                     };
                     return _cachedResult;
@@ -122,7 +137,7 @@ namespace HELIOS.CloudIntegration.Auth
                 return new AuthenticationResult
                 {
                     Success = false,
-                    ErrorMessage = $"Azure authentication failed: {response.StatusCode}"
+                    ErrorMessage = $"Azure authentication failed: {(int)response.StatusCode} {response.ReasonPhrase}"
                 };
             }
             catch (Exception ex)
@@ -157,12 +172,19 @@ namespace HELIOS.CloudIntegration.Auth
                 : new();
         }
 
-        private class AzureTokenResponse
+        private sealed class AzureTokenResponse
         {
-            public string access_token { get; set; }
-            public int expires_in { get; set; }
-            public string token_type { get; set; }
-            public string scope { get; set; }
+            [JsonPropertyName("access_token")]
+            public string? AccessToken { get; set; }
+
+            [JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
+
+            [JsonPropertyName("token_type")]
+            public string? TokenType { get; set; }
+
+            [JsonPropertyName("scope")]
+            public string? Scope { get; set; }
         }
     }
 
@@ -187,7 +209,7 @@ namespace HELIOS.CloudIntegration.Auth
         {
             try
             {
-                var keyName = $"{ServiceName.ToUpper()}_API_KEY";
+                var keyName = $"{ServiceName.ToUpperInvariant()}_API_KEY";
                 var apiKey = _credentialStore.GetSecret(keyName);
 
                 if (string.IsNullOrEmpty(apiKey))
@@ -216,13 +238,19 @@ namespace HELIOS.CloudIntegration.Auth
             }
         }
 
-        public Task<bool> IsValidAsync() => Task.FromResult(true);
+        public Task<bool> IsValidAsync()
+        {
+            var apiKey = _credentialStore.GetSecret($"{ServiceName.ToUpperInvariant()}_API_KEY");
+            return Task.FromResult(!string.IsNullOrWhiteSpace(apiKey));
+        }
         public Task RefreshTokenAsync() => Task.CompletedTask;
 
         public Dictionary<string, string> GetAuthHeaders()
         {
-            var apiKey = _credentialStore.GetSecret($"{ServiceName.ToUpper()}_API_KEY");
-            return new() { { "Authorization", $"Bearer {apiKey}" } };
+            var apiKey = _credentialStore.GetSecret($"{ServiceName.ToUpperInvariant()}_API_KEY");
+            return string.IsNullOrWhiteSpace(apiKey)
+                ? new()
+                : new() { { "Authorization", $"Bearer {apiKey}" } };
         }
     }
 
@@ -268,13 +296,19 @@ namespace HELIOS.CloudIntegration.Auth
             }
         }
 
-        public Task<bool> IsValidAsync() => Task.FromResult(true);
+        public Task<bool> IsValidAsync()
+        {
+            var token = _credentialStore.GetSecret("GITHUB_TOKEN");
+            return Task.FromResult(!string.IsNullOrWhiteSpace(token));
+        }
         public Task RefreshTokenAsync() => Task.CompletedTask;
 
         public Dictionary<string, string> GetAuthHeaders()
         {
             var token = _credentialStore.GetSecret("GITHUB_TOKEN");
-            return new() { { "Authorization", $"Bearer {token}" } };
+            return string.IsNullOrWhiteSpace(token)
+                ? new()
+                : new() { { "Authorization", $"Bearer {token}" } };
         }
     }
 
@@ -286,7 +320,7 @@ namespace HELIOS.CloudIntegration.Auth
         private readonly HttpClient _httpClient;
         private readonly ICredentialStore _credentialStore;
         private readonly Dictionary<string, string> _config;
-        private AuthenticationResult _cachedResult;
+        private AuthenticationResult? _cachedResult;
 
         public string ServiceName { get; }
 
@@ -303,33 +337,45 @@ namespace HELIOS.CloudIntegration.Auth
             try
             {
                 var tenantId = _credentialStore.GetSecret("AZURE_TENANT_ID");
-                var clientId = _credentialStore.GetSecret($"{ServiceName.ToUpper()}_CLIENT_ID");
-                var clientSecret = _credentialStore.GetSecret($"{ServiceName.ToUpper()}_CLIENT_SECRET");
+                var clientIdKey = $"{ServiceName.ToUpperInvariant()}_CLIENT_ID";
+                var clientSecretKey = $"{ServiceName.ToUpperInvariant()}_CLIENT_SECRET";
+                var clientId = _credentialStore.GetSecret(clientIdKey);
+                var clientSecret = _credentialStore.GetSecret(clientSecretKey);
 
-                var tokenUrl = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
+                var missing = AuthenticationHelpers.GetMissingSecrets(("AZURE_TENANT_ID", tenantId), (clientIdKey, clientId), (clientSecretKey, clientSecret));
+                if (missing.Count > 0)
+                {
+                    return AuthenticationHelpers.AuthenticationFailure($"{ServiceName} authentication is missing required secret(s): {string.Join(", ", missing)}");
+                }
+
+                var tokenUrl = $"https://login.microsoftonline.com/{Uri.EscapeDataString(tenantId!)}/oauth2/v2.0/token";
 
                 var request = new Dictionary<string, string>
                 {
                     { "grant_type", "client_credentials" },
-                    { "client_id", clientId },
-                    { "client_secret", clientSecret },
+                    { "client_id", clientId! },
+                    { "client_secret", clientSecret! },
                     { "scope", $"https://graph.microsoft.com/.default" }
                 };
 
                 var content = new FormUrlEncodedContent(request);
-                var response = await _httpClient.PostAsync(tokenUrl, content);
+                var response = await _httpClient.PostAsync(tokenUrl, content).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var tokenResponse = await response.Content.ReadAsAsync<OAuthTokenResponse>();
+                    var tokenResponse = await AuthenticationHelpers.DeserializeTokenResponseAsync<OAuthTokenResponse>(response).ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(tokenResponse?.AccessToken))
+                    {
+                        return AuthenticationHelpers.AuthenticationFailure($"{ServiceName} authentication succeeded but no access token was returned.");
+                    }
                     _cachedResult = new AuthenticationResult
                     {
                         Success = true,
-                        Token = tokenResponse.access_token,
-                        ExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.expires_in),
+                        Token = tokenResponse.AccessToken,
+                        ExpiresAt = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn),
                         Metadata = new Dictionary<string, object>
                         {
-                            { "token_type", tokenResponse.token_type }
+                            { "token_type", tokenResponse.TokenType ?? "Bearer" }
                         }
                     };
                     return _cachedResult;
@@ -338,7 +384,7 @@ namespace HELIOS.CloudIntegration.Auth
                 return new AuthenticationResult
                 {
                     Success = false,
-                    ErrorMessage = $"OAuth authentication failed: {response.StatusCode}"
+                    ErrorMessage = $"OAuth authentication failed: {(int)response.StatusCode} {response.ReasonPhrase}"
                 };
             }
             catch (Exception ex)
@@ -373,12 +419,46 @@ namespace HELIOS.CloudIntegration.Auth
                 : new();
         }
 
-        private class OAuthTokenResponse
+        private sealed class OAuthTokenResponse
         {
-            public string access_token { get; set; }
-            public int expires_in { get; set; }
-            public string token_type { get; set; }
+            [JsonPropertyName("access_token")]
+            public string? AccessToken { get; set; }
+
+            [JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
+
+            [JsonPropertyName("token_type")]
+            public string? TokenType { get; set; }
         }
+    }
+
+
+    internal static class AuthenticationHelpers
+    {
+        private static readonly JsonSerializerOptions TokenJsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        public static async Task<T?> DeserializeTokenResponseAsync<T>(HttpResponseMessage response)
+        {
+            await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            return await JsonSerializer.DeserializeAsync<T>(stream, TokenJsonOptions).ConfigureAwait(false);
+        }
+
+        public static List<string> GetMissingSecrets(params (string Name, string? Value)[] secrets)
+        {
+            return secrets
+                .Where(secret => string.IsNullOrWhiteSpace(secret.Value))
+                .Select(secret => secret.Name)
+                .ToList();
+        }
+
+        public static AuthenticationResult AuthenticationFailure(string message) => new()
+        {
+            Success = false,
+            ErrorMessage = message
+        };
     }
 
     /// <summary>
