@@ -1,0 +1,57 @@
+name: Windows Boot Security Validation
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/security/**'
+      - 'config/security/windows-boot-security.v1.json'
+      - 'config/openai/security-incident-analysis.example.json'
+      - 'docs/security/WINDOWS_BOOT_SECURITY_AND_ROOTKIT_RECOVERY.md'
+      - '.github/workflows/windows-boot-security-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $errorsFound = $false
+          Get-ChildItem scripts/windows/security -Filter *.ps1 -Recurse | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $errorsFound = $true
+              Write-Error "Parser errors in $($_.FullName):`n$($errors | Out-String)"
+            }
+          }
+          if ($errorsFound) { exit 1 }
+
+      - name: Validate security manifests
+        shell: pwsh
+        run: |
+          $security = Get-Content config/security/windows-boot-security.v1.json -Raw | ConvertFrom-Json
+          $openai = Get-Content config/openai/security-incident-analysis.example.json -Raw | ConvertFrom-Json
+          if ($security.defaultMode -ne 'audit') { throw 'Default mode must remain audit.' }
+          if ($security.startup.automaticOfflineScan) { throw 'Automatic offline scanning is prohibited.' }
+          if ($openai.enabled) { throw 'OpenAI security analysis must remain disabled by default.' }
+          if ($openai.allowRawEventLogs -or $openai.allowSecrets) { throw 'Raw logs and secrets must remain prohibited.' }
+
+      - name: Enforce destructive-action guardrails
+        shell: pwsh
+        run: |
+          $all = Get-ChildItem scripts/windows/security -Filter *.ps1 -Recurse | Get-Content -Raw
+          $forbidden = @('Clear-Disk', 'Initialize-Disk', 'Format-Volume', 'DisableRealtimeMonitoring $true')
+          foreach ($term in $forbidden) {
+            if ($all -match [regex]::Escape($term)) { throw "Forbidden term detected: $term" }
+          }
+          $offline = Get-Content scripts/windows/security/Invoke-HeliosRootkitRecovery.ps1 -Raw
+          if ($offline -notmatch 'RUN HELIOS OFFLINE ROOTKIT SCAN') { throw 'Offline scan confirmation phrase is missing.' }
+          if ($offline -notmatch 'Start-MpWDOScan') { throw 'Offline scan implementation is missing.' }
