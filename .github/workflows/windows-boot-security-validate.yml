@@ -41,8 +41,20 @@ jobs:
           $openai = Get-Content config/openai/security-incident-analysis.example.json -Raw | ConvertFrom-Json
           if ($security.defaultMode -ne 'audit') { throw 'Default mode must remain audit.' }
           if ($security.startup.automaticOfflineScan) { throw 'Automatic offline scanning is prohibited.' }
+          if ($security.scheduledScans.weeklyFullScanDefault) { throw 'Weekly full scanning must remain explicit opt-in.' }
+          if (-not $security.scheduledScans.fullScanRequiresExplicitOptIn) { throw 'Full scan opt-in guard is required.' }
           if ($openai.enabled) { throw 'OpenAI security analysis must remain disabled by default.' }
           if ($openai.allowRawEventLogs -or $openai.allowSecrets) { throw 'Raw logs and secrets must remain prohibited.' }
+
+      - name: Validate registry documentation
+        shell: pwsh
+        run: |
+          Get-ChildItem scripts/windows/security -Filter *.ps1 -Recurse | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            if ($content -match 'HKLM:|HKCU:' -and $content -notmatch '# Registry:') {
+              throw "Registry access is missing documentation: $($_.FullName)"
+            }
+          }
 
       - name: Enforce destructive-action guardrails
         shell: pwsh
