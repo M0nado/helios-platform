@@ -17,4 +17,8 @@
   <Folder Name="/src/Security/">
     <Project Path="src/Security/SecurityValidator.csproj" />
   </Folder>
+  <Folder Name="/src/gui/" />
+  <Folder Name="/src/gui/MonadoBlade.GUI/">
+    <Project Path="src/gui/MonadoBlade.GUI/MonadoBlade.GUI.csproj" />
+  </Folder>
 </Solution>

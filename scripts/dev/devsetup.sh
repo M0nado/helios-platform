@@ -42,7 +42,7 @@ if [ -f "/.dockerenv" ]; then
 else
     log_warning "Not running inside development container"
     log_info "To use the full development environment, run:"
-    echo "  cd .devcontainer && docker-compose up -d"
+    echo "  docker compose -f .devcontainer/docker-compose.yml up -d"
     IN_CONTAINER=false
 fi
 echo ""
@@ -129,5 +129,5 @@ echo "  3. Run: source .venv/bin/activate (if using Python)"
 echo "  4. Start developing!"
 echo ""
 echo "Development containers:"
-echo "  cd .devcontainer && docker-compose up -d"
+echo "  docker compose -f .devcontainer/docker-compose.yml up -d"
 echo ""

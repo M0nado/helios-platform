@@ -9,6 +9,10 @@ on:
       - 'scripts/azure/**'
       - 'scripts/control/**'
       - 'scripts/integrations/**'
+      - 'src/gui/**'
+      - 'src/tests/HELIOS.Platform.Tests.csproj'
+      - 'infra/azure/**'
+      - '.devcontainer/docker-compose.yml'
       - 'config/build-graph.json'
       - 'config/hermes-fleet.example.json'
       - 'config/security-preflight-allowlist.json'
@@ -32,10 +36,19 @@ jobs:
           python-version: '3.11'
       - name: Static Python and shell checks
         run: |
-          python3 -m py_compile scripts/build_graph/build_graph.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py scripts/dashboard/generate-gui.py scripts/control/helios-control.py scripts/integrations/readiness_score.py tests/scripts/test_build_graph.py
+          python3 -m py_compile scripts/build_graph/build_graph.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py scripts/azure/azure_connection_pipeline.py scripts/dashboard/generate-gui.py scripts/control/helios-control.py scripts/integrations/readiness_score.py tests/scripts/test_build_graph.py
           python3 -m json.tool config/build-graph.json >/dev/null
           python3 -m json.tool config/security-preflight-allowlist.json >/dev/null
           bash -n scripts/setup/helios-dev.sh
+      - name: Validate GUI/Azure/Docker gates
+        run: |
+          dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj
+          dotnet restore src/tests/HELIOS.Platform.Tests.csproj
+          dotnet restore src/gui/MonadoBlade.GUI/MonadoBlade.GUI.csproj
+          dotnet build src/gui/MonadoBlade.GUI/MonadoBlade.GUI.csproj --configuration Release --no-restore
+          python3 scripts/azure/azure_connection_pipeline.py --stage all --json >/dev/null
+          python3 scripts/azure/azure_what_if.py --plan-only
+          docker compose -f .devcontainer/docker-compose.yml config >/dev/null
       - name: Unit tests
         run: python3 -m unittest tests/scripts/test_build_graph.py
       - name: Generate safe reports

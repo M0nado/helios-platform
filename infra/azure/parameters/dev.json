@@ -3,6 +3,10 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "environmentName": { "value": "dev" },
-    "namePrefix": { "value": "helios" }
+    "namePrefix": { "value": "helios" },
+    "deployVm": { "value": false },
+    "vmAdminUsername": { "value": "heliosadmin" },
+    "vmAdminPublicKey": { "value": "" },
+    "vmSize": { "value": "Standard_B2s" }
   }
 }
