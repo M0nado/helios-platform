@@ -8,10 +8,34 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from enum import StrEnum
+import re
 from typing import Any, Mapping
 
 MAX_MANIFEST_BYTES = 262_144
-SENSITIVE_KEY_PARTS = ("api_key", "password", "private_key", "secret", "token")
+SENSITIVE_KEY_PARTS = (
+    "access_key",
+    "api_key",
+    "authorization",
+    "connection_string",
+    "cookie",
+    "credential",
+    "password",
+    "private_key",
+    "sas",
+    "secret",
+    "token",
+)
+ALLOWED_LANGUAGES = frozenset({"C#", "F#", "C++", "Python", "PowerShell", "TypeScript"})
+SENSITIVE_TEXT_PATTERNS = (
+    re.compile(r"\bsk-[A-Za-z0-9_-]{16,}\b"),
+    re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----", re.IGNORECASE),
+    re.compile(
+        r"\b(?:password|client[_ -]?secret|api[_ -]?key|access[_ -]?token)"
+        r"\s*[:=]\s*\S{8,}",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{16,}", re.IGNORECASE),
+)
 
 
 class Decision(StrEnum):
@@ -109,8 +133,8 @@ def contains_sensitive_key(value: Any) -> bool:
 
     if isinstance(value, dict):
         for key, nested in value.items():
-            normalized = str(key).lower().replace("-", "_")
-            if any(part in normalized for part in SENSITIVE_KEY_PARTS):
+            normalized = re.sub(r"[^a-z0-9]", "", str(key).lower())
+            if any(part.replace("_", "") in normalized for part in SENSITIVE_KEY_PARTS):
                 return True
             if contains_sensitive_key(nested):
                 return True
@@ -119,7 +143,13 @@ def contains_sensitive_key(value: Any) -> bool:
     return False
 
 
-def _normalize_action(action: str) -> str:
+def contains_sensitive_text(value: str) -> bool:
+    """Reject common credential shapes before text can enter a provider prompt."""
+
+    return any(pattern.search(value) for pattern in SENSITIVE_TEXT_PATTERNS)
+
+
+def normalize_action(action: str) -> str:
     return action.strip().lower().replace("-", "_").replace(" ", "_")
 
 
@@ -133,7 +163,7 @@ def evaluate_action(
 ) -> PolicyVerdict:
     """Evaluate an action without performing it."""
 
-    normalized = _normalize_action(action)
+    normalized = normalize_action(action)
     controls = _enabled_controls(context or {})
 
     if normalized in PROHIBITED_ACTIONS:
@@ -187,3 +217,38 @@ def evaluate_action(
         missing_controls=(),
         reason="Controls are recorded; planning is allowed, but execution remains out of scope.",
     )
+
+
+def summarize_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Create an allowlisted summary; repository and branch identifiers never leave the service."""
+
+    repositories = manifest.get("repositories", [])
+    branches = manifest.get("branches", [])
+    languages = manifest.get("languages", [])
+    proposed_actions = manifest.get("proposed_actions", [])
+    known_actions = READ_ONLY_ACTIONS | frozenset(CONTROLLED_ACTIONS) | frozenset(PROHIBITED_ACTIONS)
+
+    safe_actions: list[str] = []
+    unknown_action_count = 0
+    if isinstance(proposed_actions, list):
+        for value in proposed_actions[:64]:
+            normalized = normalize_action(str(value)[:80])
+            if normalized in known_actions:
+                if normalized not in safe_actions:
+                    safe_actions.append(normalized)
+            else:
+                unknown_action_count += 1
+
+    safe_languages = []
+    if isinstance(languages, list):
+        safe_languages = sorted(
+            {str(value) for value in languages[:16] if str(value) in ALLOWED_LANGUAGES}
+        )
+
+    return {
+        "repository_count": len(repositories) if isinstance(repositories, list) else 0,
+        "branch_count": len(branches) if isinstance(branches, list) else 0,
+        "languages": safe_languages,
+        "proposed_actions": safe_actions,
+        "unknown_action_count": unknown_action_count,
+    }

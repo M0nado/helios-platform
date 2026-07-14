@@ -1,0 +1,466 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.invalid/automation-routes-v1.schema.json",
+  "title": "HELIOS automation route registry v1",
+  "type": "object",
+  "required": [
+    "contractSchema",
+    "schemaVersion",
+    "registryId",
+    "status",
+    "logicalDestinations",
+    "untrustedTemplatePolicy",
+    "defaults",
+    "approvalClasses",
+    "feedbackLoopGuards",
+    "routes",
+    "validation",
+    "prohibitions"
+  ],
+  "properties": {
+    "contractSchema": {
+      "const": "schemas/automation-routes-v1.schema.json"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "registryId": {
+      "const": "helios-automation-routes-v1"
+    },
+    "status": {
+      "const": "proposed"
+    },
+    "logicalDestinations": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/logicalDestination"
+      }
+    },
+    "untrustedTemplatePolicy": {
+      "$ref": "#/$defs/untrustedTemplatePolicy"
+    },
+    "defaults": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "dryRun",
+        "idempotency"
+      ],
+      "properties": {
+        "enabled": {
+          "const": false
+        },
+        "dryRun": {
+          "const": true
+        },
+        "idempotency": {
+          "type": "object",
+          "required": [
+            "keyTemplate",
+            "retention",
+            "duplicateOutcome"
+          ],
+          "properties": {
+            "keyTemplate": {
+              "type": "string",
+              "pattern": "^sha256\\(normalized-length-prefixed:"
+            }
+          }
+        }
+      }
+    },
+    "approvalClasses": {
+      "type": "object",
+      "required": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[0-4]$": {
+          "type": "object",
+          "required": [
+            "name",
+            "rule"
+          ]
+        }
+      }
+    },
+    "feedbackLoopGuards": {
+      "type": "object",
+      "required": [
+        "routeGraphMustBeAcyclic",
+        "selfTargetingRouteProhibited",
+        "notificationEventsAreTerminal"
+      ],
+      "properties": {
+        "routeGraphMustBeAcyclic": {
+          "const": true
+        },
+        "selfTargetingRouteProhibited": {
+          "const": true
+        },
+        "notificationEventsAreTerminal": {
+          "const": true
+        }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/route"
+      }
+    }
+  },
+  "$defs": {
+    "provider": {
+      "enum": [
+        "github",
+        "azure",
+        "linear",
+        "slack",
+        "teams",
+        "sharepoint"
+      ]
+    },
+    "approvalClass": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "logicalDestination": {
+      "type": "object",
+      "required": [
+        "provider",
+        "resolveFrom"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "enum": [
+            "linear",
+            "slack",
+            "teams",
+            "sharepoint"
+          ]
+        },
+        "resolveFrom": {
+          "type": "string",
+          "pattern": "^HELIOS_[A-Z0-9_]+_TARGET$"
+        }
+      }
+    },
+    "untrustedTemplatePolicy": {
+      "type": "object",
+      "required": [
+        "defaultMode",
+        "providerPlainTextEscaping",
+        "mentionSuppression",
+        "urls",
+        "length",
+        "unicodeAndNewlines",
+        "allowedPlaceholders",
+        "unsafeSyntax",
+        "idempotency"
+      ],
+      "properties": {
+        "defaultMode": {
+          "const": "plain-text-only"
+        },
+        "providerPlainTextEscaping": {
+          "type": "object",
+          "required": [
+            "linear",
+            "slack",
+            "teams",
+            "sharepoint"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "linear": {
+              "type": "string",
+              "minLength": 1
+            },
+            "slack": {
+              "type": "string",
+              "minLength": 1
+            },
+            "teams": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sharepoint": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "mentionSuppression": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "rejectLiteralBroadcastMentions",
+            "rejectRenderedUserGroupAndUserMentions",
+            "allowMentions"
+          ],
+          "properties": {
+            "enabled": {
+              "const": true
+            },
+            "rejectLiteralBroadcastMentions": {
+              "const": true
+            },
+            "rejectRenderedUserGroupAndUserMentions": {
+              "const": true
+            },
+            "allowMentions": {
+              "type": "array",
+              "maxItems": 0
+            }
+          }
+        },
+        "urls": {
+          "type": "object",
+          "required": [
+            "scheme",
+            "allowedHosts",
+            "rejectCredentialsFragmentsAndNonDefaultPorts"
+          ],
+          "properties": {
+            "scheme": {
+              "const": "https"
+            },
+            "allowedHosts": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "rejectCredentialsFragmentsAndNonDefaultPorts": {
+              "const": true
+            }
+          }
+        },
+        "length": {
+          "type": "object",
+          "required": [
+            "maxRenderedCharacters",
+            "maxRenderedLines",
+            "maxSharePointPathSegmentCharacters"
+          ],
+          "properties": {
+            "maxRenderedCharacters": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4000
+            },
+            "maxRenderedLines": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "maxSharePointPathSegmentCharacters": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 120
+            }
+          }
+        },
+        "unicodeAndNewlines": {
+          "type": "object",
+          "required": [
+            "normalization",
+            "newline",
+            "stripCarriageReturns",
+            "rejectNulAndC0ControlsExceptTabAndLf",
+            "rejectBidirectionalOverridesAndIsolates"
+          ],
+          "properties": {
+            "normalization": {
+              "const": "NFC"
+            },
+            "newline": {
+              "const": "LF"
+            },
+            "stripCarriageReturns": {
+              "const": true
+            },
+            "rejectNulAndC0ControlsExceptTabAndLf": {
+              "const": true
+            },
+            "rejectBidirectionalOverridesAndIsolates": {
+              "const": true
+            }
+          }
+        },
+        "allowedPlaceholders": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_.]*(?::[A-Za-z0-9_-]+)?$"
+          }
+        },
+        "idempotency": {
+          "type": "object",
+          "required": [
+            "inputFields",
+            "normalization",
+            "componentEncoding",
+            "hashAlgorithm",
+            "output",
+            "rawUntrustedTextIncluded"
+          ],
+          "properties": {
+            "inputFields": {
+              "const": [
+                "routeId",
+                "source.deliveryId",
+                "target.logicalId",
+                "operation"
+              ]
+            },
+            "normalization": {
+              "const": "NFC-trim-ASCII-casefold-for-registered-identifiers"
+            },
+            "componentEncoding": {
+              "const": "length-prefixed-UTF-8"
+            },
+            "hashAlgorithm": {
+              "const": "sha256"
+            },
+            "output": {
+              "const": "lowercase-hex"
+            },
+            "rawUntrustedTextIncluded": {
+              "const": false
+            }
+          }
+        }
+      }
+    },
+    "operation": {
+      "enum": [
+        "broker.normalize-and-persist",
+        "broker.normalize-redact-and-persist",
+        "evidence.stage",
+        "evidence.compose-and-hash",
+        "linear.issue.upsert",
+        "linear.issue.link-or-update",
+        "linear.issue.update",
+        "slack.message.send",
+        "teams.channelMessage.send",
+        "sharepoint.file.upload-immutable"
+      ]
+    },
+    "trigger": {
+      "type": "object",
+      "required": [
+        "provider",
+        "event"
+      ],
+      "properties": {
+        "provider": {
+          "$ref": "#/$defs/provider"
+        },
+        "event": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "actions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": [
+        "order",
+        "operation",
+        "target",
+        "approvalClass"
+      ],
+      "properties": {
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "operation": {
+          "$ref": "#/$defs/operation"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "approvalClass": {
+          "$ref": "#/$defs/approvalClass"
+        },
+        "template": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "pathTemplate": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": [
+        "id",
+        "enabled",
+        "dryRun",
+        "approvalClass",
+        "trigger",
+        "steps"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[a-z0-9-]*[a-z0-9])?$",
+          "maxLength": 100
+        },
+        "enabled": {
+          "const": false
+        },
+        "dryRun": {
+          "const": true
+        },
+        "approvalClass": {
+          "$ref": "#/$defs/approvalClass"
+        },
+        "trigger": {
+          "$ref": "#/$defs/trigger"
+        },
+        "subjectKey": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    }
+  }
+}

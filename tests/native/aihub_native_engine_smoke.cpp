@@ -1,9 +1,21 @@
 #include <array>
-#include <cassert>
 #include <cmath>
+#include <iostream>
 #include <string_view>
 
 #include "helios/aihub_native_engine.hpp"
+
+namespace {
+
+int require(bool condition, std::string_view message) {
+  if (condition) {
+    return 0;
+  }
+  std::cerr << "native smoke failure: " << message << '\n';
+  return 1;
+}
+
+}  // namespace
 
 int main() {
   using namespace helios::aihub;
@@ -17,7 +29,10 @@ int main() {
   };
   constexpr auto routeScore = performance_route_score(route);
   static_assert(routeScore > 0.70 && routeScore <= 1.0);
-  assert(route_label(routeScore) == std::string_view{"native-accelerated-submodule"});
+  if (require(route_label(routeScore) == std::string_view{"native-accelerated-submodule"},
+              "unexpected route label")) {
+    return 1;
+  }
 
   constexpr FourEngineNativeSignals fusion{
       .csharpSafetyScore = 0.90,
@@ -33,12 +48,17 @@ int main() {
   const std::array<double, 3> right{0.1, 0.4, 0.8};
   const std::array<double, 3> weights{1.0, 1.0, 2.0};
   const auto similarity = weighted_similarity(left, right, weights);
-  assert(similarity > 0.90 && similarity <= 1.0);
+  if (require(similarity > 0.90 && similarity <= 1.0, "weighted similarity regression")) {
+    return 1;
+  }
 
   const std::array<double, 4> priorities{4.0, 2.0, 8.0, 6.0};
   const auto normalized = normalize_priority_cluster(priorities);
-  assert(std::abs(normalized[0] - (1.0 / 3.0)) < 1e-9);
-  assert(normalized[1] == 0.0);
-  assert(normalized[2] == 1.0);
+  if (require(std::abs(normalized[0] - (1.0 / 3.0)) < 1e-9,
+              "priority normalization midpoint regression") ||
+      require(normalized[1] == 0.0, "priority normalization minimum regression") ||
+      require(normalized[2] == 1.0, "priority normalization maximum regression")) {
+    return 1;
+  }
   return 0;
 }

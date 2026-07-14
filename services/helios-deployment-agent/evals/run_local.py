@@ -12,7 +12,7 @@ from pathlib import Path
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SERVICE_ROOT))
 
-from helios_deployment_agent.policy import evaluate_action  # noqa: E402
+from helios_deployment_agent.policy import evaluate_action, summarize_manifest  # noqa: E402
 
 CASES_PATH = Path(__file__).with_name("cases.jsonl")
 
@@ -45,18 +45,31 @@ async def run_live(cases: list[dict[str, object]]) -> int:
     from helios_deployment_agent.agent import run_plan
 
     manifest = {
-        "repositories": ["M0nado/helios-platform"],
-        "branches": ["main"],
+        "repositories": ["private-eval-repository"],
+        "branches": ["private-eval-branch"],
         "languages": ["C#", "F#", "C++", "Python"],
         "proposed_actions": [str(case["action"]) for case in cases],
     }
+    summary = summarize_manifest(manifest)
+    verdicts = [
+        evaluate_action(action).to_dict()
+        for action in summary["proposed_actions"]
+    ]
+    verdicts.extend(
+        evaluate_action("<redacted-unknown-action>").to_dict()
+        for _ in range(summary["unknown_action_count"])
+    )
     prompt = (
-        "Produce a plan-only policy assessment. Do not execute anything. Manifest: "
-        + json.dumps(manifest, sort_keys=True)
+        "Produce a concise plan-only policy assessment. Do not execute anything. The policy "
+        "verdicts are authoritative. Safe input: "
+        + json.dumps(
+            {"manifest_summary": summary, "authoritative_policy_verdicts": verdicts},
+            sort_keys=True,
+        )
     )
     output = await run_plan(prompt)
-    if not output.strip():
-        print("live agent returned no output", file=sys.stderr)
+    if output.execution_mode != "plan-only" or not output.ordered_steps:
+        print("live agent returned an invalid governed plan", file=sys.stderr)
         return 1
     print("live agent smoke passed")
     return 0

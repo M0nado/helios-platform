@@ -40,25 +40,108 @@
   "logicalDestinations": {
     "linear.integrationFabric": {
       "provider": "linear",
-      "team": "John",
-      "project": "Helios Integration Fabric",
       "resolveFrom": "HELIOS_LINEAR_INTEGRATION_FABRIC_TARGET"
     },
     "slack.controlPlane": {
       "provider": "slack",
-      "channel": "#helios-control-plane",
       "resolveFrom": "HELIOS_SLACK_CONTROL_PLANE_TARGET"
     },
     "teams.ops": {
       "provider": "teams",
-      "team": "Helios",
-      "channel": "Helios Ops",
       "resolveFrom": "HELIOS_TEAMS_OPS_TARGET"
     },
     "sharepoint.deploymentEvidence": {
       "provider": "sharepoint",
-      "path": "Helios/Governance/Deployment-Evidence",
       "resolveFrom": "HELIOS_SHAREPOINT_EVIDENCE_TARGET"
+    }
+  },
+  "untrustedTemplatePolicy": {
+    "defaultMode": "plain-text-only",
+    "providerPlainTextEscaping": {
+      "linear": "escape-control-characters-and-render-markup-literally",
+      "slack": "escape-ampersand-angle-brackets-and-disable-link-unfurling",
+      "teams": "encode-as-json-text-and-disable-html-rendering",
+      "sharepoint": "encode-file-and-path-segments-without-changing-the-resolved-root"
+    },
+    "mentionSuppression": {
+      "enabled": true,
+      "rejectLiteralBroadcastMentions": true,
+      "rejectRenderedUserGroupAndUserMentions": true,
+      "allowMentions": []
+    },
+    "urls": {
+      "scheme": "https",
+      "allowedHosts": [
+        "github.com",
+        "linear.app",
+        "*.sharepoint.com"
+      ],
+      "rejectCredentialsFragmentsAndNonDefaultPorts": true,
+      "disableAutomaticUnfurling": true
+    },
+    "length": {
+      "maxRenderedCharacters": 4000,
+      "maxRenderedLines": 20,
+      "maxSharePointPathSegmentCharacters": 120
+    },
+    "unicodeAndNewlines": {
+      "normalization": "NFC",
+      "newline": "LF",
+      "stripCarriageReturns": true,
+      "rejectNulAndC0ControlsExceptTabAndLf": true,
+      "rejectBidirectionalOverridesAndIsolates": true
+    },
+    "allowedPlaceholders": [
+      "routeId",
+      "source.deliveryId",
+      "target.logicalId",
+      "operation",
+      "repository.id",
+      "repository.full_name",
+      "repository.safeName",
+      "workflow.id",
+      "workflow.name",
+      "head_branch",
+      "githubRunUrl",
+      "correlationId",
+      "linear.issueUrl",
+      "pull_request.state",
+      "pull_request.number",
+      "pull_request.title",
+      "pull_request.html_url",
+      "checks.summary",
+      "environment",
+      "occurredAt:yyyy",
+      "occurredAt:MM",
+      "commit.short",
+      "deployment.id",
+      "state",
+      "sharepoint.webUrl",
+      "rollback.status",
+      "check_run.name",
+      "head_sha",
+      "head_sha.short"
+    ],
+    "unsafeSyntax": [
+      "shell-command-substitution",
+      "github-expression-interpolation",
+      "template-conditionals-or-loops",
+      "raw-html",
+      "javascript-or-data-url",
+      "unregistered-placeholder"
+    ],
+    "idempotency": {
+      "inputFields": [
+        "routeId",
+        "source.deliveryId",
+        "target.logicalId",
+        "operation"
+      ],
+      "normalization": "NFC-trim-ASCII-casefold-for-registered-identifiers",
+      "componentEncoding": "length-prefixed-UTF-8",
+      "hashAlgorithm": "sha256",
+      "output": "lowercase-hex",
+      "rawUntrustedTextIncluded": false
     }
   },
   "defaults": {
@@ -84,7 +167,7 @@
     ],
     "idempotency": {
       "store": "cosmos-helios-idempotency",
-      "keyTemplate": "{routeId}:{source.deliveryId}:{target.logicalId}:{operation}",
+      "keyTemplate": "sha256(normalized-length-prefixed:{routeId}:{source.deliveryId}:{target.logicalId}:{operation})",
       "retention": "P30D",
       "duplicateOutcome": "return-recorded-result-without-repeating-side-effect"
     },
@@ -321,6 +404,7 @@
         "event": "pull_request",
         "actions": [
           "opened",
+          "reopened",
           "ready_for_review",
           "synchronize",
           "closed"
@@ -349,6 +433,7 @@
           "condition": "linear-reference-present-or-governed-helios-label-present",
           "mapping": {
             "opened": "In Progress",
+            "reopened": "In Progress",
             "ready_for_review": "In Review",
             "synchronize": "In Review",
             "closed_merged": "Done",

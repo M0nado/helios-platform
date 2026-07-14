@@ -25,7 +25,8 @@ python -m pip install -e '.[dev]'
 set -a
 . ../../.env.local
 set +a
-uvicorn helios_deployment_agent.main:app --reload --port 8080
+HELIOS_PLANNER_BEARER_TOKEN="local-only-random-value" \
+  uvicorn helios_deployment_agent.main:app --reload --port 8080
 ```
 
 Run deterministic checks without an API request:
@@ -49,9 +50,13 @@ do not create a long-lived Azure client secret. The deployed Container App uses 
 Store `OPENAI_API_KEY` in Azure Key Vault and expose it to the container through a Key Vault secret
 reference—never through source, workflow output, issue text, or a prompt.
 
-The production path is Front Door/WAF to private ingress (optionally through API Management) to an
-internal Container Apps environment. Azure Monitor receives correlated, redacted telemetry. A Dev
-Tunnel is permitted only for local development and must never be the production endpoint.
+The production path is Front Door Premium/WAF through API Management to private ingress in an
+internal Container Apps environment. API Management is mandatory for production. It enforces Entra
+authentication, per-principal quotas, request-size limits, and policy before traffic reaches the
+service. The static bearer token is a local/staging bootstrap control only; production ingress must
+remain disabled until Entra JWT audience and scope validation is enforced at the edge and in-app.
+Azure Monitor receives correlated, redacted telemetry. A Dev Tunnel is permitted only for local
+development and must never be the production endpoint.
 
 Before any deployment workflow is enabled:
 
@@ -60,13 +65,18 @@ Before any deployment workflow is enabled:
 2. assign the smallest Azure role at the narrowest resource-group scope;
 3. require the `HELIOS CI / required` context and environment approval;
 4. run Bicep lint/validate/what-if and retain the deployment evidence;
-5. deploy to staging, probe `/health`, canary, monitor, and preserve the last known-good revision.
+5. deploy to staging, probe `/health/live` and `/health/ready`, canary, monitor, and preserve the
+   last known-good revision.
 
 ## API
 
-- `GET /health` reports service state and whether OpenAI configuration is present, never its value.
-- `POST /plan` accepts `objective`, `manifest`, and boolean `controls`, and returns plan text plus
-  `execution_mode: plan-only`.
+- `GET /health/live` reports process liveness and never reports configuration values.
+- `GET /health/ready` reports only whether required configuration is present. It is for the private
+  Container Apps probe path and must not be exposed at the public edge.
+- `POST /api/v1/plans` requires bearer authentication, accepts a strict `objective` and allowlisted
+  manifest, and returns structured plan-only output plus server-computed policy verdicts.
 
-The caller must omit secrets and credentials from the manifest. Sensitive-looking manifest keys are
-rejected by the inspection tool.
+The caller must omit secrets and credentials. Unknown manifest fields, sensitive-looking keys, and
+common credential shapes in the objective are rejected before a provider call. Repository and
+branch identifiers are reduced to counts inside the service and are not sent to the model. Tracing
+is disabled, sensitive trace data is excluded, and provider response storage is disabled.

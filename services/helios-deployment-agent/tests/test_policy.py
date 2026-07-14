@@ -10,7 +10,9 @@ sys.path.insert(0, str(SERVICE_ROOT))
 from helios_deployment_agent.policy import (  # noqa: E402
     Decision,
     contains_sensitive_key,
+    contains_sensitive_text,
     evaluate_action,
+    summarize_manifest,
 )
 
 
@@ -49,6 +51,28 @@ class PolicyTests(unittest.TestCase):
     def test_nested_sensitive_field_is_detected_before_prompting(self) -> None:
         self.assertTrue(contains_sensitive_key({"azure": {"client_secret": "not-returned"}}))
         self.assertFalse(contains_sensitive_key({"azure": {"client_id": "non-secret"}}))
+
+    def test_sensitive_aliases_and_objective_shapes_are_rejected(self) -> None:
+        self.assertTrue(contains_sensitive_key({"connectionString": "not-returned"}))
+        self.assertTrue(contains_sensitive_key({"authorization": "not-returned"}))
+        self.assertTrue(contains_sensitive_text("Authorization: " + "Bearer " + ("a" * 24)))
+        self.assertTrue(contains_sensitive_text("api_key=abcdefghijklmnop"))
+
+    def test_manifest_summary_never_reproduces_repository_or_branch_names(self) -> None:
+        summary = summarize_manifest(
+            {
+                "repositories": ["private-owner/private-repository"],
+                "branches": ["customer/private-feature"],
+                "languages": ["Python", "unknown"],
+                "proposed_actions": ["compare_branches", "invent-secret-action"],
+            }
+        )
+        rendered = str(summary)
+        self.assertNotIn("private-owner", rendered)
+        self.assertNotIn("customer/private-feature", rendered)
+        self.assertNotIn("invent-secret-action", rendered)
+        self.assertEqual(["compare_branches"], summary["proposed_actions"])
+        self.assertEqual(1, summary["unknown_action_count"])
 
 
 if __name__ == "__main__":

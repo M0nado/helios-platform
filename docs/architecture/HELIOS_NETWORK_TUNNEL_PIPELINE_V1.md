@@ -74,7 +74,7 @@ API Management is the application gateway and policy enforcement edge. It valida
 | Endpoint | Exposure | Authentication and restrictions |
 | --- | --- | --- |
 | `/health/live` | Front Door health probes | No sensitive dependency detail; bounded response |
-| `/health/ready` | Internal/operator only | Entra-authenticated; dependency status redacted |
+| `/health/ready` | Internal Container Apps probe only | Network-restricted and absent from the public APIM surface; dependency status redacted |
 | `/webhooks/github`, `/linear`, `/slack` | Public through Front Door/APIM | Provider signature, timestamp/replay window, delivery ID, schema and size validation |
 | `/webhooks/teams`, `/sharepoint`, `/foundry`, `/copilot` | Disabled until validation middleware is proven | Entra JWT or provider validation challenge; fail closed |
 | `/api/v1/*` | Approved operator clients | Entra JWT, audience/scope/role checks, policy evaluation, rate limit |
