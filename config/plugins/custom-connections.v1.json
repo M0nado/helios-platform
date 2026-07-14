@@ -1,0 +1,182 @@
+{
+  "schemaVersion": "1.0",
+  "registryId": "helios-custom-connection-plane",
+  "defaultPolicy": "deny-undeclared",
+  "owner": "HELIOS Enterprise Deployment Manager",
+  "connections": [
+    {
+      "id": "openai-agent-provider",
+      "kind": "openai-agents-sdk",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "api-key-reference",
+        "secretReferences": ["OPENAI_API_KEY", "OPENAI_PROJECT_ID", "OPENAI_ORG_ID"],
+        "recommendedStore": "kv-helios-core"
+      },
+      "readTools": ["model_route", "trace_read", "evaluation_read"],
+      "writeTools": ["model_call", "trace_write", "evaluation_run", "bounded_handoff"],
+      "approvalRequired": ["production-model-change", "new-write-tool"],
+      "healthCheck": "provider_metadata_and_bounded_model_call"
+    },
+    {
+      "id": "helios-chatgpt-app",
+      "kind": "chatgpt-app+mcp",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "oauth-or-managed-identity",
+        "secretReferences": [],
+        "recommendedStore": "kv-helios-core"
+      },
+      "readTools": [
+        "deployment_status",
+        "azure_plan_read",
+        "connector_health",
+        "hermes_fleet_status",
+        "aihub_status",
+        "evidence_index"
+      ],
+      "writeTools": [
+        "request_what_if",
+        "request_approval",
+        "package_codex_task",
+        "post_ops_event",
+        "publish_approved_evidence"
+      ],
+      "approvalRequired": ["write-tool-enable", "production-app-publish", "production-operation"],
+      "healthCheck": "mcp_initialize_and_read_only_tool"
+    },
+    {
+      "id": "azure-control-mcp",
+      "kind": "mcp",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "github-oidc-or-managed-identity",
+        "secretReferences": ["AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"],
+        "recommendedStore": "github-environment-vars-and-entra-federation"
+      },
+      "readTools": [
+        "az_account_show",
+        "resource_inventory",
+        "bicep_outputs",
+        "what_if_read",
+        "rbac_inventory",
+        "cost_estimate"
+      ],
+      "writeTools": ["what_if_run", "approved_deployment_apply", "approved_rollback"],
+      "approvalRequired": ["subscription-selection", "rbac-write", "production-apply", "rollback"],
+      "healthCheck": "oidc_token_exchange_and_resource_group_read"
+    },
+    {
+      "id": "microsoft-graph-connector",
+      "kind": "microsoft-graph",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "delegated-setup-and-managed-identity-runtime",
+        "secretReferences": [],
+        "recommendedStore": "entra-app-registration-and-managed-identity"
+      },
+      "readTools": ["teams_resolve", "sharepoint_resolve", "drive_item_read", "permission_readiness"],
+      "writeTools": ["teams_post", "sharepoint_upload", "onedrive_upload"],
+      "approvalRequired": ["graph-admin-consent", "new-application-permission", "external-share"],
+      "healthCheck": "resolve_helios_ops_and_governance_path"
+    },
+    {
+      "id": "github-engineering",
+      "kind": "native-connector",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "github-app",
+        "secretReferences": [],
+        "recommendedStore": "connector-owned"
+      },
+      "readTools": ["repo_read", "issue_read", "pr_read", "workflow_read"],
+      "writeTools": ["issue_write", "branch_write", "file_write", "pr_write", "workflow_rerun"],
+      "approvalRequired": ["merge", "protected-environment-change", "production-workflow-dispatch"],
+      "healthCheck": "read_canonical_repo_and_issue_165"
+    },
+    {
+      "id": "linear-execution",
+      "kind": "native-connector",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "oauth",
+        "secretReferences": [],
+        "recommendedStore": "connector-owned"
+      },
+      "readTools": ["project_read", "issue_read", "status_read"],
+      "writeTools": ["issue_write", "comment_write", "project_update"],
+      "approvalRequired": [],
+      "healthCheck": "read_helios_integration_fabric"
+    },
+    {
+      "id": "slack-operations",
+      "kind": "native-connector",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "oauth",
+        "secretReferences": [],
+        "recommendedStore": "connector-owned"
+      },
+      "readTools": ["channel_resolve", "thread_read", "canvas_read"],
+      "writeTools": ["channel_post", "thread_reply", "canvas_update", "approved_file_upload"],
+      "approvalRequired": ["new-private-channel", "private-search"],
+      "healthCheck": "resolve_and_post_test_to_helios_control_plane"
+    },
+    {
+      "id": "teams-operations",
+      "kind": "native-connector",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "microsoft-graph-delegated",
+        "secretReferences": [],
+        "recommendedStore": "connector-owned"
+      },
+      "readTools": ["team_resolve", "channel_resolve", "thread_read"],
+      "writeTools": ["channel_post", "thread_reply", "approved_channel_create"],
+      "approvalRequired": ["new-channel-create"],
+      "healthCheck": "resolve_helios_ops_and_post_test"
+    },
+    {
+      "id": "sharepoint-governance",
+      "kind": "native-connector",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "microsoft-graph-delegated",
+        "secretReferences": [],
+        "recommendedStore": "connector-owned"
+      },
+      "readTools": ["site_resolve", "folder_list", "file_read", "permissions_read", "versions_read"],
+      "writeTools": ["folder_create", "file_upload", "file_update", "approved_share"],
+      "approvalRequired": ["permission-change", "external-share"],
+      "healthCheck": "resolve_helios_governance_and_list"
+    },
+    {
+      "id": "hermes-fleet-mcp",
+      "kind": "mcp",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "managed-identity-or-local-token-reference",
+        "secretReferences": ["HERMES_API_TOKEN"],
+        "recommendedStore": "kv-helios-core"
+      },
+      "readTools": ["fleet_status", "agent_status", "routing_metrics", "evaluation_results"],
+      "writeTools": ["register_worker", "submit_evaluation", "queue_bounded_task"],
+      "approvalRequired": ["fleet-scale-change", "new-agent-capability"],
+      "healthCheck": "fleet_health_and_bounded_route_test"
+    },
+    {
+      "id": "aihub-mcp",
+      "kind": "mcp",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "managed-identity-or-api-key-reference",
+        "secretReferences": ["AIHUB_API_KEY"],
+        "recommendedStore": "kv-helios-core"
+      },
+      "readTools": ["health", "fleet_live", "engine_catalog", "security_live", "knowledge_summary"],
+      "writeTools": ["create_task", "trigger_approved_training"],
+      "approvalRequired": ["production-training-trigger", "new-engine-enable"],
+      "healthCheck": "health_and_engine_catalog"
+    }
+  ]
+}
