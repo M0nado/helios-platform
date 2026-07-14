@@ -1,0 +1,76 @@
+{
+  "$schema": "https://helios-platform.local/schemas/ai-automation-profiles.schema.json",
+  "version": "1.0.0",
+  "profiles": {
+    "helios-control": {
+      "description": "Control-plane integration profile for UI, security, cloud setup, and operator automation.",
+      "focusAreas": [
+        "WinUI 3 and WPF operator front ends",
+        "C# orchestration services",
+        "Azure CLI bootstrap and subscription selection",
+        "AIHub routing and audit-safe automation",
+        "security validation before deploy"
+      ],
+      "requiredPaths": [
+        "docs/WinUI3-Design",
+        "src/core/HELIOS.Platform",
+        "scripts/ai-integration",
+        "scripts/cloud-orchestration",
+        "microsoft-ecosystem/azure-integration"
+      ],
+      "azureCli": {
+        "requiredCommands": [
+          "account",
+          "monitor"
+        ],
+        "extensions": [
+          "resource-graph",
+          "azure-devops"
+        ]
+      }
+    },
+    "hermes-fleet-production": {
+      "description": "Fleet-production integration profile for deployment orchestration, prediction, analytics, and backend performance.",
+      "focusAreas": [
+        "C++ performance backend readiness",
+        "F# math, predictions, and analytics readiness",
+        "Python AIHub automation and validation",
+        "parallel branch and build analysis",
+        "production fleet deployment guardrails"
+      ],
+      "requiredPaths": [
+        "HERMES_SWIFT_OPTIMIZATION_EXECUTION_PLAN.md",
+        "HERMES_SWIFT_OPTIMIZATION_EXECUTIVE_SUMMARY.md",
+        "components/analytics-core",
+        "components/performance-ai",
+        "monitoring",
+        "scripts/orchestration"
+      ],
+      "azureCli": {
+        "requiredCommands": [],
+        "extensions": [
+          "aks-preview",
+          "containerapp",
+          "k8s-extension",
+          "log-analytics"
+        ]
+      }
+    }
+  },
+  "branchMerge": {
+    "defaultStrategy": "no-commit",
+    "skipPatterns": [
+      "HEAD",
+      "dependabot/",
+      "gh-pages"
+    ],
+    "conflictPolicy": "stop-and-report"
+  },
+  "languageRoles": {
+    "csharp": "front-end orchestration, services, security, Azure integration",
+    "cpp": "high-performance backend and native extension surfaces",
+    "fsharp": "math, predictions, analytics, and parallel modeling",
+    "python": "AIHub automation, validation, report generation, and Azure CLI glue",
+    "xaml": "WinUI 3/WPF shell, dashboards, and operator workflows"
+  }
+}
