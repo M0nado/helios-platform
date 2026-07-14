@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1.0",
+  "services": [
+    {
+      "name": "helios-integration-broker",
+      "owner": "M0nado/helios-platform",
+      "kind": "aspnet-core-api",
+      "status": "implemented",
+      "authentication": "bearer-token-local-managed-identity-cloud",
+      "secretSource": "environment-or-azure-key-vault",
+      "healthPath": "/healthz"
+    },
+    {
+      "name": "helios-openai-mcp",
+      "owner": "M0nado/helios-platform",
+      "kind": "mcp-server",
+      "status": "implemented",
+      "authentication": "broker-bearer-token",
+      "secretSource": "environment-or-azure-key-vault",
+      "healthPath": "/healthz"
+    },
+    {
+      "name": "github-actions-adapter",
+      "owner": "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
+      "kind": "workflow-adapter",
+      "status": "implemented",
+      "authentication": "github-oidc",
+      "secretSource": "none"
+    },
+    {
+      "name": "slack-adapter",
+      "owner": "M0nado/helios-platform",
+      "kind": "connector-adapter",
+      "status": "authorization-required",
+      "authentication": "oauth-or-bot-token",
+      "secretSource": "azure-key-vault"
+    },
+    {
+      "name": "linear-adapter",
+      "owner": "M0nado/helios-platform",
+      "kind": "connector-adapter",
+      "status": "authorization-required",
+      "authentication": "oauth-or-api-token",
+      "secretSource": "azure-key-vault"
+    },
+    {
+      "name": "microsoft-graph-adapter",
+      "owner": "M0nado/helios-platform",
+      "kind": "connector-adapter",
+      "status": "tenant-consent-required",
+      "authentication": "managed-identity-or-entra-app",
+      "secretSource": "managed-identity"
+    },
+    {
+      "name": "hermes-fleet-adapter",
+      "owner": "Yolkster64/hermes-fleet-platforms",
+      "kind": "agent-adapter",
+      "status": "registration-required",
+      "authentication": "managed-identity-or-broker-token",
+      "secretSource": "azure-key-vault"
+    },
+    {
+      "name": "aihub-adapter",
+      "owner": "M0nado/helios-ai-hub",
+      "kind": "agent-adapter",
+      "status": "registration-required",
+      "authentication": "managed-identity-or-broker-token",
+      "secretSource": "azure-key-vault"
+    }
+  ]
+}
