@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json, re, subprocess
+import json, re, shutil, subprocess
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,8 +12,13 @@ IDEA_TERMS=['hermes','fleet','xcore','bicep','jstor','wiki','codespace','runner'
 BAD_TERMS=['todo','fixme','deprecated','duplicate','generated','temp','backup','old','obsolete']
 
 def rg_files():
- p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
- return [x for x in p.stdout.splitlines() if Path(x).suffix.lower() in EXTS]
+ if shutil.which('rg'):
+  p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
+  candidates=p.stdout.splitlines()
+ else:
+  p=subprocess.run(['git','ls-files'],cwd=ROOT,text=True,capture_output=True)
+  candidates=p.stdout.splitlines()
+ return [x for x in candidates if Path(x).suffix.lower() in EXTS]
 
 def read(path):
  try: return (ROOT/path).read_text(errors='ignore')

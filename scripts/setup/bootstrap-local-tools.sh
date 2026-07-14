@@ -8,8 +8,10 @@ TOOLS_DIR="${HELIOS_TOOLS_DIR:-$(pwd)/.tools}"
 DOTNET_DIR="$TOOLS_DIR/dotnet"
 GH_DIR="$TOOLS_DIR/gh"
 AZ_DIR="$TOOLS_DIR/azcli-venv"
+RG_DIR="$TOOLS_DIR/rg"
 GH_VERSION="${GH_VERSION:-2.76.2}"
 DOTNET_CHANNEL="${DOTNET_CHANNEL:-8.0}"
+RG_VERSION="${RG_VERSION:-14.1.1}"
 
 mkdir -p "$TOOLS_DIR"
 
@@ -41,10 +43,21 @@ else
   echo "Azure CLI already installed at $AZ_DIR"
 fi
 
+if [ ! -x "$RG_DIR/bin/rg" ]; then
+  echo "Installing ripgrep $RG_VERSION into $RG_DIR"
+  tmp="$TOOLS_DIR/ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+  curl -fsSL "https://github.com/BurntSushi/ripgrep/releases/download/${RG_VERSION}/ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl.tar.gz" -o "$tmp"
+  rm -rf "$TOOLS_DIR/ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl" "$RG_DIR"
+  tar -xzf "$tmp" -C "$TOOLS_DIR"
+  mv "$TOOLS_DIR/ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl" "$RG_DIR"
+else
+  echo "ripgrep already installed at $RG_DIR"
+fi
+
 cat <<PATHINFO
 
 Add these tools to your shell:
-export PATH="$DOTNET_DIR:$GH_DIR/bin:$AZ_DIR/bin:\$PATH"
+export PATH="$DOTNET_DIR:$GH_DIR/bin:$AZ_DIR/bin:$RG_DIR/bin:\$PATH"
 
 Authenticate as needed:
 gh auth login

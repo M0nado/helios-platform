@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json, re, subprocess
+import argparse, json, re, shutil, subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -91,7 +91,10 @@ def all_refs(include_remote_scan: bool) -> list[str]:
 
 def changed_files(ref: str, target: str) -> list[str]:
     if ref == target:
-        out = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True).stdout
+        if shutil.which('rg'):
+            out = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True).stdout
+        else:
+            out = git(['ls-files'])
     else:
         out = git(['diff', '--name-only', f'{target}...{ref}']) or git(['diff', '--name-only', ref])
     return [line for line in out.splitlines() if line]
