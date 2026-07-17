@@ -2,15 +2,15 @@
 
 Helios uses one reproducible developer lane across Codespaces, local Dev Drive,
 GitHub Actions, and Azure DevOps. `config/microsoft-toolchain.json` is the inventory;
-the devcontainer supplies the baseline tools; `azd` previews the same hardened
-Bicep used by the protected GitHub deployment workflow; tenant applications are registered separately through Entra and
-solution pipelines.
+the devcontainer supplies the baseline tools; `azd` is limited to authentication
+and environment inspection; tenant applications are registered separately
+through Entra and solution pipelines.
 
 ## Merge boundaries
 
 - Azure CLI and Bicep bootstrap and inspect Azure through interactive developer
-  identity; `azd` is preview-only. GitHub Actions uses OIDC for application
-  promotion.
+  identity. Direct `azd provision` and `azd deploy` are blocked by
+  `azure.yaml`; GitHub Actions uses OIDC for application promotion.
 - Power Platform CLI moves versioned Copilot Studio solutions between environments.
 - Microsoft 365 Agents Toolkit (`atk`) packages published agents for Copilot and Teams; new work does not use deprecated TeamsFx.
 - GitHub CLI and Copilot work through branches and pull requests.
@@ -52,7 +52,8 @@ approved enterprise software distribution.
 
 1. Validate GitHub branch protection and CI.
 2. Create Entra groups, workload identities, and least-privilege roles.
-3. Run `azd provision --preview`, Bicep lint, and the protected Azure what-if.
+3. Run `scripts/Invoke-HeliosProvisionPreview.ps1`, Bicep lint, and the protected
+   Azure what-if. `azd` does not preview or apply Helios infrastructure.
 4. Approve the separate protected deployment job for identity, runtime, and observability resources.
 5. After an administrator selects and approves a Foundry project, deployment,
    identity, and RBAC, register the deployed `connectorMcpUrl` toolbox. Its only
