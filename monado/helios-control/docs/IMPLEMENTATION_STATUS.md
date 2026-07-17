@@ -5,7 +5,9 @@
 - Buildable .NET 8 webhook/API project and tests.
 - GitHub, Linear, and Slack HMAC verification in every execution mode; dry-run
   suppresses downstream effects but never bypasses ingress authentication.
-- Slack replay-window enforcement, request bounds, JSON validation, and process-local duplicate rejection.
+- Slack replay-window enforcement, request bounds, JSON validation, and bounded
+  process-local duplicate rejection. This cache is not durable and cannot provide
+  cross-replica idempotency.
 - Legacy local-only, read-only MCP tools for Copilot Chat are mapped at
   `/runtime/webhooks/mcp` only after explicit local-development opt-in;
   cloud-only mode suppresses that route. Microsoft agent manifests target the
@@ -26,8 +28,9 @@
 - An isolated VS Code Insiders profile launcher requiring explicit local confirmation.
 - Cloud-runtime contract that removes workstation dependencies from production.
 - Immutable-image Container Apps deployment, liveness/readiness probes, and a
-  protected GitHub OIDC workflow with hashed what-if evidence, drift detection,
-  and a distinct second deployment approval.
+  protected GitHub OIDC workflow with property-complete hashed what-if evidence,
+  compiled-template and parameter binding, drift detection, and a distinct
+  second deployment approval.
 - Interactive Azure/Entra bootstrap that resolves immutable GitHub OIDC subjects,
   verifies reviewer/branch protection before trust, registers exact providers,
   and keeps routine CI free of role-assignment authority.
@@ -53,6 +56,9 @@
 - Online webhook secret references, Service Bus routing/workers, Cosmos
   idempotency, Foundry/Claude cloud adapters, APIM policies, and OpenTelemetry
   are specified but not yet implemented in the deployed connector slice.
+- No outbound GitHub, Linear, Slack, Teams, SharePoint, or Microsoft agent writer
+  is bound in the runtime; `config/integrations.json` keeps every planned route
+  disabled until those workers, identities, and credentials exist.
 - APIM/private-backend networking, Container Apps Jobs, Service Bus, Cosmos DB,
   Data Lake, Azure AI Search, and Foundry resources are not present in the
   current Bicep. They remain later administrator-controlled gates.
