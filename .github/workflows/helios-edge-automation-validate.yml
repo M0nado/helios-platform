@@ -6,6 +6,10 @@ on:
       - '.github/workflows/helios-edge-automation-validate.yml'
       - 'monado/helios-control/config/edge-automation.json'
       - 'monado/helios-control/docs/EDGE_AUTOMATION.md'
+      - 'monado/helios-control/appPackage/manifest.json'
+      - 'monado/helios-control/config/agent-fabric.json'
+      - 'monado/helios-control/docs/AGENT_AUTOFIX.md'
+      - 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/**'
       - 'monado/helios-control/scripts/Invoke-HeliosEdgeAutomation.ps1'
       - 'monado/helios-control/src/Helios.Connect.Api/**'
       - 'monado/helios-control/tests/Helios.Connect.Tests/**'
@@ -36,6 +40,14 @@ jobs:
             .intents["repair-issue"].directMainWrite == false and
             .intents["repair-issue"].automaticMerge == false
           ' monado/helios-control/config/edge-automation.json > /dev/null
+          jq --exit-status '
+            .schemaVersion == 1 and
+            .autoFix.directMainWrite == false and
+            .autoFix.automaticMerge == false and
+            .autoFix.automaticTenantAdminConsent == false and
+            .learning.promotionRequiresPullRequest == true and
+            .vault.automaticReadback == false
+          ' monado/helios-control/config/agent-fabric.json > /dev/null
 
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
