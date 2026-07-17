@@ -1,16 +1,19 @@
 name: helios-control
 metadata:
-  template: helios-microsoft-agent-fabric@0.1.0
+  template: helios-microsoft-agent-fabric@0.3.0
 requiredVersions:
   azd: '>= 1.25.3'
 infra:
   provider: bicep
-  path: infra
-# azd is an authenticated preview/inspection client only. The service stanza is
-# deliberately omitted so `azd deploy` cannot bypass the protected GitHub
-# what-if and deploy environments. Image publication uses ACR Tasks through the
-# interactive wizard; application deployment uses helios-cloud-deploy.yml.
+  # Direct azd provisioning is intentionally retired. Even when hooks are
+  # skipped, this guard module contains no Helios resources and fails apply.
+  path: infra/azd-guard
+# azd remains available for authentication and environment inspection only.
+# Helios preview and deployment use the reviewed scripts and protected
+# helios-cloud-deploy.yml workflow against infra/main.bicep.
 hooks:
   preprovision:
     shell: pwsh
-    run: ./scripts/Bootstrap-MicrosoftToolchain.ps1 -Mode Verify
+    run: |
+      Write-Error 'Direct azd provisioning is disabled. Use scripts/Invoke-HeliosProvisionPreview.ps1 for local what-if or the protected helios-cloud-deploy workflow for deployment.'
+      exit 1
