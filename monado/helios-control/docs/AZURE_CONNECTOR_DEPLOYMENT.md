@@ -12,7 +12,7 @@ clients, and governed agent workflows.
 - `/health`, `/health/live`, `/health/ready`, the OpenAPI document, and OAuth
   protected-resource metadata are public discovery routes. Connector REST and
   remote MCP routes require Entra; provider webhook ingress remains a separate
-  signature/validation boundary and fails closed when live mode is enabled.
+  signature/validation boundary and fails closed in every execution mode.
 - An application-level check requires the Easy Auth principal header.
 - The user-assigned managed identity receives Reader only on the deployment resource group.
 - Returned inventory is limited to resource ID, name, type, and location.
@@ -47,16 +47,19 @@ The recommended end-to-end operator path is
 `scripts/Connect-HeliosAzureInteractive.ps1`, documented in
 `AZURE_INTERACTIVE_ONBOARDING.md`. It can authenticate through Azure CLI,
 select the target, configure scoped secretless identity, publish with an ACR
-cloud build, and run an operator what-if. Application deployment occurs only
-through the two protected GitHub workflow approvals.
+cloud build from the exact checked-out commit, and run what-if inside the
+protected workflow. Application deployment occurs only through the two
+protected GitHub workflow approvals.
 
 ### Cloud Shell PowerShell
 
 Use `Connect-HeliosAzureInteractive.ps1` for all identity and registry
 bootstrap. It resolves the repository's current immutable OIDC subject,
 verifies the reviewer and branch policy before creating trust, gives CI only
-resource-group Contributor plus registry read, and creates the runtime identity
-and its Reader/registry-read grants under the administrator session.
+resource-group Contributor plus the registry writer role needed for the
+commit-bound ACR build, and creates the runtime identity and its
+Reader/registry-read grants under the administrator session. The flexible Entra
+credential additionally requires the exact workflow `job_workflow_ref`.
 
 ```powershell
 pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
@@ -73,11 +76,11 @@ enabled and a deny-by-default network ACL. Select a Foundry/Azure OpenAI project
 model deployment, and identity assignment separately after confirming regional
 availability and quota.
 
-The immutable image must be in the dedicated Azure Container Registry named by
-`containerRegistryName` in the same Helios resource group. This guarantees that
-the authorization-mode-appropriate registry read assignment protects the exact
-registry used by the Container App. The interactive Publish phase establishes
-this invariant. The Bicep template references but never mutates that registry.
+The protected workflow builds the exact clean `GITHUB_SHA` into the dedicated
+Azure Container Registry named by `containerRegistryName`, then passes only its
+resolved digest to Bicep. The interactive Publish phase establishes and
+revalidates this trust and authorization invariant. The Bicep template
+references but never mutates that registry.
 
 The Bash compatibility script is preview-only. Its legacy `--apply` path is
 retired and fails closed with directions to the interactive wizard.
