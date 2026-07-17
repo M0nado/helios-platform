@@ -7,6 +7,7 @@ using Helios.Connect.Contracts;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpClient<OpenAiResponsesProvider>();
 builder.Services.AddHttpClient<IAzureInventoryService, AzureInventoryService>();
+builder.Services.AddSingleton<IEdgeAutomationPlanner, EdgeAutomationPlanner>();
 var app = builder.Build();
 var deliveries = new ExpiringDeliveryReplayCache(
     GetBoundedInt(builder.Configuration["HELIOS_WEBHOOK_REPLAY_CACHE_CAPACITY"], 4_096, 1, 100_000),
@@ -70,6 +71,32 @@ app.MapGet("/connector/foundry", async (HttpContext context, CancellationToken c
     if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
     var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
     return await RunInventoryQuery(() => inventory.ListFoundryResourcesAsync(cancellationToken));
+});
+
+app.MapPost("/automation/plan", async (HttpContext context, IEdgeAutomationPlanner planner, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    const int maxPlanBytes = 16_384;
+    if (!context.Request.HasJsonContentType()) return Results.BadRequest(new { error = "Content-Type must be application/json." });
+    if (context.Request.ContentLength is > maxPlanBytes) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+
+    try
+    {
+        var request = await JsonSerializer.DeserializeAsync<EdgeAutomationRequest>(
+            context.Request.Body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true },
+            cancellationToken);
+        if (request is null) return Results.BadRequest(new { error = "Automation request is required." });
+        return Results.Ok(planner.CreatePlan(request));
+    }
+    catch (JsonException)
+    {
+        return Results.BadRequest(new { error = "Automation request is invalid JSON." });
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(new { error = exception.Message });
+    }
 });
 
 app.MapGet("/mcp", (HttpContext context) =>
@@ -159,7 +186,7 @@ app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationTo
                 protocolVersion = negotiatedVersion,
                 capabilities = new { tools = new { listChanged = false } },
                 serverInfo = new { name = "helios-azure-connector", title = "Helios Azure Connector", version = "0.3.0" },
-                instructions = "Read-only Azure and Foundry inventory. No deployment, mutation, or role-assignment tools are exposed."
+                instructions = "Read-only Azure and Foundry inventory plus deterministic HELIOS automation planning. No deployment, secret-write, merge, or role-assignment tools are exposed."
             });
         }
 
@@ -178,7 +205,8 @@ app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationTo
             if (!TryValidateAzureToolCall(root, out var validationError))
                 return McpError(id, -32602, validationError);
             var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
-            return McpResult(id, await BuildAzureToolResultAsync(root, inventory, cancellationToken));
+            var planner = context.RequestServices.GetRequiredService<IEdgeAutomationPlanner>();
+            return McpResult(id, await BuildAzureToolResultAsync(root, inventory, planner, cancellationToken));
         }
 
         return method switch
@@ -469,7 +497,7 @@ static bool TryValidateAzureToolCall(JsonElement root, out string error)
     }
 
     var name = nameElement.GetString();
-    if (name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources"))
+    if (name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation"))
     {
         error = $"Unknown tool '{name}'.";
         return false;
@@ -484,7 +512,13 @@ static bool TryValidateAzureToolCall(JsonElement root, out string error)
 
     foreach (var argument in arguments.EnumerateObject())
     {
-        if (name != "azure_list_resources" || argument.Name != "typePrefix" || argument.Value.ValueKind != JsonValueKind.String)
+        var valid = name switch
+        {
+            "azure_list_resources" => argument.Name == "typePrefix" && argument.Value.ValueKind == JsonValueKind.String,
+            "helios_plan_automation" => argument.Name is "intent" or "environment" or "target" or "connector" && argument.Value.ValueKind == JsonValueKind.String,
+            _ => false
+        };
+        if (!valid)
         {
             error = $"Argument '{argument.Name}' is not valid for tool '{name}'.";
             return false;
@@ -558,10 +592,11 @@ static object[] BuildAzureToolList() => new object[]
 {
     new { name = "azure_get_context", title = "Get Azure context", description = "Use this when you need the configured Helios Azure tenant, subscription, resource group, and access mode.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
     new { name = "azure_list_resources", title = "List Azure resources", description = "Use this when you need non-secret Azure resource metadata from the authorized resource group.", inputSchema = new { type = "object", properties = new { typePrefix = new { type = "string", description = "Optional Azure resource type prefix." } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = true } },
-    new { name = "azure_list_foundry_resources", title = "List Foundry resources", description = "Use this when you need Foundry-related Cognitive Services, Machine Learning, and AI Search resources from the authorized resource group.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = true } }
+    new { name = "azure_list_foundry_resources", title = "List Foundry resources", description = "Use this when you need Foundry-related Cognitive Services, Machine Learning, and AI Search resources from the authorized resource group.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = true } },
+    new { name = "helios_plan_automation", title = "Plan HELIOS automation", description = "Use this when you need a deterministic, non-executing plan for Azure provisioning, Key Vault rotation, issue repair, or cross-system release synchronization.", inputSchema = new { type = "object", required = new[] { "intent", "environment" }, properties = new { intent = new { type = "string", @enum = new[] { "provision-resources", "rotate-secret", "repair-issue", "sync-release" } }, environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } }, target = new { type = "string", description = "Required for secret, issue, and release plans." }, connector = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "copilot", "codex", "all" } } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } }
 };
 
-static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, CancellationToken cancellationToken)
+static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, CancellationToken cancellationToken)
 {
     var name = root.TryGetProperty("params", out var parameters) && parameters.TryGetProperty("name", out var nameValue)
         ? nameValue.GetString()
@@ -573,14 +608,30 @@ static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInve
             "azure_get_context" => inventory.GetContext(),
             "azure_list_resources" => await inventory.ListResourcesAsync(ReadTypePrefix(parameters), cancellationToken),
             "azure_list_foundry_resources" => await inventory.ListFoundryResourcesAsync(cancellationToken),
+            "helios_plan_automation" => planner.CreatePlan(ReadAutomationRequest(parameters)),
             _ => new { error = "unknown tool" }
         };
-        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload) } }, isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources") };
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload) } }, isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation") };
     }
-    catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
+    catch (ArgumentException exception)
+    {
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = exception.Message }) } }, isError = true };
+    }
+    catch (Exception exception) when (exception is InvalidOperationException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
     {
         return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = "Managed identity authentication or Reader access did not succeed." }) } }, isError = true };
     }
+}
+
+static EdgeAutomationRequest ReadAutomationRequest(JsonElement parameters)
+{
+    if (!parameters.TryGetProperty("arguments", out var arguments) || arguments.ValueKind != JsonValueKind.Object)
+        throw new ArgumentException("helios_plan_automation requires arguments.");
+
+    string? Read(string name) => arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+        ? value.GetString()
+        : null;
+    return new EdgeAutomationRequest(Read("intent") ?? string.Empty, Read("environment") ?? string.Empty, Read("target"), Read("connector"));
 }
 
 static string? ReadTypePrefix(JsonElement parameters)
