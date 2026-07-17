@@ -25,15 +25,16 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
 ## 2. Configure identity and protected CI
 
 Configure can create the selected resource group, two secretless Entra
-applications, the exact GitHub environment-and-workflow-bound federation, the runtime
+applications, the exact GitHub environment-bound federation, the runtime
 managed identity, and non-secret GitHub environment variables. It resolves the
 repository's current GitHub OIDC policy, including immutable owner/repository
 IDs, and refuses custom templates rather than guessing. The reviewer-protected
 environment and its exact deployment branch are read back and verified before
-Azure trust is created. The Entra flexible federated credential must match both
-the exact environment subject and the exact
-`.github/workflows/helios-cloud-deploy.yml@refs/heads/<branch>`
-`job_workflow_ref`; an environment-only legacy credential blocks publication.
+Azure trust is created. The Entra federated credential matches the exact
+environment subject. The deployment workflow uses ordinary jobs rather than a
+reusable `workflow_call`, so it intentionally does not require GitHub's
+reusable-workflow-only `job_workflow_ref` claim. The environment's required
+reviewer and exact deployment-branch policy remain mandatory gates.
 
 The interactive administrator grants CI only Contributor at the selected
 resource-group scope. It separately grants the runtime identity Reader and
@@ -62,7 +63,7 @@ a token without storing a secret.
 ## 3. Prepare and dispatch the protected cloud build
 
 Publish does not build from the operator workstation. It revalidates the exact
-GitHub reviewer/branch policy, workflow-bound OIDC credential, resource-group
+GitHub reviewer/branch policy, environment-bound OIDC credential, resource-group
 Contributor scope, runtime Reader role, and registry roles, then dispatches the
 protected workflow. That workflow verifies a clean checkout at `GITHUB_SHA`,
 uses Azure Container Registry Tasks (`az acr build`) on that exact source, and
@@ -94,6 +95,12 @@ inside the same deploy-mode workflow waits for a second protected-environment
 approval, verifies the artifact and its SHA-256, rechecks drift, and uses the
 same immutable image digest. This keeps application execution and deployment
 online and makes review evidence durable.
+
+The evidence contract contains the exact source SHA, canonical compiled-template
+SHA-256, deployment scope, and every resolved Bicep parameter. ARM what-if uses
+`FullResourcePayloads`, so property-level changes are reviewable and participate
+in the drift hash. Only a redacted copy is uploaded; the full canonical payload
+is hashed on the ephemeral runner and is never published as an artifact.
 
 The operator wizard has no direct deployment mode. After reviewing the initial
 what-if run, dispatch the root `helios-cloud-deploy` workflow on the approved
