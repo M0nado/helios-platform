@@ -91,7 +91,7 @@ jobs:
             ) | Out-Null
             if ($errors.Count -gt 0) {
               foreach ($errorRecord in $errors) {
-                $issues += "$path:$($errorRecord.Extent.StartLineNumber): $($errorRecord.Message)"
+                $issues += "${path}:$($errorRecord.Extent.StartLineNumber): $($errorRecord.Message)"
               }
             }
             else {
@@ -127,7 +127,7 @@ jobs:
             if ($content -match '# EXAMPLE CODE') { continue }
             foreach ($pattern in $patterns.Keys) {
               if ($content -match $pattern) {
-                $issues += "$path: $($patterns[$pattern])"
+                $issues += "${path}: $($patterns[$pattern])"
               }
             }
           }
@@ -152,7 +152,7 @@ jobs:
             $content = Get-Content -LiteralPath $path -Raw
             if ($content -match $mutationPattern) {
               if ($content -notmatch '(?im)^\s*#\s*Registry:') {
-                $issues += "$path: missing '# Registry:' documentation for a registry mutation"
+                $issues += "${path}: missing '# Registry:' documentation for a registry mutation"
               }
               else {
                 Write-Host "✓ $path registry mutation is documented"
@@ -178,7 +178,7 @@ jobs:
           foreach ($path in $files) {
             $content = Get-Content -LiteralPath $path -Raw
             if ($path -notmatch '(?i)test-' -and $content -match '[''"]C:\\Users\\[^''"]*[''"]') {
-              $warnings += "$path: hard-coded user profile path"
+              $warnings += "${path}: hard-coded user profile path"
             }
           }
 
@@ -198,7 +198,7 @@ jobs:
           foreach ($path in $phaseFiles) {
             $content = Get-Content -LiteralPath $path -Raw
             if ($content -notmatch '<#' -or $content -notmatch '\.SYNOPSIS' -or $content -notmatch '\.DESCRIPTION') {
-              $issues += "$path: missing comment-based help"
+              $issues += "${path}: missing comment-based help"
             }
           }
 
