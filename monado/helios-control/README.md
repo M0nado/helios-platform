@@ -34,6 +34,18 @@ verifier remain fail-closed.
 See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`, and
 `config/integrations.json`.
 
+## Edge and Copilot setup wizard
+
+Open `/setup` on the hosted HELIOS service, or install the Microsoft 365 app
+package and select **Azure Setup**. The wizard validates tenant coordinates and
+generates a deterministic PowerShell Cloud Shell sequence that signs in,
+diagnoses the selected boundary, and creates ARM what-if evidence. It never
+applies from the browser. The **Upgrade agent** panel and
+`helios_propose_upgrade` MCP tool create deterministic proposals for a task
+branch, tests, and draft PR; they cannot silently change active policy or merge.
+
+See `docs/AZURE_SETUP_WIZARD.md`.
+
 ## Edge automation branch
 
 `docs/EDGE_AUTOMATION.md` defines the stacked plan/apply integration layer.
