@@ -31,9 +31,11 @@ var digestParts = split(toLower(containerImage), '@sha256:')
 var containerImageDigest = length(digestParts) == 2 ? digestParts[1] : ''
 var previewPlaceholderDigest = '0000000000000000000000000000000000000000000000000000000000000000'
 var digestNonHexRemainder = replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(containerImageDigest, '0', ''), '1', ''), '2', ''), '3', ''), '4', ''), '5', ''), '6', ''), '7', ''), '8', ''), '9', ''), 'a', ''), 'b', ''), 'c', ''), 'd', ''), 'e', ''), 'f', '')
-
-assert containerImageRegistryMatches = startsWith(toLower(containerImage), '${containerRegistryServer}/')
-assert containerImageIsImmutable = length(digestParts) == 2 && length(containerImageDigest) == 64 && empty(digestNonHexRemainder) && (allowPreviewPlaceholder || containerImageDigest != previewPlaceholderDigest)
+var containerImageRegistryMatches = startsWith(toLower(containerImage), '${containerRegistryServer}/')
+var containerImageIsImmutable = length(digestParts) == 2 && length(containerImageDigest) == 64 && empty(digestNonHexRemainder) && (allowPreviewPlaceholder || containerImageDigest != previewPlaceholderDigest)
+var validatedContainerImage = containerImageRegistryMatches && containerImageIsImmutable
+  ? containerImage
+  : fail('containerImage must use the configured Azure Container Registry and an approved immutable sha256 digest.')
 
 // The operator bootstrap owns all role grants. Keeping authorization resources
 // out of this template lets the routine GitHub OIDC principal remain Contributor.
@@ -114,7 +116,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
     template: {
       containers: [{
         name: 'api'
-        image: containerImage
+        image: validatedContainerImage
         env: [
           { name: 'HELIOS_EXECUTION_MODE', value: 'dry-run' }
           { name: 'HELIOS_REQUIRE_ENTRA_AUTH', value: 'true' }

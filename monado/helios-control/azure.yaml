@@ -6,11 +6,10 @@ requiredVersions:
 infra:
   provider: bicep
   path: infra
-services:
-  api:
-    project: src/Helios.Connect.Api
-    language: dotnet
-    host: containerapp
+# azd is an authenticated preview/inspection client only. The service stanza is
+# deliberately omitted so `azd deploy` cannot bypass the protected GitHub
+# what-if and deploy environments. Image publication uses ACR Tasks through the
+# interactive wizard; application deployment uses helios-cloud-deploy.yml.
 hooks:
   preprovision:
     shell: pwsh

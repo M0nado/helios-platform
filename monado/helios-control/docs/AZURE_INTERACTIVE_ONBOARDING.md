@@ -2,7 +2,7 @@
 
 This is the operator handoff for the cloud-only Helios connector. Run it from
 Azure Cloud Shell PowerShell (recommended) or PowerShell 7 with Azure CLI. The
-operator client may close after deployment; Azure Container Apps, managed
+operator client may close after the protected deployment; Azure Container Apps, managed
 identity, ACR, Key Vault, and Application Insights remain online.
 
 The wizard never accepts an OpenAI, Azure OpenAI, Anthropic, GitHub, or
@@ -82,7 +82,7 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
 Copy the emitted `HELIOS_CONTAINER_IMAGE=<registry>/helios-connect@sha256:...`
 value. It is an immutable non-secret identifier.
 
-## 4. Deploy the reviewed revision
+## 4. Deploy the reviewed revision online
 
 The recommended deployment surface is the `helios-cloud-deploy` GitHub Actions
 workflow. Its preview job produces a hashed plan artifact. A separate deploy job
@@ -91,19 +91,17 @@ approval, verifies the artifact and its SHA-256, rechecks drift, and uses the
 same immutable image digest. This keeps application execution and deployment
 online and makes review evidence durable.
 
-The interactive Deploy mode remains available to an administrator for recovery.
-It revalidates the ACR digest, GitHub environment, current OIDC subject, CI
-Contributor grant, runtime Reader grant, and registry read grant before repeating
-Bicep validation and what-if. It finally asks for `DEPLOY HELIOS DEV` (or
-`DEPLOY HELIOS PRODUCTION` for production).
+The operator wizard has no direct deployment mode. Dispatch the root
+`helios-cloud-deploy` workflow with the emitted immutable image reference,
+select `mode=deploy`, and enter `confirmDeployment=DEPLOY`. The workflow first
+waits at the preview environment, validates the exact registry and digest,
+produces and hashes canonical ARM what-if evidence, then waits at the separate
+deploy environment before rechecking drift and applying that same revision.
 
-```powershell
-pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
-  -Mode Deploy `
-  -EnvironmentName dev `
-  -ResourceGroup rg-helios-dev `
-  -ImageReference '<registry>.azurecr.io/helios-connect@sha256:<digest>'
-```
+Use GitHub Actions → `helios-cloud-deploy` → **Run workflow**. Direct local
+`az deployment group create`, `azd provision`, and `azd deploy` are not Helios
+promotion paths and are intentionally absent from the operator scripts and
+`azure.yaml` service definition.
 
 The connector is deployed in cloud-only, `dry-run`, read-only inventory mode.
 This does not enable tenant-wide writes, Graph consent, Foundry model access,

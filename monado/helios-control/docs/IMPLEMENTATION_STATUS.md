@@ -6,7 +6,10 @@
 - GitHub, Linear, and Slack HMAC verification in live mode.
 - Slack replay-window enforcement, request bounds, JSON validation, and process-local duplicate rejection.
 - Local-only, read-only MCP tools for Copilot Chat.
-- Azure Bicep resources for identity, Key Vault, Service Bus subscription, ADLS evidence, Cosmos candidates, AI Search, ACR, Container Apps, Log Analytics, Application Insights, and optional APIM.
+- Hardened Azure Bicep resources for managed identity, Key Vault, Container
+  Apps, Log Analytics, and Application Insights, with an external immutable ACR
+  binding. Service Bus, ADLS, Cosmos, AI Search, and APIM remain architecture
+  milestones rather than deployable connector resources.
 - OIDC Azure what-if workflow and separate Copilot package validation workflow.
 - OpenAI Responses provider with explicit model selection and environment/Key Vault credential references.
 - Microsoft identity, toolchain, Agent 365, Teams/Copilot package, and approval contracts.

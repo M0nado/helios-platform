@@ -3,9 +3,11 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "environmentName": { "value": "dev" },
+    "containerImage": { "value": "heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000" },
+    "containerRegistryName": { "value": "heliosplaceholderacr" },
+    "allowPreviewPlaceholder": { "value": true },
     "entraClientId": { "value": "00000000-0000-0000-0000-000000000000" },
     "entraTenantId": { "value": "00000000-0000-0000-0000-000000000000" },
-    "allowedPrincipalObjectId": { "value": "00000000-0000-0000-0000-000000000000" },
-    "deployApiManagement": { "value": false }
+    "allowedPrincipalObjectId": { "value": "00000000-0000-0000-0000-000000000000" }
   }
 }

@@ -30,10 +30,13 @@ clients, and governed agent workflows.
    create the narrow bootstrap role assignments.
 6. A reviewer-protected GitHub environment and a dedicated, Helios-tagged ACR.
 
-For `azd`, set `HELIOS_ENTRA_CLIENT_ID` and
+For `azd provision --preview`, set `HELIOS_CONTAINER_IMAGE`,
+`HELIOS_CONTAINER_REGISTRY_NAME`, `HELIOS_ENTRA_CLIENT_ID`, and
 `HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID` in the selected `azd` environment. The
 deployment identity's `AZURE_CLIENT_ID` remains separate from the connector app
-registration.
+registration. `infra/main.bicep` is now only a wrapper around the hardened
+`connector.bicep`; it cannot create a registry or grant roles. `azure.yaml`
+omits a service deployment so `azd deploy` cannot bypass GitHub promotion.
 
 These identifiers are not secrets. Do not place app secrets, tokens, or passwords
 in the parameter file.
@@ -44,8 +47,8 @@ The recommended end-to-end operator path is
 `scripts/Connect-HeliosAzureInteractive.ps1`, documented in
 `AZURE_INTERACTIVE_ONBOARDING.md`. It can authenticate through Azure CLI,
 select the target, configure scoped secretless identity, publish with an ACR
-cloud build, run what-if, deploy only after a second confirmation, and verify
-the resulting immutable registry binding.
+cloud build, and run an operator what-if. Application deployment occurs only
+through the two protected GitHub workflow approvals.
 
 ### Cloud Shell PowerShell
 

@@ -7,10 +7,10 @@ The original all-in-one draft was not adopted unchanged.
 - Removed the editable `OPENAI_API_KEY` configuration value.
 - Removed Azure OpenAI account-key retrieval and key echo/transport.
 - Replaced subscription-wide Contributor with resource-group-scoped Contributor
-  for the GitHub deployment identity. The workflow and Bicep template do not
-  grant roles. An authenticated operator separately grants Reader to the
-  connector identity and the registry's least-privileged pull role to the
-  connector and GitHub identities.
+  for the GitHub deployment identity. The hardened cloud workflow and
+  `connector.bicep` do not grant roles. An authenticated operator separately
+  grants Reader to the connector identity and the registry's least-privileged
+  pull role to the connector and GitHub identities.
 - Replaced branch-only OIDC trust with the protected GitHub environment's
   current subject template. The wizard resolves immutable owner/repository IDs
   when GitHub has immutable subjects enabled and rejects unsupported custom
@@ -22,9 +22,10 @@ The original all-in-one draft was not adopted unchanged.
   manually dispatched, protected workflow. The workflow captures and hashes a
   canonical ARM what-if artifact; a separate protected-environment approval
   revalidates the artifact, image digest, and what-if before deployment.
-- Retired the legacy direct local apply path. The interactive wizard separates
-  Plan, Configure, Publish, and Deploy modes and requires exact confirmations
-  before each Azure or GitHub mutation.
+- Retired every direct local application apply path. The interactive wizard
+  separates Plan, Configure, and Publish and requires exact confirmations
+  before each Azure or GitHub bootstrap mutation. Only the protected GitHub
+  workflow can deploy the application.
 - Added Entra allowlisting, Container Apps authentication, managed identity,
   operator-owned resource-group Reader and ACR pull assignments, immutable ACR
   image verification, OAuth resource metadata, and a read-only MCP surface.

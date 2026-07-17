@@ -1,19 +1,47 @@
 name: helios-copilot-package
+
 on:
   pull_request:
     paths:
-      - 'monado/helios-control/appPackage/**'
-      - 'monado/helios-control/config/microsoft-agents.json'
+      - .github/workflows/copilot-package.yml
+      - monado/helios-control/appPackage/**
+      - monado/helios-control/config/microsoft-agents.json
+      - appPackage/**
+      - config/microsoft-agents.json
+
 permissions:
   contents: read
+
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - run: npm install --global @microsoft/m365agentstoolkit-cli
-      - run: atk --version
-      - run: python -m json.tool monado/helios-control/appPackage/manifest.json >/dev/null
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Locate Helios project
+        id: project
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "appPackage/manifest.json" ]]; then
+            directory="."
+          elif [[ -f "monado/helios-control/appPackage/manifest.json" ]]; then
+            directory="monado/helios-control"
+          else
+            echo "Helios Copilot package manifest was not found." >&2
+            exit 1
+          fi
+          echo "directory=${directory}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+
+      - name: Verify pinned Microsoft 365 Agents Toolkit CLI
+        run: npx --yes @microsoft/m365agentstoolkit-cli@1.1.12 --version
+
+      - name: Parse Copilot package manifest
+        run: python -m json.tool "${{ steps.project.outputs.directory }}/appPackage/manifest.json" >/dev/null

@@ -37,7 +37,8 @@ Start with `docs/AZURE_INTERACTIVE_ONBOARDING.md`. The primary Cloud Shell entry
 point is `scripts/Connect-HeliosAzureInteractive.ps1`; it selects the Azure
 context interactively, configures secretless OIDC/RBAC only after exact
 confirmation, publishes the image with an ACR cloud build, repeats ARM what-if,
-and keeps deployment as a separately confirmed phase.
+and hands the immutable digest to the separately protected online deployment
+workflow. The operator script has no direct application apply path.
 
 The Bash compatibility script is preview-only. Its legacy mutation path is
 retired so it cannot bypass GitHub environment verification or newer immutable

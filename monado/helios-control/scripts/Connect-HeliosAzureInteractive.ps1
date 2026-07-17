@@ -2,16 +2,15 @@
 
 <#
 .SYNOPSIS
-Interactively plans, configures, publishes, or deploys the cloud-only Helios Azure connector.
+Interactively plans, configures, or publishes the cloud-only Helios Azure connector.
 
 .DESCRIPTION
 Plan is the default and makes no cloud resource changes. Configure creates only
 explicitly confirmed Entra/OIDC/RBAC/GitHub bindings and pre-registers the exact
 Azure providers the runtime needs. Publish performs an ACR cloud build without
 a local Docker daemon, grants the runtime identity pull-only access, and returns
-an immutable digest.
-Deploy always repeats ARM validation and what-if, then requires a separate exact
-confirmation (including DEPLOY HELIOS PRODUCTION for production).
+an immutable digest. Application deployment is intentionally available only
+through the two-stage protected GitHub workflow.
 
 .EXAMPLE
 ./scripts/Connect-HeliosAzureInteractive.ps1 -UseDeviceCode
@@ -21,14 +20,11 @@ confirmation (including DEPLOY HELIOS PRODUCTION for production).
 
 .EXAMPLE
 ./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Publish -EnvironmentName dev -ContainerRegistryName heliosdev12345
-
-.EXAMPLE
-./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Deploy -EnvironmentName dev -ImageReference 'heliosdev12345.azurecr.io/helios-connect@sha256:<digest>'
 #>
 
 [CmdletBinding()]
 param(
-    [ValidateSet('Plan', 'Configure', 'Publish', 'Deploy')]
+    [ValidateSet('Plan', 'Configure', 'Publish')]
     [string] $Mode = 'Plan',
 
     [ValidateSet('dev', 'test', 'preview', 'prod')]
@@ -64,7 +60,7 @@ $ErrorActionPreference = 'Stop'
 $script:AzPath = $null
 $script:GhPath = $null
 $script:PlaceholderClientId = '00000000-0000-0000-0000-000000000000'
-$script:PlaceholderImage = 'heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000'
+$script:PlaceholderDigest = 'sha256:0000000000000000000000000000000000000000000000000000000000000000'
 $script:ContributorRole = [pscustomobject]@{ Name = 'Contributor'; Id = 'b24988ac-6180-42a0-ab88-20f7382dd24c' }
 $script:ReaderRole = [pscustomobject]@{ Name = 'Reader'; Id = 'acdd72a7-3385-48ef-bd42-f606fba81ae7' }
 $script:RequiredProviders = @(
@@ -1078,12 +1074,12 @@ function Assert-GitHubCliReady {
     if ([string]::IsNullOrWhiteSpace($RequiredReviewerId) -or
         -not [int64]::TryParse($RequiredReviewerId, [ref] $reviewerId) -or
         $reviewerId -le 0) {
-        throw 'Configure and Deploy modes require a positive numeric RequiredReviewerId.'
+        throw 'Configure mode requires a positive numeric RequiredReviewerId.'
     }
 
     $ghCommand = Get-Command gh -ErrorAction SilentlyContinue
     if (-not $ghCommand) {
-        throw 'GitHub CLI is required for Configure and Deploy modes. Authenticate it separately; this script does not handle or store GitHub credentials.'
+        throw 'GitHub CLI is required for Configure mode. Authenticate it separately; this script does not handle or store GitHub credentials.'
     }
     $script:GhPath = $ghCommand.Source
     Invoke-GhNoOutput -Arguments @('auth', 'status', '--hostname', 'github.com') -Operation 'Checking GitHub CLI authentication'
@@ -1116,6 +1112,28 @@ function Set-GitHubEnvironmentVariables {
         }
     }
 
+    # Create or update the environment before reading its branch policies. A
+    # fresh repository returns 404 for the policy endpoint until this exists.
+    $environmentFile = Join-Path ([System.IO.Path]::GetTempPath()) ("helios-environment-{0}.json" -f [guid]::NewGuid())
+    try {
+        [System.IO.File]::WriteAllText(
+            $environmentFile,
+            ($environmentDefinition | ConvertTo-Json -Depth 8),
+            [System.Text.UTF8Encoding]::new($false))
+        Invoke-GhNoOutput `
+            -Arguments @(
+                'api', '--method', 'PUT',
+                "repos/$repositoryName/environments/$escapedEnvironment",
+                '--input', $environmentFile
+            ) `
+            -Operation "Ensuring reviewer-protected GitHub environment '$Environment'"
+    }
+    finally {
+        if (Test-Path -LiteralPath $environmentFile) {
+            Remove-Item -LiteralPath $environmentFile -Force
+        }
+    }
+
     $policies = Invoke-GhJson `
         -Arguments @('api', '--method', 'GET', "repos/$repositoryName/environments/$escapedEnvironment/deployment-branch-policies") `
         -Operation "Reading deployment branch policies for '$Environment'"
@@ -1142,25 +1160,6 @@ function Set-GitHubEnvironmentVariables {
             if (Test-Path -LiteralPath $branchPolicyFile) {
                 Remove-Item -LiteralPath $branchPolicyFile -Force
             }
-        }
-    }
-    $environmentFile = Join-Path ([System.IO.Path]::GetTempPath()) ("helios-environment-{0}.json" -f [guid]::NewGuid())
-    try {
-        [System.IO.File]::WriteAllText(
-            $environmentFile,
-            ($environmentDefinition | ConvertTo-Json -Depth 8),
-            [System.Text.UTF8Encoding]::new($false))
-        Invoke-GhNoOutput `
-            -Arguments @(
-                'api', '--method', 'PUT',
-                "repos/$repositoryName/environments/$escapedEnvironment",
-                '--input', $environmentFile
-            ) `
-            -Operation "Ensuring reviewer-protected GitHub environment '$Environment'"
-    }
-    finally {
-        if (Test-Path -LiteralPath $environmentFile) {
-            Remove-Item -LiteralPath $environmentFile -Force
         }
     }
 
@@ -1200,6 +1199,7 @@ function Assert-GitHubEnvironmentProtection {
     $reviewerRules = @($definition.protection_rules | Where-Object type -eq 'required_reviewers')
     $matchingReviewers = @($reviewerRules.reviewers | Where-Object { [int64] $_.reviewer.id -eq $ReviewerId })
     if ($reviewerRules.Count -ne 1 -or
+        @($reviewerRules[0].reviewers).Count -ne 1 -or
         $matchingReviewers.Count -ne 1 -or
         -not [bool] $reviewerRules[0].prevent_self_review -or
         -not [bool] $definition.deployment_branch_policy.custom_branch_policies -or
@@ -1213,7 +1213,7 @@ function Assert-GitHubEnvironmentProtection {
     $matchingPolicies = @($policies.branch_policies | Where-Object {
         $_.name -eq $DeploymentBranch -and $_.type -eq 'branch'
     })
-    if ($matchingPolicies.Count -ne 1) {
+    if (@($policies.branch_policies).Count -ne 1 -or $matchingPolicies.Count -ne 1) {
         throw "GitHub environment '$Environment' is not restricted to the reviewed '$DeploymentBranch' branch. Azure trust was not created."
     }
 }
@@ -1723,49 +1723,6 @@ function Invoke-BicepPreview {
     return $parameters
 }
 
-function Invoke-ReviewedDeployment {
-    param(
-        [Parameter(Mandatory)] [pscustomobject] $Context,
-        [Parameter(Mandatory)] [string] $ResourceGroupName,
-        [Parameter(Mandatory)] [string] $TemplatePath,
-        [Parameter(Mandatory)] [string[]] $Parameters
-    )
-
-    $confirmation = if ($EnvironmentName -eq 'prod') {
-        'DEPLOY HELIOS PRODUCTION'
-    }
-    else {
-        "DEPLOY HELIOS $($EnvironmentName.ToUpperInvariant())"
-    }
-    Assert-ExactConfirmation `
-        -Expected $confirmation `
-        -Purpose "Deploying the reviewed immutable Helios revision to '$EnvironmentName'"
-
-    $deploymentArguments = @(
-        'deployment', 'group', 'create',
-        '--name', "helios-connector-$EnvironmentName",
-        '--subscription', $Context.SubscriptionId,
-        '--resource-group', $ResourceGroupName,
-        '--template-file', $TemplatePath,
-        '--parameters'
-    ) + $Parameters
-    $deployment = Invoke-AzJson `
-        -Arguments $deploymentArguments `
-        -Operation "Deploying Helios to '$EnvironmentName'"
-
-    $connectorUrl = [string] $deployment.properties.outputs.connectorUrl.value
-    $connectorClientId = [string] $deployment.properties.outputs.connectorEntraClientId.value
-    $connectorTenantId = [string] $deployment.properties.outputs.connectorEntraTenantId.value
-    if ([string]::IsNullOrWhiteSpace($connectorUrl)) {
-        throw 'Azure reported deployment success without a connector URL output.'
-    }
-    Write-Host "Helios Azure connector deployed: $connectorUrl"
-    Write-Host "HELIOS_CONNECTOR_URL=$connectorUrl"
-    Write-Host "HELIOS_ENTRA_CLIENT_ID=$connectorClientId"
-    Write-Host "AZURE_TENANT_ID=$connectorTenantId"
-    Write-Host 'The deployed runtime is cloud-only and remains in governed dry-run execution mode.'
-}
-
 try {
     if ($PSVersionTable.PSVersion.Major -lt 7) {
         throw 'PowerShell 7 or later is required.'
@@ -1809,10 +1766,10 @@ try {
         -Arguments @('bicep', 'build', '--file', $template, '--stdout') `
         -Operation 'Compiling the Helios Bicep template before any cloud mutation')
 
-    if ($Mode -in @('Configure', 'Deploy')) {
+    if ($Mode -eq 'Configure') {
         Assert-GitHubCliReady
     }
-    $githubOidcSubject = if ($Mode -in @('Configure', 'Deploy')) {
+    $githubOidcSubject = if ($Mode -eq 'Configure') {
         Resolve-GitHubOidcSubject `
             -Owner $GitHubOwner `
             -Repository $GitHubRepository `
@@ -1826,12 +1783,6 @@ try {
     $selectedGroup = Select-ResourceGroup -Context $azureContext
     $selectedResourceGroup = [string] $selectedGroup.name
     $selectedLocation = [string] $selectedGroup.location
-
-    if ($Mode -eq 'Deploy') {
-        $ImageReference = Read-RequiredValue `
-            -Prompt 'Approved immutable ACR image (registry.azurecr.io/repository@sha256:digest)' `
-            -CurrentValue $ImageReference
-    }
 
     $imageForRegistryResolution = if ([string]::IsNullOrWhiteSpace($ImageReference)) { $null } else { $ImageReference }
     $registrySelection = Resolve-ContainerRegistryName `
@@ -1895,8 +1846,11 @@ try {
         Write-Host "Published immutable image: $immutableImage"
     }
     elseif ([string]::IsNullOrWhiteSpace($ImageReference)) {
-        $immutableImage = $script:PlaceholderImage
-        Write-Warning 'No image digest was supplied. This preview uses an all-zero placeholder; Configure and Plan may do this, but Deploy may not.'
+        # Keep preview-only Bicep validation bound to the selected registry.
+        # A fixed placeholder registry would violate the template's exact
+        # registry assertion and make fresh Plan/Configure runs fail.
+        $immutableImage = "$resolvedRegistryName.azurecr.io/helios-connect@$($script:PlaceholderDigest)"
+        Write-Warning 'No image digest was supplied. This preview uses an all-zero placeholder that the protected deployment workflow rejects.'
     }
     else {
         $immutableImage = Assert-ImmutableAcrImage `
@@ -1907,10 +1861,6 @@ try {
         if (-not [string]::Equals($registryFromImage, $resolvedRegistryName, [StringComparison]::OrdinalIgnoreCase)) {
             throw 'The verified image registry does not match the selected Helios container registry.'
         }
-    }
-
-    if ($Mode -eq 'Deploy' -and -not $registrySelection.Exists) {
-        throw "Container registry '$resolvedRegistryName' does not exist in '$selectedResourceGroup'. Run -Mode Publish first."
     }
 
     $entraContext = Get-ExistingEntraContext
@@ -1964,38 +1914,7 @@ try {
         $connectorClientId = [string] $connectorApplication.appId
     }
 
-    if ($Mode -eq 'Deploy' -and -not $githubApplication) {
-        throw "GitHub OIDC app '$GitHubOidcAppName' does not exist. Run -Mode Configure first."
-    }
-    if ($Mode -eq 'Deploy') {
-        [int64] $verifiedReviewerId = 0
-        [void] [int64]::TryParse($RequiredReviewerId, [ref] $verifiedReviewerId)
-        Assert-GitHubEnvironmentProtection `
-            -Owner $GitHubOwner `
-            -Repository $GitHubRepository `
-            -Environment $GitHubEnvironment `
-            -ReviewerId $verifiedReviewerId `
-            -DeploymentBranch $GitHubDeploymentBranch
-        Assert-GitHubFederationPresent `
-            -Application $githubApplication `
-            -Subject $githubOidcSubject `
-            -Environment $GitHubEnvironment
-        $deploymentScope = "/subscriptions/$($azureContext.SubscriptionId)/resourceGroups/$selectedResourceGroup"
-        Assert-RoleAssignmentPresent -ApplicationId $githubApplication.appId -Scope $deploymentScope
-        $runtimeIdentity = Get-RuntimeManagedIdentity -Context $azureContext -ResourceGroupName $selectedResourceGroup
-        Assert-PrincipalRoleAssignment `
-            -PrincipalObjectId ([string] $runtimeIdentity.principalId) `
-            -Role $script:ReaderRole.Id `
-            -Scope $deploymentScope
-        Assert-RegistryPullAccess `
-            -Context $azureContext `
-            -ResourceGroupName $selectedResourceGroup `
-            -RegistryName $resolvedRegistryName `
-            -Identity $runtimeIdentity `
-            -GitHubApplicationId ([string] $githubApplication.appId)
-    }
-
-    Write-Host 'Deployment target:'
+    Write-Host 'Reviewed Azure target:'
     Write-Host "  tenant: $($azureContext.TenantId)"
     Write-Host "  subscription: $($azureContext.SubscriptionName) ($($azureContext.SubscriptionId))"
     Write-Host "  resource group: $selectedResourceGroup ($selectedLocation)"
@@ -2004,30 +1923,24 @@ try {
     Write-Host "  GitHub trust environment: $GitHubEnvironment"
     Write-Host '  runtime: Azure Container Apps only; local runtime disabled'
 
-    $deploymentParameters = Invoke-BicepPreview `
+    [void] (Invoke-BicepPreview `
         -Context $azureContext `
         -ResourceGroupName $selectedResourceGroup `
         -ConnectorClientId $connectorClientId `
         -PrincipalObjectId $principalObjectId `
         -ImmutableImage $immutableImage `
         -RegistryName $resolvedRegistryName `
-        -TemplatePath $template
+        -TemplatePath $template)
 
-    if ($Mode -eq 'Deploy') {
-        Invoke-ReviewedDeployment `
-            -Context $azureContext `
-            -ResourceGroupName $selectedResourceGroup `
-            -TemplatePath $template `
-            -Parameters $deploymentParameters
-    }
-    elseif ($Mode -eq 'Configure') {
+    if ($Mode -eq 'Configure') {
         Write-Host 'Configuration and what-if are complete. No application deployment was performed.'
-        Write-Host 'Run -Mode Publish to build in ACR, then start a separate -Mode Deploy run after reviewing its what-if.'
+        Write-Host 'Run -Mode Publish to build in ACR, then dispatch the protected helios-cloud-deploy workflow with the immutable digest.'
     }
     elseif ($Mode -eq 'Publish') {
         Write-Host "HELIOS_CONTAINER_REGISTRY_NAME=$resolvedRegistryName"
         Write-Host "HELIOS_CONTAINER_IMAGE=$immutableImage"
         Write-Host 'Cloud publication and what-if are complete. No application deployment was performed.'
+        Write-Host 'Use the protected helios-cloud-deploy workflow for reviewed what-if and deployment; this operator script has no direct apply path.'
     }
     else {
         Write-Host 'Plan complete. No Azure, Entra, GitHub, or application resources were changed.'

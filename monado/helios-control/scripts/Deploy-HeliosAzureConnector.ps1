@@ -53,38 +53,6 @@ az deployment group what-if `
     --parameters $parameters
 
 if (-not $Apply) {
-    Write-Host 'Preview complete. After review, use Connect-HeliosAzureInteractive.ps1 -Mode Configure; direct -Apply is retired.'
+    Write-Host 'Preview complete. Run Configure/Publish with Connect-HeliosAzureInteractive.ps1, then use the protected helios-cloud-deploy workflow; direct -Apply is retired.'
     exit 0
 }
-
-if ($env:HELIOS_CONFIRM_APPLY -ne 'YES') {
-    throw 'Set HELIOS_CONFIRM_APPLY=YES before using -Apply.'
-}
-
-
-if ($ImageReference.EndsWith('@sha256:' + ('0' * 64), [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'Replace the all-zero preview placeholder with an approved immutable image reference before applying.'
-}
-
-Write-Host 'Applying the reviewed Helios Azure connector deployment.'
-$deployment = az deployment group create `
-    --name "helios-connector-$EnvironmentName" `
-    --subscription $SubscriptionId `
-    --resource-group $ResourceGroup `
-    --template-file $template `
-    --parameters $parameters `
-    --output json | ConvertFrom-Json
-
-if ($LASTEXITCODE -ne 0 -or -not $deployment) {
-    throw 'Azure connector infrastructure deployment failed.'
-}
-
-$connectorUrl = $deployment.properties.outputs.connectorUrl.value
-$connectorClientId = $deployment.properties.outputs.connectorEntraClientId.value
-$connectorTenantId = $deployment.properties.outputs.connectorEntraTenantId.value
-
-Write-Host "Connector URL: $connectorUrl"
-Write-Host "HELIOS_CONNECTOR_URL=$connectorUrl"
-Write-Host "HELIOS_ENTRA_CLIENT_ID=$connectorClientId"
-Write-Host "AZURE_TENANT_ID=$connectorTenantId"
-Write-Host 'No OpenAI, Anthropic, Azure OpenAI, or provider key was created, retrieved, printed, or stored.'
