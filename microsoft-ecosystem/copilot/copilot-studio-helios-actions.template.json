@@ -1,0 +1,31 @@
+{
+  "name": "HELIOS Platform Automation",
+  "description": "Copilot Studio action map for local + Azure HELIOS automation.",
+  "environment": "prod",
+  "actions": [
+    {
+      "name": "submitAutomationJob",
+      "target": "serviceBusQueue",
+      "resource": "helios-automation-jobs",
+      "purpose": "Queue local or cloud automation work."
+    },
+    {
+      "name": "publishFleetEvent",
+      "target": "eventHub",
+      "resource": "helios-automation-events",
+      "purpose": "Publish Hermes fleet telemetry and state changes."
+    },
+    {
+      "name": "queryOperationalHealth",
+      "target": "logAnalyticsWorkspace",
+      "resource": "law-helios-prod",
+      "purpose": "Answer operational health questions from telemetry."
+    },
+    {
+      "name": "retrieveSecretReference",
+      "target": "keyVault",
+      "resource": "kv-helios-<unique>",
+      "purpose": "Resolve approved secret references without exposing values."
+    }
+  ]
+}
