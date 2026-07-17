@@ -708,22 +708,18 @@ function Resolve-GitHubOidcTrust {
         "$canonicalOwner/$canonicalRepository"
     }
     $subject = "repo:$repoSegment`:environment:$Environment"
-    $workflowReference = "$canonicalOwner/$canonicalRepository/.github/workflows/helios-cloud-deploy.yml@refs/heads/$GitHubDeploymentBranch"
-    $claimsExpression = "claims['sub'] eq '$subject' and claims['job_workflow_ref'] eq '$workflowReference'"
     return [pscustomobject]@{
         Subject = $subject
-        WorkflowReference = $workflowReference
-        ClaimsExpression = $claimsExpression
     }
 }
 
 function Get-GitHubFederatedCredentials {
     param([Parameter(Mandatory)] [string] $ApplicationObjectId)
 
-    $url = "https://graph.microsoft.com/beta/applications/$ApplicationObjectId/federatedIdentityCredentials"
+    $url = "https://graph.microsoft.com/v1.0/applications/$ApplicationObjectId/federatedIdentityCredentials"
     $response = Invoke-AzJson `
         -Arguments @('rest', '--method', 'GET', '--url', $url) `
-        -Operation 'Reading flexible federated identity credentials through Microsoft Graph'
+        -Operation 'Reading federated identity credentials through Microsoft Graph'
     return @($response.value)
 }
 
@@ -745,22 +741,10 @@ function Get-FederatedCredentialClaimsExpression {
     return if ($valueProperty) { [string] $valueProperty.Value } else { '' }
 }
 
-function Get-FederatedCredentialClaimsLanguageVersion {
-    param([Parameter(Mandatory)] [pscustomobject] $Credential)
-
-    $property = $Credential.PSObject.Properties['claimsMatchingExpression']
-    if (-not $property -or $null -eq $property.Value) {
-        return 0
-    }
-    $versionProperty = $property.Value.PSObject.Properties['languageVersion']
-    return if ($versionProperty) { [int] $versionProperty.Value } else { 0 }
-}
-
 function Ensure-GitHubFederation {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Application,
         [Parameter(Mandatory)] [string] $Subject,
-        [Parameter(Mandatory)] [string] $ClaimsExpression,
         [Parameter(Mandatory)] [string] $Environment
     )
 
@@ -774,78 +758,51 @@ function Ensure-GitHubFederation {
         $existing = $named[0]
         $existingExpression = Get-FederatedCredentialClaimsExpression -Credential $existing
         $existingSubject = Get-FederatedCredentialSubject -Credential $existing
-        $existingLanguageVersion = Get-FederatedCredentialClaimsLanguageVersion -Credential $existing
-        $isExactFlexibleTrust = (
+        $isExactEnvironmentTrust = (
             $existing.issuer -eq 'https://token.actions.githubusercontent.com' -and
             @($existing.audiences).Count -eq 1 -and
             @($existing.audiences) -contains 'api://AzureADTokenExchange' -and
-            [string]::IsNullOrWhiteSpace($existingSubject) -and
-            $existingLanguageVersion -eq 1 -and
-            $existingExpression -ceq $ClaimsExpression)
-        if ($isExactFlexibleTrust) {
-            $legacyTrusts = @($credentials | Where-Object {
+            $existingSubject -ceq $Subject -and
+            [string]::IsNullOrWhiteSpace($existingExpression))
+        if ($isExactEnvironmentTrust) {
+            $sameSubject = @($credentials | Where-Object {
                 $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
-                (Get-FederatedCredentialSubject -Credential $_) -eq $Subject
+                (Get-FederatedCredentialSubject -Credential $_) -ceq $Subject
             })
-            if ($legacyTrusts.Count -ne 0) {
-                throw "A legacy environment-only GitHub federation still trusts '$Subject'. Remove it explicitly before continuing."
+            if ($sameSubject.Count -ne 1) {
+                throw "More than one GitHub federation trusts '$Subject'. Remove the duplicate credential before continuing."
             }
             return
         }
-
-        $isLegacyEnvironmentOnlyTrust = (
-            $existing.issuer -eq 'https://token.actions.githubusercontent.com' -and
-            @($existing.audiences).Count -eq 1 -and
-            @($existing.audiences) -contains 'api://AzureADTokenExchange' -and
-            $existingSubject -eq $Subject -and
-            [string]::IsNullOrWhiteSpace($existingExpression))
-        if (-not $isLegacyEnvironmentOnlyTrust) {
-            throw "Federated credential '$credentialName' has an unexpected trust contract. Refusing to overwrite it."
-        }
-
-        $credentialId = [string] $existing.id
-        if (-not (Test-GuidValue $credentialId)) {
-            throw "Legacy federated credential '$credentialName' did not return a valid Microsoft Graph object ID."
-        }
-        Invoke-AzNoOutput `
-            -Arguments @(
-                'rest', '--method', 'DELETE',
-                '--url', "https://graph.microsoft.com/beta/applications/$($Application.id)/federatedIdentityCredentials/$credentialId"
-            ) `
-            -Operation "Removing legacy environment-only federation '$credentialName'"
-        $credentials = @(Get-GitHubFederatedCredentials -ApplicationObjectId ([string] $Application.id))
+        throw "Federated credential '$credentialName' has an unexpected trust contract. Refusing to overwrite it. Remove the retired flexible credential, then rerun Configure."
     }
 
-    $legacyTrusts = @($credentials | Where-Object {
+    $sameSubject = @($credentials | Where-Object {
         $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
-        (Get-FederatedCredentialSubject -Credential $_) -eq $Subject
+        (Get-FederatedCredentialSubject -Credential $_) -ceq $Subject
     })
-    if ($legacyTrusts.Count -ne 0) {
-        throw "An environment-only GitHub federation still trusts '$Subject'. Remove the legacy credential explicitly before continuing."
+    if ($sameSubject.Count -ne 0) {
+        throw "A differently named GitHub federation already trusts '$Subject'. Remove the duplicate credential before continuing."
     }
 
     $definition = [ordered]@{
         name = $credentialName
         issuer = 'https://token.actions.githubusercontent.com'
+        subject = $Subject
         audiences = @('api://AzureADTokenExchange')
-        claimsMatchingExpression = [ordered]@{
-            value = $ClaimsExpression
-            languageVersion = 1
-        }
     }
     $body = $definition | ConvertTo-Json -Depth 8 -Compress
     [void] (Invoke-AzJson `
         -Arguments @(
             'rest', '--method', 'POST',
-            '--url', "https://graph.microsoft.com/beta/applications/$($Application.id)/federatedIdentityCredentials",
+            '--url', "https://graph.microsoft.com/v1.0/applications/$($Application.id)/federatedIdentityCredentials",
             '--body', $body
         ) `
-        -Operation "Creating workflow-bound flexible GitHub OIDC federation '$credentialName'")
+        -Operation "Creating exact environment-bound GitHub OIDC federation '$credentialName'")
 
     Assert-GitHubFederationPresent `
         -Application $Application `
         -Subject $Subject `
-        -ClaimsExpression $ClaimsExpression `
         -Environment $Environment
 }
 
@@ -853,7 +810,6 @@ function Assert-GitHubFederationPresent {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Application,
         [Parameter(Mandatory)] [string] $Subject,
-        [Parameter(Mandatory)] [string] $ClaimsExpression,
         [Parameter(Mandatory)] [string] $Environment
     )
 
@@ -862,21 +818,20 @@ function Assert-GitHubFederationPresent {
     $matching = @($credentials | Where-Object {
         $_.name -eq $credentialName -and
         $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
-        [string]::IsNullOrWhiteSpace((Get-FederatedCredentialSubject -Credential $_)) -and
+        (Get-FederatedCredentialSubject -Credential $_) -ceq $Subject -and
         @($_.audiences).Count -eq 1 -and
         @($_.audiences) -contains 'api://AzureADTokenExchange' -and
-        (Get-FederatedCredentialClaimsLanguageVersion -Credential $_) -eq 1 -and
-        (Get-FederatedCredentialClaimsExpression -Credential $_) -ceq $ClaimsExpression
+        [string]::IsNullOrWhiteSpace((Get-FederatedCredentialClaimsExpression -Credential $_))
     })
     if ($matching.Count -ne 1) {
-        throw "The exact workflow-bound flexible GitHub federation for '$Subject' is missing. Run -Mode Configure before publishing."
+        throw "The exact environment-bound GitHub federation for '$Subject' is missing. Run -Mode Configure before publishing."
     }
-    $legacyTrusts = @($credentials | Where-Object {
+    $sameSubject = @($credentials | Where-Object {
         $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
-        (Get-FederatedCredentialSubject -Credential $_) -eq $Subject
+        (Get-FederatedCredentialSubject -Credential $_) -ceq $Subject
     })
-    if ($legacyTrusts.Count -ne 0) {
-        throw "A legacy environment-only GitHub federation still trusts '$Subject'. Publish is blocked until it is removed."
+    if ($sameSubject.Count -ne 1) {
+        throw "More than one GitHub federation trusts '$Subject'. Publish is blocked until duplicate credentials are removed."
     }
 }
 
@@ -1760,7 +1715,6 @@ try {
         Write-Host "  container registry binding: $resolvedRegistryName"
         Write-Host "  Entra apps: '$ConnectorAppName' and '$GitHubOidcAppName'"
         Write-Host "  GitHub OIDC subject: $($githubOidcTrust.Subject)"
-        Write-Host "  GitHub OIDC workflow: $($githubOidcTrust.WorkflowReference)"
         Write-Host '  CI RBAC: Contributor at the selected resource-group scope only (no role-assignment authority)'
         Write-Host '  runtime RBAC: pre-created user-assigned identity with Reader; ACR pull is added during Publish'
         Write-Host "  GitHub environment: $GitHubOwner/$GitHubRepository / $GitHubEnvironment; reviewer-gated; branch $GitHubDeploymentBranch"
@@ -1788,7 +1742,6 @@ try {
         Assert-GitHubFederationPresent `
             -Application $publishGitHubApplication `
             -Subject $githubOidcTrust.Subject `
-            -ClaimsExpression $githubOidcTrust.ClaimsExpression `
             -Environment $GitHubEnvironment
         Assert-RoleAssignmentPresent `
             -ApplicationId ([string] $publishGitHubApplication.appId) `
@@ -1818,9 +1771,7 @@ try {
             -Owner $GitHubOwner `
             -Repository $GitHubRepository `
             -Environment $GitHubEnvironment
-        if ($revalidatedTrust.Subject -cne $githubOidcTrust.Subject -or
-            $revalidatedTrust.WorkflowReference -cne $githubOidcTrust.WorkflowReference -or
-            $revalidatedTrust.ClaimsExpression -cne $githubOidcTrust.ClaimsExpression) {
+        if ($revalidatedTrust.Subject -cne $githubOidcTrust.Subject) {
             throw 'The canonical GitHub OIDC trust changed during Publish. Nothing was dispatched.'
         }
         Assert-GitHubEnvironmentProtection `
@@ -1832,7 +1783,6 @@ try {
         Assert-GitHubFederationPresent `
             -Application $publishGitHubApplication `
             -Subject $revalidatedTrust.Subject `
-            -ClaimsExpression $revalidatedTrust.ClaimsExpression `
             -Environment $GitHubEnvironment
         Assert-RoleAssignmentPresent `
             -ApplicationId ([string] $publishGitHubApplication.appId) `
@@ -1888,8 +1838,6 @@ try {
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID = $principalObjectId
             HELIOS_REQUIRED_REVIEWER_ID = $RequiredReviewerId
             HELIOS_OIDC_SUBJECT = $githubOidcTrust.Subject
-            HELIOS_OIDC_WORKFLOW_REF = $githubOidcTrust.WorkflowReference
-            HELIOS_OIDC_CLAIMS_EXPRESSION = $githubOidcTrust.ClaimsExpression
         }
         Set-GitHubEnvironmentVariables `
             -Values $githubValues `
@@ -1899,7 +1847,6 @@ try {
         Ensure-GitHubFederation `
             -Application $githubApplication `
             -Subject $githubOidcTrust.Subject `
-            -ClaimsExpression $githubOidcTrust.ClaimsExpression `
             -Environment $GitHubEnvironment
     }
     else {
