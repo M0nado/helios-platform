@@ -12,6 +12,8 @@ on:
 permissions:
   contents: read
 
+# Validation only: this workflow never signs in to or publishes into a tenant.
+
 jobs:
   validate:
     runs-on: ubuntu-24.04
