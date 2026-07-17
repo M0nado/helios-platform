@@ -14,287 +14,201 @@ on:
       - '**.ps1'
       - '**.bat'
       - '**.cmd'
+      - '.github/workflows/code-checks.yml'
+
+permissions:
+  contents: read
 
 jobs:
   code-checks:
     name: Automated Code Quality Checks
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
-      
-      - name: Setup PowerShell 7
-        run: |
-          $ProgressPreference = "SilentlyContinue"
-          choco install powershell-core -y
+          persist-credentials: false
+
+      - name: Resolve changed PowerShell files
+        id: changed-files
         shell: pwsh
-      
-      - name: Install Pester
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
-          Install-Module -Name Pester -RequiredVersion 5.4.0 -Force -SkipPublisherCheck
-        shell: pwsh
-      
-      - name: PowerShell Syntax Validation
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          if ($env:EVENT_NAME -eq 'pull_request') {
+            if ([string]::IsNullOrWhiteSpace($env:BASE_REF)) {
+              throw 'Pull request base ref is unavailable.'
+            }
+            git fetch origin $env:BASE_REF --depth=1
+            $paths = @(git diff --name-only --diff-filter=ACMR "origin/$env:BASE_REF...HEAD")
+          }
+          elseif ($env:BEFORE_SHA -and $env:BEFORE_SHA -notmatch '^0+$') {
+            $paths = @(git diff --name-only --diff-filter=ACMR $env:BEFORE_SHA HEAD)
+          }
+          else {
+            $paths = @(git diff-tree --no-commit-id --name-only -r HEAD)
+          }
+
+          $files = @(
+            $paths |
+              Where-Object { $_ -match '\.ps1$' -and (Test-Path -LiteralPath $_ -PathType Leaf) } |
+              Sort-Object -Unique
+          )
+
+          $manifest = Join-Path $env:RUNNER_TEMP 'changed-powershell-files.json'
+          $files | ConvertTo-Json -Compress | Set-Content -LiteralPath $manifest -Encoding utf8NoBOM
+          "manifest=$manifest" >> $env:GITHUB_OUTPUT
+          "count=$($files.Count)" >> $env:GITHUB_OUTPUT
+
+          Write-Host "Changed PowerShell files: $($files.Count)"
+          $files | ForEach-Object { Write-Host "  - $_" }
+
+      - name: PowerShell syntax validation
         id: syntax-check
-        run: |
-          Write-Host "╔════════════════════════════════════════╗"
-          Write-Host "║  PowerShell Syntax Validation          ║"
-          Write-Host "╚════════════════════════════════════════╝"
-          
-          $Files = Get-ChildItem -Recurse -Filter "*.ps1"
-          $FailCount = 0
-          
-          foreach ($File in $Files) {
-            try {
-              $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $File.FullName), [ref]$null)
-              Write-Host "✓ $($File.Name)"
-            }
-            catch {
-              Write-Host "✗ $($File.Name): $($_.Exception.Message)"
-              $FailCount++
-            }
-          }
-          
-          if ($FailCount -gt 0) {
-            Write-Host ""
-            Write-Host "❌ Syntax validation FAILED ($FailCount errors)"
-            exit 1
-          }
-          else {
-            Write-Host ""
-            Write-Host "✓ All files have valid syntax"
-          }
         shell: pwsh
-      
-      - name: Security Scanning
-        id: security-scan
+        env:
+          MANIFEST: ${{ steps.changed-files.outputs.manifest }}
         run: |
-          Write-Host "╔════════════════════════════════════════╗"
-          Write-Host "║  Security Scanning                     ║"
-          Write-Host "╚════════════════════════════════════════╝"
-          
-          $Files = Get-ChildItem -Recurse -Filter "*.ps1"
-          $SecurityIssues = @()
-          
-          $PatternMap = @{
-            'password\s*=\s*[''"][^''\"]*[''"]' = "Hardcoded password"
-            'apikey\s*=\s*[''"][^''\"]*[''"]' = "Hardcoded API key"
-            'secret\s*=\s*[''"][^''\"]*[''"]' = "Hardcoded secret"
-            'token\s*=\s*[''"][^''\"]*[''"]' = "Hardcoded token"
-          }
-          
-          foreach ($File in $Files) {
-            $Content = Get-Content $File.FullName
-            
-            if ($File.Name -notmatch '^test-' -and $Content -notmatch '# EXAMPLE CODE') {
-              foreach ($Pattern in $PatternMap.Keys) {
-                if ($Content -match $Pattern) {
-                  $SecurityIssues += @{
-                    File = $File.Name
-                    Issue = $PatternMap[$Pattern]
-                    Pattern = $Pattern
-                  }
-                }
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $files = @(Get-Content -LiteralPath $env:MANIFEST -Raw | ConvertFrom-Json)
+          $issues = @()
+
+          foreach ($path in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path -LiteralPath $path).Path,
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              foreach ($errorRecord in $errors) {
+                $issues += "${path}:$($errorRecord.Extent.StartLineNumber): $($errorRecord.Message)"
               }
-            }
-          }
-          
-          if ($SecurityIssues.Count -gt 0) {
-            Write-Host "::warning::Potential security issues found (heuristic match):"
-            $SecurityIssues | ForEach-Object {
-              Write-Host "  - [$($_.File)] $($_.Issue)"
-            }
-            Write-Host "::notice::Review heuristic matches above; workflow will not fail on keyword-only detections."
-          }
-          else {
-            Write-Host "✓ No security issues detected"
-          }
-        shell: pwsh
-      
-      - name: Registry Modification Validation
-        id: registry-check
-        run: |
-          Write-Host "╔════════════════════════════════════════╗"
-          Write-Host "║  Registry Modification Validation      ║"
-          Write-Host "╚════════════════════════════════════════╝"
-          
-          $Files = Get-ChildItem -Recurse -Filter "*.ps1"
-          $IssueCount = 0
-          
-          foreach ($File in $Files) {
-            $Content = Get-Content $File.FullName
-            
-            # Find registry modifications
-            if ($Content -match '(New-Item|Set-ItemProperty|Remove-Item).*HKLM|HKCU|HKU') {
-              # Check for documentation
-              if ($Content -notmatch '# Registry:') {
-                Write-Host "✗ $($File.Name): Missing '# Registry:' documentation"
-                $IssueCount++
-              }
-              else {
-                Write-Host "✓ $($File.Name): Registry changes documented"
-              }
-            }
-          }
-          
-          if ($IssueCount -gt 0) {
-            exit 1
-          }
-        shell: pwsh
-      
-      - name: File Path Validation
-        id: path-check
-        run: |
-          Write-Host "╔════════════════════════════════════════╗"
-          Write-Host "║  File Path Validation                  ║"
-          Write-Host "╚════════════════════════════════════════╝"
-          
-          $Files = Get-ChildItem -Recurse -Filter "*.ps1"
-          $PathIssues = @()
-          
-          foreach ($File in $Files) {
-            $Content = Get-Content $File.FullName
-            
-            # Check for hardcoded paths without env variables
-            if ($Content -match "['\"]C:\\Users\\[^'\"]*['\"]" -and 
-                $File.Name -notmatch '^test-') {
-              $PathIssues += "$($File.Name): Consider using environment variables"
-            }
-            
-            # Check for invalid characters
-            if ($Content -match "['\"].*[<>:|?*].*['\"]") {
-              $PathIssues += "$($File.Name): Path contains invalid characters"
-            }
-          }
-          
-          if ($PathIssues.Count -gt 0) {
-            Write-Host "⚠  Path warnings:"
-            $PathIssues | ForEach-Object { Write-Host "  - $_" }
-          }
-          else {
-            Write-Host "✓ File paths are valid"
-          }
-        shell: pwsh
-      
-      - name: Documentation Check
-        id: doc-check
-        run: |
-          Write-Host "╔════════════════════════════════════════╗"
-          Write-Host "║  Documentation Requirements            ║"
-          Write-Host "╚════════════════════════════════════════╝"
-          
-          $PhaseFiles = Get-ChildItem -Recurse -Filter "Phase-*.ps1"
-          $DocIssues = 0
-          
-          foreach ($File in $PhaseFiles) {
-            $Content = Get-Content $File.FullName
-            
-            $HasHeader = $Content -match '<#'
-            $HasSynopsis = $Content -match '\.SYNOPSIS'
-            $HasDescription = $Content -match '\.DESCRIPTION'
-            
-            if ($HasHeader -and $HasSynopsis -and $HasDescription) {
-              Write-Host "✓ $($File.Name): Documentation complete"
             }
             else {
-              Write-Host "✗ $($File.Name): Missing documentation"
-              $DocIssues++
+              Write-Host "✓ $path"
             }
           }
-          
-          if ($DocIssues -gt 0) {
-            Write-Host ""
-            Write-Host "❌ $DocIssues files missing documentation"
+
+          if ($issues.Count -gt 0) {
+            $issues | ForEach-Object { Write-Error $_ }
             exit 1
           }
+
+      - name: Security scanning
+        id: security-scan
         shell: pwsh
-      
-      - name: Test Coverage Check
-        id: coverage-check
+        env:
+          MANIFEST: ${{ steps.changed-files.outputs.manifest }}
         run: |
-          Write-Host "╔════════════════════════════════════════╗"
-          Write-Host "║  Test Coverage Requirements            ║"
-          Write-Host "╚════════════════════════════════════════╝"
-          
-          $TestFiles = Get-ChildItem -Recurse -Filter "test-*.ps1"
-          
-          if ($TestFiles.Count -eq 0) {
-            Write-Host "⚠  No test files found"
+          Set-StrictMode -Version Latest
+          $files = @(Get-Content -LiteralPath $env:MANIFEST -Raw | ConvertFrom-Json)
+          $patterns = [ordered]@{
+            '(?i)password\s*=\s*[''"][^''"]+[''"]' = 'Hardcoded password'
+            '(?i)apikey\s*=\s*[''"][^''"]+[''"]' = 'Hardcoded API key'
+            '(?i)secret\s*=\s*[''"][^''"]+[''"]' = 'Hardcoded secret'
+            '(?i)token\s*=\s*[''"][^''"]+[''"]' = 'Hardcoded token'
+            'github_pat_[A-Za-z0-9_]{20,}' = 'GitHub personal access token'
+            'sk-[A-Za-z0-9_-]{20,}' = 'Provider API key'
           }
-          else {
-            Write-Host "✓ Found $($TestFiles.Count) test files"
-            
-            foreach ($TestFile in $TestFiles) {
-              Write-Host "  - $($TestFile.Name)"
+          $issues = @()
+
+          foreach ($path in $files) {
+            $content = Get-Content -LiteralPath $path -Raw
+            if ($content -match '# EXAMPLE CODE') { continue }
+            foreach ($pattern in $patterns.Keys) {
+              if ($content -match $pattern) {
+                $issues += "${path}: $($patterns[$pattern])"
+              }
             }
           }
-        shell: pwsh
-      
-      - name: Run Unit Tests
-        id: unit-tests
-        continue-on-error: true
-        run: |
-          Write-Host "╔════════════════════════════════════════╗"
-          Write-Host "║  Running Unit Tests                    ║"
-          Write-Host "╚════════════════════════════════════════╝"
-          
-          $TestFiles = Get-ChildItem -Recurse -Filter "test-*-unit.ps1"
-          
-          if ($TestFiles.Count -eq 0) {
-            Write-Host "ℹ  No unit tests found, skipping"
+
+          if ($issues.Count -gt 0) {
+            $issues | ForEach-Object { Write-Error $_ }
+            exit 1
           }
-          else {
-            foreach ($TestFile in $TestFiles) {
-              Write-Host ""
-              Write-Host "Running $($TestFile.Name)..."
-              
-              $Result = Invoke-Pester -Path $TestFile.FullName -PassThru -ErrorAction SilentlyContinue
-              
-              if ($Result.FailedCount -gt 0) {
-                Write-Host "❌ $($Result.FailedCount) test(s) failed"
-                exit 1
+
+      - name: Registry modification validation
+        id: registry-check
+        shell: pwsh
+        env:
+          MANIFEST: ${{ steps.changed-files.outputs.manifest }}
+        run: |
+          Set-StrictMode -Version Latest
+          $files = @(Get-Content -LiteralPath $env:MANIFEST -Raw | ConvertFrom-Json)
+          $mutationPattern = '(?is)\b(New-Item|Set-ItemProperty|Remove-Item|New-ItemProperty|Remove-ItemProperty)\b[^\r\n]*(Registry::HKEY_|HKLM:|HKCU:|HKU:)'
+          $issues = @()
+
+          foreach ($path in $files) {
+            $content = Get-Content -LiteralPath $path -Raw
+            if ($content -match $mutationPattern) {
+              if ($content -notmatch '(?im)^\s*#\s*Registry:') {
+                $issues += "${path}: missing '# Registry:' documentation for a registry mutation"
               }
               else {
-                Write-Host "✓ All tests passed"
+                Write-Host "✓ $path registry mutation is documented"
               }
             }
           }
+
+          if ($issues.Count -gt 0) {
+            $issues | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+      - name: File path validation
+        id: path-check
         shell: pwsh
-      
-      - name: Generate Report
-        if: always()
+        env:
+          MANIFEST: ${{ steps.changed-files.outputs.manifest }}
         run: |
-          Write-Host ""
-          Write-Host "╔════════════════════════════════════════╗"
-          Write-Host "║  Code Checks Summary                   ║"
-          Write-Host "╚════════════════════════════════════════╝"
-          Write-Host ""
-          Write-Host "✓ Syntax Validation: $(if ('${{ steps.syntax-check.outcome }}' -eq 'success') { 'PASS' } else { 'FAIL' })"
-          Write-Host "✓ Security Scanning: $(if ('${{ steps.security-scan.outcome }}' -eq 'success') { 'PASS' } else { 'FAIL' })"
-          Write-Host "✓ Registry Check: $(if ('${{ steps.registry-check.outcome }}' -eq 'success') { 'PASS' } else { 'FAIL' })"
-          Write-Host "✓ Path Validation: $(if ('${{ steps.path-check.outcome }}' -eq 'success') { 'PASS' } else { 'FAIL' })"
-          Write-Host "✓ Documentation: $(if ('${{ steps.doc-check.outcome }}' -eq 'success') { 'PASS' } else { 'FAIL' })"
-          Write-Host ""
+          Set-StrictMode -Version Latest
+          $files = @(Get-Content -LiteralPath $env:MANIFEST -Raw | ConvertFrom-Json)
+          $warnings = @()
+
+          foreach ($path in $files) {
+            $content = Get-Content -LiteralPath $path -Raw
+            if ($path -notmatch '(?i)test-' -and $content -match '[''"]C:\\Users\\[^''"]*[''"]') {
+              $warnings += "${path}: hard-coded user profile path"
+            }
+          }
+
+          $warnings | ForEach-Object { Write-Warning $_ }
+
+      - name: Documentation check
+        id: doc-check
         shell: pwsh
-      
-      - name: Final Status
-        if: failure()
+        env:
+          MANIFEST: ${{ steps.changed-files.outputs.manifest }}
         run: |
-          Write-Host ""
-          Write-Host "❌ Code checks FAILED"
-          Write-Host ""
-          Write-Host "Please fix the issues above before committing."
-          exit 1
-        shell: pwsh
-      
-      - name: Success Message
+          Set-StrictMode -Version Latest
+          $files = @(Get-Content -LiteralPath $env:MANIFEST -Raw | ConvertFrom-Json)
+          $phaseFiles = @($files | Where-Object { [IO.Path]::GetFileName($_) -match '^Phase-.*\.ps1$' })
+          $issues = @()
+
+          foreach ($path in $phaseFiles) {
+            $content = Get-Content -LiteralPath $path -Raw
+            if ($content -notmatch '<#' -or $content -notmatch '\.SYNOPSIS' -or $content -notmatch '\.DESCRIPTION') {
+              $issues += "${path}: missing comment-based help"
+            }
+          }
+
+          if ($issues.Count -gt 0) {
+            $issues | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+      - name: Success message
         if: success()
-        run: |
-          Write-Host ""
-          Write-Host "✅ All code checks PASSED"
-          Write-Host ""
-          Write-Host "Your code is ready to merge!"
         shell: pwsh
+        run: |
+          Write-Host 'All changed-file code checks passed.'
