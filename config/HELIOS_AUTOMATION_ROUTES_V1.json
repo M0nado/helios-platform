@@ -1,0 +1,687 @@
+{
+  "contractSchema": "schemas/automation-routes-v1.schema.json",
+  "contractSchemaStatus": "required-before-any-route-is-enabled",
+  "schemaVersion": "1.0.0",
+  "registryId": "helios-automation-routes-v1",
+  "status": "proposed",
+  "authority": {
+    "canonicalRepository": "M0nado/helios-platform",
+    "issues": [
+      "https://github.com/M0nado/helios-platform/issues/148",
+      "https://github.com/M0nado/helios-platform/issues/149"
+    ],
+    "implementationTracks": [
+      "https://github.com/M0nado/helios-platform/issues/154",
+      "https://github.com/M0nado/helios-platform/issues/155",
+      "https://github.com/M0nado/helios-platform/issues/156",
+      "https://github.com/M0nado/helios-platform/issues/158"
+    ],
+    "mergedDocumentationBaseline": "https://github.com/M0nado/helios-platform/pull/147",
+    "productionBlocker": "https://github.com/M0nado/helios-platform/issues/162"
+  },
+  "currentImplementationReality": {
+    "integrationSyncWorkflow": "artifact-only; no live Linear, Slack, Teams or SharePoint delivery",
+    "requiredBeforeEnable": [
+      "emit-the-complete-normalized-envelope",
+      "use-a-real-json-encoder-instead-of-shell-interpolation",
+      "subscribe-to-reopened-pull-requests",
+      "exercise-a-real-github-oidc-exchange-and-read-only-azure-account-call",
+      "deliver-through-the-key-vault-backed-broker-not-directly-from-actions"
+    ]
+  },
+  "systemAuthority": {
+    "github": "source, contracts, CI, manifests, releases and deployment outcomes",
+    "azureBroker": "signature verification, normalization, policy, idempotency, routing, retries and audit",
+    "linear": "planned work, ownership, dependencies and delivery status",
+    "slack": "bounded operational alerts and interaction only",
+    "teams": "bounded operations, approvals and executive context only",
+    "sharepoint": "governed architecture and approved immutable evidence only"
+  },
+  "logicalDestinations": {
+    "linear.integrationFabric": {
+      "provider": "linear",
+      "resolveFrom": "HELIOS_LINEAR_INTEGRATION_FABRIC_TARGET"
+    },
+    "slack.controlPlane": {
+      "provider": "slack",
+      "resolveFrom": "HELIOS_SLACK_CONTROL_PLANE_TARGET"
+    },
+    "teams.ops": {
+      "provider": "teams",
+      "resolveFrom": "HELIOS_TEAMS_OPS_TARGET"
+    },
+    "sharepoint.deploymentEvidence": {
+      "provider": "sharepoint",
+      "resolveFrom": "HELIOS_SHAREPOINT_EVIDENCE_TARGET"
+    }
+  },
+  "untrustedTemplatePolicy": {
+    "defaultMode": "plain-text-only",
+    "providerPlainTextEscaping": {
+      "linear": "escape-control-characters-and-render-markup-literally",
+      "slack": "escape-ampersand-angle-brackets-and-disable-link-unfurling",
+      "teams": "encode-as-json-text-and-disable-html-rendering",
+      "sharepoint": "encode-file-and-path-segments-without-changing-the-resolved-root"
+    },
+    "mentionSuppression": {
+      "enabled": true,
+      "rejectLiteralBroadcastMentions": true,
+      "rejectRenderedUserGroupAndUserMentions": true,
+      "allowMentions": []
+    },
+    "urls": {
+      "scheme": "https",
+      "allowedHosts": [
+        "github.com",
+        "linear.app",
+        "*.sharepoint.com"
+      ],
+      "rejectCredentialsFragmentsAndNonDefaultPorts": true,
+      "disableAutomaticUnfurling": true
+    },
+    "length": {
+      "maxRenderedCharacters": 4000,
+      "maxRenderedLines": 20,
+      "maxSharePointPathSegmentCharacters": 120
+    },
+    "unicodeAndNewlines": {
+      "normalization": "NFC",
+      "newline": "LF",
+      "stripCarriageReturns": true,
+      "rejectNulAndC0ControlsExceptTabAndLf": true,
+      "rejectBidirectionalOverridesAndIsolates": true
+    },
+    "allowedPlaceholders": [
+      "routeId",
+      "source.deliveryId",
+      "target.logicalId",
+      "operation",
+      "repository.id",
+      "repository.full_name",
+      "repository.safeName",
+      "workflow.id",
+      "workflow.name",
+      "head_branch",
+      "githubRunUrl",
+      "correlationId",
+      "linear.issueUrl",
+      "pull_request.state",
+      "pull_request.number",
+      "pull_request.title",
+      "pull_request.html_url",
+      "checks.summary",
+      "environment",
+      "occurredAt:yyyy",
+      "occurredAt:MM",
+      "commit.short",
+      "deployment.id",
+      "state",
+      "sharepoint.webUrl",
+      "rollback.status",
+      "check_run.name",
+      "head_sha",
+      "head_sha.short"
+    ],
+    "unsafeSyntax": [
+      "shell-command-substitution",
+      "github-expression-interpolation",
+      "template-conditionals-or-loops",
+      "raw-html",
+      "javascript-or-data-url",
+      "unregistered-placeholder"
+    ],
+    "idempotency": {
+      "inputFields": [
+        "routeId",
+        "source.deliveryId",
+        "target.logicalId",
+        "operation"
+      ],
+      "normalization": "NFC-trim-ASCII-casefold-for-registered-identifiers",
+      "componentEncoding": "length-prefixed-UTF-8",
+      "hashAlgorithm": "sha256",
+      "output": "lowercase-hex",
+      "rawUntrustedTextIncluded": false
+    }
+  },
+  "defaults": {
+    "source": "github",
+    "ingress": "azure-service-bus-broker",
+    "enabled": false,
+    "dryRun": true,
+    "dataClassification": "internal",
+    "maxPayloadBytes": 262144,
+    "requiredEnvelopeFields": [
+      "schemaVersion",
+      "id",
+      "type",
+      "source",
+      "subject",
+      "occurredAt",
+      "correlationId",
+      "causationId",
+      "traceParent",
+      "dataClassification",
+      "producer",
+      "payload"
+    ],
+    "idempotency": {
+      "store": "cosmos-helios-idempotency",
+      "keyTemplate": "sha256(normalized-length-prefixed:{routeId}:{source.deliveryId}:{target.logicalId}:{operation})",
+      "retention": "P30D",
+      "duplicateOutcome": "return-recorded-result-without-repeating-side-effect"
+    },
+    "correlation": {
+      "header": "Helios-Correlation-Id",
+      "marker": "helios-managed",
+      "markerFields": [
+        "routeId",
+        "correlationId",
+        "sourceEventId",
+        "sourceCommit",
+        "managedBy"
+      ],
+      "managedBy": "helios-deployment-manager"
+    },
+    "retryPolicy": {
+      "strategy": "exponential-with-full-jitter",
+      "maxAttempts": 5,
+      "initialDelay": "PT5S",
+      "maxDelay": "PT5M",
+      "honorRetryAfter": true,
+      "retryOn": [
+        "timeout",
+        "connection-reset",
+        "http-408",
+        "http-429",
+        "http-500",
+        "http-502",
+        "http-503",
+        "http-504"
+      ],
+      "neverRetryOn": [
+        "schema-invalid",
+        "signature-invalid",
+        "authorization-denied",
+        "approval-expired",
+        "http-400",
+        "http-401",
+        "http-403",
+        "http-404",
+        "http-409-unless-explicitly-idempotent"
+      ]
+    },
+    "deadLetter": {
+      "queue": "helios-automation-dlq",
+      "include": [
+        "routeId",
+        "correlationId",
+        "sourceReference",
+        "targetLogicalId",
+        "redactedErrorCode",
+        "attemptCount",
+        "firstAttemptAt",
+        "lastAttemptAt",
+        "evidenceReference"
+      ],
+      "exclude": [
+        "secrets",
+        "authorizationHeaders",
+        "cookies",
+        "rawWebhookBodies",
+        "privateMessageContent",
+        "modelCredentials"
+      ],
+      "replay": "new-policy-bound-plan-and-operator-approval-required"
+    },
+    "quietHours": {
+      "timezone": "America/Chicago",
+      "start": "22:00",
+      "end": "07:00",
+      "weekends": "all-day",
+      "behavior": "coalesce-by-route-subject-and-deliver-next-window",
+      "bypassSeverities": [
+        "critical"
+      ],
+      "neverDelay": [
+        "approval-expiry-warning",
+        "security-incident",
+        "production-rollback"
+      ]
+    },
+    "redaction": {
+      "profile": "helios-operations-v1",
+      "remove": [
+        "token",
+        "secret",
+        "authorization",
+        "cookie",
+        "apiKey",
+        "clientSecret",
+        "recoveryKey",
+        "rawPrompt",
+        "rawModelResponse"
+      ],
+      "hash": [
+        "userId",
+        "deviceSerial",
+        "externalPrincipal"
+      ],
+      "maxMessageCharacters": 4000
+    }
+  },
+  "approvalClasses": {
+    "0": {
+      "name": "observe",
+      "rule": "automatic read of approved public metadata only; no external write"
+    },
+    "1": {
+      "name": "read-approved-private",
+      "rule": "audited allowlisted read; no external write"
+    },
+    "2": {
+      "name": "bounded-draft-or-status-write",
+      "rule": "human-reviewed draft or policy-preapproved idempotent write using a fixed template and allowlisted internal target"
+    },
+    "3": {
+      "name": "engineering-or-staged-change",
+      "rule": "branch, pull request, test run, evidence publication or staged deployment through required policy gates"
+    },
+    "4": {
+      "name": "production-security-or-destructive",
+      "rule": "explicit unexpired human approval bound to exact subject, commit, artifact, plan, environment and rollback point"
+    }
+  },
+  "feedbackLoopGuards": {
+    "maxHopCount": 4,
+    "causalChainRequired": true,
+    "rejectIfMarkerManagedBy": "helios-deployment-manager",
+    "rejectIfSourceSystemIsTargetNotification": true,
+    "notificationEventsAreTerminal": true,
+    "linearChangesCreatedByThisRegistryDoNotTriggerGitHubWrites": true,
+    "slackAndTeamsMessagesNeverTriggerRouteExecution": true,
+    "sharepointEvidencePublicationNeverTriggersDeployment": true,
+    "routeGraphMustBeAcyclic": true,
+    "selfTargetingRouteProhibited": true,
+    "maxNotificationsPerCorrelationPerHour": 3,
+    "stateChangeRequiredForRepeatNotification": true
+  },
+  "routes": [
+    {
+      "id": "github-actions-failure-to-operations-v1",
+      "enabled": false,
+      "dryRun": true,
+      "approvalClass": 2,
+      "trigger": {
+        "provider": "github",
+        "event": "workflow_run.completed",
+        "match": {
+          "repositoryClassification": [
+            "canonical",
+            "active-module"
+          ],
+          "conclusion": [
+            "failure",
+            "timed_out",
+            "cancelled"
+          ],
+          "excludeManagedMarker": true
+        }
+      },
+      "subjectKey": "{repository.id}:{workflow.id}:{head_branch}",
+      "correlationId": "preserve-or-generate-from-github-delivery-id",
+      "steps": [
+        {
+          "order": 1,
+          "operation": "broker.normalize-and-persist",
+          "target": "azure-service-bus-broker",
+          "approvalClass": 0
+        },
+        {
+          "order": 2,
+          "operation": "linear.issue.upsert",
+          "target": "linear.integrationFabric",
+          "approvalClass": 2,
+          "externalKey": "helios-ci:{repository.id}:{workflow.id}:{head_branch}",
+          "template": "CI failure: {repository.full_name} / {workflow.name} / {head_branch}",
+          "fields": {
+            "status": "Todo",
+            "priorityByConclusion": {
+              "failure": "high",
+              "timed_out": "high",
+              "cancelled": "normal"
+            },
+            "bodyReferencesOnly": [
+              "githubRunUrl",
+              "commitSha",
+              "failedCheckNames",
+              "correlationId"
+            ]
+          }
+        },
+        {
+          "order": 3,
+          "operation": "slack.message.send",
+          "target": "slack.controlPlane",
+          "approvalClass": 2,
+          "condition": "new-subject-or-state-change-or-last-notified-more-than-PT6H",
+          "quietHoursPolicy": "defaults",
+          "template": "HELIOS CI blocked: {repository.full_name} {workflow.name} on {head_branch}. Linear: {linear.issueUrl}. Run: {githubRunUrl}. Correlation: {correlationId}."
+        },
+        {
+          "order": 4,
+          "operation": "teams.channelMessage.send",
+          "target": "teams.ops",
+          "approvalClass": 2,
+          "condition": "severity-critical-or-canonical-repository-and-state-change",
+          "quietHoursPolicy": "defaults",
+          "template": "HELIOS CI blocked: {repository.full_name} {workflow.name} on {head_branch}. Linear: {linear.issueUrl}. Run: {githubRunUrl}. Correlation: {correlationId}."
+        },
+        {
+          "order": 5,
+          "operation": "evidence.stage",
+          "target": "azure-artifact-evidence-store",
+          "approvalClass": 1,
+          "condition": "canonical-repository-or-severity-critical",
+          "format": "application/vnd.helios.ci-evidence+json",
+          "sharePointPublish": false
+        }
+      ],
+      "recovery": {
+        "onSuccessEvent": "workflow_run.completed:success",
+        "linearAction": "add-correlated-resolution-and-move-to-done-after-policy-check",
+        "notificationRule": "one-recovery-message-per-open-correlation",
+        "sharePointRule": "do-not-publish-routine-ci-evidence"
+      }
+    },
+    {
+      "id": "github-pull-request-state-to-delivery-v1",
+      "enabled": false,
+      "dryRun": true,
+      "approvalClass": 2,
+      "trigger": {
+        "provider": "github",
+        "event": "pull_request",
+        "actions": [
+          "opened",
+          "reopened",
+          "ready_for_review",
+          "synchronize",
+          "closed"
+        ],
+        "match": {
+          "repositoryClassification": [
+            "canonical",
+            "active-module"
+          ],
+          "excludeManagedMarker": true
+        }
+      },
+      "subjectKey": "{repository.id}:pull:{pull_request.number}",
+      "steps": [
+        {
+          "order": 1,
+          "operation": "broker.normalize-and-persist",
+          "target": "azure-service-bus-broker",
+          "approvalClass": 0
+        },
+        {
+          "order": 2,
+          "operation": "linear.issue.link-or-update",
+          "target": "linear.integrationFabric",
+          "approvalClass": 2,
+          "condition": "linear-reference-present-or-governed-helios-label-present",
+          "mapping": {
+            "opened": "In Progress",
+            "reopened": "In Progress",
+            "ready_for_review": "In Review",
+            "synchronize": "In Review",
+            "closed_merged": "Done",
+            "closed_unmerged": "Cancelled"
+          }
+        },
+        {
+          "order": 3,
+          "operation": "slack.message.send",
+          "target": "slack.controlPlane",
+          "approvalClass": 2,
+          "condition": "ready-for-review-or-merged-or-blocked-and-state-changed",
+          "quietHoursPolicy": "defaults",
+          "template": "HELIOS PR {pull_request.state}: {repository.full_name}#{pull_request.number} {pull_request.title}. Checks: {checks.summary}. Linear: {linear.issueUrl}. {pull_request.html_url}"
+        },
+        {
+          "order": 4,
+          "operation": "teams.channelMessage.send",
+          "target": "teams.ops",
+          "approvalClass": 2,
+          "condition": "canonical-release-pr-merged-or-production-blocker-state-changed",
+          "quietHoursPolicy": "defaults",
+          "template": "HELIOS delivery update: {repository.full_name}#{pull_request.number} is {pull_request.state}. Checks: {checks.summary}. Correlation: {correlationId}."
+        }
+      ],
+      "prohibitions": [
+        "do-not-merge-pull-request",
+        "do-not-push-directly-to-main",
+        "do-not-publish-release-from-notification-route",
+        "do-not-create-sharepoint-release-evidence-before-deployment"
+      ]
+    },
+    {
+      "id": "github-deployment-outcome-to-evidence-v1",
+      "enabled": false,
+      "dryRun": true,
+      "approvalClass": 3,
+      "trigger": {
+        "provider": "github",
+        "event": "deployment_status",
+        "match": {
+          "repositoryClassification": [
+            "canonical"
+          ],
+          "environment": [
+            "development",
+            "test",
+            "production"
+          ],
+          "state": [
+            "success",
+            "failure",
+            "error"
+          ],
+          "excludeManagedMarker": true
+        }
+      },
+      "subjectKey": "{repository.id}:deployment:{environment}:{deployment.id}",
+      "preconditions": [
+        "commit-and-artifact-digests-present",
+        "workflow-run-and-environment-present",
+        "sbom-and-attestation-verified",
+        "what-if-evidence-present",
+        "approval-reference-present-for-protected-environment",
+        "rollback-point-present",
+        "issue-162-closed-for-production"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "operation": "broker.normalize-and-persist",
+          "target": "azure-service-bus-broker",
+          "approvalClass": 0
+        },
+        {
+          "order": 2,
+          "operation": "evidence.compose-and-hash",
+          "target": "azure-artifact-evidence-store",
+          "approvalClass": 2,
+          "format": "application/vnd.helios.deployment-evidence+json",
+          "requiredFields": [
+            "repository",
+            "commitSha",
+            "workflowRunUrl",
+            "environment",
+            "artifactDigests",
+            "sbomReferences",
+            "attestationReferences",
+            "whatIfReference",
+            "approvalReference",
+            "deploymentOutcome",
+            "telemetryReference",
+            "rollbackReference",
+            "correlationId"
+          ]
+        },
+        {
+          "order": 3,
+          "operation": "sharepoint.file.upload-immutable",
+          "target": "sharepoint.deploymentEvidence",
+          "approvalClass": 3,
+          "condition": "evidence-verified-and-governance-publication-approved",
+          "pathTemplate": "{environment}/{occurredAt:yyyy}/{occurredAt:MM}/{repository.safeName}-{commit.short}-{deployment.id}.json",
+          "conflictBehavior": "fail",
+          "sidecarHash": "sha256"
+        },
+        {
+          "order": 4,
+          "operation": "linear.issue.update",
+          "target": "linear.integrationFabric",
+          "approvalClass": 2,
+          "condition": "linked-linear-issue-present",
+          "mapping": {
+            "success": "Done after evidence publication",
+            "failure": "In Progress",
+            "error": "In Progress"
+          }
+        },
+        {
+          "order": 5,
+          "operation": "slack.message.send",
+          "target": "slack.controlPlane",
+          "approvalClass": 2,
+          "condition": "deployment-state-changed-and-evidence-complete",
+          "quietHoursPolicy": "defaults",
+          "template": "HELIOS deployment {state}: {environment} at {commit.short}. Evidence: {sharepoint.webUrl}. Rollback: {rollback.status}. Correlation: {correlationId}."
+        },
+        {
+          "order": 6,
+          "operation": "teams.channelMessage.send",
+          "target": "teams.ops",
+          "approvalClass": 2,
+          "condition": "production-or-failure-or-error",
+          "quietHoursPolicy": "defaults",
+          "template": "HELIOS deployment {state}: {environment} at {commit.short}. Evidence: {sharepoint.webUrl}. Rollback: {rollback.status}. Correlation: {correlationId}."
+        }
+      ],
+      "failureRule": "if-evidence-publication-fails-do-not-report-deployment-as-governance-complete",
+      "productionRule": "production-route-remains-disabled-until-issue-162-is-closed-and-class-4-deployment-approval-was-validated-upstream"
+    },
+    {
+      "id": "github-security-gate-to-incident-v1",
+      "enabled": false,
+      "dryRun": true,
+      "approvalClass": 2,
+      "trigger": {
+        "provider": "github",
+        "event": "check_run.completed",
+        "match": {
+          "repositoryClassification": [
+            "canonical",
+            "active-module"
+          ],
+          "checkCategory": [
+            "secret-scanning",
+            "codeql",
+            "dependency-review",
+            "artifact-signature",
+            "sbom-policy"
+          ],
+          "conclusion": [
+            "failure",
+            "action_required"
+          ],
+          "excludeManagedMarker": true
+        }
+      },
+      "subjectKey": "{repository.id}:security:{check_run.name}:{head_sha}",
+      "steps": [
+        {
+          "order": 1,
+          "operation": "broker.normalize-redact-and-persist",
+          "target": "azure-service-bus-broker",
+          "approvalClass": 0,
+          "specialRule": "never-copy-secret-value-or-vulnerable-source-snippet"
+        },
+        {
+          "order": 2,
+          "operation": "linear.issue.upsert",
+          "target": "linear.integrationFabric",
+          "approvalClass": 2,
+          "externalKey": "helios-security:{repository.id}:{check_run.name}:{head_sha}",
+          "template": "Security gate blocked: {repository.full_name} / {check_run.name}",
+          "priority": "urgent"
+        },
+        {
+          "order": 3,
+          "operation": "slack.message.send",
+          "target": "slack.controlPlane",
+          "approvalClass": 2,
+          "quietHoursPolicy": "bypass-as-security-incident",
+          "template": "HELIOS security gate blocked {repository.full_name} at {head_sha.short}. Details are restricted to the GitHub run and Linear issue. Correlation: {correlationId}."
+        },
+        {
+          "order": 4,
+          "operation": "teams.channelMessage.send",
+          "target": "teams.ops",
+          "approvalClass": 2,
+          "quietHoursPolicy": "bypass-as-security-incident",
+          "template": "HELIOS security gate blocked {repository.full_name} at {head_sha.short}. Details are restricted to the GitHub run and Linear issue. Correlation: {correlationId}."
+        }
+      ],
+      "prohibitions": [
+        "do-not-send-secret-or-source-snippet",
+        "do-not-auto-dismiss-alert",
+        "do-not-auto-merge-remediation",
+        "do-not-publish-incident-details-to-sharepoint"
+      ]
+    }
+  ],
+  "validation": {
+    "requiredTests": [
+      "invalid-signature-creates-no-event",
+      "duplicate-delivery-creates-one-target-operation",
+      "managed-marker-event-is-rejected",
+      "notification-output-cannot-become-input",
+      "causal-hop-limit-is-enforced",
+      "quiet-hours-coalesces-noncritical-notices",
+      "critical-security-and-rollback-notices-bypass-quiet-hours",
+      "retryable-failure-backs-off-and-succeeds-idempotently",
+      "permanent-failure-enters-dlq-without-secrets",
+      "dlq-replay-requires-new-plan-and-approval",
+      "linear-upsert-does-not-create-duplicates",
+      "slack-and-teams-repeat-notices-require-state-change",
+      "sharepoint-upload-is-immutable-and-hash-verified",
+      "evidence-publication-failure-prevents-governance-complete-status",
+      "production-route-is-disabled-while-issue-162-is-open",
+      "unknown-route-provider-operation-or-approval-class-fails-closed"
+    ],
+    "promotionRequirements": [
+      "pr-170-green",
+      "route-contract-schema-valid",
+      "connector-identities-least-privilege",
+      "all-logical-destinations-resolved-from-private-environment-configuration",
+      "dry-run-evidence-approved",
+      "rollback-drill-passed",
+      "no-feedback-loop-model-check-passed"
+    ]
+  },
+  "prohibitions": [
+    "no-direct-github-to-saas-connector-chain",
+    "no-slack-or-teams-as-source-of-truth",
+    "no-sharepoint-as-executable-source",
+    "no-linear-status-that-overrides-github-state",
+    "no-message-triggered-deployment",
+    "no-connector-secret-in-route-registry",
+    "no-direct-to-main-write",
+    "no-self-approval",
+    "no-production-deployment-from-this-registry"
+  ]
+}

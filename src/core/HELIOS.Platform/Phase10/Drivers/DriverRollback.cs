@@ -23,7 +23,7 @@ namespace HELIOS.Platform.Phase10.Drivers
             _repository = repository;
             _healthMonitor = healthMonitor;
             _semaphore = new SemaphoreSlim(1);
-            _backupDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramData), "HELIOS", "DriverBackups");
+            _backupDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "HELIOS", "DriverBackups");
             Directory.CreateDirectory(_backupDirectory);
         }
 

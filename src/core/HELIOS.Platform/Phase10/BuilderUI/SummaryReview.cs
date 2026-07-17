@@ -30,7 +30,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private void InitializeUI()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10), Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10) };
 
             // Title
             panel.Children.Add(new TextBlock { Text = "Review & Create", FontWeight = System.Windows.FontWeights.Bold, FontSize = 14 });
@@ -52,10 +52,13 @@ namespace HELIOS.Platform.Phase10.BuilderUI
             // Terms checkbox
             _termsCheckbox = new CheckBox
             {
-                Content = "I accept the HELIOS Terms and Conditions and acknowledge that all data on the selected drive will be erased.",
+                Content = new TextBlock
+                {
+                    Text = "I accept the HELIOS Terms and Conditions and acknowledge that all data on the selected drive will be erased.",
+                    TextWrapping = System.Windows.TextWrapping.Wrap
+                },
                 Margin = new Thickness(10),
-                IsChecked = false,
-                TextWrapping = System.Windows.TextWrapping.Wrap
+                IsChecked = false
             };
             panel.Children.Add(_termsCheckbox);
 

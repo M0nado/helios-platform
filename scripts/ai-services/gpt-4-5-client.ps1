@@ -461,6 +461,7 @@ Review:
                 $delay = [Math]::Min($delay * $this.RetryPolicy.BackoffMultiplier, $this.RetryPolicy.MaxBackoffDelay)
             }
         }
+        throw "Retry loop ended without a response"
     }
     
     [PSCustomObject]MakeHttpRequest([hashtable]$RequestBody) {
@@ -487,9 +488,9 @@ Review:
     }
     
     [double]CalculateCost([PSCustomObject]$Usage) {
-        $config = $this.Config.services.'gpt-4-5'
-        $inputCost = ($Usage.prompt_tokens / 1000) * $config.costPerThousandTokens.input
-        $outputCost = ($Usage.completion_tokens / 1000) * $config.costPerThousandTokens.output
+        $serviceConfig = $this.Config.services.'gpt-4-5'
+        $inputCost = ($Usage.prompt_tokens / 1000) * $serviceConfig.costPerThousandTokens.input
+        $outputCost = ($Usage.completion_tokens / 1000) * $serviceConfig.costPerThousandTokens.output
         return $inputCost + $outputCost
     }
     

@@ -1,5 +1,9 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using CanonicalEventAggregationResult = HELIOS.Platform.Core.AdvancedOptimization.Interfaces.EventAggregationResult;
+using CanonicalEventPattern = HELIOS.Platform.Core.AdvancedOptimization.Interfaces.EventPattern;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -7,7 +11,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
     /// Complex Event Processor implementation.
     /// Provides event stream analysis and pattern detection.
     /// </summary>
-    public class ComplexEventProcessor : IComplexEventProcessor
+    public class ComplexEventProcessor : Contracts.IComplexEventProcessor
     {
         private readonly ILogger<ComplexEventProcessor> _logger;
         private readonly SemaphoreSlim _semaphore;
@@ -143,7 +147,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<PatternMatchingResult> MatchPatternsAsync(List<ComplexEvent> events, List<EventPattern> patterns, CancellationToken cancellationToken = default)
+        public async Task<PatternMatchingResult> MatchPatternsAsync(List<ComplexEvent> events, List<CanonicalEventPattern> patterns, CancellationToken cancellationToken = default)
         {
             await _semaphore.WaitAsync(cancellationToken);
             try
@@ -263,12 +267,12 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<EventAggregationResult> AggregateEventsAsync(List<ComplexEvent> events, int windowSizeSeconds, CancellationToken cancellationToken = default)
+        public async Task<CanonicalEventAggregationResult> AggregateEventsAsync(List<ComplexEvent> events, int windowSizeSeconds, CancellationToken cancellationToken = default)
         {
             await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                var result = new EventAggregationResult
+                var result = new CanonicalEventAggregationResult
                 {
                     Timestamp = DateTime.UtcNow,
                     WindowSizeSeconds = windowSizeSeconds

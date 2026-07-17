@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HELIOS.Platform.Plugins.Interfaces;
 using Microsoft.Extensions.Logging;
+using PluginContract = HELIOS.Platform.Plugins.Interfaces.IPlugin;
 
 namespace HELIOS.Platform.Plugins.Registry
 {
@@ -37,7 +38,7 @@ namespace HELIOS.Platform.Plugins.Registry
 
         public void RegisterPlugin(
             string pluginId,
-            IPlugin plugin,
+            PluginContract plugin,
             PluginMetadata metadata)
         {
             if (string.IsNullOrWhiteSpace(pluginId))
@@ -98,9 +99,23 @@ namespace HELIOS.Platform.Plugins.Registry
 
             lock (_lockObject)
             {
-                if (!_registry.TryRemove(pluginId, out var entry))
+                if (!_registry.TryGetValue(pluginId, out var entry))
                 {
                     throw new InvalidOperationException($"Plugin {pluginId} not found");
+                }
+
+                _registry.Remove(pluginId);
+
+                foreach (var dependency in entry.Metadata.Dependencies)
+                {
+                    if (_dependencyGraph.TryGetValue(dependency, out var dependents))
+                    {
+                        dependents.Remove(pluginId);
+                        if (dependents.Count == 0)
+                        {
+                            _dependencyGraph.Remove(dependency);
+                        }
+                    }
                 }
 
                 _dependencyGraph.Remove(pluginId);
@@ -210,7 +225,7 @@ namespace HELIOS.Platform.Plugins.Registry
                     return new List<string>();
                 }
 
-                return entry.Metadata.Dependencies.AsReadOnly();
+                return entry.Metadata.Dependencies.ToList().AsReadOnly();
             }
         }
 
@@ -255,7 +270,7 @@ namespace HELIOS.Platform.Plugins.Registry
             }
         }
 
-        public IReadOnlyDictionary<string, IPlugin> GetAllPlugins()
+        public IReadOnlyDictionary<string, PluginContract> GetAllPlugins()
         {
             lock (_lockObject)
             {
@@ -323,7 +338,7 @@ namespace HELIOS.Platform.Plugins.Registry
     /// </summary>
     public interface IPluginRegistry
     {
-        void RegisterPlugin(string pluginId, IPlugin plugin, PluginMetadata metadata);
+        void RegisterPlugin(string pluginId, PluginContract plugin, PluginMetadata metadata);
         void UnregisterPlugin(string pluginId);
         void SetPluginStatus(string pluginId, PluginStatus newStatus, string message = null);
         void EnablePlugin(string pluginId);
@@ -332,7 +347,7 @@ namespace HELIOS.Platform.Plugins.Registry
         IReadOnlyList<string> GetPluginDependencies(string pluginId);
         IReadOnlyList<string> GetDependentPlugins(string pluginId);
         bool CanLoadPlugin(string pluginId);
-        IReadOnlyDictionary<string, IPlugin> GetAllPlugins();
+        IReadOnlyDictionary<string, PluginContract> GetAllPlugins();
         IReadOnlyDictionary<string, PluginRegistryEntry> GetRegistrySnapshot();
         void SetPluginConfiguration(string pluginId, string key, object value);
         object GetPluginConfiguration(string pluginId, string key);
@@ -350,7 +365,7 @@ namespace HELIOS.Platform.Plugins.Registry
     public class PluginRegistryEntry
     {
         public string PluginId { get; set; }
-        public IPlugin Plugin { get; set; }
+        public PluginContract Plugin { get; set; }
         public PluginMetadata Metadata { get; set; }
         public PluginStatus Status { get; set; }
         public bool IsEnabled { get; set; }
@@ -370,7 +385,7 @@ namespace HELIOS.Platform.Plugins.Registry
         public string Author { get; set; }
         public string Description { get; set; }
         public PluginCategory Category { get; set; }
-        public IReadOnlyList<string> Dependencies { get; set; }
+        public IReadOnlyList<string> Dependencies { get; set; } = Array.Empty<string>();
         public DateTime LoadedTime { get; set; }
         public string AssemblyPath { get; set; }
         public bool IsEnabled { get; set; }

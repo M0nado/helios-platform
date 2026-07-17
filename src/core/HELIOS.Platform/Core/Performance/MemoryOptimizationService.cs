@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace HELIOS.Platform.Core.Performance
@@ -40,6 +41,10 @@ namespace HELIOS.Platform.Core.Performance
 
     public class MemoryOptimizationService : IMemoryOptimizationService
     {
+        [DllImport("psapi.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EmptyWorkingSet(IntPtr processHandle);
+
         private readonly long _memoryThresholdMB = 90; // Alert threshold
         private long _lastGen2CollectionTime;
         private long _lastMemoryCheckTime;
@@ -109,12 +114,22 @@ namespace HELIOS.Platform.Core.Performance
         public void ClearUnusedMemory()
         {
             // Trim working set to minimize memory footprint
-            try
+            if (OperatingSystem.IsWindows() && IsMemoryPressureHigh())
             {
-                // This is Windows-specific but has no effect on other platforms
-                System.Diagnostics.Process.GetCurrentProcess()?.MinimizeWorkingSet();
+                try
+                {
+                    using var process = System.Diagnostics.Process.GetCurrentProcess();
+                    if (!EmptyWorkingSet(process.Handle))
+                    {
+                        Debug.WriteLine(
+                            $"Working-set trim failed with Win32 error {Marshal.GetLastWin32Error()}.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Working-set trim failed: {ex.Message}");
+                }
             }
-            catch { /* Not available on all platforms */ }
 
             // Compact large object heap
             GC.Collect(2, GCCollectionMode.Optimized);

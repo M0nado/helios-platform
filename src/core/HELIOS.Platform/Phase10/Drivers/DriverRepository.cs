@@ -20,7 +20,7 @@ namespace HELIOS.Platform.Phase10.Drivers
 
         public DriverRepository(string repositoryPath = null)
         {
-            _repositoryPath = repositoryPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramData), "HELIOS", "Drivers");
+            _repositoryPath = repositoryPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "HELIOS", "Drivers");
             _cacheDirectory = Path.Combine(_repositoryPath, "Cache");
             _semaphore = new SemaphoreSlim(1);
             _cache = new Dictionary<string, DriverInfo>();

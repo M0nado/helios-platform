@@ -48,7 +48,7 @@ public class ThemeManager : IThemeManager
             throw new ThemeException(themeId, "Theme not found");
 
         _currentTheme = theme;
-        return await Task.CompletedTask;
+        await Task.CompletedTask;
     }
 
     public async Task<Theme> CreateThemeAsync(Theme theme)
@@ -73,7 +73,7 @@ public class ThemeManager : IThemeManager
         if (_currentTheme.Id == theme.Id)
             _currentTheme = theme;
 
-        return await Task.CompletedTask;
+        await Task.CompletedTask;
     }
 
     public async Task DeleteThemeAsync(string themeId)
@@ -86,7 +86,7 @@ public class ThemeManager : IThemeManager
         if (_currentTheme.Id == themeId)
             _currentTheme = _themes["dark-mode"];
 
-        return await Task.CompletedTask;
+        await Task.CompletedTask;
     }
 
     public async Task<ThemeMode> GetThemeModeAsync()
@@ -103,7 +103,7 @@ public class ThemeManager : IThemeManager
         else if (mode == ThemeMode.Dark)
             await SetThemeAsync("dark-mode");
 
-        return await Task.CompletedTask;
+        await Task.CompletedTask;
     }
 
     public async Task<bool> IsDarkModeEnabledAsync()
@@ -119,7 +119,7 @@ public class ThemeManager : IThemeManager
         else
             await SetThemeAsync("light-mode");
 
-        return await Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }
 
@@ -147,7 +147,7 @@ public class ThemeService : IThemeService
     {
         // In real implementation, would detect OS dark mode setting
         var isDarkMode = IsSystemDarkModeEnabled();
-        var theme = isDarkMode ? new DarkModeTheme() : new LightModeTheme();
+        Theme theme = isDarkMode ? new DarkModeTheme() : new LightModeTheme();
 
         await ApplyThemeAsync(theme);
     }

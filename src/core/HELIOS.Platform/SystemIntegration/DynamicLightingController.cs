@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Windows.Devices.Enumeration;
 using Windows.Devices.Lights;
 using Windows.Graphics;
 using Windows.UI;
@@ -16,7 +17,7 @@ namespace HELIOS.Platform.SystemIntegration
     public class DynamicLightingController : IDisposable
     {
         private readonly Dictionary<uint, LampArray> _lampArrays;
-        private LampArray _primaryLampArray;
+        private LampArray? _primaryLampArray;
         private bool _isLightingEnabled;
         private bool _isBatteryMode;
         private bool _disposed;
@@ -39,23 +40,38 @@ namespace HELIOS.Platform.SystemIntegration
         {
             try
             {
-                var lampArrays = LampArray.GetDeviceSelector();
-                Debug.WriteLine($"[DynamicLighting] Discovered lamp arrays: {lampArrays}");
-
-                if (LampArray.GetDeviceSelector() != null)
-                {
-                    _primaryLampArray = LampArray.FromIdAsync(LampArray.GetDeviceSelector()).GetAwaiter().GetResult();
-                    
-                    if (_primaryLampArray != null)
-                    {
-                        Debug.WriteLine($"[DynamicLighting] Primary lamp array initialized with {_primaryLampArray.LampCount} lamps");
-                    }
-                }
+                InitializeLightingDevicesAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[DynamicLighting] Warning: Could not initialize lighting devices: {ex.Message}");
                 LightingError?.Invoke(this, ex);
+            }
+        }
+
+        private async Task InitializeLightingDevicesAsync()
+        {
+            var selector = LampArray.GetDeviceSelector();
+            var devices = await DeviceInformation.FindAllAsync(selector);
+            Debug.WriteLine($"[DynamicLighting] Discovered {devices.Count} lamp arrays");
+
+            uint index = 0;
+            foreach (var device in devices)
+            {
+                var lampArray = await LampArray.FromIdAsync(device.Id);
+                if (lampArray == null)
+                {
+                    continue;
+                }
+
+                _lampArrays[index++] = lampArray;
+                _primaryLampArray ??= lampArray;
+            }
+
+            if (_primaryLampArray != null)
+            {
+                Debug.WriteLine(
+                    $"[DynamicLighting] Primary lamp array initialized with {_primaryLampArray.LampCount} lamps");
             }
         }
 
@@ -168,7 +184,7 @@ namespace HELIOS.Platform.SystemIntegration
 
                 if (_primaryLampArray != null)
                 {
-                    _primaryLampArray.SetColor(Colors.Black);
+                    _primaryLampArray.SetColor(Color.FromArgb(255, 0, 0, 0));
                 }
                 await Task.Delay(offDuration);
             }
@@ -182,7 +198,7 @@ namespace HELIOS.Platform.SystemIntegration
             const int steps = 15;
             var stepDuration = durationMs / steps;
             
-            Color[] gradientColors = GenerateGradient(Colors.Transparent, targetColor, steps);
+            Color[] gradientColors = GenerateGradient(Color.FromArgb(0, 0, 0, 0), targetColor, steps);
 
             foreach (var gradColor in gradientColors)
             {
@@ -238,7 +254,7 @@ namespace HELIOS.Platform.SystemIntegration
             
             if (!enabled && _primaryLampArray != null)
             {
-                _primaryLampArray.SetColor(Colors.Black);
+                _primaryLampArray.SetColor(Color.FromArgb(255, 0, 0, 0));
             }
 
             Debug.WriteLine($"[DynamicLighting] Lighting {(enabled ? "enabled" : "disabled")}");
@@ -262,7 +278,7 @@ namespace HELIOS.Platform.SystemIntegration
             {
                 if (_primaryLampArray != null)
                 {
-                    _primaryLampArray.SetColor(Colors.Black);
+                    _primaryLampArray.SetColor(Color.FromArgb(255, 0, 0, 0));
                     Debug.WriteLine("[DynamicLighting] Lighting reset to default");
                 }
             }
@@ -281,7 +297,7 @@ namespace HELIOS.Platform.SystemIntegration
             try
             {
                 ResetLighting();
-                _primaryLampArray?.Dispose();
+                _primaryLampArray = null;
                 _disposed = true;
             }
             catch (Exception ex)

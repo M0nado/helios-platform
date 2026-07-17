@@ -8,6 +8,11 @@ public interface IL1CacheService
     Task<T> GetAsync<T>(string key, Func<Task<T>> factory, TimeSpan ttl);
     bool TryGet<T>(string key, out T value);
     void Set<T>(string key, T value, TimeSpan ttl);
+    bool Remove(string key)
+    {
+        Set<object?>(key, null, TimeSpan.Zero);
+        return true;
+    }
     void Clear();
 }
 
@@ -59,6 +64,11 @@ public sealed class L1CacheService : IL1CacheService
             Value = value,
             ExpiresAtUtc = DateTime.UtcNow.Add(ttl),
         };
+    }
+
+    public bool Remove(string key)
+    {
+        return _cache.TryRemove(key, out _);
     }
 
     public void Clear()

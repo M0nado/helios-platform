@@ -31,7 +31,7 @@ public class ProfileDetector : IProfileDetector
 
             var runningProcesses = usage["RunningProcesses"] as List<string> ?? new List<string>();
 
-            if (hasGPU && gpuCores >= 8 && cpuCores >= 8 && totalRam >= 16 * 1024 * 1024 * 1024)
+            if (hasGPU && gpuCores >= 8 && cpuCores >= 8 && totalRam >= 16L * 1024 * 1024 * 1024)
             {
                 if (DetectGamingApps(runningProcesses))
                     return "Gaming";
@@ -43,7 +43,7 @@ public class ProfileDetector : IProfileDetector
             if (DetectProductivityApps(runningProcesses))
                 return "Work";
 
-            if (totalRam >= 8 * 1024 * 1024 * 1024)
+            if (totalRam >= 8L * 1024 * 1024 * 1024)
                 return "Development";
 
             return "Work";

@@ -28,7 +28,7 @@ function Find-Browser {
 }
 
 function Open-AppWindow([string]$Name, [string]$Url, [string]$Browser) {
-    Write-Host "Opening $Name: $Url" -ForegroundColor Cyan
+    Write-Host "Opening ${Name}: $Url" -ForegroundColor Cyan
     if ($Browser) {
         Start-Process -FilePath $Browser -ArgumentList @("--user-data-dir=$ProfileDir", "--app=$Url") | Out-Null
     } else {

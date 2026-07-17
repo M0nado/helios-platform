@@ -1,5 +1,8 @@
 using HELIOS.Platform.Core.AdvancedOptimization;
+using Microsoft.Extensions.Logging;
 using LoggerInterface = HELIOS.Platform.Core.Logging.ILogger;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using MsLogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace HELIOS.Platform.Core
 {
@@ -15,6 +18,8 @@ namespace HELIOS.Platform.Core
         /// </summary>
         public static void InitializePhase6Services(LoggerInterface? logger)
         {
+            ArgumentNullException.ThrowIfNull(logger);
+
             logger?.Info("═══════════════════════════════════════════════════════════════");
             logger?.Info("PHASE 6: ADVANCED OPTIMIZATION & INTELLIGENT SYSTEMS");
             logger?.Info("═══════════════════════════════════════════════════════════════");
@@ -22,43 +27,51 @@ namespace HELIOS.Platform.Core
             try
             {
                 // 1. Advanced Optimization Engine
-                var optimizationEngine = new AdvancedOptimizationEngine(logger);
-                ServiceContainer.Instance.RegisterSingleton<IAdvancedOptimizationEngine>(optimizationEngine);
+                var optimizationEngine = new AdvancedOptimizationEngine(
+                    new Phase6LoggerAdapter<AdvancedOptimizationEngine>(logger));
+                ServiceContainer.Instance.RegisterSingleton<Contracts.IAdvancedOptimizationEngine>(optimizationEngine);
                 logger?.Info("✓ Advanced Optimization Engine registered");
 
                 // 2. Intelligent Resource Allocator
-                var resourceAllocator = new IntelligentResourceAllocator(logger);
-                ServiceContainer.Instance.RegisterSingleton<IIntelligentResourceAllocator>(resourceAllocator);
+                var resourceAllocator = new IntelligentResourceAllocator(
+                    new Phase6LoggerAdapter<IntelligentResourceAllocator>(logger));
+                ServiceContainer.Instance.RegisterSingleton<Contracts.IIntelligentResourceAllocator>(resourceAllocator);
                 logger?.Info("✓ Intelligent Resource Allocator registered");
 
                 // 3. Anomaly Prediction Engine
-                var anomalyEngine = new AnomalyPredictionEngine(logger);
-                ServiceContainer.Instance.RegisterSingleton<IAnomalyPredictionEngine>(anomalyEngine);
+                var anomalyEngine = new AnomalyPredictionEngine(
+                    new Phase6LoggerAdapter<AnomalyPredictionEngine>(logger));
+                ServiceContainer.Instance.RegisterSingleton<Contracts.IAnomalyPredictionEngine>(anomalyEngine);
                 logger?.Info("✓ Anomaly Prediction Engine registered");
 
                 // 4. Service Mesh Optimizer
-                var meshOptimizer = new ServiceMeshOptimizer(logger);
-                ServiceContainer.Instance.RegisterSingleton<IServiceMeshOptimizer>(meshOptimizer);
+                var meshOptimizer = new ServiceMeshOptimizer(
+                    new Phase6LoggerAdapter<ServiceMeshOptimizer>(logger));
+                ServiceContainer.Instance.RegisterSingleton<Contracts.IServiceMeshOptimizer>(meshOptimizer);
                 logger?.Info("✓ Service Mesh Optimizer registered");
 
                 // 5. Security Threat Analyzer
-                var threatAnalyzer = new SecurityThreatAnalyzer(logger);
-                ServiceContainer.Instance.RegisterSingleton<ISecurityThreatAnalyzer>(threatAnalyzer);
+                var threatAnalyzer = new SecurityThreatAnalyzer(
+                    new Phase6LoggerAdapter<SecurityThreatAnalyzer>(logger));
+                ServiceContainer.Instance.RegisterSingleton<Contracts.ISecurityThreatAnalyzer>(threatAnalyzer);
                 logger?.Info("✓ Security Threat Analyzer registered");
 
                 // 6. Data Compression Engine
-                var compressionEngine = new DataCompressionEngine(logger);
-                ServiceContainer.Instance.RegisterSingleton<IDataCompressionEngine>(compressionEngine);
+                var compressionEngine = new DataCompressionEngine(
+                    new Phase6LoggerAdapter<DataCompressionEngine>(logger));
+                ServiceContainer.Instance.RegisterSingleton<Contracts.IDataCompressionEngine>(compressionEngine);
                 logger?.Info("✓ Data Compression Engine registered");
 
                 // 7. Performance Predictor AI
-                var performancePredictor = new PerformancePredictorAI(logger);
-                ServiceContainer.Instance.RegisterSingleton<IPerformancePredictorAI>(performancePredictor);
+                var performancePredictor = new PerformancePredictorAI(
+                    new Phase6LoggerAdapter<PerformancePredictorAI>(logger));
+                ServiceContainer.Instance.RegisterSingleton<Contracts.IPerformancePredictorAI>(performancePredictor);
                 logger?.Info("✓ Performance Predictor AI registered");
 
                 // 8. Complex Event Processor
-                var eventProcessor = new ComplexEventProcessor(logger);
-                ServiceContainer.Instance.RegisterSingleton<IComplexEventProcessor>(eventProcessor);
+                var eventProcessor = new ComplexEventProcessor(
+                    new Phase6LoggerAdapter<ComplexEventProcessor>(logger));
+                ServiceContainer.Instance.RegisterSingleton<Contracts.IComplexEventProcessor>(eventProcessor);
                 logger?.Info("✓ Complex Event Processor registered");
 
                 logger?.Info("═══════════════════════════════════════════════════════════════");
@@ -81,14 +94,14 @@ namespace HELIOS.Platform.Core
 
             try
             {
-                var optimization = ServiceContainer.Instance.GetService<IAdvancedOptimizationEngine>();
-                var resources = ServiceContainer.Instance.GetService<IIntelligentResourceAllocator>();
-                var anomaly = ServiceContainer.Instance.GetService<IAnomalyPredictionEngine>();
-                var mesh = ServiceContainer.Instance.GetService<IServiceMeshOptimizer>();
-                var threat = ServiceContainer.Instance.GetService<ISecurityThreatAnalyzer>();
-                var compression = ServiceContainer.Instance.GetService<IDataCompressionEngine>();
-                var performance = ServiceContainer.Instance.GetService<IPerformancePredictorAI>();
-                var events = ServiceContainer.Instance.GetService<IComplexEventProcessor>();
+                var optimization = ServiceContainer.Instance.GetService<Contracts.IAdvancedOptimizationEngine>();
+                var resources = ServiceContainer.Instance.GetService<Contracts.IIntelligentResourceAllocator>();
+                var anomaly = ServiceContainer.Instance.GetService<Contracts.IAnomalyPredictionEngine>();
+                var mesh = ServiceContainer.Instance.GetService<Contracts.IServiceMeshOptimizer>();
+                var threat = ServiceContainer.Instance.GetService<Contracts.ISecurityThreatAnalyzer>();
+                var compression = ServiceContainer.Instance.GetService<Contracts.IDataCompressionEngine>();
+                var performance = ServiceContainer.Instance.GetService<Contracts.IPerformancePredictorAI>();
+                var events = ServiceContainer.Instance.GetService<Contracts.IComplexEventProcessor>();
 
                 if (optimization != null && resources != null && anomaly != null && mesh != null &&
                     threat != null && compression != null && performance != null && events != null)
@@ -123,14 +136,14 @@ namespace HELIOS.Platform.Core
 
             try
             {
-                status.OptimizationEngineActive = ServiceContainer.Instance.GetService<IAdvancedOptimizationEngine>() != null;
-                status.ResourceAllocatorActive = ServiceContainer.Instance.GetService<IIntelligentResourceAllocator>() != null;
-                status.AnomalyEngineActive = ServiceContainer.Instance.GetService<IAnomalyPredictionEngine>() != null;
-                status.MeshOptimizerActive = ServiceContainer.Instance.GetService<IServiceMeshOptimizer>() != null;
-                status.ThreatAnalyzerActive = ServiceContainer.Instance.GetService<ISecurityThreatAnalyzer>() != null;
-                status.CompressionEngineActive = ServiceContainer.Instance.GetService<IDataCompressionEngine>() != null;
-                status.PerformancePredictorActive = ServiceContainer.Instance.GetService<IPerformancePredictorAI>() != null;
-                status.EventProcessorActive = ServiceContainer.Instance.GetService<IComplexEventProcessor>() != null;
+                status.OptimizationEngineActive = ServiceContainer.Instance.GetService<Contracts.IAdvancedOptimizationEngine>() != null;
+                status.ResourceAllocatorActive = ServiceContainer.Instance.GetService<Contracts.IIntelligentResourceAllocator>() != null;
+                status.AnomalyEngineActive = ServiceContainer.Instance.GetService<Contracts.IAnomalyPredictionEngine>() != null;
+                status.MeshOptimizerActive = ServiceContainer.Instance.GetService<Contracts.IServiceMeshOptimizer>() != null;
+                status.ThreatAnalyzerActive = ServiceContainer.Instance.GetService<Contracts.ISecurityThreatAnalyzer>() != null;
+                status.CompressionEngineActive = ServiceContainer.Instance.GetService<Contracts.IDataCompressionEngine>() != null;
+                status.PerformancePredictorActive = ServiceContainer.Instance.GetService<Contracts.IPerformancePredictorAI>() != null;
+                status.EventProcessorActive = ServiceContainer.Instance.GetService<Contracts.IComplexEventProcessor>() != null;
                 status.AllServicesActive = status.OptimizationEngineActive && status.ResourceAllocatorActive &&
                                            status.AnomalyEngineActive && status.MeshOptimizerActive &&
                                            status.ThreatAnalyzerActive && status.CompressionEngineActive &&
@@ -142,6 +155,63 @@ namespace HELIOS.Platform.Core
             }
 
             return status;
+        }
+
+        private sealed class Phase6LoggerAdapter<T> : Microsoft.Extensions.Logging.ILogger<T>
+        {
+            private readonly LoggerInterface _logger;
+
+            public Phase6LoggerAdapter(LoggerInterface logger)
+            {
+                _logger = logger;
+            }
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NoopScope.Instance;
+
+            public bool IsEnabled(MsLogLevel logLevel) => logLevel != MsLogLevel.None;
+
+            public void Log<TState>(
+                MsLogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (!IsEnabled(logLevel))
+                {
+                    return;
+                }
+
+                var message = formatter(state, exception);
+                switch (logLevel)
+                {
+                    case MsLogLevel.Trace:
+                    case MsLogLevel.Debug:
+                        _logger.Debug(message);
+                        break;
+                    case MsLogLevel.Information:
+                        _logger.Info(message);
+                        break;
+                    case MsLogLevel.Warning:
+                        _logger.Warning(message);
+                        break;
+                    case MsLogLevel.Error:
+                        _logger.Error(message, exception);
+                        break;
+                    case MsLogLevel.Critical:
+                        _logger.Critical(message, exception);
+                        break;
+                }
+            }
+
+            private sealed class NoopScope : IDisposable
+            {
+                public static NoopScope Instance { get; } = new();
+
+                public void Dispose()
+                {
+                }
+            }
         }
     }
 

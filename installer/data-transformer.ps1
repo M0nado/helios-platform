@@ -204,12 +204,12 @@ class SchemaTransformer {
 class VersionMigrationCoordinator {
     [hashtable] $MigrationPaths
     [hashtable] $Transformers
-    [ValidationEngine] $Validator
+    [object] $Validator
 
     VersionMigrationCoordinator() {
         $this.MigrationPaths = @{}
         $this.Transformers = @{}
-        $this.Validator = [ValidationEngine]::new([ValidationLevel]::Standard)
+        $this.Validator = New-Object -TypeName ValidationEngine -ArgumentList 2
     }
 
     [void] DefineMigrationPath([string]$fromVersion, [string]$toVersion, [DataTransformer]$transformer) {
