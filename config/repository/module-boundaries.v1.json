@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "canonicalRepository": "M0nado/helios-platform",
+  "modules": [
+    {"id":"apps","path":"apps/","owner":"product-ui","mayDependOn":["services","agents","core"]},
+    {"id":"core","path":"src/core/","owner":"platform-contracts","mayDependOn":[]},
+    {"id":"services","path":"src/services/","owner":"runtime-services","mayDependOn":["core"]},
+    {"id":"agents","path":"src/agents/","owner":"agent-control-plane","mayDependOn":["core","services"]},
+    {"id":"tools","path":"src/tools/","owner":"developer-experience","mayDependOn":["core"]},
+    {"id":"aihub","path":"python/aihub/","owner":"aihub-runtime","mayDependOn":["schemas"]},
+    {"id":"native","path":"native/","owner":"native-runtime","mayDependOn":["schemas"]},
+    {"id":"analytics","path":"analytics/fsharp/","owner":"analytics","mayDependOn":["schemas"]},
+    {"id":"windows-adapters","path":"scripts/windows/","owner":"windows-platform","mayDependOn":["config","schemas"]},
+    {"id":"validation","path":"scripts/validation/","owner":"quality-engineering","mayDependOn":["config","schemas"]},
+    {"id":"azure-infra","path":"infra/bicep/","owner":"cloud-platform","mayDependOn":["config","schemas"]},
+    {"id":"config","path":"config/","owner":"platform-governance","mayDependOn":[]},
+    {"id":"schemas","path":"config/schemas/","owner":"platform-contracts","mayDependOn":[]},
+    {"id":"legacy","path":"legacy/","owner":"migration-governance","runtimeImportAllowed":false}
+  ],
+  "separateRepositories": [
+    {"repository":"M0nado/Helios-Control-Center","relationship":"operator-and-promotion-surface"},
+    {"repository":"Yolkster64/monado-blade","relationship":"integration-laboratory"},
+    {"repository":"Yolkster64/hermes-fleet-platforms","relationship":"hermes-xcore-runtime-laboratory"},
+    {"repository":"Heli0s-Dynamics/adaptive-multibrain-bootstrap","relationship":"cross-repository-governance"},
+    {"repository":"Heli0s-Dynamics/helios-platform","relationship":"reviewed-enterprise-mirror"}
+  ],
+  "submodulePolicy": {
+    "defaultAllowed": false,
+    "requirements": [
+      "independent-release-cadence",
+      "immutable-commit-pin",
+      "independent-ci",
+      "reproducible-restore",
+      "no-secret-bearing-url",
+      "clear-missing-submodule-failure"
+    ]
+  },
+  "mergePolicy": {
+    "directToMain": false,
+    "expectedHeadShaRequired": true,
+    "requiredCiMustPass": true,
+    "externalMutationRequiresSeparateApproval": true
+  }
+}
