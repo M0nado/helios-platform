@@ -210,7 +210,7 @@ def configure_oidc(args: argparse.Namespace, targets: dict[str, Any]) -> None:
     app_name = args.app_name or azure["appDisplayName"]
     apps = run_json([
         "az", "ad", "app", "list", "--display-name", app_name,
-        "--query", "[?displayName=='" + app_name + "'] | [0].{appId:appId,id:id}", "--output", "json",
+        "--query", "[0].{appId:appId,id:id}", "--output", "json",
     ])
     app = apps
     if not app:
@@ -284,7 +284,10 @@ def deploy(args: argparse.Namespace, targets: dict[str, Any]) -> None:
         "--confirm-with-what-if",
     ]
     if args.parameters:
-        command.extend(["--parameters", f"@{Path(args.parameters).expanduser().resolve()}"])
+        parameters = Path(args.parameters).expanduser().resolve()
+        if not parameters.is_file():
+            raise HeliosAzureError(f"Parameters file not found: {parameters}")
+        command.extend(["--parameters", f"@{parameters}"])
     run(command, capture=False)
 
 

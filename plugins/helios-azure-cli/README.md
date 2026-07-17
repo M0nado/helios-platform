@@ -20,3 +20,10 @@ On Windows PowerShell:
 Nothing deploys by default. OIDC creation requires `--execute --confirm CONFIGURE-AZURE-DEV-OIDC`. Bicep deployment requires `--execute --confirm DEPLOY-AZURE-DEV`. Both mutating commands also refuse to continue until GitHub PRs #174 and #176 are merged.
 
 The plugin never creates or stores a client secret. It uses interactive Azure CLI authentication for local administration and the exact GitHub environment federation subject for automation.
+
+## Official references
+
+- [Install Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+- [Sign in interactively](https://learn.microsoft.com/en-us/cli/azure/authenticate-azure-cli-interactively)
+- [Configure a federated identity credential](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust)
+- [Preview Bicep changes with what-if](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/deploy-what-if)
