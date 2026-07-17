@@ -37,15 +37,8 @@ internal sealed class ExpiringDeliveryReplayCache
 
             if (_entries.Count >= _capacity)
             {
-                string? oldestKey = null;
-                var oldestExpiry = long.MaxValue;
-                foreach (var entry in _entries)
-                {
-                    if (entry.Value >= oldestExpiry) continue;
-                    oldestKey = entry.Key;
-                    oldestExpiry = entry.Value;
-                }
-                if (oldestKey is not null) _entries.Remove(oldestKey);
+                var oldestKey = _entries.MinBy(entry => entry.Value).Key;
+                _entries.Remove(oldestKey);
             }
 
             _entries[key] = nowTicks + _timeToLive.Ticks;
