@@ -1,12 +1,12 @@
 {
   "mcpServers": {
-    "helios-local": {
+    "helios-local-dev": {
       "type": "http",
-      "url": "${HELIOS_LOCAL_MCP_URL:-http://127.0.0.1:5080/runtime/webhooks/mcp}"
+      "url": "${HELIOS_LOCAL_MCP_URL}"
     },
     "helios-azure": {
       "type": "http",
-      "url": "${HELIOS_AZURE_CONNECTOR_URL:-http://127.0.0.1:5080}/mcp"
+      "url": "${HELIOS_AZURE_CONNECTOR_URL}/mcp"
     },
     "azure-mcp-readonly": {
       "command": "npx",
