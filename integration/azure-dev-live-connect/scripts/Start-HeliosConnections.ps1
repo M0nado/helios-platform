@@ -16,7 +16,7 @@ function Get-CommandStatus {
     [ordered]@{
         name = $Name
         installed = [bool]$command
-        path = if ($command) { $command.Source } else { $null }
+        path = $(if ($command) { $command.Source } else { $null })
     }
 }
 
@@ -51,22 +51,22 @@ $report = [ordered]@{
 if (Get-Command az -ErrorAction SilentlyContinue) {
     try {
         $account = az account show --query '{subscriptionId:id,subscriptionName:name,tenantId:tenantId,user:user}' --output json | ConvertFrom-Json
-        $report.azure = [ordered]@{ authenticated = $true; account = $account }
+        $report['azure'] = [ordered]@{ authenticated = $true; account = $account }
     } catch {
-        $report.azure = [ordered]@{ authenticated = $false; error = $_.Exception.Message }
+        $report['azure'] = [ordered]@{ authenticated = $false; error = $_.Exception.Message }
     }
 } else {
-    $report.azure = [ordered]@{ authenticated = $false; error = 'Azure CLI is not installed.' }
+    $report['azure'] = [ordered]@{ authenticated = $false; error = 'Azure CLI is not installed.' }
 }
 
 if (Get-Command gh -ErrorAction SilentlyContinue) {
     & gh auth status --hostname github.com *> $null
-    $report.githubCli = [ordered]@{ authenticated = ($LASTEXITCODE -eq 0) }
+    $report['githubCli'] = [ordered]@{ authenticated = ($LASTEXITCODE -eq 0) }
 }
 
 if ($CheckClaudeMcp -and (Get-Command claude -ErrorAction SilentlyContinue)) {
     $output = & claude mcp list 2>&1
-    $report.commandChecks += [ordered]@{
+    $report['commandChecks'] += [ordered]@{
         command = 'claude mcp list'
         succeeded = ($LASTEXITCODE -eq 0)
         output = $output
@@ -75,7 +75,7 @@ if ($CheckClaudeMcp -and (Get-Command claude -ErrorAction SilentlyContinue)) {
 
 if ($CheckAzureDevOps -and (Get-Command az -ErrorAction SilentlyContinue)) {
     $output = & az devops project list --output json 2>&1
-    $report.commandChecks += [ordered]@{
+    $report['commandChecks'] += [ordered]@{
         command = 'az devops project list'
         succeeded = ($LASTEXITCODE -eq 0)
         output = $output
@@ -84,7 +84,7 @@ if ($CheckAzureDevOps -and (Get-Command az -ErrorAction SilentlyContinue)) {
 
 if ($CheckLocalServices) {
     foreach ($property in $config.localServices.PSObject.Properties) {
-        $report.localServices += Invoke-HealthCheck -Name $property.Name -Uri ([string]$property.Value)
+        $report['localServices'] += Invoke-HealthCheck -Name $property.Name -Uri ([string]$property.Value)
     }
 }
 
