@@ -375,7 +375,7 @@ static bool AcceptsMcpPostResponse(HttpRequest request)
     // when present, the Streamable HTTP contract is enforced exactly.
     var acceptHeaders = request.Headers["Accept"];
     if (acceptHeaders.Count == 0) return true;
-    var values = acceptHeaders.SelectMany(value => value.Split(','))
+    var values = acceptHeaders.SelectMany(value => value?.Split(',') ?? Array.Empty<string>())
         .Select(value => value.Split(';')[0].Trim())
         .ToArray();
     return values.Contains("application/json", StringComparer.OrdinalIgnoreCase) &&
