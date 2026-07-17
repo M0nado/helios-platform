@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "shellId": "monadoblade-profile-shell",
+  "securityBoundary": {
+    "runsAfterWindowsAuthentication": true,
+    "replacesWindowsCredentialProvider": false,
+    "sysAdminRemoteActivationDenied": true,
+    "networkRequiredForLogin": false,
+    "fallbackShell": "safe-neutral"
+  },
+  "rendering": {
+    "primary": ["WinUI3", "WindowsComposition", "Win2D"],
+    "optional": ["Direct2D", "Direct3D11", "WebView2"],
+    "targetFrameRate": 60,
+    "startupBudgetMs": 1200,
+    "profileSwitchBudgetMs": 700,
+    "qualityModes": {
+      "cinematic": { "particles": 1.0, "grassDensity": 1.0, "volumetricFog": true, "dynamicReflections": true },
+      "balanced": { "particles": 0.55, "grassDensity": 0.65, "volumetricFog": true, "dynamicReflections": false },
+      "lightweight": { "particles": 0.15, "grassDensity": 0.25, "volumetricFog": false, "dynamicReflections": false },
+      "reducedMotion": { "particles": 0.0, "grassDensity": 0.15, "volumetricFog": false, "dynamicReflections": false, "staticWheel": true }
+    },
+    "automaticDegrade": {
+      "enabled": true,
+      "inputs": ["gpuLoad", "gpuMemory", "battery", "thermalState", "remoteSession", "accessibilityReducedMotion"],
+      "neverBlockProfileActivation": true
+    }
+  },
+  "scene": {
+    "environment": "windswept-interactive-grass-field",
+    "timeOfDay": "twilight",
+    "cursorInteraction": {
+      "grassBendRadiusPx": 180,
+      "grassBendStrength": 0.32,
+      "particleAttraction": 0.18,
+      "bladeWake": true,
+      "disableOnTouch": false
+    },
+    "layers": [
+      "sky-aurora",
+      "volumetric-mist",
+      "distant-grass",
+      "interactive-foreground-grass",
+      "monadoblade",
+      "profile-wheel",
+      "holographic-glyphs",
+      "telemetry-glass",
+      "status-and-accessibility"
+    ]
+  },
+  "blade": {
+    "stateMachine": ["dormant", "proximity-awake", "wheel-open", "profile-preview", "readiness-check", "profile-activate", "safe-blocked"],
+    "centerAperture": {
+      "glyphType": "abstract-kanji-inspired",
+      "glowRespondsToProfile": true,
+      "pulseRespondsToHealth": true,
+      "neverDisplaysSecretState": true
+    },
+    "outerCore": {
+      "motorizedSegments": 12,
+      "counterRotation": true,
+      "baseRpm": 8,
+      "previewRpm": 18,
+      "activationRpm": 32,
+      "safeBlockedRpm": 0
+    },
+    "growth": {
+      "profilePreviewPercent": 35,
+      "readinessPercent": 70,
+      "activatedPercent": 100,
+      "safeBlockedPercent": 15
+    },
+    "audio": {
+      "spatial": true,
+      "masterVolume": 0.55,
+      "respectSystemQuietHours": true,
+      "profilePitchAndTimbre": true,
+      "muteInReducedMotion": false,
+      "disableAll": false
+    }
+  },
+  "profileWheel": {
+    "orientation": "radial",
+    "selection": ["mouse", "keyboard", "controller", "touch"],
+    "inertia": 0.2,
+    "snap": true,
+    "sectors": [
+      { "profile": "developer", "glyph": "DEV", "color": "#00D8FF", "angle": 0, "sound": "glass-code-rise" },
+      { "profile": "sysops", "glyph": "OPS", "color": "#2D7DFF", "angle": 51.43, "sound": "network-pulse" },
+      { "profile": "gamer", "glyph": "PLAY", "color": "#62FF4A", "angle": 102.86, "sound": "low-latency-charge" },
+      { "profile": "studio", "glyph": "WAVE", "color": "#D64DFF", "angle": 154.29, "sound": "harmonic-bloom" },
+      { "profile": "personal", "glyph": "HOME", "color": "#BBD7FF", "angle": 205.71, "sound": "soft-chime" },
+      { "profile": "server-background", "glyph": "DAEMON", "color": "#6D7B8D", "angle": 257.14, "sound": "sub-bass-service" },
+      { "profile": "sysadmin", "glyph": "ROOT", "color": "#FFB000", "angle": 308.57, "sound": "sealed-vault", "hiddenUntilAuthorized": true }
+    ],
+    "previewPanels": ["profile-purpose", "security-boundary", "resource-policy", "service-readiness", "storage-roots", "active-models"]
+  },
+  "quickSwitch": {
+    "enabled": true,
+    "surface": "ControlCenterCompactOverlay",
+    "hotkey": "Win+Shift+M",
+    "switchWithoutLogoffWhenSafe": true,
+    "requiresIdentityChangeWhen": ["windows-user-boundary", "sysadmin", "service-session"],
+    "prewarmProfiles": ["developer", "personal", "studio"],
+    "prewarmLimit": 2,
+    "transitionMs": 420,
+    "preserveForegroundApps": "policy-controlled",
+    "rollbackOnReadinessFailure": true
+  },
+  "profileThemes": {
+    "developer": {
+      "backgroundVariant": "grass-code-grid-aurora",
+      "panelStyle": "cyan-glass",
+      "metrics": ["build", "test", "repo", "model", "container", "vm", "cpu", "gpu", "memory", "security"],
+      "density": "advanced"
+    },
+    "sysadmin": {
+      "backgroundVariant": "sealed-vault-night",
+      "panelStyle": "amber-graphite",
+      "metrics": ["integrity", "secureboot", "tpm", "bitlocker", "driver-trust", "firewall", "recovery"],
+      "density": "focused"
+    },
+    "sysops": {
+      "backgroundVariant": "operations-constellation",
+      "panelStyle": "blue-amber-telemetry",
+      "metrics": ["services", "security", "performance", "latency", "network", "vm", "container", "memory", "azure", "github"],
+      "density": "cockpit"
+    },
+    "gamer": {
+      "backgroundVariant": "energy-field-green",
+      "panelStyle": "minimal-overlay",
+      "metrics": ["fps", "frame-time", "gpu", "cpu", "memory", "storage-latency", "network-latency"],
+      "density": "minimal"
+    },
+    "studio": {
+      "backgroundVariant": "waveform-grass-violet",
+      "panelStyle": "violet-spatial-wave",
+      "metrics": ["asio", "buffer", "xruns", "cpu", "gpu", "memory", "disk-stream", "plugins", "render"],
+      "density": "creative"
+    },
+    "personal": {
+      "backgroundVariant": "calm-grass-silver-blue",
+      "panelStyle": "soft-glass",
+      "metrics": ["privacy", "backup", "security", "storage", "memory", "network"],
+      "density": "simple"
+    },
+    "server-background": {
+      "backgroundVariant": "graphite-service-mesh",
+      "panelStyle": "dark-daemon",
+      "metrics": ["uptime", "queues", "services", "firewall", "container", "vm", "model-workers", "memory", "power", "backup"],
+      "density": "operations"
+    }
+  },
+  "readinessChecks": [
+    "profile-policy-valid",
+    "required-volumes-online",
+    "folder-hierarchy-valid",
+    "required-services-healthy",
+    "firewall-policy-loaded",
+    "aihub-router-available-or-local-fallback",
+    "quarantine-broker-available",
+    "resource-budget-available"
+  ],
+  "accessibility": {
+    "keyboardComplete": true,
+    "screenReaderLabels": true,
+    "highContrast": true,
+    "reducedMotion": true,
+    "soundDescriptions": true,
+    "colorIsNotOnlySignal": true
+  }
+}

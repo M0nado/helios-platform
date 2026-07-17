@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "layoutId": "monadoblade-2x2tb-default",
+  "destructiveApplyDefault": false,
+  "requireWhatIf": true,
+  "requireAdministrator": true,
+  "requirePhysicalAuthorization": true,
+  "requiredConfirmationPhrase": "APPLY MONADOBLADE STORAGE LAYOUT",
+  "volumeDiscovery": {
+    "resolveByVolumeManifest": true,
+    "fallbackToLabel": true,
+    "doNotAssumeDriveLetters": true,
+    "manifestName": "MONADO_VOLUME.json"
+  },
+  "disks": [
+    {
+      "diskRole": "system",
+      "expectedMedia": "nvme",
+      "expectedCapacityGiB": { "minimum": 1800, "maximum": 2100 },
+      "preserveExistingEfiMsrRecovery": true,
+      "denyIfBootDiskIdentityUncertain": true,
+      "partitions": [
+        {
+          "id": "windows-core",
+          "preferredLetter": "C",
+          "label": "MONADO_SYSTEM",
+          "fileSystem": "NTFS",
+          "sizePolicy": { "mode": "remaining-after-fixed", "minimumGiB": 1450 },
+          "purpose": ["windows", "program-files", "visual-studio-core", "sdk-foundations", "boot-critical-drivers"],
+          "bitLocker": "os-policy",
+          "profileAccess": ["developer", "sysadmin", "sysops", "gamer", "studio", "personal", "server-background"]
+        },
+        {
+          "id": "recovery-tools",
+          "preferredLetter": "R",
+          "label": "MONADO_RECOVERY",
+          "fileSystem": "NTFS",
+          "sizePolicy": { "mode": "fixed", "targetGiB": 80, "minimumGiB": 48, "maximumGiB": 120 },
+          "purpose": ["winre", "offline-scanners", "signed-repair-packages", "recovery-media-staging"],
+          "bitLocker": "fixed-data-protected",
+          "profileAccess": ["sysadmin", "sysops-read"]
+        },
+        {
+          "id": "vault-control",
+          "preferredLetter": "V",
+          "label": "MONADO_VAULT_CTRL",
+          "fileSystem": "NTFS",
+          "sizePolicy": { "mode": "fixed", "targetGiB": 48, "minimumGiB": 32, "maximumGiB": 64 },
+          "purpose": ["local-authorization-broker", "policy-manifests", "approval-evidence", "vault-mount-control"],
+          "bitLocker": "required",
+          "autoMount": false,
+          "profileAccess": ["sysadmin", "server-background-broker"]
+        }
+      ]
+    },
+    {
+      "diskRole": "workload",
+      "expectedMedia": "nvme",
+      "expectedCapacityGiB": { "minimum": 1800, "maximum": 2100 },
+      "mustNotBeBootOrSystem": true,
+      "denyIfAllocatedDataGiBAbove": 1,
+      "partitions": [
+        {
+          "id": "developer-devdrive",
+          "preferredLetter": "D",
+          "label": "MONADO_DEV",
+          "fileSystem": "ReFS",
+          "devDrive": true,
+          "sizePolicy": { "mode": "percentage-bounded", "percentage": 55, "minimumGiB": 850, "maximumGiB": 1150 },
+          "purpose": ["repositories", "toolchains", "package-caches", "build-output", "docker-data", "wsl-distributions", "devhub-templates", "common-core"],
+          "bitLocker": "recommended",
+          "profileAccess": ["developer", "sysadmin", "sysops", "server-background-bounded"]
+        },
+        {
+          "id": "ai-models-memory",
+          "preferredLetter": "M",
+          "label": "MONADO_AI_MODELS",
+          "fileSystem": "NTFS",
+          "sizePolicy": { "mode": "percentage-bounded", "percentage": 20, "minimumGiB": 300, "maximumGiB": 450 },
+          "purpose": ["local-models", "provider-caches", "embeddings", "vector-stores", "training", "evaluations", "routing-memory", "approved-datasets"],
+          "bitLocker": "required-for-sensitive-models",
+          "profileAccess": ["developer", "sysadmin", "sysops", "studio", "server-background"]
+        },
+        {
+          "id": "secure-profile-vaults",
+          "preferredLetter": "S",
+          "label": "MONADO_SECURE",
+          "fileSystem": "NTFS",
+          "sizePolicy": { "mode": "percentage-bounded", "percentage": 12, "minimumGiB": 180, "maximumGiB": 300 },
+          "purpose": ["encrypted-vhdx", "profile-protected-data", "identity-evidence", "recovery-keys", "compliance-exports"],
+          "bitLocker": "required",
+          "autoMount": false,
+          "profileAccess": ["sysadmin", "profile-owner-through-broker"]
+        },
+        {
+          "id": "quarantine",
+          "preferredLetter": "Q",
+          "label": "MONADO_QUARANTINE",
+          "fileSystem": "NTFS",
+          "sizePolicy": { "mode": "percentage-bounded", "percentage": 5, "minimumGiB": 80, "maximumGiB": 140 },
+          "purpose": ["incoming", "suspicious-files", "drivers", "scripts", "installers", "repositories", "models", "network-captures", "sandbox-results", "cold-evidence"],
+          "bitLocker": "required",
+          "executionPolicy": "deny-execute-where-practical",
+          "profileAccess": ["sysadmin", "sysops-read", "quarantine-service"]
+        },
+        {
+          "id": "backup",
+          "preferredLetter": "B",
+          "label": "MONADO_BACKUP",
+          "fileSystem": "NTFS",
+          "sizePolicy": { "mode": "remaining", "minimumGiB": 120 },
+          "purpose": ["daily", "weekly", "monthly", "system-images", "repo-bundles", "recovery-media", "audit-evidence"],
+          "bitLocker": "required",
+          "profileAccess": ["sysadmin", "backup-service", "profile-owner-restore-bounded"]
+        }
+      ]
+    }
+  ],
+  "guardrails": {
+    "neverClearDiskWithoutExactIdentity": true,
+    "neverFormatSystemOrBootDisk": true,
+    "neverDeleteOemRecoveryAutomatically": true,
+    "alwaysExportPlan": true,
+    "alwaysExportRollbackNotes": true,
+    "alwaysRecordDiskSerialAndUniqueId": true,
+    "requireBackupEvidenceBeforeApply": true,
+    "requireBitLockerRecoveryEvidence": true
+  }
+}
