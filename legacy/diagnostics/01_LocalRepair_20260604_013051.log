@@ -1,0 +1,40 @@
+[2026-06-04 01:30:51][INFO] === LOCAL REPAIR START === RAZ5
+[2026-06-04 01:30:51][INFO] >>> SFC /scannow
+[2026-06-04 01:30:51][ERROR] <<< FAIL: SFC /scannow — The term 'sfc' is not recognized as the name of a cmdlet, function, script file, or operable program.
+[2026-06-04 01:30:51][INFO] >>> DISM RestoreHealth
+[2026-06-04 01:30:51][ERROR] <<< FAIL: DISM RestoreHealth — The term 'DISM' is not recognized as the name of a cmdlet, function, script file, or operable program.
+[2026-06-04 01:30:51][INFO] >>> WMI Repository Repair
+[2026-06-04 01:30:51][ERROR] <<< FAIL: WMI Repository Repair — The term 'winmgmt' is not recognized as the name of a cmdlet, function, script file, or operable program.
+[2026-06-04 01:30:51][INFO] >>> Windows Update Service Stack Reset
+[2026-06-04 01:30:51][ERROR] <<< FAIL: Windows Update Service Stack Reset — The term 'netsh' is not recognized as the name of a cmdlet, function, script file, or operable program.
+[2026-06-04 01:30:51][INFO] >>> Network Stack Full Reset
+[2026-06-04 01:30:51][ERROR] <<< FAIL: Network Stack Full Reset — The term 'netsh' is not recognized as the name of a cmdlet, function, script file, or operable program.
+[2026-06-04 01:30:51][INFO] >>> Ethernet NIC Re-Enable
+[2026-06-04 01:30:52][OK] <<< OK: Ethernet NIC Re-Enable
+[2026-06-04 01:30:52][INFO] >>> GPU Driver Re-Enable
+[2026-06-04 01:30:53][ERROR] <<< FAIL: GPU Driver Re-Enable — The term 'pnputil' is not recognized as the name of a cmdlet, function, script file, or operable program.
+[2026-06-04 01:30:53][INFO] >>> Audio Services + Devices
+[2026-06-04 01:30:53][OK] <<< OK: Audio Services + Devices
+[2026-06-04 01:30:53][INFO] >>> Camera, Microphone & Frame Server Reset
+[2026-06-04 01:30:53][INFO] Camera + microphone set to Allow in privacy settings.
+[2026-06-04 01:30:53][OK] <<< OK: Camera, Microphone & Frame Server Reset
+[2026-06-04 01:30:53][INFO] >>> Teams Media Pipeline Reset
+[2026-06-04 01:30:54][INFO] Cleared Teams cache: C:\Users\thepa\AppData\Local\Packages\MSTeams_8wekyb3d8bbwe\LocalCache\Microsoft\MSTeams
+[2026-06-04 01:30:54][OK] <<< OK: Teams Media Pipeline Reset
+[2026-06-04 01:30:54][INFO] >>> Firmware & Driver Updates via PSWindowsUpdate
+[2026-06-04 01:30:55][ERROR] <<< FAIL: Firmware & Driver Updates via PSWindowsUpdate — Administrator rights are required to install modules in 'C:\Program Files\WindowsPowerShell\Modules'.
+[2026-06-04 01:30:55][INFO] >>> Critical Services Audit
+[2026-06-04 01:30:55][OK] EventLog => Running
+[2026-06-04 01:30:55][OK] Winmgmt => Running
+[2026-06-04 01:30:55][OK] RpcSs => Running
+[2026-06-04 01:30:55][OK] DcomLaunch => Running
+[2026-06-04 01:30:55][OK] Schedule => Running
+[2026-06-04 01:30:55][OK] CryptSvc => Running
+[2026-06-04 01:30:55][OK] Dhcp => Running
+[2026-06-04 01:30:55][OK] PlugPlay => Running
+[2026-06-04 01:30:55][OK] Power => Running
+[2026-06-04 01:30:55][OK] <<< OK: Critical Services Audit
+[2026-06-04 01:30:55][INFO] >>> Pending Reboot Detection
+[2026-06-04 01:30:55][OK] No pending reboot.
+[2026-06-04 01:30:55][OK] <<< OK: Pending Reboot Detection
+[2026-06-04 01:30:55][INFO] === LOCAL REPAIR COMPLETE === Log: C:\XTier\Logs\01_LocalRepair_20260604_013051.log
