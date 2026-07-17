@@ -120,7 +120,9 @@ jobs:
     outputs:
       artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
       image_reference: ${{ steps.image.outputs.image_reference }}
+      resource_group_location: ${{ steps.registry.outputs.resource_group_location }}
       registry_name: ${{ steps.registry.outputs.registry_name }}
+      template_sha256: ${{ steps.template.outputs.template_sha256 }}
       what_if_sha256: ${{ steps.whatif.outputs.what_if_sha256 }}
     steps:
       - name: Checkout
@@ -172,6 +174,36 @@ jobs:
           az bicep install --version "${HELIOS_BICEP_VERSION}"
           az bicep version
 
+      - name: Compile canonical reviewed deployment template
+        id: template
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "${actual_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "The template checkout does not match GITHUB_SHA." >&2
+            exit 1
+          fi
+          if [[ -n "$(git status --porcelain=v1 --untracked-files=all)" ]]; then
+            echo "The template source tree is not clean." >&2
+            exit 1
+          fi
+          raw_template="${RUNNER_TEMP}/helios-connector.template.raw.json"
+          canonical_template="${RUNNER_TEMP}/helios-connector.template.json"
+          az bicep build \
+            --file "${PROJECT_DIRECTORY}/infra/connector.bicep" \
+            --outfile "${raw_template}"
+          jq --sort-keys . "${raw_template}" > "${canonical_template}"
+          template_sha256="$(sha256sum "${canonical_template}" | cut -d' ' -f1)"
+          if [[ ! "${template_sha256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "The compiled deployment template did not produce a valid SHA-256 digest." >&2
+            exit 1
+          fi
+          echo "template_path=${canonical_template}" >> "${GITHUB_OUTPUT}"
+          echo "template_sha256=${template_sha256}" >> "${GITHUB_OUTPUT}"
+
       - name: Verify configured registry binding
         id: registry
         shell: bash
@@ -193,13 +225,24 @@ jobs:
             --name "${HELIOS_CONTAINER_REGISTRY_NAME}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
             --output json)"
+          resource_group_json="$(az group show \
+            --name "${AZURE_RESOURCE_GROUP}" \
+            --subscription "${AZURE_SUBSCRIPTION_ID}" \
+            --output json)"
           registry_id="$(jq -r '.id' <<<"${registry_json}")"
           registry_server="$(jq -r '.loginServer' <<<"${registry_json}")"
           registry_role_assignment_mode="$(jq -r '.roleAssignmentMode // "rbac"' <<<"${registry_json}")"
+          resource_group_id="$(jq -r '.id' <<<"${resource_group_json}")"
+          resource_group_location="$(jq -r '.location' <<<"${resource_group_json}")"
           expected_registry_id="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${HELIOS_CONTAINER_REGISTRY_NAME}"
+          expected_resource_group_id="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}"
 
           if [[ "${registry_id,,}" != "${expected_registry_id,,}" ]]; then
             echo "The configured registry did not resolve in the configured subscription and resource group." >&2
+            exit 1
+          fi
+          if [[ "${resource_group_id,,}" != "${expected_resource_group_id,,}" || ! "${resource_group_location}" =~ ^[a-z0-9-]+$ ]]; then
+            echo "The configured resource group returned an unexpected ID or location." >&2
             exit 1
           fi
           if [[ "${registry_server}" != "${configured_server}" ]]; then
@@ -213,6 +256,7 @@ jobs:
           echo "registry_name=${HELIOS_CONTAINER_REGISTRY_NAME}" >> "${GITHUB_OUTPUT}"
           echo "registry_server=${registry_server}" >> "${GITHUB_OUTPUT}"
           echo "registry_role_assignment_mode=${registry_role_assignment_mode}" >> "${GITHUB_OUTPUT}"
+          echo "resource_group_location=${resource_group_location}" >> "${GITHUB_OUTPUT}"
 
       - name: Build exact checked-out commit and resolve immutable digest
         id: image
@@ -222,6 +266,7 @@ jobs:
           REGISTRY_NAME: ${{ steps.registry.outputs.registry_name }}
           REGISTRY_SERVER: ${{ steps.registry.outputs.registry_server }}
           REGISTRY_ROLE_ASSIGNMENT_MODE: ${{ steps.registry.outputs.registry_role_assignment_mode }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
         run: |
           set -euo pipefail
           actual_sha="$(git rev-parse HEAD)"
@@ -249,7 +294,7 @@ jobs:
           pushd "${PROJECT_DIRECTORY}" > /dev/null
           az acr build \
             --registry "${REGISTRY_NAME}" \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
             --image "${repository}:${tag}" \
             --file "${dockerfile}" \
             --no-logs \
@@ -287,6 +332,10 @@ jobs:
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
           IMAGE_REFERENCE: ${{ steps.image.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ steps.registry.outputs.registry_name }}
+          RESOURCE_GROUP_LOCATION: ${{ steps.registry.outputs.resource_group_location }}
+          SERVICE_NAME: helios-connector
+          TEMPLATE_PATH: ${{ steps.template.outputs.template_path }}
+          TEMPLATE_SHA256: ${{ steps.template.outputs.template_sha256 }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
@@ -301,10 +350,12 @@ jobs:
 
           az deployment group what-if \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
-            --template-file "${PROJECT_DIRECTORY}/infra/connector.bicep" \
-            --result-format ResourceIdOnly \
+            --template-file "${TEMPLATE_PATH}" \
+            --result-format FullResourcePayloads \
             --parameters \
+              location="${RESOURCE_GROUP_LOCATION}" \
               environmentName="${environment_name}" \
+              serviceName="${SERVICE_NAME}" \
               containerImage="${IMAGE_REFERENCE}" \
               containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
               allowPreviewPlaceholder=false \
@@ -341,13 +392,20 @@ jobs:
             --arg runId "${GITHUB_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
             --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
+            --arg templateSha256 "${TEMPLATE_SHA256}" \
+            --arg location "${RESOURCE_GROUP_LOCATION}" \
+            --arg environmentName "${environment_name}" \
+            --arg serviceName "${SERVICE_NAME}" \
             --arg imageReference "${IMAGE_REFERENCE}" \
             --arg registryName "${CONTAINER_REGISTRY_NAME}" \
+            --arg entraClientId "${HELIOS_ENTRA_CLIENT_ID}" \
+            --arg entraTenantId "${AZURE_TENANT_ID}" \
+            --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, imageReference: $imageReference, registryName: $registryName, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -356,6 +414,7 @@ jobs:
             echo ""
             echo "- Environment: \`${TARGET_ENVIRONMENT}\`"
             echo "- Image: \`${IMAGE_REFERENCE}\`"
+            echo "- Compiled template SHA-256: \`${TEMPLATE_SHA256}\`"
             echo "- Full canonical what-if SHA-256: \`${what_if_sha256}\`"
             echo "- Review-safe artifact content SHA-256: \`${review_sha256}\`"
             echo "- A deploy request now requires a second protected-environment approval."
@@ -446,6 +505,36 @@ jobs:
           az bicep install --version "${HELIOS_BICEP_VERSION}"
           az bicep version
 
+      - name: Recompile the reviewed deployment template
+        id: template
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "${actual_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "The deployment checkout does not match GITHUB_SHA." >&2
+            exit 1
+          fi
+          if [[ -n "$(git status --porcelain=v1 --untracked-files=all)" ]]; then
+            echo "The deployment source tree is not clean." >&2
+            exit 1
+          fi
+          raw_template="${RUNNER_TEMP}/helios-connector.deploy.template.raw.json"
+          canonical_template="${RUNNER_TEMP}/helios-connector.deploy.template.json"
+          az bicep build \
+            --file "${PROJECT_DIRECTORY}/infra/connector.bicep" \
+            --outfile "${raw_template}"
+          jq --sort-keys . "${raw_template}" > "${canonical_template}"
+          template_sha256="$(sha256sum "${canonical_template}" | cut -d' ' -f1)"
+          if [[ ! "${template_sha256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "The recompiled deployment template did not produce a valid SHA-256 digest." >&2
+            exit 1
+          fi
+          echo "template_path=${canonical_template}" >> "${GITHUB_OUTPUT}"
+          echo "template_sha256=${template_sha256}" >> "${GITHUB_OUTPUT}"
+
       - name: Download reviewed what-if evidence
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -458,13 +547,21 @@ jobs:
           EXPECTED_WHAT_IF_SHA256: ${{ needs.preview.outputs.what_if_sha256 }}
           EXPECTED_IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
           EXPECTED_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
+          EXPECTED_RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
+          EXPECTED_TEMPLATE_SHA256: ${{ needs.preview.outputs.template_sha256 }}
+          ACTUAL_TEMPLATE_SHA256: ${{ steps.template.outputs.template_sha256 }}
+          SERVICE_NAME: helios-connector
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
         run: |
           set -euo pipefail
           evidence_dir="${RUNNER_TEMP}/approved-what-if"
+          environment_name="${TARGET_ENVIRONMENT#azure-}"
           actual_review_sha256="$(sha256sum "${evidence_dir}/what-if.json" | cut -d' ' -f1)"
           expected_review_sha256="$(jq --raw-output '.reviewSha256' "${evidence_dir}/request.json")"
           if [[ "${actual_review_sha256}" != "${expected_review_sha256}" ]]; then
@@ -475,17 +572,28 @@ jobs:
             echo "The protected registry binding changed after preview; start a new workflow run." >&2
             exit 1
           fi
+          if [[ "${EXPECTED_TEMPLATE_SHA256}" != "${ACTUAL_TEMPLATE_SHA256}" ]]; then
+            echo "The compiled deployment template changed after preview; start a new workflow run." >&2
+            exit 1
+          fi
           jq --exit-status \
             --arg runId "${GITHUB_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
             --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
+            --arg templateSha256 "${ACTUAL_TEMPLATE_SHA256}" \
+            --arg location "${EXPECTED_RESOURCE_GROUP_LOCATION}" \
+            --arg environmentName "${environment_name}" \
+            --arg serviceName "${SERVICE_NAME}" \
             --arg imageReference "${EXPECTED_IMAGE_REFERENCE}" \
             --arg registryName "${EXPECTED_REGISTRY_NAME}" \
+            --arg entraClientId "${HELIOS_ENTRA_CLIENT_ID}" \
+            --arg entraTenantId "${AZURE_TENANT_ID}" \
+            --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .imageReference == $imageReference and .registryName == $registryName and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${evidence_dir}/request.json" > /dev/null
 
       - name: Re-verify configured registry and published digest
@@ -496,6 +604,7 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          EXPECTED_RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
         run: |
           set -euo pipefail
           if [[ ! "${IMAGE_REFERENCE}" =~ ^[a-z0-9]{5,50}\.azurecr\.io/helios-connect@sha256:[0-9a-f]{64}$ ]]; then
@@ -519,9 +628,18 @@ jobs:
             --output json)"
           registry_id="$(jq -r '.id' <<<"${registry_json}")"
           registry_server="$(jq -r '.loginServer' <<<"${registry_json}")"
+          resource_group_location="$(az group show \
+            --name "${AZURE_RESOURCE_GROUP}" \
+            --subscription "${AZURE_SUBSCRIPTION_ID}" \
+            --query location \
+            --output tsv)"
           expected_registry_id="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${HELIOS_CONTAINER_REGISTRY_NAME}"
           if [[ "${registry_id,,}" != "${expected_registry_id,,}" || "${registry_server}" != "${configured_server}" ]]; then
             echo "The configured registry changed after preview; start a new workflow run." >&2
+            exit 1
+          fi
+          if [[ "${resource_group_location}" != "${EXPECTED_RESOURCE_GROUP_LOCATION}" ]]; then
+            echo "The configured resource-group location changed after preview; start a new workflow run." >&2
             exit 1
           fi
 
@@ -548,10 +666,12 @@ jobs:
       - name: Re-run what-if and fail on drift
         shell: bash
         env:
-          PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
           IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
+          RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
+          SERVICE_NAME: helios-connector
+          TEMPLATE_PATH: ${{ steps.template.outputs.template_path }}
           EXPECTED_WHAT_IF_SHA256: ${{ needs.preview.outputs.what_if_sha256 }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
@@ -564,10 +684,12 @@ jobs:
           canonical_what_if="${RUNNER_TEMP}/helios-drift-check.json"
           az deployment group what-if \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
-            --template-file "${PROJECT_DIRECTORY}/infra/connector.bicep" \
-            --result-format ResourceIdOnly \
+            --template-file "${TEMPLATE_PATH}" \
+            --result-format FullResourcePayloads \
             --parameters \
+              location="${RESOURCE_GROUP_LOCATION}" \
               environmentName="${environment_name}" \
+              serviceName="${SERVICE_NAME}" \
               containerImage="${IMAGE_REFERENCE}" \
               containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
               allowPreviewPlaceholder=false \
@@ -586,10 +708,12 @@ jobs:
         id: deploy
         shell: bash
         env:
-          PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
           IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
+          RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
+          SERVICE_NAME: helios-connector
+          TEMPLATE_PATH: ${{ steps.template.outputs.template_path }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
@@ -600,9 +724,11 @@ jobs:
           deployment_json="$(az deployment group create \
             --name "helios-cloud-${environment_name}-${GITHUB_RUN_ID}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
-            --template-file "${PROJECT_DIRECTORY}/infra/connector.bicep" \
+            --template-file "${TEMPLATE_PATH}" \
             --parameters \
+              location="${RESOURCE_GROUP_LOCATION}" \
               environmentName="${environment_name}" \
+              serviceName="${SERVICE_NAME}" \
               containerImage="${IMAGE_REFERENCE}" \
               containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
               allowPreviewPlaceholder=false \
