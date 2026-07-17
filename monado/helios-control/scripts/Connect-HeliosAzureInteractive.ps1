@@ -63,6 +63,7 @@ $script:ReaderRole = [pscustomobject]@{ Name = 'Reader'; Id = 'acdd72a7-3385-48e
 $script:RequiredProviders = @(
     'Microsoft.App',
     'Microsoft.ContainerRegistry',
+    'Microsoft.DocumentDB',
     'Microsoft.Insights',
     'Microsoft.KeyVault',
     'Microsoft.ManagedIdentity',

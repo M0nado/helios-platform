@@ -4,10 +4,10 @@
 
 One secure nervous system connects Helios engineering, planning, communication,
 documents, and models without making any SaaS product the master of all state.
-The diagram is the target architecture. Today only signed ingress, normalized
-event creation, read-only MCP inventory, Container Apps, an empty Key Vault, and
-Azure monitoring are implemented; Service Bus, workers, outbound writers,
-durable idempotency, and the audit/dead-letter stores are not.
+The diagram is the target architecture. Today signed ingress, normalized event
+creation, read-only MCP inventory, Container Apps, an empty Key Vault, Azure
+monitoring, Cosmos-leased Edge runs, and a dry-run signed relay dispatcher are
+implemented. Service Bus workers and audit/dead-letter stores are not.
 
 ```mermaid
 flowchart TD
@@ -28,10 +28,10 @@ flowchart TD
 - Microsoft Foundry Agent Service hosts governed Hermes/XCore agents, evaluations, tools, memory, and stable endpoints; Microsoft 365 Copilot and Teams are distribution surfaces.
 - Slack and Teams are notification and interaction surfaces, never source-of-truth stores.
 - Azure currently provides managed identity, an empty Key Vault, Container Apps,
-  and monitoring for this slice. Service Bus and Storage are target services.
-- Local MCP exposes two development-only status tools. The remote MCP exposes
-  three read-only Azure inventory tools; the two surfaces are intentionally not
-  interchangeable.
+  serverless Cosmos run state, and monitoring. Service Bus and Storage are targets.
+- Local MCP exposes two development-only status tools. Remote MCP exposes seven
+  read-only inventory, planning, proposal, run-status, and connector-status tools;
+  the two surfaces are intentionally not interchangeable.
 
 ## Enterprise and multi-repository plane
 
@@ -47,7 +47,7 @@ flowchart TD
 - In the target enterprise plane, Azure API Management fronts enterprise APIs,
   Container Apps/AKS host services, ACR stores images, and Cosmos DB/Data Lake
   hold learning and event data. The current slice implements Container Apps,
-  external ACR binding, Application Insights, and Log Analytics only.
+  external ACR binding, Cosmos control-run state, Application Insights, and Log Analytics.
 - Entra groups, Conditional Access, managed devices, Purview classification, retention, audit, and selected-site Microsoft Graph permissions form the business governance edge.
 
 ### Agent permission tiers
@@ -66,8 +66,8 @@ Agents prefer pull requests over direct pushes. No raw Bitwarden exports, recove
 
 Every event has `id`, `type`, `source`, `subject`, `occurredAt`, `correlationId`,
 `traceParent`, `dataClassification`, and `payload`. Future workers must be
-idempotent on `id + target`, and future outbound operations must carry a Helios
-correlation marker. No outbound worker is implemented today.
+idempotent on `id + target`, and outbound operations carry a Helios correlation
+marker. The current inline dispatcher is not the future Service Bus worker fleet.
 
 ## Security boundaries
 

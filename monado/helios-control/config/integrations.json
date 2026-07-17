@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "executionMode": "dry-run",
-  "runtimeBindings": "disabled-no-outbound-workers-or-provider-credentials",
-  "routingState": "planned-not-executable",
+  "runtimeBindings": "cosmos-leased-control-runs-with-inline-signed-relay-dispatcher",
+  "routingState": "control-run-executable-provider-events-still-disabled",
   "identity": { "azureCredential": "managed-identity", "secretStore": "key-vault" },
   "enterprise": {
     "codeAuthority": "github-enterprise",
@@ -14,14 +14,15 @@
     "secretPolicy": "key-vault-or-local-vault-never-repository"
   },
   "destinations": {
-    "github": { "account": "M0nado", "repository": "M0nado/helios-platform", "path": "monado/helios-control", "enabled": false, "bindingState": "governance-reference-only-no-runtime-writer" },
-    "linear": { "team": "${LINEAR_TEAM_NAME}", "project": "${LINEAR_PROJECT_NAME}", "enabled": false, "bindingState": "unbound-placeholder" },
-    "slack": { "workspace": "${SLACK_WORKSPACE_NAME}", "channel": "${SLACK_CHANNEL_NAME}", "enabled": false, "bindingState": "unbound-placeholder" },
+    "github": { "account": "M0nado", "repository": "M0nado/helios-platform", "path": "monado/helios-control", "enabled": false, "selectedByDefault": true, "bindingState": "requires-https-relay-key-vault-hmac-and-exact-host-allowlist" },
+    "linear": { "team": "${LINEAR_TEAM_NAME}", "project": "${LINEAR_PROJECT_NAME}", "enabled": false, "selectedByDefault": true, "bindingState": "requires-https-relay-key-vault-hmac-and-exact-host-allowlist" },
+    "slack": { "workspace": "${SLACK_WORKSPACE_NAME}", "channel": "${SLACK_CHANNEL_NAME}", "enabled": false, "selectedByDefault": true, "bindingState": "requires-https-relay-key-vault-hmac-and-exact-host-allowlist" },
     "teams": { "team": "${TEAMS_TEAM_NAME}", "channel": "${TEAMS_CHANNEL_NAME}", "enabled": false, "bindingState": "unbound-placeholder" },
-    "sharepoint": { "tenant": "${SHAREPOINT_TENANT_HOST}", "library": "${SHAREPOINT_LIBRARY}", "folder": "${SHAREPOINT_GOVERNANCE_FOLDER}", "enabled": false, "bindingState": "unbound-placeholder" },
+    "sharepoint": { "tenant": "${SHAREPOINT_TENANT_HOST}", "library": "${SHAREPOINT_LIBRARY}", "folder": "${SHAREPOINT_GOVERNANCE_FOLDER}", "enabled": false, "selectedByDefault": true, "bindingState": "requires-https-relay-key-vault-hmac-and-exact-host-allowlist" },
     "microsoftAgents": { "registry": "entra-agent-registry", "manifest": "config/microsoft-agents.json", "toolchain": "config/microsoft-toolchain.json", "runtime": "microsoft-foundry-agent-service", "channels": ["microsoft-365-copilot", "teams"], "enabled": false, "bindingState": "planned-not-published" }
   },
   "routing": [
+    { "event": "control.run.updated", "enabled": false, "mode": "dry-run-until-bindings-approved", "targets": ["github", "linear", "slack", "sharepoint"] },
     { "event": "github.workflow.failed", "enabled": false, "targets": ["linear", "slack", "teams"] },
     { "event": "linear.issue.updated", "enabled": false, "targets": ["github", "slack", "teams"] },
     { "event": "hermes.training.candidate", "enabled": false, "targets": ["microsoftAgents", "sharepoint"] },

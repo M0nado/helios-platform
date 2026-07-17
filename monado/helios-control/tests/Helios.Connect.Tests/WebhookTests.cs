@@ -232,6 +232,43 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Edge_control_routes_expose_safe_connector_state_and_require_idempotency()
+    {
+        using var connectors = await _client.GetAsync("/control/connectors");
+        var connectorBody = await connectors.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, connectors.StatusCode);
+        Assert.Contains("no-store", connectors.Headers.CacheControl?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("github", connectorBody);
+        Assert.DoesNotContain("HMAC_SECRET", connectorBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("https://", connectorBody, StringComparison.OrdinalIgnoreCase);
+
+        using var content = new StringContent("{\"intent\":\"provision-resources\",\"environment\":\"dev\"}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/control/runs", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edge_control_route_rejects_oversized_chunked_bodies()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/control/runs")
+        {
+            Content = new ChunkedJsonContent(Encoding.UTF8.GetBytes($"{{\"intent\":\"provision-resources\",\"environment\":\"dev\",\"padding\":\"{new string('a', 20_000)}\"}}"))
+        };
+        request.Headers.Add("Idempotency-Key", "chunked-control-0001");
+
+        using var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edge_manifest_is_served_with_installable_content_type()
+    {
+        using var response = await _client.GetAsync("/wizard/manifest.webmanifest");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/manifest+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
     public async Task Readiness_fails_closed_when_cloud_identity_configuration_is_missing()
     {
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>

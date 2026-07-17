@@ -4,8 +4,8 @@
   "bindings": [
     { "workload": "github-actions", "credential": "exact-environment-subject-entra-federated-oidc", "secret": false, "scope": "selected-resource-group-plus-approved-registry-write", "roles": ["Contributor", "AcrPush or Container Registry Repository Writer"] },
     { "workload": "azure-pipelines", "credential": "workload-identity-service-connection", "secret": false, "roles": ["Reader", "Deployment Stack Contributor"] },
-    { "workload": "helios-api", "credential": "user-assigned-managed-identity", "secret": false, "roles": ["Key Vault Secrets User", "Azure Service Bus Data Sender"] },
-    { "workload": "connector-workers", "credential": "user-assigned-managed-identity", "secret": false, "roles": ["Azure Service Bus Data Receiver", "Storage Blob Data Contributor", "Cosmos DB Built-in Data Contributor"] },
+    { "workload": "helios-api", "credential": "user-assigned-managed-identity", "secret": false, "scope": "control-runs-container", "roles": ["Cosmos DB Built-in Data Contributor"] },
+    { "workload": "connector-workers", "credential": "future-user-assigned-managed-identity", "secret": false, "roles": ["Azure Service Bus Data Receiver", "Storage Blob Data Contributor"] },
     { "workload": "foundry-agents", "credential": "dedicated-agent-365-identity", "secret": false, "roles": ["Foundry Agent Consumer"] },
     { "workload": "copilot-user-actions", "credential": "oauth-on-behalf-of", "secret": false, "roles": ["selected-resource-only"] },
     { "workload": "openai-provider", "credential": "key-vault-secret-reference", "secret": true, "secretName": "helios-openai-api-key", "localEnvironmentName": "OPENAI_API_KEY" }

@@ -5,10 +5,11 @@ Slack, Microsoft Teams, SharePoint, Microsoft Copilot/Foundry, Azure, and MCP.
 Local processes are development and administration clients only; the governed
 runtime is hosted in Azure.
 
-The implemented slice validates signed webhooks, emits a normalized event
-envelope, exposes read-only MCP inventory, and rejects duplicate deliveries with
-a bounded process-local cache. Durable routing, per-connector workers, Service
-Bus, Cosmos DB idempotency, and dead-letter replay remain target architecture.
+The implemented slice validates signed webhooks, exposes read-only MCP
+inventory, runs the Edge one-button Diagnose → Plan → Save → Sync flow, stores
+run/idempotency state in Cosmos DB through managed identity, and emits signed
+connector-relay receipts. Service Bus scale-out, provider-native workers, and
+dead-letter replay remain target architecture.
 Secrets never live in source control: local secrets come from environment
 variables or .NET user-secrets; approved Azure secrets will come from Key Vault
 through managed identity after their separate administrator gate.
@@ -37,10 +38,10 @@ See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`, and
 ## Edge and Copilot setup wizard
 
 Open `/setup` on the hosted HELIOS service, or install the Microsoft 365 app
-package and select **Azure Setup**. The wizard validates tenant coordinates and
-generates a deterministic PowerShell Cloud Shell sequence that signs in,
-diagnoses the selected boundary, and creates ARM what-if evidence. It never
-applies from the browser. The **Upgrade agent** panel and
+package and select **Azure Setup**. **Run HELIOS now** inventories the configured
+Azure boundary, saves the deterministic plan plus its evidence digest, and records connector
+receipts in one resumable run. The Cloud Shell panel retains the first-time
+tenant bootstrap. Neither path applies from the browser. The **Upgrade agent** panel and
 `helios_propose_upgrade` MCP tool create deterministic proposals for a task
 branch, tests, and draft PR; they cannot silently change active policy or merge.
 
@@ -58,10 +59,10 @@ secure prompt and are never returned or exposed as MCP arguments.
 
 ## Azure connector
 
-The project includes an Azure-deployable, Entra-protected read-only connector
+The project includes an Azure-deployable, Entra-protected connector
 for discovering the configured subscription/resource group and Foundry-related
-resources. It exposes REST inventory routes and an MCP endpoint, uses a
-user-assigned managed identity with resource-group Reader, and contains no Azure
+resources. It exposes REST inventory routes, Cosmos-backed control-run status,
+and an MCP endpoint, uses a user-assigned managed identity, and contains no Azure
 mutation tools.
 
 Start with `docs/AZURE_INTERACTIVE_ONBOARDING.md`. The primary Cloud Shell entry
@@ -92,9 +93,9 @@ routes without publishing to Teams or Copilot.
 
 `config/cloud-runtime.json` distinguishes the implemented hosted connector slice
 from the target production architecture. The current Bicep hosts the API, remote
-MCP, Key Vault shell, and telemetry in Azure. Durable queues, agent jobs, state,
-evidence stores, APIM/private ingress, and Foundry agents are explicitly marked
-unimplemented. Local VS Code, Claude Code, and CLI processes are administration
+MCP, Cosmos control-run state, Key Vault shell, and telemetry in Azure. Durable
+Service Bus fan-out, agent jobs, artifact stores, APIM/private ingress, and
+Foundry agents are explicitly marked unimplemented. Local VS Code, Claude Code, and CLI processes are administration
 clients only and are never a production runtime dependency.
 
 Set `HELIOS_CLOUD_RUNTIME_ONLY=true` in Azure. The local-development MCP route
@@ -112,8 +113,9 @@ with execution tracked in
 verifies a clean checkout at `GITHUB_SHA`, builds that source in the configured
 dedicated registry, resolves the immutable digest, publishes hashed ARM what-if
 evidence, and requires a separate protected deploy approval bound to that
-evidence before applying. The workflow does not create role assignments, grant
-consent, or populate Key Vault.
+evidence before applying. The template creates one container-scoped Cosmos SQL
+data-role assignment for the runtime managed identity; the workflow does not
+grant tenant consent, routine Azure management RBAC, or populate Key Vault.
 
 ## Claude, VS Code Insiders, and local fleets
 

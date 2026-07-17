@@ -8,6 +8,9 @@
     "secretsExcluded": true
   },
   "autoFix": {
+    "oneButtonEdgeRun": true,
+    "durableRunStore": "cosmos-managed-identity",
+    "connectorReceipts": "signed-idempotent-relay",
     "diagnoseAutomatically": true,
     "createTaskBranch": true,
     "openDraftPullRequest": true,
@@ -38,6 +41,6 @@
     "vnet": "disabled-until-module-review",
     "functions": "disabled-until-module-review",
     "eventHubs": "disabled-until-module-review",
-    "cosmosDb": "disabled-until-module-review"
+    "cosmosDb": "control-run-store-implemented; broader-learning-modules-disabled-until-review"
   }
 }

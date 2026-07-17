@@ -38,7 +38,7 @@ reviewer and exact deployment-branch policy remain mandatory gates.
 
 The interactive administrator grants CI only Contributor at the selected
 resource-group scope. It separately grants the runtime identity Reader and
-registers only the six resource providers listed by the wizard; provider
+registers only the seven resource providers listed by the wizard; provider
 registration has its own `REGISTER HELIOS PROVIDERS` confirmation. CI never
 receives Owner or role-assignment authority. Configuration requires the exact
 phrase `CONFIGURE HELIOS AZURE`; resource-group creation has a separate exact

@@ -8,7 +8,8 @@ The design separates reasoning from mutation:
 - Azure CLI performs diagnostics and produces deployment evidence.
 - A protected GitHub environment controls production execution.
 - GitHub branches and draft pull requests contain issue repairs.
-- Linear, Slack, and SharePoint receive status and evidence links through the existing HELIOS outbox connectors.
+- Edge starts a Cosmos-backed, resumable Diagnose → Plan → Save → Sync run.
+- GitHub, Linear, Slack, and SharePoint receive normalized status through signed, idempotent relay bindings.
 
 ## Safety contract
 
@@ -24,9 +25,9 @@ Infrastructure apply requires all of the following:
 
 Vault updates use a secure prompt and a restricted temporary file. The secret is passed to `az keyvault secret set --file`, never supplied as a command-line value, never returned by the API, and never read back by the script.
 
-## OpenAI app surface
+## Edge and OpenAI app surface
 
-The MCP endpoint exposes `helios_plan_automation` as a plan-only tool. It follows the Apps SDK tool model and explicitly declares read-only, non-destructive behavior. There is deliberately no apply tool.
+The Edge page starts the job through authenticated same-origin REST. The MCP endpoint exposes `helios_plan_automation`, `helios_get_run`, and `helios_list_connectors` as read-only tools for ChatGPT, Codex, and Copilot. They follow the Apps SDK tool model and explicitly declare non-destructive behavior. There is deliberately no MCP apply or run-start tool.
 
 Reference documentation:
 
@@ -80,4 +81,6 @@ Supported intents are `provision-resources`, `rotate-secret`, `repair-issue`, an
 
 The branch validation workflow parses the guardrail configuration, runs the .NET test suite, checks PowerShell syntax on Windows, and rejects prohibited commands such as secret readback or automatic PR merge. The existing cloud deployment workflow continues to compile Bicep and owns protected what-if/deploy execution.
 
-This work is stacked on `integration/azure-live-connect-hardening-v1`. Merge the Azure live-connect PR first, then rebase this branch onto `main` and require all checks before merge.
+This work is carried by PR #188 on current `main`. Require the Windows/.NET,
+Bicep/cloud, Copilot package, and repository CI checks before merge; deployment
+and typed apply remain separate protected-environment decisions.

@@ -1,6 +1,14 @@
 # HELIOS Azure Setup Wizard
 
-The wizard is a personal Microsoft 365/Teams tab and ordinary Edge web app served by the HELIOS control API at `/setup`. The same plan and upgrade capabilities are available to Copilot, ChatGPT, and Codex through authenticated MCP tools.
+The wizard is a personal Microsoft 365/Teams tab and ordinary Edge web app served by the HELIOS control API at `/setup`. The default **Run** view is a one-button control surface; the Cloud Shell generator is retained for first-time tenant bootstrap. Copilot, ChatGPT, and Codex can read run and connector status through authenticated MCP tools.
+
+## One-button run
+
+Select **Run HELIOS now** to create an idempotent, Cosmos-backed job. The hosted managed identity verifies the configured Azure boundary, inventories non-secret resource metadata, creates the deterministic plan, and saves its SHA-256 digest plus connector receipts. Cosmos ETag leases let another replica reclaim queued or expired work after restart; a failed run can also be resumed explicitly.
+
+Connector cards show only whether a binding exists. Relay URLs and HMAC values are never returned to the browser or MCP. Outbound delivery remains `dry-run` until an administrator injects each relay URL and 32-byte-or-longer HMAC secret from Key Vault and changes `HELIOS_CONNECTOR_DELIVERY_MODE` to `live` through a reviewed deployment.
+
+The terminal state for any plan containing mutation is `awaiting-approval`. The run endpoint, browser, and MCP expose no apply method. Azure apply still requires the protected workflow, reviewed what-if hash, fresh drift match, reviewer approval, and exact typed confirmation.
 
 ## Setup flow
 
@@ -19,7 +27,7 @@ The generated script contains identifiers but no credentials, tokens, secret val
 
 ## Resource governance and cleanup
 
-The Bicep entry point accepts organization tags and enforces reserved `helios-managed`, service, environment, owner, provisioner, and repository tags on managed resources. The `cleanup-owned-resources` intent is plan-only: it inventories only `helios-managed=true` resources, detects locks and shared dependencies, and produces a complete-mode removal what-if. Unknown, untagged, shared, or drifted resources are protected. Removal can run only later through the protected workflow after owners review the exact digest and provide typed confirmation.
+The Bicep entry point accepts organization tags and enforces reserved `helios-managed`, service, environment, owner, provisioner, and repository tags on managed resources. The Edge `cleanup-owned-resources` intent is only an orchestration plan describing mandatory tag, lock, dependency, and complete-mode what-if checks; it does not execute those checks or remove anything. The protected operator workflow must produce the real removal what-if, protect unknown, untagged, shared, or drifted resources, and receive owner review plus typed confirmation before removal.
 
 ## Automatic upgrades
 
