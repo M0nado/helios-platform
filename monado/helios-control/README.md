@@ -34,6 +34,16 @@ verifier remain fail-closed.
 See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`, and
 `config/integrations.json`.
 
+## Edge automation branch
+
+`docs/EDGE_AUTOMATION.md` defines the stacked plan/apply integration layer.
+It adds deterministic REST/MCP plans for Azure provisioning, secret rotation,
+issue repair, and release synchronization. ChatGPT and Copilot can plan but
+cannot apply. `scripts/Invoke-HeliosEdgeAutomation.ps1` is the only new apply
+surface: it requires a reviewed what-if hash, a fresh drift check, a protected
+operator context, and exact confirmation. Key Vault values enter through a
+secure prompt and are never returned or exposed as MCP arguments.
+
 ## Azure connector
 
 The project includes an Azure-deployable, Entra-protected read-only connector
