@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "denyPatterns": [
+    "password=",
+    "api_key=",
+    "secret=",
+    "token=",
+    "-----BEGIN",
+    "BEGIN PRIVATE KEY",
+    "xoxb-"
+  ],
+  "rules": [
+    {
+      "id": "deploy-requires-apply",
+      "description": "Azure deploy commands must include --apply.",
+      "match": "azure deploy",
+      "requires": "--apply"
+    },
+    {
+      "id": "mass-merge-requires-final-gate",
+      "description": "Mass merge/apply requires a passing final gate report.",
+      "match": "mass_integration.py branch --apply",
+      "requiresReport": "reports/final-gate/final-gate.json"
+    },
+    {
+      "id": "auto-merge-requires-final-gate",
+      "description": "Auto-merge requires a passing final gate report.",
+      "match": "mass_integration.py merge --apply",
+      "requiresReport": "reports/final-gate/final-gate.json"
+    },
+    {
+      "id": "no-secrets-in-reports",
+      "description": "Generated reports must not contain common secret markers.",
+      "scanPaths": [
+        "reports"
+      ]
+    }
+  ]
+}

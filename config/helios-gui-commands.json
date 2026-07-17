@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "groups": [
+    {"name": "Setup", "buttons": [{"label": "Status", "command": "./tools/helios.ps1 status", "mode": "copy", "risk": "low"}, {"label": "Deep Setup All", "command": "./tools/helios.ps1 setup deep-all", "mode": "copy", "risk": "low"}]},
+    {"name": "GitHub", "buttons": [{"label": "Takeover Status", "command": "./tools/helios.ps1 github takeover", "mode": "copy", "risk": "medium"}, {"label": "Mass Score", "command": "./tools/helios.ps1 github mass-score", "mode": "copy", "risk": "low"}]},
+    {"name": "Agents", "buttons": [{"label": "Agent XP", "command": "./tools/helios.ps1 agents xp", "mode": "copy", "risk": "low"}, {"label": "Runtime", "command": "./tools/helios.ps1 agents runtime", "mode": "copy", "risk": "low"}]},
+    {"name": "Models", "buttons": [{"label": "Model Store", "command": "./tools/helios.ps1 models list", "mode": "copy", "risk": "low"}, {"label": "Hermes/XCore", "command": "./tools/helios.ps1 hermes models", "mode": "copy", "risk": "low"}]},
+    {"name": "Danger Zone", "buttons": [{"label": "Mass Apply", "command": "./tools/helios.ps1 github mass-all --apply", "mode": "disabled", "risk": "high", "requires": ["policy-pass", "final-gate-pass"]}]}
+  ]
+}
