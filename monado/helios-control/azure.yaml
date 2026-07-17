@@ -1,0 +1,17 @@
+name: helios-control
+metadata:
+  template: helios-microsoft-agent-fabric@0.1.0
+requiredVersions:
+  azd: '>= 1.25.3'
+infra:
+  provider: bicep
+  path: infra
+services:
+  api:
+    project: src/Helios.Connect.Api
+    language: dotnet
+    host: containerapp
+hooks:
+  preprovision:
+    shell: pwsh
+    run: ./scripts/Bootstrap-MicrosoftToolchain.ps1 -Mode Verify

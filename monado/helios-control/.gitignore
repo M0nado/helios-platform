@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.azure/
+appPackage/build/
+runtime/
+artifacts/
+bin/
+obj/
+*.user
+*.suo
+.cache/
+.claude/settings.local.json

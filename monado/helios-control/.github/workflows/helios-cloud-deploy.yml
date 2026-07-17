@@ -1,0 +1,659 @@
+name: helios-cloud-deploy
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/helios-cloud-deploy.yml
+      - monado/helios-control/**
+      - infra/connector.bicep
+      - src/**
+      - tests/**
+  workflow_dispatch:
+    inputs:
+      targetEnvironment:
+        description: Protected GitHub environment containing the Azure OIDC variables
+        required: true
+        type: choice
+        default: azure-dev
+        options:
+          - azure-dev
+          - azure-test
+          - azure-prod
+      mode:
+        description: Preview is the default; deploy requires a second protected-environment approval
+        required: true
+        type: choice
+        default: what-if
+        options:
+          - what-if
+          - deploy
+      imageReference:
+        description: Approved immutable OCI image (registry/repository@sha256:digest)
+        required: true
+        type: string
+        default: heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      confirmDeployment:
+        description: Enter DEPLOY when mode is deploy; ignored for what-if
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: helios-cloud-${{ inputs.targetEnvironment || 'validation' }}
+  cancel-in-progress: false
+
+env:
+  HELIOS_BICEP_VERSION: v0.43.8
+  HELIOS_DOTNET_SDK_VERSION: 8.0.423
+
+jobs:
+  validate:
+    name: Validate deployment request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      project-directory: ${{ steps.project.outputs.directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Locate Helios project
+        id: project
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "infra/connector.bicep" ]]; then
+            directory="."
+          elif [[ -f "monado/helios-control/infra/connector.bicep" ]]; then
+            directory="monado/helios-control"
+          else
+            echo "Helios connector.bicep was not found." >&2
+            exit 1
+          fi
+          echo "directory=${directory}" >> "${GITHUB_OUTPUT}"
+
+      - name: Enforce immutable image and explicit deploy confirmation
+        shell: bash
+        env:
+          IMAGE_REFERENCE: ${{ inputs.imageReference }}
+          DEPLOYMENT_MODE: ${{ inputs.mode || 'what-if' }}
+          DEPLOYMENT_CONFIRMATION: ${{ inputs.confirmDeployment || '' }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${IMAGE_REFERENCE}" ]]; then
+            IMAGE_REFERENCE='heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000'
+          fi
+          if [[ ! "${IMAGE_REFERENCE}" =~ ^[a-z0-9][a-z0-9]{4,49}\.azurecr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]]; then
+            echo "imageReference must be a lowercase immutable Azure Container Registry digest reference." >&2
+            exit 1
+          fi
+          if [[ "${DEPLOYMENT_MODE}" == "deploy" ]]; then
+            if [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
+              echo "A deploy run requires confirmDeployment=DEPLOY." >&2
+              exit 1
+            fi
+            if [[ "${IMAGE_REFERENCE}" == *@sha256:0000000000000000000000000000000000000000000000000000000000000000 ]]; then
+              echo "The all-zero preview placeholder image cannot be deployed." >&2
+              exit 1
+            fi
+          fi
+
+      - name: Build pinned Bicep template
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ steps.project.outputs.directory }}
+        run: |
+          set -euo pipefail
+          az bicep install --version "${HELIOS_BICEP_VERSION}"
+          az bicep version
+          az bicep build --file "${PROJECT_DIRECTORY}/infra/connector.bicep"
+
+      - name: Set up pinned .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: ${{ env.HELIOS_DOTNET_SDK_VERSION }}
+
+      - name: Run tests
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ steps.project.outputs.directory }}
+        run: dotnet test "${PROJECT_DIRECTORY}/Helios.Connect.sln" --configuration Release
+
+  preview:
+    name: Reviewed Azure what-if (${{ inputs.targetEnvironment }})
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # The operator bootstrap verifies this environment's reviewer protection via
+    # the GitHub API before creating OIDC federation; a variable is not evidence.
+    environment: ${{ inputs.targetEnvironment }}
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
+      image_reference: ${{ steps.registry.outputs.image_reference }}
+      is_preview_placeholder: ${{ steps.registry.outputs.is_preview_placeholder }}
+      registry_name: ${{ steps.registry.outputs.registry_name }}
+      what_if_sha256: ${{ steps.whatif.outputs.what_if_sha256 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Validate protected environment variables
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+        run: |
+          set -euo pipefail
+          required=(
+            AZURE_CLIENT_ID
+            AZURE_TENANT_ID
+            AZURE_SUBSCRIPTION_ID
+            AZURE_RESOURCE_GROUP
+            HELIOS_ENTRA_CLIENT_ID
+            HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID
+            HELIOS_CONTAINER_REGISTRY_NAME
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Required protected environment variable ${name} is not configured." >&2
+              exit 1
+            fi
+          done
+          if [[ ! "${HELIOS_CONTAINER_REGISTRY_NAME}" =~ ^[a-z0-9]{5,50}$ ]]; then
+            echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
+            exit 1
+          fi
+
+      - name: Azure login with GitHub OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install pinned Bicep CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install --version "${HELIOS_BICEP_VERSION}"
+          az bicep version
+
+      - name: Verify configured registry and immutable image
+        id: registry
+        shell: bash
+        env:
+          IMAGE_REFERENCE: ${{ inputs.imageReference }}
+          DEPLOYMENT_MODE: ${{ inputs.mode }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+        run: |
+          set -euo pipefail
+
+          actual_subscription_id="$(az account show --query id --output tsv)"
+          if [[ "${actual_subscription_id,,}" != "${AZURE_SUBSCRIPTION_ID,,}" ]]; then
+            echo "Azure CLI is not using the configured protected-environment subscription." >&2
+            exit 1
+          fi
+
+          configured_server="${HELIOS_CONTAINER_REGISTRY_NAME}.azurecr.io"
+          input_server="${IMAGE_REFERENCE%%/*}"
+          zero_digest="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          requested_digest="${IMAGE_REFERENCE##*@}"
+          is_preview_placeholder=false
+
+          if [[ "${requested_digest}" == "${zero_digest}" ]]; then
+            if [[ "${DEPLOYMENT_MODE}" != "what-if" ]]; then
+              echo "The all-zero image digest is permitted only for a what-if preview." >&2
+              exit 1
+            fi
+            is_preview_placeholder=true
+            effective_image="${configured_server}/helios-connect@${zero_digest}"
+            echo "Using the protected environment registry with the non-deployable what-if placeholder."
+          else
+            if [[ "${input_server}" != "${configured_server}" ]]; then
+              echo "imageReference registry ${input_server} does not exactly match protected HELIOS_CONTAINER_REGISTRY_NAME (${configured_server})." >&2
+              exit 1
+            fi
+            effective_image="${IMAGE_REFERENCE}"
+          fi
+
+          registry_json="$(az acr show \
+            --name "${HELIOS_CONTAINER_REGISTRY_NAME}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --output json)"
+          registry_id="$(jq -r '.id' <<<"${registry_json}")"
+          registry_server="$(jq -r '.loginServer' <<<"${registry_json}")"
+          expected_registry_id="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${HELIOS_CONTAINER_REGISTRY_NAME}"
+
+          if [[ "${registry_id,,}" != "${expected_registry_id,,}" ]]; then
+            echo "The configured registry did not resolve in the configured subscription and resource group." >&2
+            exit 1
+          fi
+          if [[ "${registry_server}" != "${configured_server}" ]]; then
+            echo "Azure returned an unexpected login server for the configured registry." >&2
+            exit 1
+          fi
+
+          if [[ "${is_preview_placeholder}" != true ]]; then
+            image_path="${effective_image#*/}"
+            repository="${image_path%@sha256:*}"
+            digest="${effective_image##*@}"
+            az account get-access-token \
+              --scope 'https://containerregistry.azure.net/.default' \
+              --output none
+            if ! manifest_digest="$(az acr repository show \
+              --name "${HELIOS_CONTAINER_REGISTRY_NAME}" \
+              --image "${repository}@${digest}" \
+              --query digest \
+              --output tsv)"; then
+              echo "The immutable digest could not be read. The operator must grant the GitHub OIDC identity AcrPull (RBAC-only registry) or Container Registry Repository Reader (ABAC registry)." >&2
+              exit 1
+            fi
+            if [[ "${manifest_digest,,}" != "${digest,,}" ]]; then
+              echo "The requested immutable digest was not found in the configured registry." >&2
+              exit 1
+            fi
+          fi
+
+          echo "image_reference=${effective_image}" >> "${GITHUB_OUTPUT}"
+          echo "is_preview_placeholder=${is_preview_placeholder}" >> "${GITHUB_OUTPUT}"
+          echo "registry_name=${HELIOS_CONTAINER_REGISTRY_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Capture canonical Azure Resource Manager what-if
+        id: whatif
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          IMAGE_REFERENCE: ${{ steps.registry.outputs.image_reference }}
+          IS_PREVIEW_PLACEHOLDER: ${{ steps.registry.outputs.is_preview_placeholder }}
+          CONTAINER_REGISTRY_NAME: ${{ steps.registry.outputs.registry_name }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+        run: |
+          set -euo pipefail
+          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          artifact_dir="${RUNNER_TEMP}/helios-what-if"
+          raw_what_if="${RUNNER_TEMP}/helios-what-if.raw.json"
+          mkdir -p "${artifact_dir}"
+
+          az deployment group what-if \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --template-file "${PROJECT_DIRECTORY}/infra/connector.bicep" \
+            --result-format ResourceIdOnly \
+            --parameters \
+              environmentName="${environment_name}" \
+              containerImage="${IMAGE_REFERENCE}" \
+              containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
+              allowPreviewPlaceholder="${IS_PREVIEW_PLACEHOLDER}" \
+              entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
+              entraTenantId="${AZURE_TENANT_ID}" \
+              allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
+            --output json > "${raw_what_if}"
+
+          full_what_if="${RUNNER_TEMP}/helios-what-if.full.canonical.json"
+          jq --sort-keys . "${raw_what_if}" > "${full_what_if}"
+          what_if_sha256="$(sha256sum "${full_what_if}" | cut -d' ' -f1)"
+          jq --sort-keys '
+            walk(
+              if type == "object" then
+                (.name? // "") as $name |
+                if (($name | type) == "string" and ($name | test("(SECRET|PASSWORD|TOKEN|CONNECTION_STRING|API_KEY|KEY$)"; "i")) and has("value")) then
+                  .value = "<redacted>"
+                else
+                  with_entries(
+                    if (.key | test("(secret|password|token|connectionstring|instrumentationkey|sharedkey|apikey)$"; "i")) then
+                      .value = "<redacted>"
+                    else
+                      .
+                    end
+                  )
+                end
+              else
+                .
+              end
+            )
+          ' "${raw_what_if}" > "${artifact_dir}/what-if.json"
+          review_sha256="$(sha256sum "${artifact_dir}/what-if.json" | cut -d' ' -f1)"
+          jq --null-input \
+            --arg runId "${GITHUB_RUN_ID}" \
+            --arg sourceSha "${GITHUB_SHA}" \
+            --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
+            --arg imageReference "${IMAGE_REFERENCE}" \
+            --arg registryName "${CONTAINER_REGISTRY_NAME}" \
+            --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
+            --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
+            --arg whatIfSha256 "${what_if_sha256}" \
+            --arg reviewSha256 "${review_sha256}" \
+            '{runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, imageReference: $imageReference, registryName: $registryName, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            > "${artifact_dir}/request.json"
+
+          echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Azure what-if ready for deployment review"
+            echo ""
+            echo "- Environment: \`${TARGET_ENVIRONMENT}\`"
+            echo "- Image: \`${IMAGE_REFERENCE}\`"
+            echo "- Full canonical what-if SHA-256: \`${what_if_sha256}\`"
+            echo "- Review-safe artifact content SHA-256: \`${review_sha256}\`"
+            echo "- A deploy request now requires a second protected-environment approval."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Publish immutable what-if evidence
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: helios-what-if-${{ github.run_id }}-${{ inputs.targetEnvironment }}
+          path: ${{ runner.temp }}/helios-what-if
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Record immutable artifact digest
+        shell: bash
+        env:
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${ARTIFACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ && ! "${ARTIFACT_DIGEST}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "The artifact action did not return a valid SHA-256 digest." >&2
+            exit 1
+          fi
+          echo "- GitHub artifact SHA-256: \`${ARTIFACT_DIGEST}\`" >> "${GITHUB_STEP_SUMMARY}"
+
+  deploy:
+    name: Deploy after second approval (${{ inputs.targetEnvironment }})
+    if: ${{ inputs.mode == 'deploy' && inputs.confirmDeployment == 'DEPLOY' }}
+    needs:
+      - validate
+      - preview
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # A second environment deployment creates a distinct approval gate after
+    # the immutable what-if artifact is available to reviewers.
+    environment: ${{ inputs.targetEnvironment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Validate protected environment variables again
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+        run: |
+          set -euo pipefail
+          required=(
+            AZURE_CLIENT_ID
+            AZURE_TENANT_ID
+            AZURE_SUBSCRIPTION_ID
+            AZURE_RESOURCE_GROUP
+            HELIOS_ENTRA_CLIENT_ID
+            HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID
+            HELIOS_CONTAINER_REGISTRY_NAME
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Required protected environment variable ${name} is not configured." >&2
+              exit 1
+            fi
+          done
+          if [[ ! "${HELIOS_CONTAINER_REGISTRY_NAME}" =~ ^[a-z0-9]{5,50}$ ]]; then
+            echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
+            exit 1
+          fi
+
+      - name: Azure login with GitHub OIDC after second approval
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install pinned Bicep CLI again
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install --version "${HELIOS_BICEP_VERSION}"
+          az bicep version
+
+      - name: Download reviewed what-if evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: helios-what-if-${{ github.run_id }}-${{ inputs.targetEnvironment }}
+          path: ${{ runner.temp }}/approved-what-if
+
+      - name: Verify reviewed what-if evidence
+        shell: bash
+        env:
+          EXPECTED_WHAT_IF_SHA256: ${{ needs.preview.outputs.what_if_sha256 }}
+          EXPECTED_IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
+          EXPECTED_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+        run: |
+          set -euo pipefail
+          evidence_dir="${RUNNER_TEMP}/approved-what-if"
+          actual_review_sha256="$(sha256sum "${evidence_dir}/what-if.json" | cut -d' ' -f1)"
+          expected_review_sha256="$(jq --raw-output '.reviewSha256' "${evidence_dir}/request.json")"
+          if [[ "${actual_review_sha256}" != "${expected_review_sha256}" ]]; then
+            echo "Downloaded review-safe what-if evidence does not match its recorded digest." >&2
+            exit 1
+          fi
+          if [[ "${EXPECTED_REGISTRY_NAME}" != "${HELIOS_CONTAINER_REGISTRY_NAME}" ]]; then
+            echo "The protected registry binding changed after preview; start a new workflow run." >&2
+            exit 1
+          fi
+          jq --exit-status \
+            --arg runId "${GITHUB_RUN_ID}" \
+            --arg sourceSha "${GITHUB_SHA}" \
+            --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
+            --arg imageReference "${EXPECTED_IMAGE_REFERENCE}" \
+            --arg registryName "${EXPECTED_REGISTRY_NAME}" \
+            --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
+            --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
+            --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
+            --arg reviewSha256 "${actual_review_sha256}" \
+            '.runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .imageReference == $imageReference and .registryName == $registryName and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            "${evidence_dir}/request.json" > /dev/null
+
+      - name: Re-verify configured registry and published digest
+        id: registry
+        shell: bash
+        env:
+          IMAGE_REFERENCE: ${{ inputs.imageReference }}
+          PREVIEW_IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+        run: |
+          set -euo pipefail
+          if [[ "${IMAGE_REFERENCE}" != "${PREVIEW_IMAGE_REFERENCE}" ]]; then
+            echo "The deployment image differs from the reviewed preview image." >&2
+            exit 1
+          fi
+          configured_server="${HELIOS_CONTAINER_REGISTRY_NAME}.azurecr.io"
+          if [[ "${IMAGE_REFERENCE%%/*}" != "${configured_server}" ]]; then
+            echo "The deployment image registry no longer matches the protected environment binding." >&2
+            exit 1
+          fi
+          actual_subscription_id="$(az account show --query id --output tsv)"
+          if [[ "${actual_subscription_id,,}" != "${AZURE_SUBSCRIPTION_ID,,}" ]]; then
+            echo "Azure CLI is not using the configured protected-environment subscription." >&2
+            exit 1
+          fi
+
+          registry_json="$(az acr show \
+            --name "${HELIOS_CONTAINER_REGISTRY_NAME}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --output json)"
+          registry_id="$(jq -r '.id' <<<"${registry_json}")"
+          registry_server="$(jq -r '.loginServer' <<<"${registry_json}")"
+          expected_registry_id="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${HELIOS_CONTAINER_REGISTRY_NAME}"
+          if [[ "${registry_id,,}" != "${expected_registry_id,,}" || "${registry_server}" != "${configured_server}" ]]; then
+            echo "The configured registry changed after preview; start a new workflow run." >&2
+            exit 1
+          fi
+
+          image_path="${IMAGE_REFERENCE#*/}"
+          repository="${image_path%@sha256:*}"
+          digest="${IMAGE_REFERENCE##*@}"
+          az account get-access-token \
+            --scope 'https://containerregistry.azure.net/.default' \
+            --output none
+          if ! manifest_digest="$(az acr repository show \
+            --name "${HELIOS_CONTAINER_REGISTRY_NAME}" \
+            --image "${repository}@${digest}" \
+            --query digest \
+            --output tsv)"; then
+            echo "The immutable digest could not be read. The operator must grant the GitHub OIDC identity AcrPull (RBAC-only registry) or Container Registry Repository Reader (ABAC registry)." >&2
+            exit 1
+          fi
+          if [[ "${manifest_digest,,}" != "${digest,,}" ]]; then
+            echo "The reviewed immutable digest is no longer available in the configured registry." >&2
+            exit 1
+          fi
+          echo "registry_name=${HELIOS_CONTAINER_REGISTRY_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Re-run what-if and fail on drift
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
+          CONTAINER_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
+          EXPECTED_WHAT_IF_SHA256: ${{ needs.preview.outputs.what_if_sha256 }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+        run: |
+          set -euo pipefail
+          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          raw_what_if="${RUNNER_TEMP}/helios-drift-check.raw.json"
+          canonical_what_if="${RUNNER_TEMP}/helios-drift-check.json"
+          az deployment group what-if \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --template-file "${PROJECT_DIRECTORY}/infra/connector.bicep" \
+            --result-format ResourceIdOnly \
+            --parameters \
+              environmentName="${environment_name}" \
+              containerImage="${IMAGE_REFERENCE}" \
+              containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
+              allowPreviewPlaceholder=false \
+              entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
+              entraTenantId="${AZURE_TENANT_ID}" \
+              allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
+            --output json > "${raw_what_if}"
+          jq --sort-keys . "${raw_what_if}" > "${canonical_what_if}"
+          actual_what_if_sha256="$(sha256sum "${canonical_what_if}" | cut -d' ' -f1)"
+          if [[ "${actual_what_if_sha256}" != "${EXPECTED_WHAT_IF_SHA256}" ]]; then
+            echo "Azure state or deployment inputs changed after the reviewed what-if. Start a new workflow run." >&2
+            exit 1
+          fi
+
+      - name: Deploy reviewed immutable revision
+        id: deploy
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
+          CONTAINER_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+        run: |
+          set -euo pipefail
+          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          deployment_json="$(az deployment group create \
+            --name "helios-cloud-${environment_name}-${GITHUB_RUN_ID}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --template-file "${PROJECT_DIRECTORY}/infra/connector.bicep" \
+            --parameters \
+              environmentName="${environment_name}" \
+              containerImage="${IMAGE_REFERENCE}" \
+              containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
+              allowPreviewPlaceholder=false \
+              entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
+              entraTenantId="${AZURE_TENANT_ID}" \
+              allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
+            --output json)"
+          connector_url="$(jq -r '.properties.outputs.connectorUrl.value' <<<"${deployment_json}")"
+          if [[ ! "${connector_url}" =~ ^https://[^/]+$ ]]; then
+            echo "Azure deployment did not return a valid HTTPS connector URL." >&2
+            exit 1
+          fi
+          echo "connector_url=${connector_url}" >> "${GITHUB_OUTPUT}"
+
+      - name: Verify cloud health and fail-closed boundary
+        shell: bash
+        env:
+          CONNECTOR_URL: ${{ steps.deploy.outputs.connector_url }}
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in {1..24}; do
+            if curl --fail --silent --show-error "${CONNECTOR_URL}/health/ready" > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          if [[ "${ready}" != true ]]; then
+            echo "The deployed connector did not become ready within two minutes." >&2
+            exit 1
+          fi
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' "${CONNECTOR_URL}/connector/context")"
+          if [[ "${status}" != 401 ]]; then
+            echo "Expected anonymous connector access to return 401; received ${status}." >&2
+            exit 1
+          fi
+          forged_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header 'X-MS-CLIENT-PRINCIPAL-ID: forged-untrusted-principal' \
+            "${CONNECTOR_URL}/connector/context")"
+          if [[ "${forged_status}" != 401 ]]; then
+            echo "The ingress did not strip a forged Easy Auth principal header; received ${forged_status}." >&2
+            exit 1
+          fi
+          metadata="$(curl --fail --silent --show-error "${CONNECTOR_URL}/.well-known/oauth-protected-resource/mcp")"
+          jq --exit-status \
+            --arg resource "${CONNECTOR_URL}/mcp" \
+            '.resource == $resource and (.authorization_servers | length) >= 1 and (.scopes_supported | length) == 1' \
+            <<<"${metadata}" > /dev/null
+          mcp_headers="$(mktemp)"
+          mcp_status="$(curl --silent --output /dev/null --dump-header "${mcp_headers}" --write-out '%{http_code}' \
+            --header 'Accept: application/json, text/event-stream' \
+            --header 'Content-Type: application/json' \
+            --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
+            "${CONNECTOR_URL}/mcp")"
+          if [[ "${mcp_status}" != 401 ]] || ! grep -qi 'resource_metadata=' "${mcp_headers}"; then
+            echo 'The anonymous MCP boundary did not return an RFC 9728 resource_metadata challenge.' >&2
+            exit 1
+          fi

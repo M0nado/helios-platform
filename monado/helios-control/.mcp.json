@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "helios-local": {
+      "type": "http",
+      "url": "${HELIOS_LOCAL_MCP_URL:-http://127.0.0.1:5080/runtime/webhooks/mcp}"
+    },
+    "helios-azure": {
+      "type": "http",
+      "url": "${HELIOS_AZURE_CONNECTOR_URL:-http://127.0.0.1:5080}/mcp"
+    },
+    "azure-mcp-readonly": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure/mcp@3.0.0-beta.27",
+        "server",
+        "start",
+        "--read-only",
+        "--mode",
+        "namespace",
+        "--namespace",
+        "subscription",
+        "--namespace",
+        "group",
+        "--namespace",
+        "containerapps",
+        "--namespace",
+        "applicationinsights",
+        "--namespace",
+        "monitor",
+        "--namespace",
+        "foundryextensions",
+        "--namespace",
+        "quota",
+        "--namespace",
+        "pricing"
+      ]
+    }
+  }
+}

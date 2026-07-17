@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "environments": ["development", "test", "production"],
+  "bindings": [
+    { "workload": "github-actions", "credential": "entra-federated-oidc", "secret": false, "scope": "selected-resource-group-plus-approved-registry-read", "roles": ["Contributor", "AcrPull or Container Registry Repository Reader"] },
+    { "workload": "azure-pipelines", "credential": "workload-identity-service-connection", "secret": false, "roles": ["Reader", "Deployment Stack Contributor"] },
+    { "workload": "helios-api", "credential": "user-assigned-managed-identity", "secret": false, "roles": ["Key Vault Secrets User", "Azure Service Bus Data Sender"] },
+    { "workload": "connector-workers", "credential": "user-assigned-managed-identity", "secret": false, "roles": ["Azure Service Bus Data Receiver", "Storage Blob Data Contributor", "Cosmos DB Built-in Data Contributor"] },
+    { "workload": "foundry-agents", "credential": "dedicated-agent-365-identity", "secret": false, "roles": ["Foundry Agent Consumer"] },
+    { "workload": "copilot-user-actions", "credential": "oauth-on-behalf-of", "secret": false, "roles": ["selected-resource-only"] },
+    { "workload": "openai-provider", "credential": "key-vault-secret-reference", "secret": true, "secretName": "helios-openai-api-key", "localEnvironmentName": "OPENAI_API_KEY" }
+  ],
+  "forbidden": ["plaintext-token-in-repository", "tenant-wide-graph-by-default", "shared-agent-identity-across-trust-boundaries", "production-client-secret"]
+}

@@ -1,0 +1,23 @@
+name: helios-connect-ci
+on:
+  pull_request:
+    paths:
+      - 'monado/helios-control/**'
+      - '.github/workflows/helios-control-ci.yml'
+  push:
+    branches: [main, master]
+    paths:
+      - 'monado/helios-control/**'
+      - '.github/workflows/helios-control-ci.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '8.0.x' }
+      - run: dotnet restore monado/helios-control/Helios.Connect.sln
+      - run: dotnet test monado/helios-control/Helios.Connect.sln --no-restore --configuration Release

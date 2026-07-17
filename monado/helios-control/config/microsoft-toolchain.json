@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "policy": "pinned-declarative-pr-first",
+  "tools": [
+    { "id": "azure-cli", "command": "az", "channel": "stable", "purpose": "Azure resource and identity operations" },
+    { "id": "azure-developer-cli", "command": "azd", "minimumVersion": "1.25.3", "purpose": "Environment provisioning and application deployment" },
+    { "id": "bicep", "command": "az bicep", "channel": "azure-cli-managed", "purpose": "Infrastructure as code" },
+    { "id": "azure-functions-core-tools", "command": "func", "channel": "4", "purpose": "Local MCP and webhook Functions runtime" },
+    { "id": "power-platform-cli", "command": "pac", "channel": "stable", "purpose": "Copilot Studio and Power Platform solution lifecycle" },
+    { "id": "microsoft-365-agents-toolkit", "command": "atk", "package": "@microsoft/m365agentstoolkit-cli", "channel": "stable", "purpose": "Microsoft 365 and Teams agent packaging" },
+    { "id": "github-cli", "command": "gh", "channel": "stable", "purpose": "PR, Actions, Codespaces, and Copilot workflows" },
+    { "id": "dotnet-sdk", "command": "dotnet", "channel": "8.0", "purpose": "Helios C# spine" },
+    { "id": "powershell", "command": "pwsh", "channel": "7", "purpose": "Hash-verified Windows and Azure adapters" },
+    { "id": "docker", "command": "docker", "channel": "stable", "purpose": "Hosted-agent and local service containers" },
+    { "id": "nodejs", "command": "node", "channel": "22", "purpose": "MCP and agent CLI host" },
+    { "id": "jq", "command": "jq", "channel": "stable", "purpose": "Portable Bash manifest parsing and JSON reports" },
+    { "id": "azure-mcp", "command": "npx", "package": "@azure/mcp", "version": "3.0.0-beta.27", "defaultArguments": ["server", "start", "--read-only", "--mode", "namespace"], "purpose": "Read-only local Azure and Foundry context" },
+    { "id": "claude-code", "command": "claude", "package": "@anthropic-ai/claude-code", "version": "2.1.212", "purpose": "Peer implementation and review agent connected through project MCP" },
+    { "id": "vscode-insiders", "command": "code-insiders", "channel": "insiders", "purpose": "Local multi-agent workbench and MCP client" }
+  ],
+  "vscodeExtensions": [
+    "ms-azuretools.azure-dev",
+    "ms-azuretools.vscode-azurefunctions",
+    "ms-azuretools.vscode-bicep",
+    "ms-dotnettools.csdevkit",
+    "github.copilot",
+    "github.copilot-chat",
+    "ms-azuretools.vscode-azure-github-copilot",
+    "ms-azuretools.vscode-azure-mcp-server",
+    "teamsdevapp.ms-teams-vscode-extension"
+  ],
+  "azureServices": [
+    "microsoft-foundry-agent-service",
+    "azure-openai",
+    "container-apps",
+    "functions",
+    "api-management",
+    "service-bus",
+    "key-vault",
+    "cosmos-db",
+    "azure-ai-search",
+    "storage-data-lake",
+    "container-registry",
+    "application-insights",
+    "log-analytics"
+  ],
+  "tenantApps": [
+    "microsoft-365-copilot",
+    "copilot-studio",
+    "agent-365-registry",
+    "entra-agent-id",
+    "azure-devops-mcp",
+    "sharepoint",
+    "teams"
+  ]
+}

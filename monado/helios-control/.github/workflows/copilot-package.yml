@@ -1,0 +1,19 @@
+name: helios-copilot-package
+on:
+  pull_request:
+    paths:
+      - 'monado/helios-control/appPackage/**'
+      - 'monado/helios-control/config/microsoft-agents.json'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm install --global @microsoft/m365agentstoolkit-cli
+      - run: atk --version
+      - run: python -m json.tool monado/helios-control/appPackage/manifest.json >/dev/null

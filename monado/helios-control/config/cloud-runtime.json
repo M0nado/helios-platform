@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "name": "helios-cloud-runtime",
+  "version": "1.0.0",
+  "runtime": {
+    "hosting": "azure",
+    "localRuntimeAllowed": false,
+    "executionMode": "dry-run",
+    "productionMinReplicas": 1,
+    "nonProductionMinReplicas": 0,
+    "immutableImagesRequired": true
+  },
+  "services": {
+    "apiManagement": {
+      "purpose": "Public policy edge for Entra-authenticated APIs and separately signed webhook ingress",
+      "privateBackendRequired": true,
+      "required": true
+    },
+    "containerRegistry": {
+      "purpose": "Approved immutable Helios images addressed by sha256 digest",
+      "adminCredentialsAllowed": false,
+      "required": true
+    },
+    "containerApps": {
+      "purpose": "Public Entra-protected Helios API and remote MCP endpoint",
+      "identity": "user-assigned-managed-identity",
+      "required": true
+    },
+    "containerAppsJobs": {
+      "purpose": "Bounded asynchronous Hermes/XCore evaluation workers",
+      "trigger": "service-bus",
+      "required": true
+    },
+    "serviceBus": {
+      "purpose": "Durable command and evidence routing with dead-letter isolation",
+      "localAuthenticationAllowed": false,
+      "required": true
+    },
+    "keyVault": {
+      "purpose": "Provider credential references for workloads that cannot use federation",
+      "rbacOnly": true,
+      "secretValuesInDeploymentAllowed": false,
+      "required": true
+    },
+    "foundryAgentService": {
+      "purpose": "Governed cloud agent execution and evaluation",
+      "modelDeploymentRequired": true,
+      "required": true
+    },
+    "cosmosDb": {
+      "purpose": "Candidate state, run metadata, approvals, and idempotency",
+      "localAuthenticationAllowed": false,
+      "required": true
+    },
+    "dataLake": {
+      "purpose": "Versioned evidence and evaluation artifacts",
+      "hierarchicalNamespace": true,
+      "publicAccessAllowed": false,
+      "required": true
+    },
+    "aiSearch": {
+      "purpose": "Governed retrieval memory over approved and sanitized evidence",
+      "localAuthenticationAllowed": false,
+      "required": true
+    },
+    "applicationInsights": {
+      "purpose": "Distributed traces, health, failures, and cost telemetry",
+      "required": true
+    }
+  },
+  "integrations": {
+    "github": "signed-webhook-to-service-bus",
+    "linear": "signed-webhook-to-service-bus-and-governed-status-writes",
+    "slack": "signed-webhook-to-service-bus-and-governed-thread-writes",
+    "teams": "entra-jwt-and-validation-challenge-required",
+    "sharePoint": "graph-consent-and-selected-site-permission-required"
+  },
+  "providerIsolation": {
+    "enabled": true,
+    "providers": [
+      "azure-foundry",
+      "openai",
+      "anthropic-claude",
+      "microsoft-copilot"
+    ],
+    "credentialBoundary": "one-managed-identity-or-vault-reference-per-provider",
+    "crossProviderCredentialReuseAllowed": false,
+    "rawConversationSharingAllowed": false,
+    "sanitizedEvidenceExchange": "service-bus-and-data-lake"
+  },
+  "gates": {
+    "githubEnvironmentRequired": true,
+    "oidcRequired": true,
+    "whatIfRequired": true,
+    "immutableImageDigestRequired": true,
+    "humanApprovalRequired": true,
+    "entraAdminConsentRequired": true,
+    "rbacReviewRequired": true,
+    "productionMutationDefault": "deny"
+  }
+}
