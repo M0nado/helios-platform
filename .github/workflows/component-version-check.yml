@@ -75,7 +75,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '18'
-          cache: 'npm'
 
       - name: Extract Version Info
         id: version-info
@@ -112,10 +111,13 @@ jobs:
           COMPONENT="${{ steps.version-info.outputs.component }}"
           VERSION="${{ steps.version-info.outputs.version }}"
           
-          # Check if version is already published
-          npm view "${{ steps.version-info.outputs.name }}@$VERSION" > /dev/null 2>&1
-          if [ $? -eq 0 ]; then
+          # Check if version is already published. Wrap the probe in an
+          # explicit conditional so GitHub's fail-fast shell does not abort
+          # when an unpublished package correctly returns a non-zero status.
+          if npm view "${{ steps.version-info.outputs.name }}@$VERSION" > /dev/null 2>&1; then
             echo "::warning::Version $VERSION already published"
+          else
+            echo "Version $VERSION is not published"
           fi
 
       - name: Verify Dependencies
@@ -154,12 +156,16 @@ jobs:
           echo "**Status**: ${{ needs.validate-versions.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Validation Results" >> $GITHUB_STEP_SUMMARY
-          echo "- Version format validation: ✓ Passed" >> $GITHUB_STEP_SUMMARY
-          echo "- Dependency checks: ✓ Completed" >> $GITHUB_STEP_SUMMARY
-          echo "- Conflict detection: ✓ Completed" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.validate-versions.result }}" = "success" ]; then
+            echo "- Version format validation: ✓ Passed" >> $GITHUB_STEP_SUMMARY
+            echo "- Dependency checks: ✓ Completed" >> $GITHUB_STEP_SUMMARY
+            echo "- Conflict detection: ✓ Completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Component validation: ✗ ${{ needs.validate-versions.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Comment on PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && needs.discover-components.result == 'success' && needs.validate-versions.result == 'success'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
