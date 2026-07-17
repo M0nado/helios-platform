@@ -23,8 +23,18 @@ param entraTenantId string = subscription().tenantId
 @description('Object ID of the user or service principal allowed to call the connector.')
 @minLength(1)
 param allowedPrincipalObjectId string
+@description('Additional organization tags. Reserved HELIOS governance tags cannot be overridden.')
+param commonTags object = {}
 
 var suffix = uniqueString(resourceGroup().id, environmentName, serviceName)
+var governedTags = union(commonTags, {
+  'helios-managed': 'true'
+  'helios-service': serviceName
+  'helios-environment': environmentName
+  'helios-owner': 'platform-engineering'
+  'helios-provisioner': 'bicep'
+  'helios-repository': 'M0nado/helios-platform'
+})
 var compactName = take(replace('${serviceName}${environmentName}${suffix}', '-', ''), 20)
 var containerRegistryServer = '${containerRegistryName}.azurecr.io'
 var digestParts = split(toLower(containerImage), '@sha256:')
@@ -42,11 +52,13 @@ var validatedContainerImage = containerImageRegistryMatches && containerImageIsI
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: '${serviceName}-${environmentName}-id'
   location: location
+  tags: governedTags
 }
 
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${serviceName}-${environmentName}-law'
   location: location
+  tags: governedTags
   properties: {
     retentionInDays: 30
     features: { enableLogAccessUsingOnlyResourcePermissions: true }
@@ -56,6 +68,7 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 resource insights 'Microsoft.Insights/components@2020-02-02' = {
   name: '${serviceName}-${environmentName}-appi'
   location: location
+  tags: governedTags
   kind: 'web'
   properties: {
     Application_Type: 'web'
@@ -66,6 +79,7 @@ resource insights 'Microsoft.Insights/components@2020-02-02' = {
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: take('${compactName}kv', 24)
   location: location
+  tags: governedTags
   properties: {
     tenantId: entraTenantId
     enableRbacAuthorization: true
@@ -80,6 +94,7 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${serviceName}-${environmentName}-cae'
   location: location
+  tags: governedTags
   properties: {
     appLogsConfiguration: {
       destination: 'log-analytics'
@@ -94,6 +109,7 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
 resource api 'Microsoft.App/containerApps@2024-03-01' = {
   name: '${serviceName}-${environmentName}-api'
   location: location
+  tags: governedTags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: { '${identity.id}': {} }

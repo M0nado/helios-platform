@@ -13,6 +13,9 @@ param environmentName string = 'dev'
 
 param serviceName string = 'helios-connector'
 
+@description('Additional organization tags. HELIOS ownership and environment tags are always enforced by the connector module.')
+param commonTags object = {}
+
 @description('Approved immutable image in the dedicated Helios Azure Container Registry.')
 param containerImage string
 
@@ -50,6 +53,7 @@ module connector './connector.bicep' = {
     entraClientId: entraClientId
     entraTenantId: entraTenantId
     allowedPrincipalObjectId: allowedPrincipalObjectId
+    commonTags: commonTags
   }
 }
 

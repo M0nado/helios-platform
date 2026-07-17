@@ -4,6 +4,7 @@
   "parameters": {
     "environmentName": { "value": "dev" },
     "serviceName": { "value": "helios-connector" },
+    "commonTags": { "value": { "cost-center": "platform", "data-classification": "internal", "lifecycle": "managed" } },
     "containerImage": { "value": "heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000" },
     "containerRegistryName": { "value": "heliosplaceholderacr" },
     "allowPreviewPlaceholder": { "value": true },

@@ -3,6 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "environmentName": { "value": "${AZURE_ENV_NAME}" },
+    "commonTags": { "value": { "cost-center": "platform", "data-classification": "internal", "lifecycle": "managed" } },
     "containerImage": { "value": "${HELIOS_CONTAINER_IMAGE}" },
     "containerRegistryName": { "value": "${HELIOS_CONTAINER_REGISTRY_NAME}" },
     "allowPreviewPlaceholder": { "value": false },

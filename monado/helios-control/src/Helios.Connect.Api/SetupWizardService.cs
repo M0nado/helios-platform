@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Helios.Connect.Api;
 
 public sealed record SetupBootstrapRequest(string TenantId, string SubscriptionId, string ResourceGroup, string Environment);
-public sealed record SetupBootstrapResult(string Script, string ScriptSha256, string Mode, bool ContainsSecrets, bool AppliesChanges);
+public sealed record SetupBootstrapResult(string Script, string ScriptSha256, string Mode, string SubscriptionSelection, IReadOnlyDictionary<string, string> ShellPackets, bool ContainsSecrets, bool AppliesChanges);
 public sealed record UpgradeProposalRequest(string Capability, string Reason, string Target = "helios-control");
 public sealed record UpgradeProposal(string ProposalId, string Capability, string Reason, string Target, string Promotion, bool AutomaticApply, bool AutomaticMerge, IReadOnlyList<string> RequiredChecks);
 
@@ -23,7 +23,7 @@ public sealed partial class SetupWizardService : ISetupWizardService
     {
         ArgumentNullException.ThrowIfNull(request);
         var tenant = RequireGuid(request.TenantId, nameof(request.TenantId));
-        var subscription = RequireGuid(request.SubscriptionId, nameof(request.SubscriptionId));
+        var subscription = string.IsNullOrWhiteSpace(request.SubscriptionId) ? null : RequireGuid(request.SubscriptionId, nameof(request.SubscriptionId));
         var group = RequireMatch(request.ResourceGroup, nameof(request.ResourceGroup), ResourceGroupPattern(), 90);
         var environment = RequireMatch(request.Environment, nameof(request.Environment), SimpleNamePattern(), 16).ToLowerInvariant();
         if (!Environments.Contains(environment)) throw new ArgumentException("Environment must be dev, test, preview, or prod.", nameof(request.Environment));
@@ -32,20 +32,34 @@ public sealed partial class SetupWizardService : ISetupWizardService
         {
             "$ErrorActionPreference = 'Stop'",
             $"$tenantId = '{tenant}'",
-            $"$subscriptionId = '{subscription}'",
+            $"$subscriptionId = '{subscription ?? string.Empty}'",
             $"$resourceGroup = '{group}'",
             $"$environmentName = '{environment}'",
             "az login --tenant $tenantId --use-device-code",
+            "if (-not $subscriptionId) {",
+            "  $enabled = @(az account list --all --query \"[?tenantId=='$tenantId' && state=='Enabled'].id\" -o tsv)",
+            "  $matching = @($enabled | Where-Object { az account set --subscription $_; (az group exists --name $resourceGroup) -eq 'true' })",
+            "  if ($matching.Count -eq 1) { $subscriptionId = $matching[0] } elseif ($enabled.Count -eq 1) { $subscriptionId = $enabled[0] } else { az account list --all --query \"[?tenantId=='$tenantId'].{Name:name,Id:id,State:state}\" -o table; $subscriptionId = Read-Host 'Enter one enabled subscription ID' }",
+            "}",
+            "if ($subscriptionId -notmatch '^[0-9a-fA-F-]{36}$') { throw 'A valid subscription ID is required.' }",
             "az account set --subscription $subscriptionId",
             "az account show --query '{tenantId:tenantId,subscriptionId:id,subscriptionName:name}' --output table",
             "git clone https://github.com/M0nado/helios-platform.git",
             "Set-Location ./helios-platform/monado/helios-control",
-            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Diagnose -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName",
-            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName",
+            "$evidence = Join-Path $HOME 'clouddrive/helios-evidence'",
+            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Diagnose -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -EvidenceDirectory $evidence",
+            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -EvidenceDirectory $evidence",
             "Write-Host 'STOP: review the what-if file and SHA-256. This bootstrap never applies.'"
         });
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(script))).ToLowerInvariant();
-        return new(script, digest, "diagnose-then-plan", ContainsSecrets: false, AppliesChanges: false);
+        var packets = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["inventory"] = "Read resource metadata and HELIOS ownership tags only.",
+            ["identity-readiness"] = "Inspect Entra, managed-identity, OIDC, and RBAC readiness without granting access.",
+            ["deployment-preview"] = "Validate Bicep and persist canonical ARM what-if evidence to Cloud Shell storage.",
+            ["health-verification"] = "Verify HTTPS, Entra boundary, MCP inventory, telemetry, and delivery receipts."
+        };
+        return new(script, digest, "diagnose-then-plan", subscription is null ? "unique-resource-group-match-then-interactive-fallback" : "explicit", packets, ContainsSecrets: false, AppliesChanges: false);
     }
 
     public UpgradeProposal CreateUpgradeProposal(UpgradeProposalRequest request)

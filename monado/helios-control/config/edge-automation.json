@@ -23,6 +23,12 @@
       "applyExecutor": "connector-outbox",
       "destinations": ["github", "linear", "slack", "sharepoint", "copilot"],
       "requiredEvidence": ["release-envelope", "idempotency-key", "delivery-receipts"]
+    },
+    "cleanup-owned-resources": {
+      "applyExecutor": "protected-workflow",
+      "ownershipFilter": "helios-managed=true",
+      "protectUnknownOrSharedResources": true,
+      "requiredEvidence": ["governed-tag-inventory", "dependency-and-lock-check", "removal-what-if", "plan-sha256", "environment-approval", "typed-confirmation"]
     }
   },
   "mcp": {

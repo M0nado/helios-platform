@@ -65,7 +65,8 @@ public sealed class EdgeAutomationPlanner : IEdgeAutomationPlanner
             "rotate-secret" => SecretSteps(RequireTarget(target, intent)),
             "repair-issue" => IssueSteps(RequireTarget(target, intent), connector),
             "sync-release" => ReleaseSteps(RequireTarget(target, intent), connector),
-            _ => throw new ArgumentException("Intent must be provision-resources, rotate-secret, repair-issue, or sync-release.", nameof(request.Intent))
+            "cleanup-owned-resources" => CleanupSteps(RequireTarget(target, intent)),
+            _ => throw new ArgumentException("Intent must be provision-resources, rotate-secret, repair-issue, sync-release, or cleanup-owned-resources.", nameof(request.Intent))
         };
 
         var approvals = new List<string> { "reviewed-plan-sha256" };
@@ -132,6 +133,16 @@ public sealed class EdgeAutomationPlanner : IEdgeAutomationPlanner
         Step(2, "stage-normalized-release-envelope", "helios-edge", false, "schema-validation"),
         Step(3, $"deliver-to:{connector ?? "all"}", "connector-outbox", true, "idempotency-key"),
         Step(4, "reconcile-delivery-receipts", "connector-outbox", false, "dead-letter-on-failure")
+    ];
+
+    private static IReadOnlyList<EdgeAutomationStep> CleanupSteps(string target) =>
+    [
+        Step(1, $"inventory-governed-tags:{target}", "azure-resource-graph", false, "helios-managed-true-only"),
+        Step(2, "detect-shared-dependencies-and-locks", "azure-cli", false, "unknown-or-shared-resources-protected"),
+        Step(3, "capture-complete-mode-removal-what-if", "azure-cli", false, "deletions-listed-with-plan-sha256"),
+        Step(4, "approve-removal-plan", "github-environment", false, "resource-owner-and-production-owner"),
+        Step(5, "remove-only-approved-owned-resources", "protected-workflow", true, "typed-confirmation-and-fresh-drift-check"),
+        Step(6, "retain-evidence-and-verify-survivors", "helios-edge", false, "cloud-shell-and-github-evidence")
     ];
 
     private static EdgeAutomationStep Step(int order, string action, string executor, bool mutating, string gate) =>
