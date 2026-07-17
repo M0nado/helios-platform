@@ -76,6 +76,27 @@ var result = await deployment.DeployAsync(DeploymentTier.Enterprise);
 - **[NUGET_INSTALLATION_GUIDES.md](NUGET_INSTALLATION_GUIDES.md)** - Installation methods and usage
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design and component interactions
 
+## 🧰 Full Stack Setup and Validation
+
+For the combined HELIOS/Hermes stack, start with the non-mutating setup validators before running any local bootstrap or Azure deployment:
+
+```bash
+./scripts/dev/validate-setup.sh
+```
+
+```powershell
+./scripts/dev/Validate-Setup.ps1
+```
+
+The stack currently centers on .NET 8 (`net8.0` and `net8.0-windows`) with Windows desktop integration, optional WinUI 3/Windows App SDK work, C++ native performance/security modules, F# analytics tooling through the .NET SDK, Python 3.11+ AI Hub integration, Docker, GitHub CLI, and Azure CLI. Local development setup is idempotent and separate from production deployment:
+
+```bash
+./scripts/dev/devsetup.sh           # local-only bootstrap
+./scripts/dev/devsetup.sh --install-deps  # opt-in package restore/install
+```
+
+See [GETTING_STARTED.md](GETTING_STARTED.md) for the full SDK/tool matrix, Azure authentication checklist, service principal and CI/CD variable guidance, and branch/component integration notes.
+
 ## ⚡ Quick Start
 
 ### Option 1: GitHub Codespace (Recommended)
