@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "1.0",
+  "setupId": "helios-shared-control-enterprise-setup",
+  "productionEnabled": false,
+  "productionBlockerIssue": 162,
+  "phases": [
+    {
+      "id": "tools",
+      "confirmation": "INSTALL-HELIOS-TOOLS",
+      "operations": [
+        "install-azure-cli",
+        "install-azd",
+        "install-functions-tools",
+        "install-powershell",
+        "install-github-cli",
+        "install-node-lts",
+        "install-m365-agents-toolkit",
+        "install-claude-code",
+        "install-azure-devops-extension"
+      ]
+    },
+    {
+      "id": "authenticate",
+      "confirmation": "AUTHENTICATE-HELIOS",
+      "operations": [
+        "azure-interactive-login",
+        "azd-interactive-login",
+        "github-interactive-login",
+        "power-platform-interactive-login",
+        "agent365-interactive-login"
+      ]
+    },
+    {
+      "id": "agent365-developer",
+      "confirmation": "PREPARE-HELIOS-AGENT365",
+      "operations": [
+        "validate-agent365-requirements",
+        "preview-agent365-setup",
+        "generate-admin-handoff"
+      ]
+    },
+    {
+      "id": "azure-devops",
+      "confirmation": "CONFIGURE-HELIOS-AZURE-DEVOPS",
+      "operations": [
+        "set-azure-devops-defaults",
+        "validate-azure-devops-project"
+      ]
+    },
+    {
+      "id": "connections",
+      "confirmation": "VALIDATE-HELIOS-CONNECTIONS",
+      "operations": [
+        "validate-claude-mcp",
+        "validate-github",
+        "validate-azure",
+        "validate-azure-devops",
+        "validate-collaboration-destinations"
+      ]
+    },
+    {
+      "id": "production",
+      "confirmation": "DISABLED",
+      "operations": []
+    }
+  ]
+}
