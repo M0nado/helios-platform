@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import process from "node:process";
 
 const port = 18473;
@@ -9,6 +10,10 @@ const child = spawn(process.execPath, ["dist/server.js"], {
 
 const deadline = Date.now() + 8_000;
 try {
+  const widget = await readFile(new URL("../public/control-center.html", import.meta.url), "utf8");
+  if (widget.includes(".innerHTML") || !widget.includes("safeHttpsUrl")) {
+    throw new Error("Widget must use safe DOM rendering and HTTPS-only links");
+  }
   let health;
   while (Date.now() < deadline) {
     try {
