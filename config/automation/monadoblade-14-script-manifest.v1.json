@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "runner": "HELIOS.ScriptExecutionBroker",
+  "defaultMode": "plan",
+  "rawExecutionDenied": true,
+  "requirements": {
+    "manifestHash": true,
+    "scriptSha256": true,
+    "signedReleaseRequiredForApply": true,
+    "structuredParameters": true,
+    "structuredResults": true,
+    "correlationId": true,
+    "dryRun": true,
+    "rollbackNotes": true,
+    "administratorDeclared": true,
+    "physicalAuthorizationForCritical": true,
+    "logsRoot": "%ProgramData%/HELIOS/Automation/Logs"
+  },
+  "scripts": [
+    {
+      "order": 0,
+      "id": "master-orchestrator",
+      "sourceName": "00_MasterOrchestrator",
+      "targetPath": "scripts/windows/templates/00_MasterOrchestrator.ps1",
+      "risk": "high",
+      "administrator": false,
+      "purpose": "Plan and coordinate all bounded phases without embedding privileged implementation logic.",
+      "applyRequires": ["reviewed-phase-selection"]
+    },
+    {
+      "order": 1,
+      "id": "local-repair",
+      "sourceName": "01_LocalRepair",
+      "targetPath": "scripts/windows/templates/01_LocalRepair.ps1",
+      "risk": "high",
+      "administrator": true,
+      "purpose": "Repair PATH/System32 resolution, validate SFC/DISM/WMI/network/device tooling, and generate evidence.",
+      "applyRequires": ["sysadmin", "local-approval", "backup-evidence"]
+    },
+    {
+      "order": 2,
+      "id": "tpm-safe-enable",
+      "sourceName": "02_TPM_SafeEnable",
+      "targetPath": "scripts/windows/templates/02_TPM_SafeEnable.ps1",
+      "risk": "critical",
+      "administrator": true,
+      "purpose": "Audit TPM and Secure Boot readiness; mutation remains separate and physically authorized.",
+      "applyRequires": ["sysadmin", "physical-two-factor", "recovery-key-evidence", "firmware-review"]
+    },
+    {
+      "order": 3,
+      "id": "m365-security",
+      "sourceName": "03_M365Security",
+      "targetPath": "scripts/microsoft/templates/03_M365Security.ps1",
+      "risk": "high",
+      "administrator": false,
+      "purpose": "Stage Microsoft 365 security readiness and tenant operations without fabricating admin consent.",
+      "applyRequires": ["tenant-admin-consent", "reviewed-change-set"]
+    },
+    {
+      "order": 4,
+      "id": "purview-compliance",
+      "sourceName": "04_PurviewCompliance",
+      "targetPath": "scripts/microsoft/templates/04_PurviewCompliance.ps1",
+      "risk": "high",
+      "administrator": false,
+      "purpose": "Stage Purview governance, classification, retention, and compliance readiness.",
+      "applyRequires": ["compliance-admin-consent", "reviewed-policy"]
+    },
+    {
+      "order": 5,
+      "id": "disk-layout-blueprint",
+      "sourceName": "05_DiskLayout_Blueprint",
+      "targetPath": "scripts/windows/templates/05_DiskLayout_Blueprint.ps1",
+      "risk": "critical",
+      "administrator": true,
+      "purpose": "Generate and validate the two-SSD Monadoblade partition plan; apply is separately gated.",
+      "applyRequires": ["sysadmin", "physical-two-factor", "exact-disk-identity", "backup-evidence", "confirmation-phrase"]
+    },
+    {
+      "order": 6,
+      "id": "azure-vnet-vault-integrations",
+      "sourceName": "06_AzureVNet_Vault_Integrations",
+      "targetPath": "scripts/azure/templates/06_AzureVNet_Vault_Integrations.ps1",
+      "risk": "high",
+      "administrator": false,
+      "purpose": "Coordinate Azure network, private DNS, Key Vault, Foundry, GitHub, Docker, Functions, and M365 subplans.",
+      "applyRequires": ["azure-oidc", "protected-environment", "approved-what-if"]
+    },
+    {
+      "order": 7,
+      "id": "azure-vnet-dns",
+      "sourceName": "06a_AzureVNet_DNS",
+      "targetPath": "scripts/azure/templates/06a_AzureVNet_DNS.ps1",
+      "risk": "high",
+      "administrator": false,
+      "purpose": "Validate and stage VNets, subnets, private DNS zones, links, and resolution evidence.",
+      "applyRequires": ["azure-oidc", "network-review", "approved-what-if"]
+    },
+    {
+      "order": 8,
+      "id": "keyvault-private-endpoint",
+      "sourceName": "06b_KeyVault_PrivateEndpoint",
+      "targetPath": "scripts/azure/templates/06b_KeyVault_PrivateEndpoint.ps1",
+      "risk": "critical",
+      "administrator": false,
+      "purpose": "Stage Key Vault, managed identity, RBAC, private endpoint, private DNS, and secret-reference policies.",
+      "applyRequires": ["azure-oidc", "security-review", "least-privilege-rbac", "approved-what-if"]
+    },
+    {
+      "order": 9,
+      "id": "foundry-github-docker-functions",
+      "sourceName": "06c_Foundry_GitHub_Docker_Functions",
+      "targetPath": "scripts/azure/templates/06c_Foundry_GitHub_Docker_Functions.ps1",
+      "risk": "high",
+      "administrator": false,
+      "purpose": "Stage Azure AI Foundry, GitHub OIDC, ACR, Docker, Container Apps, and Functions integration.",
+      "applyRequires": ["azure-oidc", "foundry-selection", "container-review", "approved-what-if"]
+    },
+    {
+      "order": 10,
+      "id": "m365-powerplatform-ai-connections",
+      "sourceName": "06d_M365_PowerPlatform_AI_Connections",
+      "targetPath": "scripts/microsoft/templates/06d_M365_PowerPlatform_AI_Connections.ps1",
+      "risk": "high",
+      "administrator": false,
+      "purpose": "Stage Microsoft 365, Graph, Power Platform, Copilot Studio, Teams, SharePoint, and AI connections.",
+      "applyRequires": ["tenant-admin-consent", "copilot-environment", "graph-scope-review"]
+    },
+    {
+      "order": 11,
+      "id": "local-hardening",
+      "sourceName": "07_LocalHardening",
+      "targetPath": "scripts/windows/templates/07_LocalHardening.ps1",
+      "risk": "critical",
+      "administrator": true,
+      "purpose": "Audit and optionally apply Defender, Firewall, ASR, VBS, LSA, driver blocklist, and service baselines.",
+      "applyRequires": ["sysadmin", "physical-two-factor", "baseline-backup", "compatibility-review", "what-if"]
+    },
+    {
+      "order": 12,
+      "id": "azure-dev-stack",
+      "sourceName": "08_AzureDevStack",
+      "targetPath": "scripts/azure/templates/08_AzureDevStack.ps1",
+      "risk": "medium",
+      "administrator": true,
+      "purpose": "Plan and install approved developer toolchain components separately from account authentication.",
+      "applyRequires": ["sysadmin", "package-source-review", "local-approval"]
+    },
+    {
+      "order": 13,
+      "id": "azure-full-infra",
+      "sourceName": "09_AzureFullInfra",
+      "targetPath": "scripts/azure/templates/09_AzureFullInfra.ps1",
+      "risk": "critical",
+      "administrator": false,
+      "purpose": "Coordinate enterprise infrastructure what-if and protected deployment; never performs unapproved production deployment.",
+      "applyRequires": ["azure-oidc", "protected-environment", "approved-what-if", "production-reviewers", "rollback-plan"]
+    }
+  ],
+  "criticalDeniedOperations": [
+    "blind-clear-disk",
+    "unreviewed-format",
+    "tpm-reset",
+    "permanent-bitlocker-disable",
+    "plaintext-secret-output",
+    "subscription-owner-grant",
+    "tenant-wide-consent-without-review",
+    "unreviewed-production-deploy",
+    "recursive-delete-outside-approved-root"
+  ]
+}
