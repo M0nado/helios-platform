@@ -409,6 +409,39 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.DoesNotContain("automaticMerge\\\":true", body, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Setup_wizard_is_served_and_bootstrap_remains_plan_only()
+    {
+        using var page = await _client.GetAsync("/setup");
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("Azure Setup Wizard", html);
+
+        const string payload = "{\"tenantId\":\"11111111-1111-1111-1111-111111111111\",\"subscriptionId\":\"22222222-2222-2222-2222-222222222222\",\"resourceGroup\":\"helios-dev-rg\",\"environment\":\"dev\"}";
+        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/setup/bootstrap", content);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("-Mode Diagnose", body);
+        Assert.Contains("-Mode Plan", body);
+        Assert.DoesNotContain("-Mode Apply", body);
+        Assert.Contains("\"appliesChanges\":false", body);
+    }
+
+    [Fact]
+    public async Task Mcp_exposes_upgrade_proposals_but_no_upgrade_apply_tool()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("helios_propose_upgrade", body);
+        Assert.DoesNotContain("helios_apply_upgrade", body, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static HttpRequestMessage CreateSignedGitHubWebhook(string deliveryId, string body)
     {
         var signature = Convert.ToHexString(HMACSHA256.HashData(
