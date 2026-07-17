@@ -13,9 +13,25 @@
 <body><main><div class="head"><div><div class="eyebrow">HELIOS · HERMES XCORE</div><h1>Monado Control Center</h1></div><button id="refresh">Refresh fabric</button></div><p class="muted" id="stamp">Waiting for control-plane data…</p><section class="grid" id="grid"></section></main>
 <script>
   const grid=document.getElementById('grid'), stamp=document.getElementById('stamp');
-  function render(data){const systems=data?.systems||[];stamp.textContent=`Fabric ${data?.version||''} · ${data?.generatedAt||'live'}`;grid.innerHTML=systems.map(s=>`<article class="card"><div class="name">${s.name}</div><div class="state ${s.state}">${s.state.replaceAll('_',' ')}</div><div class="muted">${s.purpose}</div><p class="muted">${s.nextAction}</p>${s.url?`<a href="${s.url}" target="_blank" rel="noreferrer">Open system ↗</a>`:''}</article>`).join('')}
+  function node(tag,className,text){const value=document.createElement(tag);if(className)value.className=className;if(text!==undefined)value.textContent=String(text);return value}
+  function safeHttpsUrl(value){try{const url=new URL(value);return url.protocol==='https:'?url.href:null}catch{return null}}
+  function render(data){
+    const systems=Array.isArray(data?.systems)?data.systems:[];
+    stamp.textContent=`Fabric ${data?.version||''} · ${data?.generatedAt||'live'}`;
+    grid.replaceChildren();
+    for(const system of systems){
+      const state=['connected','configured','needs_configuration','blocked'].includes(system?.state)?system.state:'needs_configuration';
+      const card=node('article','card');
+      card.append(node('div','name',system?.name||'Unknown system'));
+      card.append(node('div',`state ${state}`,state.replaceAll('_',' ')));
+      card.append(node('div','muted',system?.purpose||''));
+      card.append(node('p','muted',system?.nextAction||''));
+      const href=safeHttpsUrl(system?.url);
+      if(href){const link=node('a','', 'Open system ↗');link.href=href;link.target='_blank';link.rel='noreferrer';card.append(link)}
+      grid.append(card);
+    }
+  }
   window.addEventListener('message',e=>{const m=e.data;if(m?.jsonrpc==='2.0'&&m.method==='ui/notifications/tool-result')render(m.params?.structuredContent)});
   if(window.openai?.toolOutput)render(window.openai.toolOutput);
   document.getElementById('refresh').onclick=async()=>{if(window.openai?.callTool){const r=await window.openai.callTool('get_control_plane_status',{});render(r?.structuredContent||r)}else{window.parent.postMessage({jsonrpc:'2.0',id:Date.now(),method:'tools/call',params:{name:'get_control_plane_status',arguments:{}}},'*')}};
 </script></body></html>
-
