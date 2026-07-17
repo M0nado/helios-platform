@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "brain": {
+    "id": "aihub-main-brain",
+    "mode": "governed-local-first",
+    "autonomousAdministrator": false,
+    "denySecretReadback": true,
+    "denyUnboundedShell": true,
+    "denySelfPrivilegeEscalation": true,
+    "requireHumanApprovalForExternalWrites": true,
+    "eventFabric": "helios-fabric",
+    "memoryClasses": ["public", "internal", "sensitive-gated", "local-only", "quarantine-evidence"],
+    "trainingDeniedClasses": ["raw-secrets", "authentication-material", "private-chat-raw", "quarantine-evidence-unapproved"]
+  },
+  "modelRouting": {
+    "strategy": "policy-first-multi-model-consensus",
+    "providers": ["openai", "azure-foundry", "ollama", "lm-studio", "llama-cpp", "approved-external"],
+    "selectionInputs": ["taskType", "profile", "privacyClass", "latencyBudget", "costBudget", "qualityTarget", "toolRequirements", "locality", "modelHealth"],
+    "specialistRoles": ["planner", "coder", "reviewer", "security", "performance", "sysops", "ui", "documentation", "test", "azure", "github", "studio"],
+    "consensus": {
+      "enabledFor": ["security-recommendation", "architecture-change", "driver-trust", "production-plan", "data-removal"],
+      "minimumIndependentReviewers": 2,
+      "humanApprovalStillRequired": true
+    },
+    "communication": {
+      "typedMessages": true,
+      "correlationIds": true,
+      "sharedSanitizedContext": true,
+      "rawHiddenConversationSharing": false,
+      "credentialSharing": false,
+      "providerResponseRetention": "policy-controlled"
+    }
+  },
+  "globalObjectives": [
+    "security-floor",
+    "user-intent",
+    "stability",
+    "latency",
+    "throughput",
+    "memory-efficiency",
+    "power-efficiency",
+    "cost",
+    "privacy",
+    "recoverability"
+  ],
+  "watchers": {
+    "system": ["cpu", "gpu", "ram", "pagefile", "thermals", "power", "processes", "services"],
+    "storage": ["free-space", "latency", "queue-depth", "smart-health", "refs-health", "ntfs-health", "bitlocker", "backup-age"],
+    "network": ["latency", "packet-loss", "dns", "unexpected-egress", "firewall-events", "service-health"],
+    "virtualization": ["docker", "wsl2", "hyperv", "windows-sandbox", "gpu-partitioning", "vm-memory-pressure"],
+    "ai": ["provider-health", "model-load", "token-rate", "latency", "quality", "cost", "memory", "gpu-memory", "drift", "evaluation-score"],
+    "development": ["build-time", "test-time", "cache-hit-rate", "compiler-memory", "container-start", "dependency-findings", "ci-status"],
+    "security": ["defender", "firewall", "startup-persistence", "driver-trust", "signature", "quarantine", "policy-drift", "secureboot", "tpm"]
+  },
+  "profilePolicies": {
+    "developer": {
+      "primaryObjectives": ["build-throughput", "incremental-cache", "model-routing", "container-start", "test-parallelism"],
+      "learningSignals": ["build-results", "test-results", "developer-choices", "model-evals", "resource-telemetry"],
+      "automaticActions": ["cache-recommendation", "safe-process-priority", "local-model-route", "test-sharding-recommendation"],
+      "approvalActions": ["package-install", "repository-write", "azure-write", "external-message", "system-setting-change"]
+    },
+    "sysadmin": {
+      "primaryObjectives": ["integrity", "recoverability", "driver-trust", "security-baseline", "storage-safety"],
+      "learningSignals": ["audit-results", "recovery-tests", "driver-findings", "policy-drift"],
+      "automaticActions": ["read-only-audit", "evidence-correlation", "risk-recommendation"],
+      "approvalActions": ["all-writes"],
+      "autonomousAdminDenied": true
+    },
+    "sysops": {
+      "primaryObjectives": ["security", "broad-performance", "service-uptime", "network-latency", "vm-container-health", "deployment-readiness"],
+      "learningSignals": ["incidents", "service-health", "performance-traces", "network-telemetry", "azure-monitor", "github-actions"],
+      "automaticActions": ["health-probe", "safe-restart-recommendation", "capacity-recommendation", "incident-correlation", "firewall-anomaly-alert"],
+      "approvalActions": ["service-restart", "firewall-write", "deployment", "rollback", "external-message"]
+    },
+    "gamer": {
+      "primaryObjectives": ["frame-time", "input-latency", "gpu-utilization", "storage-latency", "network-latency"],
+      "learningSignals": ["frame-time", "game-session", "thermal-state", "background-contention"],
+      "automaticActions": ["safe-background-throttle", "overlay-layout", "model-worker-pause"],
+      "approvalActions": ["driver-change", "power-plan-persist", "network-policy-change"]
+    },
+    "studio": {
+      "primaryObjectives": ["audio-realtime", "zero-xruns", "disk-stream", "plugin-stability", "render-throughput"],
+      "learningSignals": ["asio-buffer", "xruns", "plugin-scan", "render-results", "disk-telemetry"],
+      "automaticActions": ["safe-background-throttle", "render-queue-recommendation", "sample-indexing", "plugin-risk-alert"],
+      "approvalActions": ["plugin-promotion", "driver-change", "persistent-power-setting"]
+    },
+    "personal": {
+      "primaryObjectives": ["privacy", "quiet-operation", "backup", "battery", "safe-assistance"],
+      "learningSignals": ["explicit-preferences", "backup-results", "resource-telemetry"],
+      "automaticActions": ["quiet-notification", "backup-reminder", "low-risk-route"],
+      "approvalActions": ["external-write", "software-install", "sensitive-data-index"]
+    },
+    "server-background": {
+      "primaryObjectives": ["uptime", "queue-health", "efficient-power", "firewall", "backup", "worker-throughput"],
+      "learningSignals": ["service-health", "queue-latency", "container-health", "vm-health", "model-worker-results"],
+      "automaticActions": ["health-probe", "bounded-worker-scaling", "log-rotation", "backup-verification", "safe-local-retry"],
+      "approvalActions": ["external-scale", "deployment", "firewall-write", "data-removal"]
+    }
+  },
+  "evaluation": {
+    "requiredBeforeModelPromotion": true,
+    "dimensions": ["quality", "security", "privacy", "latency", "cost", "memory", "power", "tool-correctness"],
+    "rollbackOnRegression": true,
+    "retainEvidence": true,
+    "minimumBaselineSamples": 20
+  }
+}
