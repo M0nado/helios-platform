@@ -69,8 +69,16 @@ public sealed class HmacVerifier(TimeProvider timeProvider)
     private static bool VerifyHex(string secret, ReadOnlySpan<byte> value, string signature)
     {
         if (string.IsNullOrWhiteSpace(secret) || signature.Length != 64) return false;
-        Span<byte> supplied = stackalloc byte[32];
-        if (!Convert.TryFromHexString(signature, supplied, out var written) || written != supplied.Length) return false;
+        byte[] supplied;
+        try
+        {
+            supplied = Convert.FromHexString(signature);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        if (supplied.Length != 32) return false;
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var computed = hmac.ComputeHash(value.ToArray());
         return CryptographicOperations.FixedTimeEquals(computed, supplied);
