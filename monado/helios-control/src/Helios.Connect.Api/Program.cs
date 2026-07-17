@@ -8,12 +8,25 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpClient<OpenAiResponsesProvider>();
 builder.Services.AddHttpClient<IAzureInventoryService, AzureInventoryService>();
 builder.Services.AddSingleton<IEdgeAutomationPlanner, EdgeAutomationPlanner>();
+builder.Services.AddSingleton<ISetupWizardService, SetupWizardService>();
 var app = builder.Build();
 var deliveries = new ExpiringDeliveryReplayCache(
     GetBoundedInt(builder.Configuration["HELIOS_WEBHOOK_REPLAY_CACHE_CAPACITY"], 4_096, 1, 100_000),
     TimeSpan.FromSeconds(GetBoundedInt(builder.Configuration["HELIOS_WEBHOOK_REPLAY_TTL_SECONDS"], 86_400, 1, 604_800)));
 var localMcpEnabled = IsEnabled(builder.Configuration["HELIOS_LOCAL_RUNTIME_ALLOWED"]) &&
     !IsEnabled(builder.Configuration["HELIOS_CLOUD_RUNTIME_ONLY"]);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = static context =>
+    {
+        context.Context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'self' https://*.microsoft.com https://*.office.com";
+        context.Context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        context.Context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    }
+});
+
+app.MapGet("/setup", () => Results.Redirect("/wizard/index.html"));
 
 app.MapGet("/health", () => Results.Ok(new { service = "helios-connect", status = "healthy", mode = Environment.GetEnvironmentVariable("HELIOS_EXECUTION_MODE") ?? "dry-run" }));
 
@@ -97,6 +110,34 @@ app.MapPost("/automation/plan", async (HttpContext context, IEdgeAutomationPlann
     {
         return Results.BadRequest(new { error = exception.Message });
     }
+});
+
+app.MapPost("/setup/bootstrap", async (HttpContext context, ISetupWizardService wizard, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    if (!context.Request.HasJsonContentType()) return Results.BadRequest(new { error = "Content-Type must be application/json." });
+    if (context.Request.ContentLength is > 16_384) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    try
+    {
+        var request = await JsonSerializer.DeserializeAsync<SetupBootstrapRequest>(context.Request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }, cancellationToken);
+        return request is null ? Results.BadRequest(new { error = "Setup request is required." }) : Results.Ok(wizard.CreateBootstrap(request));
+    }
+    catch (JsonException) { return Results.BadRequest(new { error = "Setup request is invalid JSON." }); }
+    catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
+});
+
+app.MapPost("/upgrades/propose", async (HttpContext context, ISetupWizardService wizard, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    if (!context.Request.HasJsonContentType()) return Results.BadRequest(new { error = "Content-Type must be application/json." });
+    if (context.Request.ContentLength is > 16_384) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    try
+    {
+        var request = await JsonSerializer.DeserializeAsync<UpgradeProposalRequest>(context.Request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }, cancellationToken);
+        return request is null ? Results.BadRequest(new { error = "Upgrade proposal is required." }) : Results.Ok(wizard.CreateUpgradeProposal(request));
+    }
+    catch (JsonException) { return Results.BadRequest(new { error = "Upgrade proposal is invalid JSON." }); }
+    catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
 });
 
 app.MapGet("/mcp", (HttpContext context) =>
@@ -205,11 +246,12 @@ app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationTo
             if (!TryValidateAzureToolCall(root, out var validationError))
                 return McpError(id, -32602, validationError);
             var planner = context.RequestServices.GetRequiredService<IEdgeAutomationPlanner>();
+            var wizard = context.RequestServices.GetRequiredService<ISetupWizardService>();
             var toolName = root.GetProperty("params").GetProperty("name").GetString();
-            var inventory = toolName == "helios_plan_automation"
+            var inventory = toolName is "helios_plan_automation" or "helios_propose_upgrade"
                 ? null!
                 : context.RequestServices.GetRequiredService<IAzureInventoryService>();
-            return McpResult(id, await BuildAzureToolResultAsync(root, inventory, planner, cancellationToken));
+            return McpResult(id, await BuildAzureToolResultAsync(root, inventory, planner, wizard, cancellationToken));
         }
 
         return method switch
@@ -500,7 +542,7 @@ static bool TryValidateAzureToolCall(JsonElement root, out string error)
     }
 
     var name = nameElement.GetString();
-    if (name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation"))
+    if (name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade"))
     {
         error = $"Unknown tool '{name}'.";
         return false;
@@ -519,6 +561,7 @@ static bool TryValidateAzureToolCall(JsonElement root, out string error)
         {
             "azure_list_resources" => argument.Name == "typePrefix" && argument.Value.ValueKind == JsonValueKind.String,
             "helios_plan_automation" => argument.Name is "intent" or "environment" or "target" or "connector" && argument.Value.ValueKind == JsonValueKind.String,
+            "helios_propose_upgrade" => argument.Name is "capability" or "reason" or "target" && argument.Value.ValueKind == JsonValueKind.String,
             _ => false
         };
         if (!valid)
@@ -596,10 +639,11 @@ static object[] BuildAzureToolList() => new object[]
     new { name = "azure_get_context", title = "Get Azure context", description = "Use this when you need the configured Helios Azure tenant, subscription, resource group, and access mode.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
     new { name = "azure_list_resources", title = "List Azure resources", description = "Use this when you need non-secret Azure resource metadata from the authorized resource group.", inputSchema = new { type = "object", properties = new { typePrefix = new { type = "string", description = "Optional Azure resource type prefix." } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = true } },
     new { name = "azure_list_foundry_resources", title = "List Foundry resources", description = "Use this when you need Foundry-related Cognitive Services, Machine Learning, and AI Search resources from the authorized resource group.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = true } },
-    new { name = "helios_plan_automation", title = "Plan HELIOS automation", description = "Use this when you need a deterministic, non-executing plan for Azure provisioning, Key Vault rotation, issue repair, or cross-system release synchronization.", inputSchema = new { type = "object", required = new[] { "intent", "environment" }, properties = new { intent = new { type = "string", @enum = new[] { "provision-resources", "rotate-secret", "repair-issue", "sync-release" } }, environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } }, target = new { type = "string", description = "Required for secret, issue, and release plans." }, connector = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "copilot", "codex", "all" } } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } }
+    new { name = "helios_plan_automation", title = "Plan HELIOS automation", description = "Use this when you need a deterministic, non-executing plan for Azure provisioning, Key Vault rotation, issue repair, or cross-system release synchronization.", inputSchema = new { type = "object", required = new[] { "intent", "environment" }, properties = new { intent = new { type = "string", @enum = new[] { "provision-resources", "rotate-secret", "repair-issue", "sync-release" } }, environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } }, target = new { type = "string", description = "Required for secret, issue, and release plans." }, connector = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "copilot", "codex", "all" } } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
+    new { name = "helios_propose_upgrade", title = "Propose HELIOS upgrade", description = "Create a deterministic, test-gated upgrade proposal for promotion through a task branch and draft pull request.", inputSchema = new { type = "object", required = new[] { "capability", "reason" }, properties = new { capability = new { type = "string" }, reason = new { type = "string" }, target = new { type = "string", defaultValue = "helios-control" } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } }
 };
 
-static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, CancellationToken cancellationToken)
+static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, ISetupWizardService wizard, CancellationToken cancellationToken)
 {
     var name = root.TryGetProperty("params", out var parameters) && parameters.TryGetProperty("name", out var nameValue)
         ? nameValue.GetString()
@@ -612,9 +656,10 @@ static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInve
             "azure_list_resources" => await inventory.ListResourcesAsync(ReadTypePrefix(parameters), cancellationToken),
             "azure_list_foundry_resources" => await inventory.ListFoundryResourcesAsync(cancellationToken),
             "helios_plan_automation" => planner.CreatePlan(ReadAutomationRequest(parameters)),
+            "helios_propose_upgrade" => wizard.CreateUpgradeProposal(ReadUpgradeProposal(parameters)),
             _ => new { error = "unknown tool" }
         };
-        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } }, isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation") };
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } }, isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade") };
     }
     catch (ArgumentException exception)
     {
@@ -635,6 +680,14 @@ static EdgeAutomationRequest ReadAutomationRequest(JsonElement parameters)
         ? value.GetString()
         : null;
     return new EdgeAutomationRequest(Read("intent") ?? string.Empty, Read("environment") ?? string.Empty, Read("target"), Read("connector"));
+}
+
+static UpgradeProposalRequest ReadUpgradeProposal(JsonElement parameters)
+{
+    if (!parameters.TryGetProperty("arguments", out var arguments) || arguments.ValueKind != JsonValueKind.Object)
+        throw new ArgumentException("helios_propose_upgrade requires arguments.");
+    string? Read(string name) => arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+    return new UpgradeProposalRequest(Read("capability") ?? string.Empty, Read("reason") ?? string.Empty, Read("target") ?? "helios-control");
 }
 
 static string? ReadTypePrefix(JsonElement parameters)
