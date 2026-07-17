@@ -30,13 +30,13 @@ clients, and governed agent workflows.
    create the narrow bootstrap role assignments.
 6. A reviewer-protected GitHub environment and a dedicated, Helios-tagged ACR.
 
-For `azd provision --preview`, set `HELIOS_CONTAINER_IMAGE`,
-`HELIOS_CONTAINER_REGISTRY_NAME`, `HELIOS_ENTRA_CLIENT_ID`, and
-`HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID` in the selected `azd` environment. The
+Direct `azd provision` and `azd deploy` are blocked by `azure.yaml`; `azd` is an
+authentication and environment-inspection client only. Use
+`scripts/Invoke-HeliosProvisionPreview.ps1` for a non-mutating local ARM what-if
+or the protected GitHub workflow for reviewed preview and deployment. The
 deployment identity's `AZURE_CLIENT_ID` remains separate from the connector app
-registration. `infra/main.bicep` is now only a wrapper around the hardened
-`connector.bicep`; it cannot create a registry or grant roles. `azure.yaml`
-omits a service deployment so `azd deploy` cannot bypass GitHub promotion.
+registration. `infra/main.bicep` is only a wrapper around the hardened
+`connector.bicep`; it cannot create a registry or grant roles.
 
 These identifiers are not secrets. Do not place app secrets, tokens, or passwords
 in the parameter file.
@@ -58,8 +58,10 @@ bootstrap. It resolves the repository's current immutable OIDC subject,
 verifies the reviewer and branch policy before creating trust, gives CI only
 resource-group Contributor plus the registry writer role needed for the
 commit-bound ACR build, and creates the runtime identity and its
-Reader/registry-read grants under the administrator session. The flexible Entra
-credential additionally requires the exact workflow `job_workflow_ref`.
+Reader/registry-read grants under the administrator session. The Entra
+credential matches the exact protected-environment subject. Required-reviewer
+and exact deployment-branch policies gate every job that can receive its OIDC
+token; ordinary jobs do not emit the reusable-workflow-only `job_workflow_ref`.
 
 ```powershell
 pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
@@ -81,6 +83,12 @@ Azure Container Registry named by `containerRegistryName`, then passes only its
 resolved digest to Bicep. The interactive Publish phase establishes and
 revalidates this trust and authorization invariant. The Bicep template
 references but never mutates that registry.
+
+Preview compiles the template with the pinned Bicep version, canonicalizes it,
+and binds its SHA-256 plus every resolved deployment parameter into the evidence
+manifest. What-if uses `FullResourcePayloads`; a property-level canonical hash
+is re-created immediately before deploy. Only the redacted review copy is
+uploaded to GitHub.
 
 The Bash compatibility script is preview-only. Its legacy `--apply` path is
 retired and fails closed with directions to the interactive wizard.
