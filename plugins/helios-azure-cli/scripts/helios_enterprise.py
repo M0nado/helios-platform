@@ -81,7 +81,13 @@ def operation_commands(operation: str) -> list[list[str]]:
         return [["az", "devops", "configure", "--defaults", f"organization={organization}", f"project={project}"]]
     if operation in {"validate-azure-devops-project", "validate-azure-devops"}:
         return [["az", "devops", "project", "list"]]
-    if operation in {"generate-admin-handoff", "validate-collaboration-destinations"}:
+    if operation in {
+        "generate-admin-handoff",
+        "validate-collaboration-destinations",
+        "install-slack-claude-plugin",
+        "validate-linear-mcp",
+        "validate-slack-mcp",
+    }:
         return []
     if operation not in mapping:
         raise SetupError(f"Unknown operation: {operation}")
