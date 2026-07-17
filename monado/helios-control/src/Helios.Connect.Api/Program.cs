@@ -204,8 +204,11 @@ app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationTo
         {
             if (!TryValidateAzureToolCall(root, out var validationError))
                 return McpError(id, -32602, validationError);
-            var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
             var planner = context.RequestServices.GetRequiredService<IEdgeAutomationPlanner>();
+            var toolName = root.GetProperty("params").GetProperty("name").GetString();
+            var inventory = toolName == "helios_plan_automation"
+                ? null!
+                : context.RequestServices.GetRequiredService<IAzureInventoryService>();
             return McpResult(id, await BuildAzureToolResultAsync(root, inventory, planner, cancellationToken));
         }
 
