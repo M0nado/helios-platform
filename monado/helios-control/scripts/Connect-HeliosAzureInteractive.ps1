@@ -7,10 +7,11 @@ Interactively plans, configures, or publishes the cloud-only Helios Azure connec
 .DESCRIPTION
 Plan is the default and makes no cloud resource changes. Configure creates only
 explicitly confirmed Entra/OIDC/RBAC/GitHub bindings and pre-registers the exact
-Azure providers the runtime needs. Publish performs an ACR cloud build without
-a local Docker daemon, grants the runtime identity pull-only access, and returns
-an immutable digest. Application deployment is intentionally available only
-through the two-stage protected GitHub workflow.
+Azure providers the runtime needs. Publish revalidates every trust and RBAC gate,
+prepares the registry permissions, and dispatches the protected GitHub what-if
+workflow. Only that workflow may build the deployable image from its exact
+checked-out commit and resolve the immutable digest. Application deployment is
+intentionally available only through the two-stage protected GitHub workflow.
 
 .EXAMPLE
 ./scripts/Connect-HeliosAzureInteractive.ps1 -UseDeviceCode
@@ -27,7 +28,7 @@ param(
     [ValidateSet('Plan', 'Configure', 'Publish')]
     [string] $Mode = 'Plan',
 
-    [ValidateSet('dev', 'test', 'preview', 'prod')]
+    [ValidateSet('dev', 'test', 'prod')]
     [string] $EnvironmentName = 'dev',
 
     [string] $TenantId,
@@ -36,10 +37,6 @@ param(
     [string] $Location = 'eastus2',
     [string] $ImageReference,
     [string] $ContainerRegistryName,
-    [string] $ImageRepository = 'helios-connect',
-    [string] $ImageTag,
-    [string] $BuildContext,
-    [string] $DockerfilePath = 'src/Helios.Connect.Api/Dockerfile',
     [string] $AllowedPrincipalObjectId,
 
     [string] $GitHubOwner = 'M0nado',
@@ -672,7 +669,7 @@ function Ensure-EntraApplication {
     return $application
 }
 
-function Resolve-GitHubOidcSubject {
+function Resolve-GitHubOidcTrust {
     param(
         [Parameter(Mandatory)] [string] $Owner,
         [Parameter(Mandatory)] [string] $Repository,
@@ -710,74 +707,176 @@ function Resolve-GitHubOidcSubject {
     else {
         "$canonicalOwner/$canonicalRepository"
     }
-    return "repo:$repoSegment`:environment:$Environment"
+    $subject = "repo:$repoSegment`:environment:$Environment"
+    $workflowReference = "$canonicalOwner/$canonicalRepository/.github/workflows/helios-cloud-deploy.yml@refs/heads/$GitHubDeploymentBranch"
+    $claimsExpression = "claims['sub'] eq '$subject' and claims['job_workflow_ref'] eq '$workflowReference'"
+    return [pscustomobject]@{
+        Subject = $subject
+        WorkflowReference = $workflowReference
+        ClaimsExpression = $claimsExpression
+    }
+}
+
+function Get-GitHubFederatedCredentials {
+    param([Parameter(Mandatory)] [string] $ApplicationObjectId)
+
+    $url = "https://graph.microsoft.com/beta/applications/$ApplicationObjectId/federatedIdentityCredentials"
+    $response = Invoke-AzJson `
+        -Arguments @('rest', '--method', 'GET', '--url', $url) `
+        -Operation 'Reading flexible federated identity credentials through Microsoft Graph'
+    return @($response.value)
+}
+
+function Get-FederatedCredentialSubject {
+    param([Parameter(Mandatory)] [pscustomobject] $Credential)
+
+    $property = $Credential.PSObject.Properties['subject']
+    return if ($property) { [string] $property.Value } else { '' }
+}
+
+function Get-FederatedCredentialClaimsExpression {
+    param([Parameter(Mandatory)] [pscustomobject] $Credential)
+
+    $property = $Credential.PSObject.Properties['claimsMatchingExpression']
+    if (-not $property -or $null -eq $property.Value) {
+        return ''
+    }
+    $valueProperty = $property.Value.PSObject.Properties['value']
+    return if ($valueProperty) { [string] $valueProperty.Value } else { '' }
+}
+
+function Get-FederatedCredentialClaimsLanguageVersion {
+    param([Parameter(Mandatory)] [pscustomobject] $Credential)
+
+    $property = $Credential.PSObject.Properties['claimsMatchingExpression']
+    if (-not $property -or $null -eq $property.Value) {
+        return 0
+    }
+    $versionProperty = $property.Value.PSObject.Properties['languageVersion']
+    return if ($versionProperty) { [int] $versionProperty.Value } else { 0 }
 }
 
 function Ensure-GitHubFederation {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Application,
         [Parameter(Mandatory)] [string] $Subject,
+        [Parameter(Mandatory)] [string] $ClaimsExpression,
         [Parameter(Mandatory)] [string] $Environment
     )
 
     $credentialName = "github-$Environment"
-    $credentials = @(Invoke-AzJson `
-        -Arguments @('ad', 'app', 'federated-credential', 'list', '--id', [string] $Application.id) `
-        -Operation "Looking up GitHub OIDC federation '$credentialName'")
-    $existing = $credentials | Where-Object name -eq $credentialName | Select-Object -First 1
-    if ($existing) {
-        if ($existing.subject -ne $Subject -or
-            $existing.issuer -ne 'https://token.actions.githubusercontent.com' -or
-            @($existing.audiences).Count -ne 1 -or
-            @($existing.audiences) -notcontains 'api://AzureADTokenExchange') {
-            throw "Federated credential '$credentialName' exists with a different issuer, subject, or audience. Refusing to overwrite trust."
+    $credentials = @(Get-GitHubFederatedCredentials -ApplicationObjectId ([string] $Application.id))
+    $named = @($credentials | Where-Object name -eq $credentialName)
+    if ($named.Count -gt 1) {
+        throw "More than one federated credential is named '$credentialName'. Refusing to guess which trust is authoritative."
+    }
+    if ($named.Count -eq 1) {
+        $existing = $named[0]
+        $existingExpression = Get-FederatedCredentialClaimsExpression -Credential $existing
+        $existingSubject = Get-FederatedCredentialSubject -Credential $existing
+        $existingLanguageVersion = Get-FederatedCredentialClaimsLanguageVersion -Credential $existing
+        $isExactFlexibleTrust = (
+            $existing.issuer -eq 'https://token.actions.githubusercontent.com' -and
+            @($existing.audiences).Count -eq 1 -and
+            @($existing.audiences) -contains 'api://AzureADTokenExchange' -and
+            [string]::IsNullOrWhiteSpace($existingSubject) -and
+            $existingLanguageVersion -eq 1 -and
+            $existingExpression -ceq $ClaimsExpression)
+        if ($isExactFlexibleTrust) {
+            $legacyTrusts = @($credentials | Where-Object {
+                $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
+                (Get-FederatedCredentialSubject -Credential $_) -eq $Subject
+            })
+            if ($legacyTrusts.Count -ne 0) {
+                throw "A legacy environment-only GitHub federation still trusts '$Subject'. Remove it explicitly before continuing."
+            }
+            return
         }
-        return
+
+        $isLegacyEnvironmentOnlyTrust = (
+            $existing.issuer -eq 'https://token.actions.githubusercontent.com' -and
+            @($existing.audiences).Count -eq 1 -and
+            @($existing.audiences) -contains 'api://AzureADTokenExchange' -and
+            $existingSubject -eq $Subject -and
+            [string]::IsNullOrWhiteSpace($existingExpression))
+        if (-not $isLegacyEnvironmentOnlyTrust) {
+            throw "Federated credential '$credentialName' has an unexpected trust contract. Refusing to overwrite it."
+        }
+
+        $credentialId = [string] $existing.id
+        if (-not (Test-GuidValue $credentialId)) {
+            throw "Legacy federated credential '$credentialName' did not return a valid Microsoft Graph object ID."
+        }
+        Invoke-AzNoOutput `
+            -Arguments @(
+                'rest', '--method', 'DELETE',
+                '--url', "https://graph.microsoft.com/beta/applications/$($Application.id)/federatedIdentityCredentials/$credentialId"
+            ) `
+            -Operation "Removing legacy environment-only federation '$credentialName'"
+        $credentials = @(Get-GitHubFederatedCredentials -ApplicationObjectId ([string] $Application.id))
+    }
+
+    $legacyTrusts = @($credentials | Where-Object {
+        $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
+        (Get-FederatedCredentialSubject -Credential $_) -eq $Subject
+    })
+    if ($legacyTrusts.Count -ne 0) {
+        throw "An environment-only GitHub federation still trusts '$Subject'. Remove the legacy credential explicitly before continuing."
     }
 
     $definition = [ordered]@{
         name = $credentialName
         issuer = 'https://token.actions.githubusercontent.com'
-        subject = $Subject
         audiences = @('api://AzureADTokenExchange')
-    }
-    $temporaryFile = Join-Path ([System.IO.Path]::GetTempPath()) ("helios-oidc-{0}.json" -f [guid]::NewGuid())
-    try {
-        [System.IO.File]::WriteAllText($temporaryFile, ($definition | ConvertTo-Json -Depth 5), [System.Text.UTF8Encoding]::new($false))
-        [void] (Invoke-AzJson `
-            -Arguments @(
-                'ad', 'app', 'federated-credential', 'create',
-                '--id', [string] $Application.id,
-                '--parameters', $temporaryFile
-            ) `
-            -Operation "Creating GitHub OIDC federation '$credentialName'")
-    }
-    finally {
-        if (Test-Path -LiteralPath $temporaryFile) {
-            Remove-Item -LiteralPath $temporaryFile -Force
+        claimsMatchingExpression = [ordered]@{
+            value = $ClaimsExpression
+            languageVersion = 1
         }
     }
+    $body = $definition | ConvertTo-Json -Depth 8 -Compress
+    [void] (Invoke-AzJson `
+        -Arguments @(
+            'rest', '--method', 'POST',
+            '--url', "https://graph.microsoft.com/beta/applications/$($Application.id)/federatedIdentityCredentials",
+            '--body', $body
+        ) `
+        -Operation "Creating workflow-bound flexible GitHub OIDC federation '$credentialName'")
+
+    Assert-GitHubFederationPresent `
+        -Application $Application `
+        -Subject $Subject `
+        -ClaimsExpression $ClaimsExpression `
+        -Environment $Environment
 }
 
 function Assert-GitHubFederationPresent {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Application,
         [Parameter(Mandatory)] [string] $Subject,
+        [Parameter(Mandatory)] [string] $ClaimsExpression,
         [Parameter(Mandatory)] [string] $Environment
     )
 
     $credentialName = "github-$Environment"
-    $credentials = @(Invoke-AzJson `
-        -Arguments @('ad', 'app', 'federated-credential', 'list', '--id', [string] $Application.id) `
-        -Operation "Verifying GitHub OIDC federation '$credentialName'")
+    $credentials = @(Get-GitHubFederatedCredentials -ApplicationObjectId ([string] $Application.id))
     $matching = @($credentials | Where-Object {
         $_.name -eq $credentialName -and
         $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
-        $_.subject -eq $Subject -and
-        @($_.audiences) -contains 'api://AzureADTokenExchange'
+        [string]::IsNullOrWhiteSpace((Get-FederatedCredentialSubject -Credential $_)) -and
+        @($_.audiences).Count -eq 1 -and
+        @($_.audiences) -contains 'api://AzureADTokenExchange' -and
+        (Get-FederatedCredentialClaimsLanguageVersion -Credential $_) -eq 1 -and
+        (Get-FederatedCredentialClaimsExpression -Credential $_) -ceq $ClaimsExpression
     })
     if ($matching.Count -ne 1) {
-        throw "The exact GitHub OIDC federation for '$Subject' is missing. Run -Mode Configure before deploying."
+        throw "The exact workflow-bound flexible GitHub federation for '$Subject' is missing. Run -Mode Configure before publishing."
+    }
+    $legacyTrusts = @($credentials | Where-Object {
+        $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
+        (Get-FederatedCredentialSubject -Credential $_) -eq $Subject
+    })
+    if ($legacyTrusts.Count -ne 0) {
+        throw "A legacy environment-only GitHub federation still trusts '$Subject'. Publish is blocked until it is removed."
     }
 }
 
@@ -805,7 +904,8 @@ function Ensure-RoleAssignment {
 
     $role = $script:ContributorRole
     $matching = @($assignments | Where-Object {
-        ([string] $_.roleDefinitionId).EndsWith("/$($role.Id)", [StringComparison]::OrdinalIgnoreCase)
+        ([string] $_.roleDefinitionId).EndsWith("/$($role.Id)", [StringComparison]::OrdinalIgnoreCase) -and
+        [string]::Equals([string] $_.scope, $Scope, [StringComparison]::OrdinalIgnoreCase)
     })
     if ($matching.Count -eq 0) {
         [void] (Invoke-AzJson `
@@ -844,7 +944,8 @@ function Assert-RoleAssignmentPresent {
 
     $role = $script:ContributorRole
     $matching = @($assignments | Where-Object {
-        ([string] $_.roleDefinitionId).EndsWith("/$($role.Id)", [StringComparison]::OrdinalIgnoreCase)
+        ([string] $_.roleDefinitionId).EndsWith("/$($role.Id)", [StringComparison]::OrdinalIgnoreCase) -and
+        [string]::Equals([string] $_.scope, $Scope, [StringComparison]::OrdinalIgnoreCase)
     })
     if ($matching.Count -eq 0) {
         throw "The GitHub OIDC application does not have $($role.Name) at '$Scope'. Run -Mode Configure before deploying."
@@ -897,7 +998,8 @@ function Ensure-PrincipalRoleAssignment {
         -Arguments @('role', 'assignment', 'list', '--assignee', $PrincipalObjectId, '--scope', $Scope) `
         -Operation "Checking '$Role' at the approved scope")
     $matching = @($assignments | Where-Object {
-        $_.roleDefinitionName -eq $Role -or ([string] $_.roleDefinitionId).EndsWith("/$Role", [StringComparison]::OrdinalIgnoreCase)
+        ($_.roleDefinitionName -eq $Role -or ([string] $_.roleDefinitionId).EndsWith("/$Role", [StringComparison]::OrdinalIgnoreCase)) -and
+        [string]::Equals([string] $_.scope, $Scope, [StringComparison]::OrdinalIgnoreCase)
     })
     if ($matching.Count -eq 0) {
         [void] (Invoke-AzJson `
@@ -923,7 +1025,8 @@ function Assert-PrincipalRoleAssignment {
         -Arguments @('role', 'assignment', 'list', '--assignee', $PrincipalObjectId, '--scope', $Scope) `
         -Operation "Verifying '$Role' at the approved scope")
     $matching = @($assignments | Where-Object {
-        $_.roleDefinitionName -eq $Role -or ([string] $_.roleDefinitionId).EndsWith("/$Role", [StringComparison]::OrdinalIgnoreCase)
+        ($_.roleDefinitionName -eq $Role -or ([string] $_.roleDefinitionId).EndsWith("/$Role", [StringComparison]::OrdinalIgnoreCase)) -and
+        [string]::Equals([string] $_.scope, $Scope, [StringComparison]::OrdinalIgnoreCase)
     })
     if ($matching.Count -eq 0) {
         throw "Required role '$Role' is missing at '$Scope'. Run the administrator Configure/Publish phase first."
@@ -984,7 +1087,7 @@ function Get-RuntimeManagedIdentity {
     return $identity
 }
 
-function Ensure-RegistryPullAccess {
+function Ensure-RegistryPublishAccess {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Context,
         [Parameter(Mandatory)] [string] $ResourceGroupName,
@@ -996,7 +1099,7 @@ function Ensure-RegistryPullAccess {
     $registry = Invoke-AzJson `
         -Arguments @('acr', 'show', '--subscription', $Context.SubscriptionId, '--resource-group', $ResourceGroupName, '--name', $RegistryName) `
         -Operation "Reading authorization mode for registry '$RegistryName'"
-    $role = if ([string] $registry.roleAssignmentMode -eq 'rbac-abac') {
+    $runtimeRole = if ([string] $registry.roleAssignmentMode -eq 'rbac-abac') {
         'Container Registry Repository Reader'
     }
     else {
@@ -1005,19 +1108,25 @@ function Ensure-RegistryPullAccess {
     Ensure-PrincipalRoleAssignment `
         -PrincipalObjectId ([string] $Identity.principalId) `
         -PrincipalType 'ServicePrincipal' `
-        -Role $role `
+        -Role $runtimeRole `
         -Scope ([string] $registry.id)
 
     $githubServicePrincipals = @(Invoke-AzJson `
         -Arguments @('ad', 'sp', 'list', '--filter', "appId eq '$GitHubApplicationId'") `
-        -Operation 'Resolving the GitHub OIDC service principal for ACR read verification')
+        -Operation 'Resolving the GitHub OIDC service principal for protected ACR publication')
     if ($githubServicePrincipals.Count -ne 1) {
         throw 'The GitHub OIDC service principal is missing or ambiguous. Run -Mode Configure first.'
+    }
+    $publisherRole = if ([string] $registry.roleAssignmentMode -eq 'rbac-abac') {
+        'Container Registry Repository Writer'
+    }
+    else {
+        'AcrPush'
     }
     Ensure-PrincipalRoleAssignment `
         -PrincipalObjectId ([string] $githubServicePrincipals[0].id) `
         -PrincipalType 'ServicePrincipal' `
-        -Role $role `
+        -Role $publisherRole `
         -Scope ([string] $registry.id)
 
     $armAuthentication = Invoke-AzJson `
@@ -1029,7 +1138,7 @@ function Ensure-RegistryPullAccess {
     Write-Host "Registry authentication-as-ARM policy: $($armAuthentication.status). Helios supports both modes and does not weaken this policy."
 }
 
-function Assert-RegistryPullAccess {
+function Assert-RegistryPublishAccess {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Context,
         [Parameter(Mandatory)] [string] $ResourceGroupName,
@@ -1041,7 +1150,7 @@ function Assert-RegistryPullAccess {
     $registry = Invoke-AzJson `
         -Arguments @('acr', 'show', '--subscription', $Context.SubscriptionId, '--resource-group', $ResourceGroupName, '--name', $RegistryName) `
         -Operation "Verifying registry '$RegistryName'"
-    $role = if ([string] $registry.roleAssignmentMode -eq 'rbac-abac') {
+    $runtimeRole = if ([string] $registry.roleAssignmentMode -eq 'rbac-abac') {
         'Container Registry Repository Reader'
     }
     else {
@@ -1049,17 +1158,23 @@ function Assert-RegistryPullAccess {
     }
     Assert-PrincipalRoleAssignment `
         -PrincipalObjectId ([string] $Identity.principalId) `
-        -Role $role `
+        -Role $runtimeRole `
         -Scope ([string] $registry.id)
     $githubServicePrincipals = @(Invoke-AzJson `
         -Arguments @('ad', 'sp', 'list', '--filter', "appId eq '$GitHubApplicationId'") `
-        -Operation 'Resolving the GitHub OIDC service principal for ACR verification')
+        -Operation 'Resolving the GitHub OIDC service principal for protected ACR publication verification')
     if ($githubServicePrincipals.Count -ne 1) {
         throw 'The GitHub OIDC service principal is missing or ambiguous. Run -Mode Configure first.'
     }
+    $publisherRole = if ([string] $registry.roleAssignmentMode -eq 'rbac-abac') {
+        'Container Registry Repository Writer'
+    }
+    else {
+        'AcrPush'
+    }
     Assert-PrincipalRoleAssignment `
         -PrincipalObjectId ([string] $githubServicePrincipals[0].id) `
-        -Role $role `
+        -Role $publisherRole `
         -Scope ([string] $registry.id)
     $armAuthentication = Invoke-AzJson `
         -Arguments @('acr', 'config', 'authentication-as-arm', 'show', '--subscription', $Context.SubscriptionId, '--registry', $RegistryName) `
@@ -1074,12 +1189,12 @@ function Assert-GitHubCliReady {
     if ([string]::IsNullOrWhiteSpace($RequiredReviewerId) -or
         -not [int64]::TryParse($RequiredReviewerId, [ref] $reviewerId) -or
         $reviewerId -le 0) {
-        throw 'Configure mode requires a positive numeric RequiredReviewerId.'
+        throw 'Configure and Publish modes require a positive numeric RequiredReviewerId.'
     }
 
     $ghCommand = Get-Command gh -ErrorAction SilentlyContinue
     if (-not $ghCommand) {
-        throw 'GitHub CLI is required for Configure mode. Authenticate it separately; this script does not handle or store GitHub credentials.'
+        throw 'GitHub CLI is required for Configure and Publish modes. Authenticate it separately; this script does not handle or store GitHub credentials.'
     }
     $script:GhPath = $ghCommand.Source
     Invoke-GhNoOutput -Arguments @('auth', 'status', '--hostname', 'github.com') -Operation 'Checking GitHub CLI authentication'
@@ -1493,167 +1608,6 @@ function New-ConfirmedContainerRegistry {
     return $registry
 }
 
-function Resolve-SafeCloudBuildContext {
-    param([Parameter(Mandatory)] [string] $ProjectRoot)
-
-    $contextCandidate = if ([string]::IsNullOrWhiteSpace($BuildContext)) { $ProjectRoot } else { $BuildContext }
-    $contextAbsolute = if ([System.IO.Path]::IsPathRooted($contextCandidate)) {
-        $contextCandidate
-    }
-    else {
-        Join-Path (Get-Location).Path $contextCandidate
-    }
-    $resolvedContext = [System.IO.Path]::GetFullPath($contextAbsolute)
-    $resolvedRoot = [System.IO.Path]::GetFullPath($ProjectRoot)
-    $pathComparison = if ($IsWindows) { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
-    $rootPrefix = $resolvedRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-    if (-not [string]::Equals($resolvedContext, $resolvedRoot, $pathComparison) -and -not $resolvedContext.StartsWith($rootPrefix, $pathComparison)) {
-        throw 'BuildContext must be the Helios project root or a directory inside it.'
-    }
-    if (-not [string]::Equals($resolvedContext, $resolvedRoot, $pathComparison)) {
-        throw 'Cloud publication uses an allowlisted project-root context. Custom subdirectory BuildContext values are not supported.'
-    }
-    if (-not (Test-Path -LiteralPath $resolvedContext -PathType Container)) {
-        throw "Cloud build context does not exist: $resolvedContext"
-    }
-
-    $dockerCandidate = if ([System.IO.Path]::IsPathRooted($DockerfilePath)) {
-        [System.IO.Path]::GetFullPath($DockerfilePath)
-    }
-    else {
-        [System.IO.Path]::GetFullPath((Join-Path $resolvedContext $DockerfilePath))
-    }
-    $contextPrefix = $resolvedContext.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
-    if (-not $dockerCandidate.StartsWith($contextPrefix, $pathComparison)) {
-        throw 'DockerfilePath must resolve inside BuildContext.'
-    }
-    if (-not (Test-Path -LiteralPath $dockerCandidate -PathType Leaf)) {
-        throw "Dockerfile does not exist: $dockerCandidate"
-    }
-
-    $gitMetadata = Join-Path $resolvedContext '.git'
-    if (Test-Path -LiteralPath $gitMetadata) {
-        $dockerIgnore = Join-Path $resolvedContext '.dockerignore'
-        if (-not (Test-Path -LiteralPath $dockerIgnore -PathType Leaf)) {
-            throw 'BuildContext contains .git metadata but no .dockerignore. Add a reviewed .dockerignore that excludes .git before cloud publication.'
-        }
-        $ignoreRules = @(Get-Content -LiteralPath $dockerIgnore | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
-        if ($ignoreRules -notcontains '.git' -and $ignoreRules -notcontains '.git/' -and $ignoreRules -notcontains '**/.git') {
-            throw 'The reviewed .dockerignore must explicitly exclude .git before cloud publication.'
-        }
-    }
-
-    $sensitiveNames = @('.env', '.env.local', 'secrets.json', 'id_rsa', 'id_ed25519')
-    $sensitiveExtensions = @('.pfx', '.p12', '.pem', '.key')
-    $sensitiveFiles = @(Get-ChildItem -LiteralPath $resolvedContext -File -Force -Recurse -ErrorAction Stop | Where-Object {
-        $_.Name -in $sensitiveNames -or $_.Extension.ToLowerInvariant() -in $sensitiveExtensions
-    })
-    if ($sensitiveFiles.Count -gt 0) {
-        $relativeNames = @($sensitiveFiles | ForEach-Object { [System.IO.Path]::GetRelativePath($resolvedContext, $_.FullName) })
-        throw "Cloud build context contains secret-shaped files and will not be uploaded: $($relativeNames -join ', ')"
-    }
-
-    $stagingContext = Join-Path ([System.IO.Path]::GetTempPath()) ("helios-build-{0}" -f [guid]::NewGuid())
-    [void] (New-Item -ItemType Directory -Path $stagingContext)
-    try {
-        $sourceDirectory = Join-Path $resolvedContext 'src'
-        if (-not (Test-Path -LiteralPath $sourceDirectory -PathType Container)) {
-            throw 'The reviewed src directory is missing from the Helios project root.'
-        }
-        Copy-Item -LiteralPath $sourceDirectory -Destination $stagingContext -Recurse -Force
-        foreach ($optionalBuildFile in @('Directory.Build.props', 'Directory.Build.targets', 'NuGet.config', 'global.json')) {
-            $candidate = Join-Path $resolvedContext $optionalBuildFile
-            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-                Copy-Item -LiteralPath $candidate -Destination $stagingContext -Force
-            }
-        }
-    }
-    catch {
-        Remove-Item -LiteralPath $stagingContext -Recurse -Force -ErrorAction SilentlyContinue
-        throw
-    }
-
-    return [pscustomobject]@{
-        Context = $stagingContext
-        Dockerfile = [System.IO.Path]::GetRelativePath($resolvedContext, $dockerCandidate).Replace('\', '/')
-        Temporary = $true
-    }
-}
-
-function Publish-HeliosCloudImage {
-    param(
-        [Parameter(Mandatory)] [pscustomobject] $Context,
-        [Parameter(Mandatory)] [string] $ResourceGroupName,
-        [Parameter(Mandatory)] [string] $RegistryName,
-        [Parameter(Mandatory)] [pscustomobject] $BuildInput
-    )
-
-    if ($ImageRepository -cnotmatch '^[a-z0-9]+(?:[._-][a-z0-9]+)*(?:/[a-z0-9]+(?:[._-][a-z0-9]+)*)*$') {
-        throw 'ImageRepository must be a lowercase OCI repository path.'
-    }
-    $effectiveTag = $ImageTag
-    if ([string]::IsNullOrWhiteSpace($effectiveTag)) {
-        $effectiveTag = 'helios-' + [DateTime]::UtcNow.ToString('yyyyMMddHHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
-    }
-    if ($effectiveTag -cnotmatch '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$') {
-        throw 'ImageTag is not a valid OCI tag.'
-    }
-
-    Write-Host 'Cloud image publication plan:'
-    Write-Host "  registry: $RegistryName (resource group $ResourceGroupName)"
-    Write-Host "  image: ${ImageRepository}:$effectiveTag"
-    Write-Host "  build service: Azure Container Registry Tasks (no local Docker daemon)"
-    Write-Host "  Dockerfile: $($BuildInput.Dockerfile)"
-    Assert-ExactConfirmation -Expected 'PUBLISH HELIOS IMAGE' -Purpose 'Uploading the reviewed source context and running an ACR cloud build'
-
-    $build = Invoke-AzJson `
-        -Arguments @(
-            'acr', 'build',
-            '--subscription', $Context.SubscriptionId,
-            '--registry', $RegistryName,
-            '--resource-group', $ResourceGroupName,
-            '--image', "${ImageRepository}:$effectiveTag",
-            '--file', $BuildInput.Dockerfile,
-            '--no-logs',
-            $BuildInput.Context
-        ) `
-        -Operation 'Running the Helios image build in Azure Container Registry'
-    $buildStatusProperty = $build.PSObject.Properties['status']
-    $buildStatus = if ($buildStatusProperty) { [string] $buildStatusProperty.Value } else { $null }
-    if (-not [string]::IsNullOrWhiteSpace($buildStatus) -and $buildStatus -notin @('Succeeded', 'Completed')) {
-        throw "Azure Container Registry build finished with status '$buildStatus'."
-    }
-
-    Invoke-AzNoOutput `
-        -Arguments @('account', 'get-access-token', '--scope', 'https://containerregistry.azure.net/.default') `
-        -Operation 'Acquiring an ACR-scoped token without printing or persisting it'
-    $manifest = Invoke-AzJson `
-        -Arguments @(
-            'acr', 'repository', 'show',
-            '--name', $RegistryName,
-            '--image', "${ImageRepository}:$effectiveTag",
-            '--subscription', $Context.SubscriptionId
-        ) `
-        -Operation 'Resolving the published image digest'
-    $digest = ([string] $manifest.digest).ToLowerInvariant()
-    if ($digest -notmatch '^sha256:[0-9a-f]{64}$') {
-        throw 'Azure Container Registry did not return an immutable digest for the published image.'
-    }
-
-    $registry = Invoke-AzJson `
-        -Arguments @('acr', 'show', '--name', $RegistryName, '--subscription', $Context.SubscriptionId) `
-        -Operation 'Resolving the registry login server after publication'
-    if (-not [string]::Equals([string] $registry.resourceGroup, $ResourceGroupName, [StringComparison]::OrdinalIgnoreCase)) {
-        throw 'The published image registry is not in the selected Helios resource group.'
-    }
-    $immutableReference = "$($registry.loginServer)/$ImageRepository@$digest"
-    $verified = Assert-ImmutableAcrImage `
-        -Reference $immutableReference `
-        -SelectedSubscriptionId $Context.SubscriptionId `
-        -SelectedResourceGroup $ResourceGroupName
-    return $verified
-}
-
 function Get-ExistingEntraContext {
     $connectorApplication = Find-EntraApplication -DisplayName $ConnectorAppName
     $githubApplication = Find-EntraApplication -DisplayName $GitHubOidcAppName
@@ -1734,8 +1688,12 @@ try {
     }
     $script:AzPath = $azCommand.Source
 
+    $expectedGitHubEnvironment = "azure-$EnvironmentName"
     if ([string]::IsNullOrWhiteSpace($GitHubEnvironment)) {
-        $GitHubEnvironment = "azure-$EnvironmentName"
+        $GitHubEnvironment = $expectedGitHubEnvironment
+    }
+    elseif ($GitHubEnvironment -cne $expectedGitHubEnvironment) {
+        throw "GitHubEnvironment must be '$expectedGitHubEnvironment' for EnvironmentName '$EnvironmentName'. The workflow has no alternate preview alias."
     }
     if ($GitHubOwner -notmatch '^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$') {
         throw 'GitHubOwner is not a valid GitHub account or organization name.'
@@ -1766,11 +1724,11 @@ try {
         -Arguments @('bicep', 'build', '--file', $template, '--stdout') `
         -Operation 'Compiling the Helios Bicep template before any cloud mutation')
 
-    if ($Mode -eq 'Configure') {
+    if ($Mode -in @('Configure', 'Publish')) {
         Assert-GitHubCliReady
     }
-    $githubOidcSubject = if ($Mode -eq 'Configure') {
-        Resolve-GitHubOidcSubject `
+    $githubOidcTrust = if ($Mode -in @('Configure', 'Publish')) {
+        Resolve-GitHubOidcTrust `
             -Owner $GitHubOwner `
             -Repository $GitHubRepository `
             -Environment $GitHubEnvironment
@@ -1784,7 +1742,10 @@ try {
     $selectedResourceGroup = [string] $selectedGroup.name
     $selectedLocation = [string] $selectedGroup.location
 
-    $imageForRegistryResolution = if ([string]::IsNullOrWhiteSpace($ImageReference)) { $null } else { $ImageReference }
+    if ($Mode -eq 'Publish' -and -not [string]::IsNullOrWhiteSpace($ImageReference)) {
+        throw 'Publish does not accept ImageReference. The protected GitHub workflow builds the exact checked-out GITHUB_SHA and resolves its digest.'
+    }
+    $imageForRegistryResolution = if ($Mode -eq 'Publish' -or [string]::IsNullOrWhiteSpace($ImageReference)) { $null } else { $ImageReference }
     $registrySelection = Resolve-ContainerRegistryName `
         -Context $azureContext `
         -ResourceGroupName $selectedResourceGroup `
@@ -1798,7 +1759,8 @@ try {
         Write-Host "  resource group: $selectedResourceGroup ($selectedLocation)"
         Write-Host "  container registry binding: $resolvedRegistryName"
         Write-Host "  Entra apps: '$ConnectorAppName' and '$GitHubOidcAppName'"
-        Write-Host "  GitHub OIDC: $githubOidcSubject"
+        Write-Host "  GitHub OIDC subject: $($githubOidcTrust.Subject)"
+        Write-Host "  GitHub OIDC workflow: $($githubOidcTrust.WorkflowReference)"
         Write-Host '  CI RBAC: Contributor at the selected resource-group scope only (no role-assignment authority)'
         Write-Host '  runtime RBAC: pre-created user-assigned identity with Reader; ACR pull is added during Publish'
         Write-Host "  GitHub environment: $GitHubOwner/$GitHubRepository / $GitHubEnvironment; reviewer-gated; branch $GitHubDeploymentBranch"
@@ -1817,7 +1779,21 @@ try {
             -PrincipalObjectId ([string] $runtimeIdentity.principalId) `
             -Role $script:ReaderRole.Id `
             -Scope $resourceGroupScope
-        $buildInput = Resolve-SafeCloudBuildContext -ProjectRoot $root
+        Assert-GitHubEnvironmentProtection `
+            -Owner $GitHubOwner `
+            -Repository $GitHubRepository `
+            -Environment $GitHubEnvironment `
+            -ReviewerId ([int64] $RequiredReviewerId) `
+            -DeploymentBranch $GitHubDeploymentBranch
+        Assert-GitHubFederationPresent `
+            -Application $publishGitHubApplication `
+            -Subject $githubOidcTrust.Subject `
+            -ClaimsExpression $githubOidcTrust.ClaimsExpression `
+            -Environment $GitHubEnvironment
+        Assert-RoleAssignmentPresent `
+            -ApplicationId ([string] $publishGitHubApplication.appId) `
+            -Scope $resourceGroupScope
+
         if (-not $registrySelection.Exists) {
             [void] (New-ConfirmedContainerRegistry `
                 -Context $azureContext `
@@ -1825,25 +1801,52 @@ try {
                 -LocationName $selectedLocation `
                 -Name $resolvedRegistryName)
         }
-        try {
-            $immutableImage = Publish-HeliosCloudImage `
-                -Context $azureContext `
-                -ResourceGroupName $selectedResourceGroup `
-                -RegistryName $resolvedRegistryName `
-                -BuildInput $buildInput
-        }
-        finally {
-            if ([bool] $buildInput.Temporary -and (Test-Path -LiteralPath $buildInput.Context)) {
-                Remove-Item -LiteralPath $buildInput.Context -Recurse -Force -ErrorAction SilentlyContinue
-            }
-        }
-        Ensure-RegistryPullAccess `
+        Assert-ExactConfirmation `
+            -Expected 'PREPARE HELIOS PUBLISH' `
+            -Purpose 'Granting the protected GitHub workflow ACR publication access and confirming runtime pull access'
+        Ensure-RegistryPublishAccess `
             -Context $azureContext `
             -ResourceGroupName $selectedResourceGroup `
             -RegistryName $resolvedRegistryName `
             -Identity $runtimeIdentity `
             -GitHubApplicationId ([string] $publishGitHubApplication.appId)
-        Write-Host "Published immutable image: $immutableImage"
+
+        # Re-read every trust and authorization gate after the final mutation.
+        # A workflow dispatch or what-if is not produced unless all bindings
+        # still match the exact reviewed contract.
+        $revalidatedTrust = Resolve-GitHubOidcTrust `
+            -Owner $GitHubOwner `
+            -Repository $GitHubRepository `
+            -Environment $GitHubEnvironment
+        if ($revalidatedTrust.Subject -cne $githubOidcTrust.Subject -or
+            $revalidatedTrust.WorkflowReference -cne $githubOidcTrust.WorkflowReference -or
+            $revalidatedTrust.ClaimsExpression -cne $githubOidcTrust.ClaimsExpression) {
+            throw 'The canonical GitHub OIDC trust changed during Publish. Nothing was dispatched.'
+        }
+        Assert-GitHubEnvironmentProtection `
+            -Owner $GitHubOwner `
+            -Repository $GitHubRepository `
+            -Environment $GitHubEnvironment `
+            -ReviewerId ([int64] $RequiredReviewerId) `
+            -DeploymentBranch $GitHubDeploymentBranch
+        Assert-GitHubFederationPresent `
+            -Application $publishGitHubApplication `
+            -Subject $revalidatedTrust.Subject `
+            -ClaimsExpression $revalidatedTrust.ClaimsExpression `
+            -Environment $GitHubEnvironment
+        Assert-RoleAssignmentPresent `
+            -ApplicationId ([string] $publishGitHubApplication.appId) `
+            -Scope $resourceGroupScope
+        Assert-PrincipalRoleAssignment `
+            -PrincipalObjectId ([string] $runtimeIdentity.principalId) `
+            -Role $script:ReaderRole.Id `
+            -Scope $resourceGroupScope
+        Assert-RegistryPublishAccess `
+            -Context $azureContext `
+            -ResourceGroupName $selectedResourceGroup `
+            -RegistryName $resolvedRegistryName `
+            -Identity $runtimeIdentity `
+            -GitHubApplicationId ([string] $publishGitHubApplication.appId)
     }
     elseif ([string]::IsNullOrWhiteSpace($ImageReference)) {
         # Keep preview-only Bicep validation bound to the selected registry.
@@ -1884,7 +1887,9 @@ try {
             HELIOS_ENTRA_CLIENT_ID = [string] $connectorApplication.appId
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID = $principalObjectId
             HELIOS_REQUIRED_REVIEWER_ID = $RequiredReviewerId
-            HELIOS_OIDC_SUBJECT = $githubOidcSubject
+            HELIOS_OIDC_SUBJECT = $githubOidcTrust.Subject
+            HELIOS_OIDC_WORKFLOW_REF = $githubOidcTrust.WorkflowReference
+            HELIOS_OIDC_CLAIMS_EXPRESSION = $githubOidcTrust.ClaimsExpression
         }
         Set-GitHubEnvironmentVariables `
             -Values $githubValues `
@@ -1893,7 +1898,8 @@ try {
             -Environment $GitHubEnvironment
         Ensure-GitHubFederation `
             -Application $githubApplication `
-            -Subject $githubOidcSubject `
+            -Subject $githubOidcTrust.Subject `
+            -ClaimsExpression $githubOidcTrust.ClaimsExpression `
             -Environment $GitHubEnvironment
     }
     else {
@@ -1902,7 +1908,7 @@ try {
     }
 
     if (-not $connectorApplication) {
-        if ($Mode -in @('Plan', 'Publish')) {
+        if ($Mode -eq 'Plan') {
             Write-Warning "Connector app '$ConnectorAppName' does not exist. Bicep preview will use a non-persisted placeholder client ID."
             $connectorClientId = $script:PlaceholderClientId
         }
@@ -1923,24 +1929,39 @@ try {
     Write-Host "  GitHub trust environment: $GitHubEnvironment"
     Write-Host '  runtime: Azure Container Apps only; local runtime disabled'
 
-    [void] (Invoke-BicepPreview `
-        -Context $azureContext `
-        -ResourceGroupName $selectedResourceGroup `
-        -ConnectorClientId $connectorClientId `
-        -PrincipalObjectId $principalObjectId `
-        -ImmutableImage $immutableImage `
-        -RegistryName $resolvedRegistryName `
-        -TemplatePath $template)
+    if ($Mode -eq 'Publish') {
+        Assert-ExactConfirmation `
+            -Expected 'DISPATCH HELIOS WHAT-IF' `
+            -Purpose "Dispatching the protected $GitHubEnvironment workflow from '$GitHubDeploymentBranch'"
+        Invoke-GhNoOutput `
+            -Arguments @(
+                'workflow', 'run', 'helios-cloud-deploy.yml',
+                '--repo', "$GitHubOwner/$GitHubRepository",
+                '--ref', $GitHubDeploymentBranch,
+                '--field', "targetEnvironment=$GitHubEnvironment",
+                '--field', 'mode=what-if'
+            ) `
+            -Operation 'Dispatching the protected Helios what-if workflow'
+    }
+    else {
+        [void] (Invoke-BicepPreview `
+            -Context $azureContext `
+            -ResourceGroupName $selectedResourceGroup `
+            -ConnectorClientId $connectorClientId `
+            -PrincipalObjectId $principalObjectId `
+            -ImmutableImage $immutableImage `
+            -RegistryName $resolvedRegistryName `
+            -TemplatePath $template)
+    }
 
     if ($Mode -eq 'Configure') {
         Write-Host 'Configuration and what-if are complete. No application deployment was performed.'
-        Write-Host 'Run -Mode Publish to build in ACR, then dispatch the protected helios-cloud-deploy workflow with the immutable digest.'
+        Write-Host 'Run -Mode Publish to revalidate all gates and dispatch the protected build/what-if workflow.'
     }
     elseif ($Mode -eq 'Publish') {
         Write-Host "HELIOS_CONTAINER_REGISTRY_NAME=$resolvedRegistryName"
-        Write-Host "HELIOS_CONTAINER_IMAGE=$immutableImage"
-        Write-Host 'Cloud publication and what-if are complete. No application deployment was performed.'
-        Write-Host 'Use the protected helios-cloud-deploy workflow for reviewed what-if and deployment; this operator script has no direct apply path.'
+        Write-Host 'The protected workflow was dispatched. It will build only the exact checked-out GITHUB_SHA, resolve its immutable ACR digest, and produce the reviewed what-if after environment approval.'
+        Write-Host 'No image build, deployment what-if, or application deployment was performed by this operator script; it has no direct apply path.'
     }
     else {
         Write-Host 'Plan complete. No Azure, Entra, GitHub, or application resources were changed.'
