@@ -31,66 +31,68 @@ type ProfileOptimizationRecommendation =
     }
 
 module private Numeric =
-    let clamp minimum maximum value =
-        Math.Max(minimum, Math.Min(maximum, value))
+    let clamp (minimum: float) (maximum: float) (value: float) : float =
+        if value < minimum then minimum
+        elif value > maximum then maximum
+        else value
 
-    let normalizedPercent value =
+    let normalizedPercent (value: float) : float =
         clamp 0.0 1.0 (value / 100.0)
 
-    let inverseNormalized maximum value =
+    let inverseNormalized (maximum: float) (value: float) : float =
         if maximum <= 0.0 then
             0.0
         else
             1.0 - clamp 0.0 1.0 (value / maximum)
 
 module ProfilePolicy =
-    let private commonSafety telemetry =
+    let private commonSafety (telemetry: ProfileTelemetry) : float =
         let thermal = Numeric.normalizedPercent telemetry.ThermalPressure
         let risk = Numeric.normalizedPercent telemetry.SecurityRisk
         1.0 - ((thermal * 0.35) + (risk * 0.65))
 
-    let private developer telemetry =
+    let private developer (telemetry: ProfileTelemetry) : float =
         let cpuHeadroom = 1.0 - Numeric.normalizedPercent telemetry.CpuUtilization
         let memoryHeadroom = 1.0 - Numeric.normalizedPercent telemetry.MemoryUtilization
         let storage = Numeric.inverseNormalized 20.0 telemetry.StorageLatencyMs
         let model = Numeric.inverseNormalized 250.0 telemetry.ModelLatencyMs
         (cpuHeadroom * 0.25) + (memoryHeadroom * 0.25) + (storage * 0.25) + (model * 0.25)
 
-    let private sysAdmin telemetry =
+    let private sysAdmin (telemetry: ProfileTelemetry) : float =
         let risk = 1.0 - Numeric.normalizedPercent telemetry.SecurityRisk
         let thermal = 1.0 - Numeric.normalizedPercent telemetry.ThermalPressure
         let memory = 1.0 - Numeric.normalizedPercent telemetry.MemoryUtilization
         (risk * 0.60) + (thermal * 0.20) + (memory * 0.20)
 
-    let private sysOps telemetry =
+    let private sysOps (telemetry: ProfileTelemetry) : float =
         let network = Numeric.inverseNormalized 150.0 telemetry.NetworkLatencyMs
         let storage = Numeric.inverseNormalized 30.0 telemetry.StorageLatencyMs
         let vm = 1.0 - Numeric.normalizedPercent telemetry.VmMemoryPressure
         let risk = 1.0 - Numeric.normalizedPercent telemetry.SecurityRisk
         (network * 0.25) + (storage * 0.20) + (vm * 0.20) + (risk * 0.35)
 
-    let private gamer telemetry =
+    let private gamer (telemetry: ProfileTelemetry) : float =
         let frame = Numeric.inverseNormalized 33.4 telemetry.FrameTimeMs
         let network = Numeric.inverseNormalized 100.0 telemetry.NetworkLatencyMs
         let gpu = Numeric.normalizedPercent telemetry.GpuUtilization
         let thermal = 1.0 - Numeric.normalizedPercent telemetry.ThermalPressure
         (frame * 0.40) + (network * 0.20) + (gpu * 0.20) + (thermal * 0.20)
 
-    let private studio telemetry =
+    let private studio (telemetry: ProfileTelemetry) : float =
         let audio = Numeric.inverseNormalized 10.0 telemetry.AudioXruns
         let storage = Numeric.inverseNormalized 15.0 telemetry.StorageLatencyMs
         let memory = 1.0 - Numeric.normalizedPercent telemetry.MemoryUtilization
         let thermal = 1.0 - Numeric.normalizedPercent telemetry.ThermalPressure
         (audio * 0.45) + (storage * 0.25) + (memory * 0.15) + (thermal * 0.15)
 
-    let private personal telemetry =
+    let private personal (telemetry: ProfileTelemetry) : float =
         let cpu = 1.0 - Numeric.normalizedPercent telemetry.CpuUtilization
         let memory = 1.0 - Numeric.normalizedPercent telemetry.MemoryUtilization
         let thermal = 1.0 - Numeric.normalizedPercent telemetry.ThermalPressure
         let risk = 1.0 - Numeric.normalizedPercent telemetry.SecurityRisk
         (cpu * 0.20) + (memory * 0.20) + (thermal * 0.25) + (risk * 0.35)
 
-    let private server telemetry =
+    let private server (telemetry: ProfileTelemetry) : float =
         let cpu = 1.0 - Numeric.normalizedPercent telemetry.CpuUtilization
         let memory = 1.0 - Numeric.normalizedPercent telemetry.MemoryUtilization
         let vm = 1.0 - Numeric.normalizedPercent telemetry.VmMemoryPressure
@@ -98,7 +100,7 @@ module ProfilePolicy =
         let risk = 1.0 - Numeric.normalizedPercent telemetry.SecurityRisk
         (cpu * 0.15) + (memory * 0.20) + (vm * 0.20) + (network * 0.15) + (risk * 0.30)
 
-    let score profile telemetry =
+    let score (profile: MonadobladeProfileId) (telemetry: ProfileTelemetry) : float =
         let profileFitness =
             match profile with
             | MonadobladeProfileId.Developer -> developer telemetry
@@ -112,7 +114,10 @@ module ProfilePolicy =
 
         Numeric.clamp 0.0 1.0 ((profileFitness * 0.80) + (commonSafety telemetry * 0.20))
 
-    let recommend profile telemetry =
+    let recommend
+        (profile: MonadobladeProfileId)
+        (telemetry: ProfileTelemetry)
+        : ProfileOptimizationRecommendation =
         let fitness = score profile telemetry
         let actions = ResizeArray<string>()
         let reasons = ResizeArray<string>()
@@ -160,7 +165,11 @@ module ProfilePolicy =
         {
             Profile = profile
             FitnessScore = Math.Round(fitness, 4)
-            Confidence = Math.Round(Numeric.clamp 0.50 0.98 (0.55 + (abs (fitness - 0.5) * 0.7)), 4)
+            Confidence =
+                Math.Round(
+                    Numeric.clamp 0.50 0.98 (0.55 + (Math.Abs(fitness - 0.5) * 0.7)),
+                    4
+                )
             Actions = actions.ToArray()
             Reasons = reasons.ToArray()
             RequiresApproval = requiresApproval
