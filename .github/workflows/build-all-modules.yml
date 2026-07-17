@@ -152,11 +152,20 @@ jobs:
             find coverage -name "*.json" -o -name "*.html" | head -10
           fi
 
+      - name: Normalize artifact name
+        id: artifact
+        if: always()
+        env:
+          MODULE_PATH: ${{ matrix.module }}
+        run: |
+          safe_name="${MODULE_PATH//\//-}"
+          echo "name=$safe_name" >> "$GITHUB_OUTPUT"
+
       - name: Upload Build Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-${{ matrix.module }}
+          name: build-artifacts-${{ steps.artifact.outputs.name }}
           path: |
             ${{ matrix.module }}/dist/
             ${{ matrix.module }}/build/
@@ -167,7 +176,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.module }}
+          name: coverage-${{ steps.artifact.outputs.name }}
           path: ${{ matrix.module }}/coverage/
           if-no-files-found: warn
           retention-days: 7
@@ -236,3 +245,4 @@ jobs:
               repo: context.repo.repo,
               body: `## ${status} Build All Modules\n\n**Status**: ${{ needs.setup.outputs.has-modules != 'true' && 'skipped - no Node.js modules found' || needs.build.result }}\n\n[View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
             })
+
