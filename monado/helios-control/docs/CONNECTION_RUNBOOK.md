@@ -1,5 +1,10 @@
 # Connection runbook
 
+This is the target activation runbook. The current connector implements signed
+ingress plus local/cloud MCP inventory only. It has no Service Bus route,
+connector worker, outbound SaaS writer, durable idempotency store, WAF/APIM
+policy, or dead-letter queue.
+
 ## Safe order
 
 1. Resolve the GitHub repository, SharePoint library, Microsoft Foundry project, and Entra Agent Registry.
@@ -16,13 +21,16 @@
 ## Webhook endpoints
 
 `POST /webhooks/github`, `/linear`, `/slack`, `/teams`, `/sharepoint`, `/foundry`,
-and `/copilot`. Public ingress should terminate TLS and pass through Azure WAF.
+and `/copilot`. The current Container Apps slice terminates TLS; supported
+providers are HMAC-verified in the application and unsupported providers fail
+closed. WAF/APIM and private-backend ingress remain a later gate.
 
 ## Local MCP
 
-Run the API on loopback and configure Codex with a stdio or HTTP MCP adapter.
-Expose narrow tools (`get_status`, `list_routes`, `replay_event`,
-`draft_notification`) before enabling any live mutation tool.
+Run the API on loopback only for explicit development and configure Codex with
+the HTTP MCP adapter. The compatibility endpoint currently exposes only
+`hermes_get_status` and `hermes_list_routes`. Replay and notification tools do
+not exist and must not be documented as available before durable routing lands.
 
 ## Verification
 
@@ -30,4 +38,6 @@ Expose narrow tools (`get_status`, `list_routes`, `replay_event`,
 - Duplicate delivery IDs create one target operation.
 - Disabled routes create an auditable skip.
 - Secrets never appear in logs.
-- A dead-letter event can be inspected and replayed after correction.
+- After Service Bus and a governed replay tool are implemented, a dead-letter
+  event can be inspected and replayed after correction. This is not a current
+  verification criterion.
