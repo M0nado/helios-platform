@@ -614,7 +614,7 @@ static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInve
             "helios_plan_automation" => planner.CreatePlan(ReadAutomationRequest(parameters)),
             _ => new { error = "unknown tool" }
         };
-        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload) } }, isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation") };
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } }, isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation") };
     }
     catch (ArgumentException exception)
     {
