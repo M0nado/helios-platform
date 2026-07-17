@@ -1,0 +1,114 @@
+name: HELIOS control-plane operator
+
+'on':
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Bounded target workflow
+        required: true
+        type: choice
+        options:
+          - connector-readiness
+          - azure-plan
+          - azure-deploy
+          - sharepoint-plan
+          - sharepoint-apply
+          - emergency-quarantine
+          - release-evidence
+      arguments_json:
+        description: JSON object containing only target-approved inputs
+        required: true
+        type: string
+        default: '{}'
+      execute:
+        description: Dispatch the target workflow after operator approval
+        required: true
+        type: boolean
+        default: false
+      confirmation:
+        description: Type DISPATCH HELIOS CONTROL PLANE when execute is true
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: helios-control-plane-operator
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      request_artifact: ${{ steps.meta.outputs.name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Build bounded dispatch request
+        env:
+          OPERATION: ${{ inputs.operation }}
+          ARGUMENTS_JSON: ${{ inputs.arguments_json }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          python scripts/github/control_plane_dispatch.py \
+            --operation "$OPERATION" \
+            --repository "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF_NAME" \
+            --arguments "$ARGUMENTS_JSON" \
+            --output artifacts/dispatch-plan.json
+          sha256sum artifacts/dispatch-plan.json > artifacts/SHA256SUMS
+      - id: meta
+        shell: bash
+        run: echo "name=control-plane-dispatch-${GITHUB_RUN_ID}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.meta.outputs.name }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 30
+
+  dispatch:
+    needs: plan
+    if: ${{ inputs.execute && inputs.confirmation == 'DISPATCH HELIOS CONTROL PLANE' }}
+    runs-on: ubuntu-latest
+    environment: helios-stage
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Dispatch bounded target workflow
+        env:
+          OPERATION: ${{ inputs.operation }}
+          ARGUMENTS_JSON: ${{ inputs.arguments_json }}
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python scripts/github/control_plane_dispatch.py \
+            --operation "$OPERATION" \
+            --repository "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF_NAME" \
+            --arguments "$ARGUMENTS_JSON" \
+            --apply \
+            --confirm 'DISPATCH HELIOS CONTROL PLANE' \
+            --output evidence/dispatch-result.json
+          sha256sum evidence/dispatch-result.json > evidence/SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: control-plane-dispatch-result-${{ github.run_id }}
+          path: evidence
+          if-no-files-found: error
+          retention-days: 90

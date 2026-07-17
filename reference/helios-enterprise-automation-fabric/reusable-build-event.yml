@@ -1,0 +1,82 @@
+name: Reusable HELIOS event builder
+
+'on':
+  workflow_call:
+    inputs:
+      event_type:
+        required: true
+        type: string
+      summary:
+        required: true
+        type: string
+      environment:
+        required: false
+        type: string
+        default: global
+      severity:
+        required: false
+        type: string
+        default: info
+      actions:
+        required: false
+        type: string
+        default: notify
+      payload_json:
+        required: false
+        type: string
+        default: '{}'
+    outputs:
+      event_artifact:
+        description: Uploaded event artifact name
+        value: ${{ jobs.build.outputs.event_artifact }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      event_artifact: ${{ steps.meta.outputs.artifact }}
+    env:
+      EVENT_TYPE: ${{ inputs.event_type }}
+      EVENT_SUMMARY: ${{ inputs.summary }}
+      EVENT_ENVIRONMENT: ${{ inputs.environment }}
+      EVENT_SEVERITY: ${{ inputs.severity }}
+      EVENT_ACTIONS: ${{ inputs.actions }}
+      EVENT_PAYLOAD_JSON: ${{ inputs.payload_json }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate and build canonical event
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = json.loads(os.environ['EVENT_PAYLOAD_JSON'])
+          if not isinstance(payload, dict):
+              raise SystemExit('payload_json must be a JSON object')
+          Path('payload.json').write_text(json.dumps(payload), encoding='utf-8')
+          PY
+          python scripts/github/build_event.py \
+            --event-type "$EVENT_TYPE" \
+            --summary "$EVENT_SUMMARY" \
+            --environment "$EVENT_ENVIRONMENT" \
+            --severity "$EVENT_SEVERITY" \
+            --actions "$EVENT_ACTIONS" \
+            --payload @payload.json \
+            --output artifacts/event.json
+      - id: meta
+        shell: bash
+        run: echo 'artifact=helios-event-${{ github.run_id }}' >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: helios-event-${{ github.run_id }}
+          path: artifacts/event.json
+          if-no-files-found: error
+          retention-days: 30

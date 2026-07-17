@@ -1,0 +1,142 @@
+name: HELIOS Azure plan
+
+'on':
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options: [dev, stage, prod]
+      source_sha:
+        description: Immutable 40-character source commit SHA to plan
+        required: true
+        type: string
+      deploy_workloads:
+        description: Include broker and worker Container Apps in the plan
+        required: true
+        type: boolean
+        default: false
+      broker_image:
+        description: Broker image; production workloads must use an @sha256 digest
+        required: false
+        type: string
+        default: ghcr.io/m0nado/helios-fabric-broker:2.0.0
+      worker_image:
+        description: Worker image; production workloads must use an @sha256 digest
+        required: false
+        type: string
+        default: ghcr.io/m0nado/helios-fabric-worker:2.0.0
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: azure-plan-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    environment: helios-${{ inputs.environment }}
+    env:
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+      DEPLOY_WORKLOADS: ${{ inputs.deploy_workloads }}
+      BROKER_IMAGE: ${{ inputs.broker_image }}
+      WORKER_IMAGE: ${{ inputs.worker_image }}
+    steps:
+      - name: Validate immutable inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          if [[ "$DEPLOY_WORKLOADS" == 'true' ]]; then
+            test -n "$BROKER_IMAGE"
+            test -n "$WORKER_IMAGE"
+            if [[ "$TARGET_ENVIRONMENT" == 'prod' ]]; then
+              [[ "$BROKER_IMAGE" == *@sha256:* ]]
+              [[ "$WORKER_IMAGE" == *@sha256:* ]]
+            fi
+          fi
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+      - name: Enforce exact source SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Compile Bicep and parameters
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          az bicep build --file infra/bicep/main.bicep --stdout > artifacts/main.json
+          az bicep build-params \
+            --file "infra/bicep/parameters/${TARGET_ENVIRONMENT}.bicepparam" \
+            --stdout > artifacts/parameters.json
+      - name: Run resource-group what-if
+        shell: bash
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --name "helios-fabric-plan-${GITHUB_RUN_ID}" \
+            --resource-group "rg-helios-fabric-${TARGET_ENVIRONMENT}" \
+            --template-file infra/bicep/main.bicep \
+            --parameters "infra/bicep/parameters/${TARGET_ENVIRONMENT}.bicepparam" \
+            --parameters deployWorkloads="$DEPLOY_WORKLOADS" brokerImage="$BROKER_IMAGE" workerImage="$WORKER_IMAGE" \
+            --result-format FullResourcePayloads \
+            --output json > artifacts/what-if.raw.json
+          python scripts/github/canonicalize_plan.py \
+            --input artifacts/what-if.raw.json \
+            --output artifacts/what-if.canonical.json \
+            --metadata-output artifacts/plan-metadata.json
+      - name: Create immutable plan provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          metadata = json.loads(Path('artifacts/plan-metadata.json').read_text(encoding='utf-8'))
+          metadata.update({
+              'sourceSha': os.environ['SOURCE_SHA'].lower(),
+              'environment': os.environ['TARGET_ENVIRONMENT'],
+              'workflowRunId': os.environ['GITHUB_RUN_ID'],
+              'repository': os.environ['GITHUB_REPOSITORY'],
+              'deployWorkloads': os.environ['DEPLOY_WORKLOADS'].lower() == 'true',
+              'brokerImage': os.environ['BROKER_IMAGE'],
+              'workerImage': os.environ['WORKER_IMAGE'],
+          })
+          Path('artifacts/plan-provenance.json').write_text(
+              json.dumps(metadata, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          sha256sum artifacts/* > artifacts/SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: azure-plan-${{ inputs.environment }}-${{ inputs.source_sha }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 30
+      - name: Job summary
+        shell: bash
+        run: |
+          plan_sha=$(python -c "import json; print(json.load(open('artifacts/plan-metadata.json'))['sha256'])")
+          {
+            echo '## HELIOS Azure plan'
+            echo '- Environment: `${{ inputs.environment }}`'
+            echo '- Source SHA: `${{ inputs.source_sha }}`'
+            echo "- Plan SHA-256: \`${plan_sha}\`"
+            echo '- Workloads included: `${{ inputs.deploy_workloads }}`'
+            echo '- External writes: **none beyond the Azure what-if operation and evidence artifact**'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,24 @@
+name: helios-enterprise-automation-fabric
+metadata:
+  template: helios-enterprise-automation-fabric@2.0.0
+infra:
+  provider: bicep
+  path: infra/bicep
+  module: main
+services:
+  broker:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: ./docker/broker.Dockerfile
+      context: .
+      remoteBuild: true
+  worker:
+    project: .
+    language: docker
+    host: containerapp
+    docker:
+      path: ./docker/worker.Dockerfile
+      context: .
+      remoteBuild: true

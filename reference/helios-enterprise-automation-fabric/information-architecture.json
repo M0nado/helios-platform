@@ -1,0 +1,290 @@
+{
+  "version": "1.0",
+  "site": {
+    "displayName": "HELIOS Control Plane",
+    "hostname": "REPLACE.sharepoint.com",
+    "serverRelativePath": "/sites/HeliosControlPlane",
+    "purpose": "Governance, architecture, deployment evidence, incident evidence, and release provenance",
+    "managedIdentityPermission": "Sites.Selected"
+  },
+  "libraries": [
+    {
+      "name": "Governance",
+      "description": "Policies, connector contracts, approval rules, and architecture decisions",
+      "contentTypes": [
+        "HELIOS Governance Document",
+        "HELIOS Architecture Decision"
+      ],
+      "defaultRetention": "Helios-Governance-7Y",
+      "versioning": {
+        "major": true,
+        "minor": false,
+        "checkoutRequired": false
+      }
+    },
+    {
+      "name": "Deployment Evidence",
+      "description": "What-if, approvals, deployment results, hashes, and rollback evidence",
+      "contentTypes": [
+        "HELIOS Deployment Evidence"
+      ],
+      "defaultRetention": "Helios-Deployment-7Y",
+      "versioning": {
+        "major": true,
+        "minor": false,
+        "checkoutRequired": false
+      }
+    },
+    {
+      "name": "Incident Evidence",
+      "description": "Incident timelines, correlated events, recovery actions, and postmortems",
+      "contentTypes": [
+        "HELIOS Incident Evidence"
+      ],
+      "defaultRetention": "Helios-Incident-7Y",
+      "versioning": {
+        "major": true,
+        "minor": false,
+        "checkoutRequired": false
+      }
+    },
+    {
+      "name": "Release Evidence",
+      "description": "Release manifests, attestations, checksums, SBOM references, and promotion records",
+      "contentTypes": [
+        "HELIOS Release Evidence"
+      ],
+      "defaultRetention": "Helios-Release-7Y",
+      "versioning": {
+        "major": true,
+        "minor": false,
+        "checkoutRequired": false
+      }
+    },
+    {
+      "name": "Health Evidence",
+      "description": "Periodic connector and platform health summaries",
+      "contentTypes": [
+        "HELIOS Health Evidence"
+      ],
+      "defaultRetention": "Helios-Operations-1Y",
+      "versioning": {
+        "major": true,
+        "minor": false,
+        "checkoutRequired": false
+      }
+    }
+  ],
+  "siteColumns": [
+    {
+      "internalName": "HeliosCorrelationId",
+      "displayName": "Correlation ID",
+      "type": "Text",
+      "required": true,
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosEventId",
+      "displayName": "Event ID",
+      "type": "Text",
+      "required": true,
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosEnvironment",
+      "displayName": "Environment",
+      "type": "Choice",
+      "required": true,
+      "choices": [
+        "local",
+        "dev",
+        "test",
+        "stage",
+        "prod",
+        "global"
+      ],
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosEventType",
+      "displayName": "Event Type",
+      "type": "Text",
+      "required": true,
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosSeverity",
+      "displayName": "Severity",
+      "type": "Choice",
+      "required": true,
+      "choices": [
+        "debug",
+        "info",
+        "notice",
+        "warning",
+        "error",
+        "critical"
+      ],
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosRepository",
+      "displayName": "Repository",
+      "type": "Text",
+      "required": false,
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosCommitSha",
+      "displayName": "Commit SHA",
+      "type": "Text",
+      "required": false,
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosWorkflowRunId",
+      "displayName": "Workflow Run ID",
+      "type": "Text",
+      "required": false,
+      "indexed": false
+    },
+    {
+      "internalName": "HeliosLinearIssue",
+      "displayName": "Linear Issue",
+      "type": "Hyperlink",
+      "required": false,
+      "indexed": false
+    },
+    {
+      "internalName": "HeliosEvidenceSha256",
+      "displayName": "Evidence SHA-256",
+      "type": "Text",
+      "required": true,
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosApprovalState",
+      "displayName": "Approval State",
+      "type": "Choice",
+      "required": false,
+      "choices": [
+        "not-required",
+        "pending",
+        "approved",
+        "rejected",
+        "expired"
+      ],
+      "indexed": true
+    },
+    {
+      "internalName": "HeliosDataClassification",
+      "displayName": "Data Classification",
+      "type": "Choice",
+      "required": true,
+      "choices": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ],
+      "indexed": true
+    }
+  ],
+  "contentTypes": [
+    {
+      "name": "HELIOS Governance Document",
+      "parent": "Document",
+      "columns": [
+        "HeliosCorrelationId",
+        "HeliosEnvironment",
+        "HeliosEvidenceSha256",
+        "HeliosDataClassification"
+      ]
+    },
+    {
+      "name": "HELIOS Architecture Decision",
+      "parent": "HELIOS Governance Document",
+      "columns": [
+        "HeliosEventId",
+        "HeliosRepository",
+        "HeliosCommitSha",
+        "HeliosApprovalState"
+      ]
+    },
+    {
+      "name": "HELIOS Deployment Evidence",
+      "parent": "Document",
+      "columns": [
+        "HeliosCorrelationId",
+        "HeliosEventId",
+        "HeliosEnvironment",
+        "HeliosEventType",
+        "HeliosRepository",
+        "HeliosCommitSha",
+        "HeliosWorkflowRunId",
+        "HeliosLinearIssue",
+        "HeliosEvidenceSha256",
+        "HeliosApprovalState",
+        "HeliosDataClassification"
+      ]
+    },
+    {
+      "name": "HELIOS Incident Evidence",
+      "parent": "Document",
+      "columns": [
+        "HeliosCorrelationId",
+        "HeliosEventId",
+        "HeliosEnvironment",
+        "HeliosEventType",
+        "HeliosSeverity",
+        "HeliosRepository",
+        "HeliosLinearIssue",
+        "HeliosEvidenceSha256",
+        "HeliosDataClassification"
+      ]
+    },
+    {
+      "name": "HELIOS Release Evidence",
+      "parent": "Document",
+      "columns": [
+        "HeliosCorrelationId",
+        "HeliosEventId",
+        "HeliosEnvironment",
+        "HeliosRepository",
+        "HeliosCommitSha",
+        "HeliosWorkflowRunId",
+        "HeliosEvidenceSha256",
+        "HeliosApprovalState",
+        "HeliosDataClassification"
+      ]
+    },
+    {
+      "name": "HELIOS Health Evidence",
+      "parent": "Document",
+      "columns": [
+        "HeliosCorrelationId",
+        "HeliosEventId",
+        "HeliosEnvironment",
+        "HeliosEventType",
+        "HeliosSeverity",
+        "HeliosEvidenceSha256",
+        "HeliosDataClassification"
+      ]
+    }
+  ],
+  "folderPolicy": {
+    "pattern": "{library}/{environment}/{yyyy}/{MM}/{eventType}/{correlationId}",
+    "disallowUserSecrets": true,
+    "disallowExecutableFiles": true,
+    "allowedExtensions": [
+      ".json",
+      ".md",
+      ".txt",
+      ".csv",
+      ".sarif",
+      ".spdx.json",
+      ".cyclonedx.json",
+      ".zip"
+    ]
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "version": "1.0",
+  "defaults": {
+    "denyUnmatched": true,
+    "dedupeWindowSeconds": 86400,
+    "maximumFanout": 5,
+    "redactionPolicy": "default-redaction-v1"
+  },
+  "routes": [
+    {
+      "id": "critical-incident-fanout",
+      "enabled": true,
+      "priority": 1000,
+      "match": {
+        "eventTypes": [
+          "incident.*",
+          "connector.health.critical",
+          "deployment.failed"
+        ],
+        "environments": [
+          "dev",
+          "test",
+          "stage",
+          "prod",
+          "global"
+        ],
+        "minimumSeverity": "critical",
+        "requestedActions": [
+          "notify"
+        ]
+      },
+      "sinks": [
+        "slack-ops",
+        "teams-ops",
+        "linear-work",
+        "sharepoint-evidence",
+        "github-control"
+      ],
+      "approvalPolicy": null,
+      "transform": "incident-critical-v1",
+      "continue": false
+    },
+    {
+      "id": "production-plan-approval",
+      "enabled": true,
+      "priority": 900,
+      "match": {
+        "eventTypes": [
+          "deployment.plan.created",
+          "deployment.plan.updated"
+        ],
+        "environments": [
+          "prod"
+        ],
+        "minimumSeverity": "notice",
+        "requestedActions": [
+          "approve"
+        ]
+      },
+      "sinks": [
+        "sharepoint-evidence",
+        "slack-ops",
+        "teams-ops",
+        "linear-work"
+      ],
+      "approvalPolicy": "prod-deploy-v1",
+      "transform": "deployment-approval-v1",
+      "continue": false
+    },
+    {
+      "id": "production-deploy-result",
+      "enabled": true,
+      "priority": 850,
+      "match": {
+        "eventTypes": [
+          "deployment.applied",
+          "deployment.failed",
+          "deployment.rolled-back"
+        ],
+        "environments": [
+          "prod"
+        ],
+        "minimumSeverity": "notice",
+        "requestedActions": [
+          "archive",
+          "notify"
+        ]
+      },
+      "sinks": [
+        "sharepoint-evidence",
+        "slack-ops",
+        "teams-ops",
+        "linear-work",
+        "github-control"
+      ],
+      "approvalPolicy": null,
+      "transform": "deployment-result-v1",
+      "continue": false
+    },
+    {
+      "id": "ci-failure",
+      "enabled": true,
+      "priority": 700,
+      "match": {
+        "eventTypes": [
+          "github.workflow.failed",
+          "github.check.failed"
+        ],
+        "environments": [
+          "dev",
+          "test",
+          "stage",
+          "prod"
+        ],
+        "minimumSeverity": "error",
+        "requestedActions": [
+          "notify",
+          "track"
+        ]
+      },
+      "sinks": [
+        "slack-ops",
+        "linear-work"
+      ],
+      "approvalPolicy": null,
+      "transform": "ci-failure-v1",
+      "continue": false
+    },
+    {
+      "id": "pull-request-tracking",
+      "enabled": true,
+      "priority": 500,
+      "match": {
+        "eventTypes": [
+          "github.pull-request.*"
+        ],
+        "environments": [
+          "dev",
+          "test",
+          "stage",
+          "prod"
+        ],
+        "minimumSeverity": "info",
+        "requestedActions": [
+          "track"
+        ]
+      },
+      "sinks": [
+        "linear-work"
+      ],
+      "approvalPolicy": null,
+      "transform": "pull-request-tracking-v1",
+      "continue": false
+    },
+    {
+      "id": "release-evidence",
+      "enabled": true,
+      "priority": 600,
+      "match": {
+        "eventTypes": [
+          "github.release.published",
+          "artifact.attested",
+          "evidence.generated"
+        ],
+        "environments": [
+          "stage",
+          "prod",
+          "global"
+        ],
+        "minimumSeverity": "notice",
+        "requestedActions": [
+          "archive"
+        ]
+      },
+      "sinks": [
+        "sharepoint-evidence",
+        "slack-ops",
+        "teams-ops",
+        "linear-work"
+      ],
+      "approvalPolicy": null,
+      "transform": "release-evidence-v1",
+      "continue": false
+    },
+    {
+      "id": "health-digest",
+      "enabled": true,
+      "priority": 200,
+      "match": {
+        "eventTypes": [
+          "connector.health.digest",
+          "platform.health.digest"
+        ],
+        "environments": [
+          "dev",
+          "test",
+          "stage",
+          "prod",
+          "global"
+        ],
+        "minimumSeverity": "info",
+        "requestedActions": [
+          "notify"
+        ]
+      },
+      "sinks": [
+        "slack-ops",
+        "teams-ops",
+        "sharepoint-evidence"
+      ],
+      "approvalPolicy": null,
+      "transform": "health-digest-v1",
+      "continue": false
+    }
+  ]
+}

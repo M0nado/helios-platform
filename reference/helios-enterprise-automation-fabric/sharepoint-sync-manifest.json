@@ -1,0 +1,513 @@
+{
+  "destination": "HELIOS/Governance/AutomationFabric",
+  "entries": [
+    {
+      "bytes": 7669,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/azure-deploy.yml",
+      "sha256": "cfe49be4c8fa2a3c3173988dc652e755750b9d119fa62bf7403610f961c4c3e5",
+      "source": ".github/workflows/azure-deploy.yml"
+    },
+    {
+      "bytes": 5446,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/azure-plan.yml",
+      "sha256": "6f4ac6adf4b455c8dffe1ae54742b2c00a55ef76d2274e6c67f28c12f2dcca66",
+      "source": ".github/workflows/azure-plan.yml"
+    },
+    {
+      "bytes": 1556,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/broker-images.yml",
+      "sha256": "0e8d2986e85230bd65f3b20d3e8772a7aacc2ef29b2e1100a8b883bc42b11639",
+      "source": ".github/workflows/broker-images.yml"
+    },
+    {
+      "bytes": 3274,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/config-drift.yml",
+      "sha256": "ff485bb538d3395c7934dbce72d36e28fe0ec7a84982cbb8ee255cad7296c176",
+      "source": ".github/workflows/config-drift.yml"
+    },
+    {
+      "bytes": 3142,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/connector-readiness.yml",
+      "sha256": "3091ccaebfcc0d115b1a0ed6253387f5804cd6804f12645cb4b7bde24fdeea22",
+      "source": ".github/workflows/connector-readiness.yml"
+    },
+    {
+      "bytes": 3686,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/emergency-quarantine.yml",
+      "sha256": "402ae07293997c43be0779d4ef8fcd7a501cbff3b03329a35ac0b86c7b155e6f",
+      "source": ".github/workflows/emergency-quarantine.yml"
+    },
+    {
+      "bytes": 5852,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/fabric-ci.yml",
+      "sha256": "e2d1c4958b9b8de7907c2f4e9bd63f913fa52a24c94327af1f418b016d7a29dd",
+      "source": ".github/workflows/fabric-ci.yml"
+    },
+    {
+      "bytes": 1215,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/nightly-health.yml",
+      "sha256": "cc3bd5bef5ef6f49d29e3f0e1327a7bea719f4d5e7d88170370d19bfa1f9a7ad",
+      "source": ".github/workflows/nightly-health.yml"
+    },
+    {
+      "bytes": 2529,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/pr-linear-sync.yml",
+      "sha256": "dddae63b74f627d9c870fb3677dc8abe4301852c5fe7db37bec7f32b3e2236b0",
+      "source": ".github/workflows/pr-linear-sync.yml"
+    },
+    {
+      "bytes": 1868,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/promote-reviewed-sha.yml",
+      "sha256": "638572bb2269ce977b03f17a1f7744fe91d0fe8e2b7b62e64f76bca1c40a9429",
+      "source": ".github/workflows/promote-reviewed-sha.yml"
+    },
+    {
+      "bytes": 1357,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/release-evidence.yml",
+      "sha256": "0bd869ad281cfcd0ca97d49524681aca8e546e19becccbdb86791e95687d0bf3",
+      "source": ".github/workflows/release-evidence.yml"
+    },
+    {
+      "bytes": 2361,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/reusable-build-event.yml",
+      "sha256": "ee50dce7e32aad5e3750ee5ba8a2ae3806d151494f4b1d0315ce3af1583900c8",
+      "source": ".github/workflows/reusable-build-event.yml"
+    },
+    {
+      "bytes": 3546,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/sharepoint-governance-sync.yml",
+      "sha256": "b0405b1a40f8d0f86c1a13f52e61207ac96b1036a4203bde5364b00a8cd7efb9",
+      "source": ".github/workflows/sharepoint-governance-sync.yml"
+    },
+    {
+      "bytes": 2349,
+      "destination": "HELIOS/Governance/AutomationFabric/.github/workflows/workflow-outcome-router.yml",
+      "sha256": "c6dc12d7b5d0c2ce0dbe7782c5c3c8acfd7abedb750025c5b2f68511204ab3c9",
+      "source": ".github/workflows/workflow-outcome-router.yml"
+    },
+    {
+      "bytes": 750,
+      "destination": "HELIOS/Governance/AutomationFabric/CHANGELOG.md",
+      "sha256": "d2585b65bbd0b6e2fc6e3a4f92b61fc259e91d869d193b5916f81de9f70e7287",
+      "source": "CHANGELOG.md"
+    },
+    {
+      "bytes": 3355,
+      "destination": "HELIOS/Governance/AutomationFabric/README.md",
+      "sha256": "47a79848ce85ba53a11fa7cd0e714dbedfd7073ba8663f34f8d67344ee9c4967",
+      "source": "README.md"
+    },
+    {
+      "bytes": 2934,
+      "destination": "HELIOS/Governance/AutomationFabric/RUN_THIS_FIRST.md",
+      "sha256": "03adcddf1e1a462aac0fbc43e36d404570f5ccc022d12b90692042e5b6b19663",
+      "source": "RUN_THIS_FIRST.md"
+    },
+    {
+      "bytes": 2638,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/approval-policy.json",
+      "sha256": "83f48f2549c60238bed13f814c12c99d1b8161972fe72ecc5cab584c8273727c",
+      "source": "config/fabric/approval-policy.json"
+    },
+    {
+      "bytes": 7047,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/connector-registry.json",
+      "sha256": "eb4f9b1c464252139723c952f7d7baed83a3b925fdf1701af8e23d0eec110fe1",
+      "source": "config/fabric/connector-registry.json"
+    },
+    {
+      "bytes": 5191,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/connector-registry.schema.json",
+      "sha256": "b3ca98cbf64dbb07f4c9e28e9a344ac878e90b4eb6ae75777302cf24b0b09500",
+      "source": "config/fabric/connector-registry.schema.json"
+    },
+    {
+      "bytes": 1122,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/environments.json",
+      "sha256": "9b8b785c5d904285eeedda6f7f1ee9a739286605867fba5be2f7419ef36d5015",
+      "source": "config/fabric/environments.json"
+    },
+    {
+      "bytes": 5831,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/event-envelope.schema.json",
+      "sha256": "a3d053a9c6628bd707db0effa4c7a0a7cf0b4c996fa4954f8041fa4ce74776ea",
+      "source": "config/fabric/event-envelope.schema.json"
+    },
+    {
+      "bytes": 734,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/redaction-policy.json",
+      "sha256": "f42fae8b730772ddb7e5897ea385525519645abf6e9c08ca7628306ed40f7847",
+      "source": "config/fabric/redaction-policy.json"
+    },
+    {
+      "bytes": 917,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/resource-naming.json",
+      "sha256": "ec6f39a63f218c28ea606bf25d0f0b8a7d0ab9f5b684401988dd0af21775f991",
+      "source": "config/fabric/resource-naming.json"
+    },
+    {
+      "bytes": 4635,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/routing-policy.json",
+      "sha256": "63988fa163bb5e8c55050d11d4cc8160ae276e1421d8e1c60596a3448f0ebd22",
+      "source": "config/fabric/routing-policy.json"
+    },
+    {
+      "bytes": 3254,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/routing-policy.schema.json",
+      "sha256": "0ed8ed8b80e739d17c7ef2a45f6ee3628d6a2f4a96ba6c18c46b3dc8a5180316",
+      "source": "config/fabric/routing-policy.schema.json"
+    },
+    {
+      "bytes": 407,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/service-levels.json",
+      "sha256": "34c0e5bd81d631a51cf69fef370cef6e6578ae6cb3916500a6f5b0951ecd69f5",
+      "source": "config/fabric/service-levels.json"
+    },
+    {
+      "bytes": 1828,
+      "destination": "HELIOS/Governance/AutomationFabric/config/fabric/transforms.json",
+      "sha256": "9ac1ff22adb10b8be005d84d5305ffb83e58b42ac23d75d4f085e130b3fee24a",
+      "source": "config/fabric/transforms.json"
+    },
+    {
+      "bytes": 983,
+      "destination": "HELIOS/Governance/AutomationFabric/config/github/environments.json",
+      "sha256": "0e65df4a999c0215efc8185dee5d536dcd710ff012a8d7eb30faf62ea7b0420b",
+      "source": "config/github/environments.json"
+    },
+    {
+      "bytes": 586,
+      "destination": "HELIOS/Governance/AutomationFabric/config/github/github-app-permissions.json",
+      "sha256": "d286126df00c896b1975fbe7c6cadac3dace57aba9f2dbcdbb7f57307364dbde",
+      "source": "config/github/github-app-permissions.json"
+    },
+    {
+      "bytes": 801,
+      "destination": "HELIOS/Governance/AutomationFabric/config/github/labels.json",
+      "sha256": "8eb69a42ac174ae1424c97b502b04a3928a53924ec7d8bf675216bc526ce5672",
+      "source": "config/github/labels.json"
+    },
+    {
+      "bytes": 1170,
+      "destination": "HELIOS/Governance/AutomationFabric/config/github/ruleset-main.example.json",
+      "sha256": "686d8a927161ec5cba72576bc320e64143976eabdeb3f39712b0520d7b0cab36",
+      "source": "config/github/ruleset-main.example.json"
+    },
+    {
+      "bytes": 1039,
+      "destination": "HELIOS/Governance/AutomationFabric/config/github/secrets-manifest.json",
+      "sha256": "54216e38ba40b4be35b524a6f4258f441bc804e107e90bbc84e169f2baeaa871",
+      "source": "config/github/secrets-manifest.json"
+    },
+    {
+      "bytes": 896,
+      "destination": "HELIOS/Governance/AutomationFabric/config/github/variables.json",
+      "sha256": "eae5839fe71a97f4743bd04992ef3aec00b1804afe30679dfd26ca475734c02f",
+      "source": "config/github/variables.json"
+    },
+    {
+      "bytes": 1718,
+      "destination": "HELIOS/Governance/AutomationFabric/config/linear/issue-templates.json",
+      "sha256": "b7175caf6cd02d11ed16dbe158298a097c7cfebc87a89568de6c7006acf01a43",
+      "source": "config/linear/issue-templates.json"
+    },
+    {
+      "bytes": 753,
+      "destination": "HELIOS/Governance/AutomationFabric/config/linear/status-policy.json",
+      "sha256": "2cc2b76dfd694e895b5ec80d1f4d7bf81ec7ebddb915f06bce53b2068b55634e",
+      "source": "config/linear/status-policy.json"
+    },
+    {
+      "bytes": 3081,
+      "destination": "HELIOS/Governance/AutomationFabric/config/linear/sync-map.json",
+      "sha256": "f41f1d745786001406c875182fc7cf59fff004cf3d6718ecee36c314f8e90082",
+      "source": "config/linear/sync-map.json"
+    },
+    {
+      "bytes": 484,
+      "destination": "HELIOS/Governance/AutomationFabric/config/linear/webhook-config.example.json",
+      "sha256": "e40d1abf9f8512354310ebf2537f5529088e612c119784ad7006010047281056",
+      "source": "config/linear/webhook-config.example.json"
+    },
+    {
+      "bytes": 1645,
+      "destination": "HELIOS/Governance/AutomationFabric/config/setup/execution-plan.json",
+      "sha256": "b0c945e04e0af5085ea5fb79633bf255364840b0b6af2ab229e2246a3bee6ef7",
+      "source": "config/setup/execution-plan.json"
+    },
+    {
+      "bytes": 1584,
+      "destination": "HELIOS/Governance/AutomationFabric/config/sharepoint/evidence-mapping.json",
+      "sha256": "d04b7c760fb122b0c660d04f8f646fc9c5218104f9043e3f63a372620d2a17eb",
+      "source": "config/sharepoint/evidence-mapping.json"
+    },
+    {
+      "bytes": 840,
+      "destination": "HELIOS/Governance/AutomationFabric/config/sharepoint/graph-permission-plan.json",
+      "sha256": "254968ffab92ffacfe4bfe50d67789d3827433b03e021b28863f49831abf0217",
+      "source": "config/sharepoint/graph-permission-plan.json"
+    },
+    {
+      "bytes": 7067,
+      "destination": "HELIOS/Governance/AutomationFabric/config/sharepoint/information-architecture.json",
+      "sha256": "0d9a4bbcb939559767d39778ae557097e383ac25ebd4ae5ffcec6dfdf6c42fe3",
+      "source": "config/sharepoint/information-architecture.json"
+    },
+    {
+      "bytes": 2081,
+      "destination": "HELIOS/Governance/AutomationFabric/config/sharepoint/lists-and-libraries.json",
+      "sha256": "bd7ce2a8302a4db74e3d88ebd5f43eebfbb2e90632d40e7e8d9af28d4fff054e",
+      "source": "config/sharepoint/lists-and-libraries.json"
+    },
+    {
+      "bytes": 822,
+      "destination": "HELIOS/Governance/AutomationFabric/config/sharepoint/retention-labels.example.json",
+      "sha256": "9dac9b632e81d8171eec08cdb2e0cf522eb6d18dc93d4f5794c756e9332c9d62",
+      "source": "config/sharepoint/retention-labels.example.json"
+    },
+    {
+      "bytes": 538,
+      "destination": "HELIOS/Governance/AutomationFabric/config/sharepoint/site-binding.example.json",
+      "sha256": "938051356e9553c035cab01854355aa9e582df63e2de68edc91dc52475c3df76",
+      "source": "config/sharepoint/site-binding.example.json"
+    },
+    {
+      "bytes": 964,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/app-manifest.yaml",
+      "sha256": "6b34ba6926bf0ffae3c303af7b3314a7ee47d0ad1ec296447c3db56309e74f31",
+      "source": "config/slack/app-manifest.yaml"
+    },
+    {
+      "bytes": 1292,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/automations.json",
+      "sha256": "431f0b492c18a78514478329a10f4b5734fe94a899a380418351ffd3b0218fb6",
+      "source": "config/slack/automations.json"
+    },
+    {
+      "bytes": 709,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/blocks/ci-failure.json",
+      "sha256": "9a1eedc34d8ec68e4c2f08241863a50965cce5356f8c5bfdb9ab16c313b149d9",
+      "source": "config/slack/blocks/ci-failure.json"
+    },
+    {
+      "bytes": 2029,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/blocks/deployment-approval.json",
+      "sha256": "477d9f309e726731883dfd82ba644f1ae1dc06408991fdca069a07e02f37a83e",
+      "source": "config/slack/blocks/deployment-approval.json"
+    },
+    {
+      "bytes": 766,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/blocks/deployment-result.json",
+      "sha256": "5950ed540aff2c6cdb6ebd8a95dd98c3579f00b74bc2a1be0bf44b5a06dc5c86",
+      "source": "config/slack/blocks/deployment-result.json"
+    },
+    {
+      "bytes": 846,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/blocks/health-digest.json",
+      "sha256": "cf6e1260d49869b59971d535d7e377a9780942cb81791c3aaf1e1922dc6d8b2f",
+      "source": "config/slack/blocks/health-digest.json"
+    },
+    {
+      "bytes": 1896,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/blocks/incident-critical.json",
+      "sha256": "2285686fa53628fa9f994ee0c9c748613ce87d8f0a225238465136003330ec4a",
+      "source": "config/slack/blocks/incident-critical.json"
+    },
+    {
+      "bytes": 738,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/blocks/release-evidence.json",
+      "sha256": "5f4f1e0b51e3440bf43f0a50d987c745d1113e52280a5ca87b5d5bc9f51a3366",
+      "source": "config/slack/blocks/release-evidence.json"
+    },
+    {
+      "bytes": 855,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/channels.json",
+      "sha256": "156f619e02c3a5f47a627585b4bbb2ed5eaa60af74e47be0ac770363ae39ea54",
+      "source": "config/slack/channels.json"
+    },
+    {
+      "bytes": 305,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/identity-map.example.json",
+      "sha256": "9f85995308d05c93d315c3310a587df5e4503804ce99d1af6d94e523e13ee559",
+      "source": "config/slack/identity-map.example.json"
+    },
+    {
+      "bytes": 2174,
+      "destination": "HELIOS/Governance/AutomationFabric/config/slack/workflow-contracts.json",
+      "sha256": "3bf895290932e4f32f676f64e181ffe599d028cfc7b0cd49f1c7166a85c03609",
+      "source": "config/slack/workflow-contracts.json"
+    },
+    {
+      "bytes": 1360,
+      "destination": "HELIOS/Governance/AutomationFabric/config/teams/cards/deployment-approval.json",
+      "sha256": "e39cd7825f3d41f385306f20dc15a8d9c996facbcd7c605b2e7dde646f56a9de",
+      "source": "config/teams/cards/deployment-approval.json"
+    },
+    {
+      "bytes": 1042,
+      "destination": "HELIOS/Governance/AutomationFabric/config/teams/cards/deployment-result.json",
+      "sha256": "f05a35d5472e053cad013e769b00ee5af76d2f30a3aad1d8df5afd3122ac8e66",
+      "source": "config/teams/cards/deployment-result.json"
+    },
+    {
+      "bytes": 934,
+      "destination": "HELIOS/Governance/AutomationFabric/config/teams/cards/health-digest.json",
+      "sha256": "78593de6499a0381150ddffb72600553c717980a9f779ed901fd73e488131b39",
+      "source": "config/teams/cards/health-digest.json"
+    },
+    {
+      "bytes": 1058,
+      "destination": "HELIOS/Governance/AutomationFabric/config/teams/cards/incident-critical.json",
+      "sha256": "56b294b9cef9be991507a8a856956412fc9a0b5881a8a8d856b79fbfa671a619",
+      "source": "config/teams/cards/incident-critical.json"
+    },
+    {
+      "bytes": 786,
+      "destination": "HELIOS/Governance/AutomationFabric/config/teams/cards/release-evidence.json",
+      "sha256": "bd371e68d026ecfecdf151950a64a539546c35cf8c5461ca15c6dd14da45644c",
+      "source": "config/teams/cards/release-evidence.json"
+    },
+    {
+      "bytes": 681,
+      "destination": "HELIOS/Governance/AutomationFabric/config/teams/channel-bindings.example.json",
+      "sha256": "92f7abe76c871b15d61c26251674bc50ad95a77a8707a3e0656d76ea674d1b20",
+      "source": "config/teams/channel-bindings.example.json"
+    },
+    {
+      "bytes": 1076,
+      "destination": "HELIOS/Governance/AutomationFabric/config/teams/workflow-contracts.json",
+      "sha256": "50582836845059ccdd6a6734d8afef4ae4ce7e37ec09feb3bb64c6fa55a783e7",
+      "source": "config/teams/workflow-contracts.json"
+    },
+    {
+      "bytes": 1161,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/README.md",
+      "sha256": "74e1fd777359f8eee72104411929089b1d6e94b0bf1aab1ccc7166f1c4bd9de5",
+      "source": "infra/bicep/README.md"
+    },
+    {
+      "bytes": 848,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/bicepconfig.json",
+      "sha256": "ce14a0f33535d97f471fcdc93dafbece6e96519bb7715d9ff001e2c511583995",
+      "source": "infra/bicep/bicepconfig.json"
+    },
+    {
+      "bytes": 2987,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/main.bicep",
+      "sha256": "ee41d8b47ae7763eefa5c5acf1a065f22ee390c3c8cf1957e114cebeb46a73b4",
+      "source": "infra/bicep/main.bicep"
+    },
+    {
+      "bytes": 1449,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/appconfig.bicep",
+      "sha256": "e710d4cb4016c024df3f246b750266d7ba3e0b7089b5dae6e83c69c1ed848d6b",
+      "source": "infra/bicep/modules/appconfig.bicep"
+    },
+    {
+      "bytes": 5197,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/containerapps.bicep",
+      "sha256": "45edfd9f21c47a6be302e482e99431f3c8944724bd50f8d02d00329734d5ecb5",
+      "source": "infra/bicep/modules/containerapps.bicep"
+    },
+    {
+      "bytes": 1788,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/deployment-rbac.bicep",
+      "sha256": "acb4b7609e78a5de353912e150d6318036459057d7f73171b134e05346e51801",
+      "source": "infra/bicep/modules/deployment-rbac.bicep"
+    },
+    {
+      "bytes": 6368,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/foundation.bicep",
+      "sha256": "1ae1c66f1ce93ef07548f93c61c759c5a1d9dc67fad495d38f184a8f8397cc9f",
+      "source": "infra/bicep/modules/foundation.bicep"
+    },
+    {
+      "bytes": 736,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/identity.bicep",
+      "sha256": "ed337e85c3343590064de4d5dba587d2d5ded5914bc8019f7490ddb2784cf6bf",
+      "source": "infra/bicep/modules/identity.bicep"
+    },
+    {
+      "bytes": 1706,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/keyvault.bicep",
+      "sha256": "fb45b61027117626ca54ba1f1eb550188ee8503bd836ce1701afd835c54d591f",
+      "source": "infra/bicep/modules/keyvault.bicep"
+    },
+    {
+      "bytes": 1272,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/network.bicep",
+      "sha256": "dde8bbb20978df0edbbf46401a57eb4d644f59534b0daf79dd432eacfa14fb8a",
+      "source": "infra/bicep/modules/network.bicep"
+    },
+    {
+      "bytes": 1187,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/observability.bicep",
+      "sha256": "f1d9a25dce2c5f407879b1b84e32bb3c3de9cfb4644a62c23d55d112c8fa739a",
+      "source": "infra/bicep/modules/observability.bicep"
+    },
+    {
+      "bytes": 1462,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/private-endpoint.bicep",
+      "sha256": "f9533cee9c6b38dab8375d106eb71fce167e824f6425e45c1bbf4adca7d0c75c",
+      "source": "infra/bicep/modules/private-endpoint.bicep"
+    },
+    {
+      "bytes": 1851,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/registry.bicep",
+      "sha256": "46261a2d03af5da38e09a3858da7a868e557a6b10ad9a9011ed8726a1dcfb4f8",
+      "source": "infra/bicep/modules/registry.bicep"
+    },
+    {
+      "bytes": 3883,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/servicebus.bicep",
+      "sha256": "5e7ff54942f356078397a573fb1524a096f5b877c04362e198f141578d243db6",
+      "source": "infra/bicep/modules/servicebus.bicep"
+    },
+    {
+      "bytes": 3477,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/modules/storage.bicep",
+      "sha256": "a7aba1793e62b9cf86706fe2277b8bb77ac3b946d08a59cad265caf92440c088",
+      "source": "infra/bicep/modules/storage.bicep"
+    },
+    {
+      "bytes": 375,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/parameters/dev.bicepparam",
+      "sha256": "1e846efe74bafd74fa12f982ffd8fef4d5ce51edb7e52cffc1f244b7e406f5f9",
+      "source": "infra/bicep/parameters/dev.bicepparam"
+    },
+    {
+      "bytes": 375,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/parameters/prod.bicepparam",
+      "sha256": "1e729849a8d086acca59b675201658ff32fd422b709d5d71e583274bed29aaaf",
+      "source": "infra/bicep/parameters/prod.bicepparam"
+    },
+    {
+      "bytes": 377,
+      "destination": "HELIOS/Governance/AutomationFabric/infra/bicep/parameters/stage.bicepparam",
+      "sha256": "695cee3bebcdd7d672f7bda1ef7300fae031317e3a7aa659c49f79971930de5b",
+      "source": "infra/bicep/parameters/stage.bicepparam"
+    },
+    {
+      "bytes": 428,
+      "destination": "HELIOS/Governance/AutomationFabric/power-platform/custom-connectors/helios-fabric/README.md",
+      "sha256": "9aed510a44ac21a259effb7127f938981014673ecb5c684f3471088d6a2f93e4",
+      "source": "power-platform/custom-connectors/helios-fabric/README.md"
+    },
+    {
+      "bytes": 3743,
+      "destination": "HELIOS/Governance/AutomationFabric/power-platform/custom-connectors/helios-fabric/apiDefinition.swagger.json",
+      "sha256": "4b88cb446bb396d71756537828f34884b5a278f41329cc0f41d72b6ff2469fbc",
+      "source": "power-platform/custom-connectors/helios-fabric/apiDefinition.swagger.json"
+    },
+    {
+      "bytes": 596,
+      "destination": "HELIOS/Governance/AutomationFabric/power-platform/custom-connectors/helios-fabric/apiProperties.json",
+      "sha256": "0ddc0e7544234329070803252e283f1794e1f190ff2631675858b3f3be0a103f",
+      "source": "power-platform/custom-connectors/helios-fabric/apiProperties.json"
+    }
+  ],
+  "fileCount": 84,
+  "manifestSha256": "af0b992dec6958c92aac14f9cecaa27232fc1d38211d1ade2a358a8ae775565b",
+  "mode": "plan",
+  "specVersion": "1.0"
+}

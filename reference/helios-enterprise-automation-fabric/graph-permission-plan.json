@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "principle": "least-privilege",
+  "runtimeIdentity": "uami-helios-fabric-{environment}",
+  "applicationPermissions": [
+    {
+      "permission": "Sites.Selected",
+      "reason": "Allows explicit site-scoped grants rather than tenant-wide Sites.ReadWrite.All",
+      "adminConsentRequired": true
+    }
+  ],
+  "siteGrant": {
+    "role": "write",
+    "scope": "single HELIOS governance site"
+  },
+  "bootstrapPermissions": [
+    {
+      "permission": "Sites.FullControl.All",
+      "type": "delegated",
+      "duration": "one-time provisioning only",
+      "removeAfterBootstrap": true
+    }
+  ],
+  "prohibited": [
+    "Sites.FullControl.All application permission for runtime",
+    "tenant-wide SharePoint mutation",
+    "personal OneDrive as production evidence root",
+    "secret values in document metadata"
+  ]
+}
