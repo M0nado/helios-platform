@@ -1,0 +1,74 @@
+swagger: '2.0'
+info:
+  title: Helios Azure Connector
+  description: Read-only, Entra-protected Azure inventory for Helios, Copilot, and governed MCP clients.
+  version: '0.3.0'
+host: ${HELIOS_CONNECTOR_HOST}
+basePath: /
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  azure_ad:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/authorize
+    tokenUrl: https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/token
+    scopes:
+      api://${ENTRA_CLIENT_ID}/user_impersonation: Read Helios Azure inventory
+security:
+  - azure_ad:
+      - api://${ENTRA_CLIENT_ID}/user_impersonation
+paths:
+  /connector/context:
+    get:
+      operationId: GetAzureContext
+      summary: Read the configured Azure context
+      description: Returns tenant, subscription, resource group, and read-only access mode without secrets.
+      x-ms-visibility: important
+      responses:
+        '200':
+          description: Azure connector context
+          schema:
+            type: object
+        '401':
+          description: Entra authentication required
+  /connector/resources:
+    get:
+      operationId: ListAzureResources
+      summary: List Azure resources
+      description: Returns non-secret resource IDs, names, types, and locations from the authorized resource group.
+      x-ms-visibility: important
+      parameters:
+        - name: typePrefix
+          in: query
+          required: false
+          type: string
+          description: Optional Azure resource type prefix, such as Microsoft.CognitiveServices/.
+      responses:
+        '200':
+          description: Azure resource inventory
+          schema:
+            type: array
+            items:
+              type: object
+        '401':
+          description: Entra authentication required
+  /connector/foundry:
+    get:
+      operationId: ListFoundryResources
+      summary: List Foundry-related resources
+      description: Filters the authorized resource group to Cognitive Services, Machine Learning, and AI Search resources.
+      x-ms-visibility: important
+      responses:
+        '200':
+          description: Foundry-related resource inventory
+          schema:
+            type: array
+            items:
+              type: object
+        '401':
+          description: Entra authentication required

@@ -1,0 +1,66 @@
+{
+  "servers": {
+    "helios-local-dev": {
+      "type": "http",
+      "url": "${input:heliosLocalDevUrl}/runtime/webhooks/mcp"
+    },
+    "azure-devops-readonly": {
+      "type": "http",
+      "url": "https://mcp.dev.azure.com/${input:azureDevOpsOrganization}",
+      "headers": {
+        "X-MCP-Toolsets": "repos,wit,pipelines",
+        "X-MCP-Readonly": "true"
+      }
+    },
+    "azure-mcp-readonly": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure/mcp@3.0.0-beta.27",
+        "server",
+        "start",
+        "--read-only",
+        "--mode",
+        "namespace",
+        "--namespace",
+        "subscription",
+        "--namespace",
+        "group",
+        "--namespace",
+        "containerapps",
+        "--namespace",
+        "applicationinsights",
+        "--namespace",
+        "monitor",
+        "--namespace",
+        "foundryextensions",
+        "--namespace",
+        "quota",
+        "--namespace",
+        "pricing"
+      ]
+    },
+    "helios-azure": {
+      "type": "http",
+      "url": "${input:heliosAzureConnectorUrl}/mcp"
+    }
+  },
+  "inputs": [
+    {
+      "id": "azureDevOpsOrganization",
+      "type": "promptString",
+      "description": "Azure DevOps organization name"
+    },
+    {
+      "id": "heliosAzureConnectorUrl",
+      "type": "promptString",
+      "description": "Required Entra-protected Helios Connector HTTPS origin"
+    },
+    {
+      "id": "heliosLocalDevUrl",
+      "type": "promptString",
+      "description": "Optional local-development origin; requires HELIOS_LOCAL_RUNTIME_ALLOWED=true",
+      "default": "http://127.0.0.1:5080"
+    }
+  ]
+}

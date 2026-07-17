@@ -1,0 +1,72 @@
+name: helios-copilot-package
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/copilot-package.yml
+      - monado/helios-control/appPackage/**
+      - monado/helios-control/config/microsoft-agents.json
+      - appPackage/**
+      - config/microsoft-agents.json
+
+permissions:
+  contents: read
+
+# Validation only: this workflow never signs in to or publishes into a tenant.
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Locate Helios project
+        id: project
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "appPackage/manifest.json" ]]; then
+            directory="."
+          elif [[ -f "monado/helios-control/appPackage/manifest.json" ]]; then
+            directory="monado/helios-control"
+          else
+            echo "Helios Copilot package manifest was not found." >&2
+            exit 1
+          fi
+          echo "directory=${directory}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+
+      - name: Verify pinned Microsoft 365 Agents Toolkit CLI
+        run: npx --yes @microsoft/m365agentstoolkit-cli@1.1.12 --version
+
+      - name: Materialize Teams package icons
+        shell: pwsh
+        run: ./scripts/New-HeliosTeamsPackage.ps1
+        working-directory: ${{ steps.project.outputs.directory }}
+
+      - name: Validate Copilot package contract
+        shell: bash
+        working-directory: ${{ steps.project.outputs.directory }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import struct
+          from pathlib import Path
+
+          root = Path("appPackage")
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          assert manifest["version"] == "0.3.0"
+          expected_resource = "api://" + "$" + "{{ENTRA_APP_ID}}"
+          assert manifest["webApplicationInfo"]["resource"] == expected_resource
+          for name, expected in (("color.png", (192, 192)), ("outline.png", (32, 32))):
+              data = (root / name).read_bytes()
+              assert data[:8] == b"\x89PNG\r\n\x1a\n"
+              assert struct.unpack(">II", data[16:24]) == expected
+          PY

@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.azure/
+appPackage/build/
+appPackage/color.png
+appPackage/outline.png
+runtime/
+artifacts/
+bin/
+obj/
+*.user
+*.suo
+.cache/
+.claude/settings.local.json

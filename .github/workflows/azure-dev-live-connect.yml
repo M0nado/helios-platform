@@ -50,17 +50,29 @@ jobs:
       - name: Parse PowerShell connector
         shell: pwsh
         run: |
-          $errors = $null
-          $tokens = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
+          $scripts = @(
             'integration/azure-dev-live-connect/scripts/Connect-HeliosAzureDev.ps1',
-            [ref]$tokens,
-            [ref]$errors
-          ) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | ForEach-Object { Write-Error $_.Message }
-            exit 1
+            'integration/azure-dev-live-connect/scripts/Start-HeliosConnections.ps1'
+          )
+          foreach ($script in $scripts) {
+            $errors = $null
+            $tokens = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $script,
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$script`: $($_.Message)" }
+              exit 1
+            }
           }
+
+      - name: Parse connection registry
+        shell: pwsh
+        run: |
+          Get-Content 'integration/azure-dev-live-connect/config/connections.json' -Raw |
+            ConvertFrom-Json -Depth 100 | Out-Null
 
   what_if:
     name: Authenticate and run azure-dev what-if
@@ -114,6 +126,28 @@ jobs:
           test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
           test "$(az account show --query tenantId --output tsv)" = "$AZURE_TENANT_ID"
           az group show --name "$AZURE_RESOURCE_GROUP" --query '{id:id,location:location}' --output json
+
+      - name: Capture authenticated read-only cloud preflight
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          az account show \
+            --query '{subscriptionId:id,tenantId:tenantId,name:name}' \
+            --output json > "$EVIDENCE_DIR/preflight-azure-account.json"
+          az group show \
+            --name "$AZURE_RESOURCE_GROUP" \
+            --query '{name:name,location:location,id:id}' \
+            --output json > "$EVIDENCE_DIR/preflight-resource-group.json"
+          az resource list \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query '[].{name:name,type:type,location:location}' \
+            --output json > "$EVIDENCE_DIR/preflight-resource-inventory.json"
+          gh api "repos/$GITHUB_REPOSITORY" \
+            --jq '{full_name: .full_name, visibility: .visibility, default_branch: .default_branch}' \
+            > "$EVIDENCE_DIR/preflight-github-repository.json"
 
       - name: Install and compile Bicep
         shell: bash

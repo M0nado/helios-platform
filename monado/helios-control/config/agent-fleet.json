@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "name": "helios-local-agent-fleet",
+  "executionMode": "dry-run",
+  "automaticProviderRuns": false,
+  "limits": {
+    "maxParallelAgents": 4,
+    "maxParallelCloudAgents": 2,
+    "maxTaskMinutes": 30,
+    "maxMcpOutputTokens": 25000
+  },
+  "controlPlane": {
+    "workspace": "HeliosControl.code-workspace",
+    "localMcp": "http://127.0.0.1:5080/runtime/webhooks/mcp",
+    "azureConnectorEnvironment": "HELIOS_AZURE_CONNECTOR_URL",
+    "stateDirectory": "runtime/fleet",
+    "evidenceDirectory": "artifacts/fleet-evidence"
+  },
+  "providers": [
+    {
+      "id": "github-copilot-vscode",
+      "host": "vscode-insiders",
+      "authentication": "github-user-session",
+      "role": "interactive-orchestrator"
+    },
+    {
+      "id": "claude-code",
+      "host": "claude",
+      "version": "2.1.212",
+      "authentication": "anthropic-managed-user-session",
+      "mcpConfig": ".mcp.json",
+      "role": "peer-review-and-bounded-implementation"
+    },
+    {
+      "id": "openai-responses",
+      "host": "helios-api",
+      "credentialEnvironment": "OPENAI_API_KEY",
+      "modelEnvironment": "OPENAI_MODEL",
+      "role": "planner-and-evaluator",
+      "enabledWhenConfigured": true
+    },
+    {
+      "id": "microsoft-foundry",
+      "host": "azure",
+      "authentication": "managed-identity",
+      "role": "governed-cloud-agents",
+      "enabledWhenConfigured": true
+    }
+  ],
+  "agents": [
+    {
+      "id": "helios-governor",
+      "definition": ".github/agents/helios-governor.agent.md",
+      "providerPreference": ["github-copilot-vscode", "openai-responses"],
+      "permission": "read-only",
+      "outputs": ["gate-report"]
+    },
+    {
+      "id": "azure-scout",
+      "definition": ".github/agents/azure-scout.agent.md",
+      "providerPreference": ["github-copilot-vscode", "claude-code"],
+      "permission": "azure-read-only",
+      "outputs": ["inventory", "quota-report", "cost-evidence"]
+    },
+    {
+      "id": "integration-builder",
+      "definition": ".github/agents/integration-builder.agent.md",
+      "providerPreference": ["claude-code", "github-copilot-vscode"],
+      "permission": "local-worktree-only",
+      "outputs": ["patch", "tests", "review-notes"]
+    },
+    {
+      "id": "xcore-evaluator",
+      "definition": ".github/agents/xcore-evaluator.agent.md",
+      "providerPreference": ["openai-responses", "claude-code"],
+      "permission": "evaluation-only",
+      "outputs": ["evaluation-report"]
+    }
+  ],
+  "workflow": [
+    "azure-scout",
+    "integration-builder",
+    "xcore-evaluator",
+    "helios-governor",
+    "human-approval",
+    "pull-request"
+  ],
+  "forbidden": [
+    "automatic-production-deploy",
+    "automatic-rbac-change",
+    "automatic-consent-grant",
+    "automatic-merge",
+    "cross-provider-secret-sharing",
+    "raw-conversation-training",
+    "unbounded-recursive-agents"
+  ]
+}

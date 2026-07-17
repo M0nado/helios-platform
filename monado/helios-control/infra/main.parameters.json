@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "value": "${AZURE_ENV_NAME}" },
+    "containerImage": { "value": "${HELIOS_CONTAINER_IMAGE}" },
+    "containerRegistryName": { "value": "${HELIOS_CONTAINER_REGISTRY_NAME}" },
+    "allowPreviewPlaceholder": { "value": false },
+    "entraClientId": { "value": "${HELIOS_ENTRA_CLIENT_ID}" },
+    "entraTenantId": { "value": "${AZURE_TENANT_ID}" },
+    "allowedPrincipalObjectId": { "value": "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" }
+  }
+}
