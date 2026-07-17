@@ -27,11 +27,6 @@ on:
         options:
           - what-if
           - deploy
-      imageReference:
-        description: Approved immutable OCI image (registry/repository@sha256:digest)
-        required: true
-        type: string
-        default: heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000
       confirmDeployment:
         description: Enter DEPLOY when mode is deploy; ignored for what-if
         required: false
@@ -75,28 +70,16 @@ jobs:
           fi
           echo "directory=${directory}" >> "${GITHUB_OUTPUT}"
 
-      - name: Enforce immutable image and explicit deploy confirmation
+      - name: Enforce explicit deploy confirmation
         shell: bash
         env:
-          IMAGE_REFERENCE: ${{ inputs.imageReference }}
           DEPLOYMENT_MODE: ${{ inputs.mode || 'what-if' }}
           DEPLOYMENT_CONFIRMATION: ${{ inputs.confirmDeployment || '' }}
         run: |
           set -euo pipefail
-          if [[ -z "${IMAGE_REFERENCE}" ]]; then
-            IMAGE_REFERENCE='heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000'
-          fi
-          if [[ ! "${IMAGE_REFERENCE}" =~ ^[a-z0-9][a-z0-9]{4,49}\.azurecr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]]; then
-            echo "imageReference must be a lowercase immutable Azure Container Registry digest reference." >&2
-            exit 1
-          fi
           if [[ "${DEPLOYMENT_MODE}" == "deploy" ]]; then
             if [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
               echo "A deploy run requires confirmDeployment=DEPLOY." >&2
-              exit 1
-            fi
-            if [[ "${IMAGE_REFERENCE}" == *@sha256:0000000000000000000000000000000000000000000000000000000000000000 ]]; then
-              echo "The all-zero preview placeholder image cannot be deployed." >&2
               exit 1
             fi
           fi
@@ -136,8 +119,7 @@ jobs:
       id-token: write
     outputs:
       artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
-      image_reference: ${{ steps.registry.outputs.image_reference }}
-      is_preview_placeholder: ${{ steps.registry.outputs.is_preview_placeholder }}
+      image_reference: ${{ steps.image.outputs.image_reference }}
       registry_name: ${{ steps.registry.outputs.registry_name }}
       what_if_sha256: ${{ steps.whatif.outputs.what_if_sha256 }}
     steps:
@@ -190,12 +172,10 @@ jobs:
           az bicep install --version "${HELIOS_BICEP_VERSION}"
           az bicep version
 
-      - name: Verify configured registry and immutable image
+      - name: Verify configured registry binding
         id: registry
         shell: bash
         env:
-          IMAGE_REFERENCE: ${{ inputs.imageReference }}
-          DEPLOYMENT_MODE: ${{ inputs.mode }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
@@ -209,33 +189,13 @@ jobs:
           fi
 
           configured_server="${HELIOS_CONTAINER_REGISTRY_NAME}.azurecr.io"
-          input_server="${IMAGE_REFERENCE%%/*}"
-          zero_digest="sha256:0000000000000000000000000000000000000000000000000000000000000000"
-          requested_digest="${IMAGE_REFERENCE##*@}"
-          is_preview_placeholder=false
-
-          if [[ "${requested_digest}" == "${zero_digest}" ]]; then
-            if [[ "${DEPLOYMENT_MODE}" != "what-if" ]]; then
-              echo "The all-zero image digest is permitted only for a what-if preview." >&2
-              exit 1
-            fi
-            is_preview_placeholder=true
-            effective_image="${configured_server}/helios-connect@${zero_digest}"
-            echo "Using the protected environment registry with the non-deployable what-if placeholder."
-          else
-            if [[ "${input_server}" != "${configured_server}" ]]; then
-              echo "imageReference registry ${input_server} does not exactly match protected HELIOS_CONTAINER_REGISTRY_NAME (${configured_server})." >&2
-              exit 1
-            fi
-            effective_image="${IMAGE_REFERENCE}"
-          fi
-
           registry_json="$(az acr show \
             --name "${HELIOS_CONTAINER_REGISTRY_NAME}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
             --output json)"
           registry_id="$(jq -r '.id' <<<"${registry_json}")"
           registry_server="$(jq -r '.loginServer' <<<"${registry_json}")"
+          registry_role_assignment_mode="$(jq -r '.roleAssignmentMode // "rbac"' <<<"${registry_json}")"
           expected_registry_id="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.ContainerRegistry/registries/${HELIOS_CONTAINER_REGISTRY_NAME}"
 
           if [[ "${registry_id,,}" != "${expected_registry_id,,}" ]]; then
@@ -246,31 +206,78 @@ jobs:
             echo "Azure returned an unexpected login server for the configured registry." >&2
             exit 1
           fi
+          if [[ "${registry_role_assignment_mode}" != "rbac" && "${registry_role_assignment_mode}" != "rbac-abac" ]]; then
+            echo "Azure returned an unsupported registry role-assignment mode." >&2
+            exit 1
+          fi
+          echo "registry_name=${HELIOS_CONTAINER_REGISTRY_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "registry_server=${registry_server}" >> "${GITHUB_OUTPUT}"
+          echo "registry_role_assignment_mode=${registry_role_assignment_mode}" >> "${GITHUB_OUTPUT}"
 
-          if [[ "${is_preview_placeholder}" != true ]]; then
-            image_path="${effective_image#*/}"
-            repository="${image_path%@sha256:*}"
-            digest="${effective_image##*@}"
-            az account get-access-token \
-              --scope 'https://containerregistry.azure.net/.default' \
-              --output none
-            if ! manifest_digest="$(az acr repository show \
-              --name "${HELIOS_CONTAINER_REGISTRY_NAME}" \
-              --image "${repository}@${digest}" \
-              --query digest \
-              --output tsv)"; then
-              echo "The immutable digest could not be read. The operator must grant the GitHub OIDC identity AcrPull (RBAC-only registry) or Container Registry Repository Reader (ABAC registry)." >&2
-              exit 1
-            fi
-            if [[ "${manifest_digest,,}" != "${digest,,}" ]]; then
-              echo "The requested immutable digest was not found in the configured registry." >&2
-              exit 1
-            fi
+      - name: Build exact checked-out commit and resolve immutable digest
+        id: image
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
+          REGISTRY_NAME: ${{ steps.registry.outputs.registry_name }}
+          REGISTRY_SERVER: ${{ steps.registry.outputs.registry_server }}
+          REGISTRY_ROLE_ASSIGNMENT_MODE: ${{ steps.registry.outputs.registry_role_assignment_mode }}
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "${actual_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "The checked-out commit does not match GITHUB_SHA." >&2
+            exit 1
+          fi
+          if [[ -n "$(git status --porcelain=v1 --untracked-files=all)" ]]; then
+            echo "The checked-out source tree is not clean; refusing to build ambiguous content." >&2
+            git status --short >&2
+            exit 1
           fi
 
-          echo "image_reference=${effective_image}" >> "${GITHUB_OUTPUT}"
-          echo "is_preview_placeholder=${is_preview_placeholder}" >> "${GITHUB_OUTPUT}"
-          echo "registry_name=${HELIOS_CONTAINER_REGISTRY_NAME}" >> "${GITHUB_OUTPUT}"
+          dockerfile='src/Helios.Connect.Api/Dockerfile'
+          if [[ ! -f "${PROJECT_DIRECTORY}/${dockerfile}" ]]; then
+            echo "The reviewed connector Dockerfile was not found." >&2
+            exit 1
+          fi
+          repository='helios-connect'
+          tag="git-${GITHUB_SHA}-run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          source_auth_args=()
+          if [[ "${REGISTRY_ROLE_ASSIGNMENT_MODE}" == 'rbac-abac' ]]; then
+            source_auth_args=(--source-acr-auth-id '[caller]')
+          fi
+          pushd "${PROJECT_DIRECTORY}" > /dev/null
+          az acr build \
+            --registry "${REGISTRY_NAME}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --image "${repository}:${tag}" \
+            --file "${dockerfile}" \
+            --no-logs \
+            --output none \
+            "${source_auth_args[@]}" \
+            .
+          popd > /dev/null
+
+          az account get-access-token \
+            --scope 'https://containerregistry.azure.net/.default' \
+            --output none
+          digest="$(az acr repository show \
+            --name "${REGISTRY_NAME}" \
+            --image "${repository}:${tag}" \
+            --query digest \
+            --output tsv)"
+          if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "ACR did not return an immutable digest for GITHUB_SHA ${GITHUB_SHA}." >&2
+            exit 1
+          fi
+          immutable_reference="${REGISTRY_SERVER}/${repository}@${digest}"
+          if [[ ! "${immutable_reference}" =~ ^[a-z0-9]{5,50}\.azurecr\.io/helios-connect@sha256:[0-9a-f]{64}$ ]]; then
+            echo "The workflow produced an invalid immutable ACR reference." >&2
+            exit 1
+          fi
+          echo "image_reference=${immutable_reference}" >> "${GITHUB_OUTPUT}"
+          echo "source_sha=${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "Built ${immutable_reference} from exact commit ${GITHUB_SHA}." >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Capture canonical Azure Resource Manager what-if
         id: whatif
@@ -278,8 +285,7 @@ jobs:
         env:
           PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
-          IMAGE_REFERENCE: ${{ steps.registry.outputs.image_reference }}
-          IS_PREVIEW_PLACEHOLDER: ${{ steps.registry.outputs.is_preview_placeholder }}
+          IMAGE_REFERENCE: ${{ steps.image.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ steps.registry.outputs.registry_name }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
@@ -301,7 +307,7 @@ jobs:
               environmentName="${environment_name}" \
               containerImage="${IMAGE_REFERENCE}" \
               containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
-              allowPreviewPlaceholder="${IS_PREVIEW_PLACEHOLDER}" \
+              allowPreviewPlaceholder=false \
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
@@ -486,15 +492,14 @@ jobs:
         id: registry
         shell: bash
         env:
-          IMAGE_REFERENCE: ${{ inputs.imageReference }}
-          PREVIEW_IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
+          IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
         run: |
           set -euo pipefail
-          if [[ "${IMAGE_REFERENCE}" != "${PREVIEW_IMAGE_REFERENCE}" ]]; then
-            echo "The deployment image differs from the reviewed preview image." >&2
+          if [[ ! "${IMAGE_REFERENCE}" =~ ^[a-z0-9]{5,50}\.azurecr\.io/helios-connect@sha256:[0-9a-f]{64}$ ]]; then
+            echo "The reviewed workflow output is not a valid immutable Helios image." >&2
             exit 1
           fi
           configured_server="${HELIOS_CONTAINER_REGISTRY_NAME}.azurecr.io"
