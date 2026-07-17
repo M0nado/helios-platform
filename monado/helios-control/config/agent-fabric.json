@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "mode": "interactive",
+  "reasoningProviders": ["openai-codex", "chatgpt", "github-copilot", "microsoft-365-copilot"],
+  "grounding": {
+    "sources": ["repository", "github-issues", "linear", "slack", "sharepoint", "azure-resource-graph", "azure-activity-log"],
+    "freshnessRequired": true,
+    "secretsExcluded": true
+  },
+  "autoFix": {
+    "oneButtonEdgeRun": true,
+    "durableRunStore": "cosmos-managed-identity",
+    "connectorReceipts": "signed-idempotent-relay",
+    "diagnoseAutomatically": true,
+    "createTaskBranch": true,
+    "openDraftPullRequest": true,
+    "runTests": true,
+    "directMainWrite": false,
+    "automaticMerge": false,
+    "automaticTenantAdminConsent": false
+  },
+  "cloudShellRoles": ["inventory", "identity-readiness", "deployment-preview", "health-verification"],
+  "learning": {
+    "mode": "candidate-only",
+    "inputs": ["test-results", "incident-evidence", "operator-feedback", "delivery-receipts"],
+    "promotionRequiresPullRequest": true,
+    "mayTrainOnSecrets": false
+  },
+  "identity": {
+    "entraBootstrap": "plan-and-readiness-report",
+    "adminConsent": "tenant-admin-only",
+    "roleAssignments": "approved-operator-or-protected-workflow"
+  },
+  "vault": {
+    "rotation": "secure-prompt-approved-cli",
+    "automaticReadback": false,
+    "automaticSecretGeneration": false
+  },
+  "futureModules": {
+    "dns": "plan-only",
+    "vnet": "disabled-until-module-review",
+    "functions": "disabled-until-module-review",
+    "eventHubs": "disabled-until-module-review",
+    "cosmosDb": "control-run-store-implemented; broader-learning-modules-disabled-until-review"
+  }
+}

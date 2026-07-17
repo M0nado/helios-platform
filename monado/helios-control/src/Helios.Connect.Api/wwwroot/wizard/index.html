@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>HELIOS Control — Azure Setup Wizard</title>
+  <link rel="manifest" href="/wizard/manifest.webmanifest">
+  <link rel="icon" href="/wizard/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/wizard/wizard.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <span class="eyebrow">HELIOS CONTROL FABRIC</span>
+        <h1>One button from evidence to action.</h1>
+        <p>Diagnose Azure, build the governed plan, save evidence, and synchronize every configured workspace.</p>
+      </div>
+      <div class="shield"><span>PLAN</span><strong>SAFE</strong></div>
+    </header>
+
+    <nav role="tablist" aria-label="Control views">
+      <button id="runTab" class="tab active" role="tab" aria-selected="true" aria-controls="run" data-panel="run">Run</button>
+      <button id="bootstrapTab" class="tab" role="tab" aria-selected="false" aria-controls="bootstrap" data-panel="bootstrap">Cloud Shell</button>
+      <button id="upgradeTab" class="tab" role="tab" aria-selected="false" aria-controls="upgrade" data-panel="upgrade">Upgrade agent</button>
+      <button id="installApp" class="install hidden">Install in Edge</button>
+    </nav>
+
+    <section id="run" class="panel active" role="tabpanel" aria-labelledby="runTab">
+      <div class="run-head">
+        <div>
+          <span class="kicker">AUTOMATED CONTROL RUN</span>
+          <h2>Inspect → plan → save → sync</h2>
+          <p>The configured tenant and resource group stay authoritative. HELIOS stops before every Azure mutation.</p>
+        </div>
+        <button id="runNow" class="launch"><span>▶</span> Run HELIOS now</button>
+      </div>
+
+      <div class="settings">
+        <label>Environment
+          <select id="runEnvironment"><option>dev</option><option>test</option><option>preview</option><option>prod</option></select>
+        </label>
+        <label>Run type
+          <select id="runIntent"><option value="provision-resources">Diagnose and plan</option><option value="cleanup-owned-resources">Plan governed cleanup</option></select>
+        </label>
+        <label>Resource group override
+          <input id="runTarget" autocomplete="off" placeholder="Use server configuration">
+        </label>
+      </div>
+
+      <div class="connectors-wrap">
+        <div class="section-title"><span>Connections</span><small id="connectorMode">Checking bindings…</small></div>
+        <div id="connectors" class="connectors" aria-live="polite"></div>
+      </div>
+
+      <div id="runStatus" class="run-status idle" aria-live="polite">
+        <div><span id="statusDot" class="status-dot"></span><strong id="statusText">Ready</strong></div>
+        <small id="runMeta">No run started in this browser.</small>
+      </div>
+      <div id="timeline" class="timeline" aria-live="polite"></div>
+
+      <div id="evidence" class="evidence hidden">
+        <div><span class="kicker">ORCHESTRATION EVIDENCE DIGEST</span><strong id="digestValue"></strong></div>
+        <button id="copyDigest">Copy digest</button>
+      </div>
+      <div id="planDigest" class="plan-digest hidden">
+        <div class="section-title"><span>Governed orchestration plan</span><small id="planId"></small></div>
+        <ol id="planSteps"></ol>
+        <small>ARM what-if is produced separately by the protected GitHub workflow and must match its reviewed SHA before apply.</small>
+      </div>
+      <div id="receipts" class="receipt-grid" aria-live="polite"></div>
+      <button id="resumeRun" class="secondary hidden">Resume saved run</button>
+    </section>
+
+    <section id="bootstrap" class="panel" role="tabpanel" aria-labelledby="bootstrapTab">
+      <span class="kicker">FIRST-TIME TENANT BOOTSTRAP</span>
+      <h2>Generate the safe Cloud Shell handoff</h2>
+      <p>Use this once before the hosted control plane has managed identity and Cosmos access.</p>
+      <div class="grid">
+        <label>Tenant ID<input id="tenant" autocomplete="off" placeholder="00000000-0000-0000-0000-000000000000"></label>
+        <label>Subscription ID (optional)<input id="subscription" autocomplete="off" placeholder="Auto-detect or ask in Cloud Shell"></label>
+        <label>Resource group<input id="group" value="helios-dev-rg"></label>
+        <label>Environment<select id="environment"><option>dev</option><option>test</option><option>preview</option><option>prod</option></select></label>
+      </div>
+      <button id="generate" class="primary">Generate Diagnose → Plan script</button>
+      <div id="setupStatus" class="status"></div>
+      <div class="output">
+        <div><strong>Cloud Shell script</strong><button id="copy">Copy</button></div>
+        <pre id="script">Enter the tenant boundary to generate the non-applying bootstrap.</pre>
+        <small id="digest"></small>
+      </div>
+    </section>
+
+    <section id="upgrade" class="panel" role="tabpanel" aria-labelledby="upgradeTab">
+      <span class="kicker">CANDIDATE-ONLY LEARNING</span>
+      <h2>Propose a new capability</h2>
+      <p>HELIOS turns accepted improvements into a tested task branch and draft PR. It never silently changes active policy.</p>
+      <label>Capability<input id="capability" placeholder="dns/private-zone-planner"></label>
+      <label>Why it is needed<textarea id="reason" placeholder="Describe the missing capability or recurring issue."></textarea></label>
+      <button id="propose" class="primary">Create upgrade proposal</button>
+      <div id="upgradeStatus" class="status"></div>
+      <pre id="proposal">Upgrade proposals are deterministic, test-gated, and draft-PR only.</pre>
+    </section>
+
+    <footer>Edge, Copilot, ChatGPT, and Codex can start or inspect governed work. Entra consent, vault writes, DNS delegation, resource deletion, production apply, and merge remain protected approvals.</footer>
+  </main>
+  <script src="/wizard/wizard.js"></script>
+</body>
+</html>

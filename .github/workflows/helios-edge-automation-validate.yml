@@ -1,0 +1,84 @@
+name: HELIOS Edge Automation Validation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/helios-edge-automation-validate.yml'
+      - 'monado/helios-control/config/edge-automation.json'
+      - 'monado/helios-control/docs/EDGE_AUTOMATION.md'
+      - 'monado/helios-control/appPackage/manifest.json'
+      - 'monado/helios-control/config/agent-fabric.json'
+      - 'monado/helios-control/docs/AGENT_AUTOFIX.md'
+      - 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/**'
+      - 'monado/helios-control/scripts/Invoke-HeliosEdgeAutomation.ps1'
+      - 'monado/helios-control/src/Helios.Connect.Api/**'
+      - 'monado/helios-control/tests/Helios.Connect.Tests/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-dotnet-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Validate automation manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq --exit-status '
+            .schemaVersion == 1 and
+            .defaultMode == "plan" and
+            .mcp.canApplyFromMcp == false and
+            .mcp.mutationToolsAllowed == false and
+            .intents["repair-issue"].directMainWrite == false and
+            .intents["repair-issue"].automaticMerge == false
+          ' monado/helios-control/config/edge-automation.json > /dev/null
+          jq --exit-status '
+            .schemaVersion == 1 and
+            .autoFix.directMainWrite == false and
+            .autoFix.automaticMerge == false and
+            .autoFix.automaticTenantAdminConsent == false and
+            .learning.promotionRequiresPullRequest == true and
+            .vault.automaticReadback == false
+          ' monado/helios-control/config/agent-fabric.json > /dev/null
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 8.0.423
+
+      - name: Test edge contracts
+        shell: bash
+        run: dotnet test monado/helios-control/Helios.Connect.sln --configuration Release
+
+  validate-powershell-guardrails:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Parse and inspect edge automation
+        shell: pwsh
+        run: |
+          $path = 'monado/helios-control/scripts/Invoke-HeliosEdgeAutomation.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+          $content = Get-Content $path -Raw
+          foreach ($required in @('ApprovedPlanSha256', 'APPLY HELIOS EDGE', 'Incremental', 'Read-Host', 'AsSecureString')) {
+            if ($content -notmatch [regex]::Escape($required)) { throw "Missing guardrail: $required" }
+          }
+          foreach ($forbidden in @('keyvault secret show', 'keyvault secret download', '--mode Complete')) {
+            if ($content -match [regex]::Escape($forbidden)) { throw "Forbidden operation: $forbidden" }
+          }

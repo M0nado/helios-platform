@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "defaultMode": "plan",
+  "allowedEnvironments": ["dev", "test", "preview", "prod"],
+  "intents": {
+    "provision-resources": {
+      "applyExecutor": "azure-cli",
+      "requiredEvidence": ["bicep-validation", "arm-what-if", "plan-sha256", "environment-approval"]
+    },
+    "rotate-secret": {
+      "applyExecutor": "operator-cli",
+      "secretInput": "secure-prompt-to-restricted-temporary-file",
+      "allowSecretReadback": false,
+      "requiredEvidence": ["secret-metadata", "typed-confirmation", "dependent-service-health"]
+    },
+    "repair-issue": {
+      "applyExecutor": "codex-pr-only",
+      "directMainWrite": false,
+      "automaticMerge": false,
+      "requiredEvidence": ["issue-reference", "reproduction", "tests", "draft-pull-request"]
+    },
+    "sync-release": {
+      "applyExecutor": "connector-outbox",
+      "destinations": ["github", "linear", "slack", "sharepoint", "copilot"],
+      "requiredEvidence": ["release-envelope", "idempotency-key", "delivery-receipts"]
+    },
+    "cleanup-owned-resources": {
+      "applyExecutor": "protected-workflow",
+      "ownershipFilter": "helios-managed=true",
+      "protectUnknownOrSharedResources": true,
+      "requiredEvidence": ["governed-tag-inventory", "dependency-and-lock-check", "removal-what-if", "plan-sha256", "environment-approval", "typed-confirmation"]
+    }
+  },
+  "mcp": {
+    "exposedTools": ["azure_get_context", "azure_list_resources", "azure_list_foundry_resources", "helios_plan_automation"],
+    "mutationToolsAllowed": false,
+    "canApplyFromMcp": false
+  },
+  "safety": {
+    "incrementalDeploymentsOnly": true,
+    "productionRequiresAdditionalApproval": true,
+    "vaultValuesInLogs": false,
+    "vaultValuesInCommandLine": false,
+    "directResourceDeletion": false,
+    "directRoleAssignmentFromRuntime": false
+  }
+}

@@ -1,9 +1,9 @@
 # Connection runbook
 
-This is the target activation runbook. The current connector implements signed
-ingress plus local/cloud MCP inventory only. It has no Service Bus route,
-connector worker, outbound SaaS writer, durable idempotency store, WAF/APIM
-policy, or dead-letter queue.
+This is the activation runbook. The connector implements signed ingress,
+local/cloud MCP inventory, Cosmos-leased Edge control runs, and an inline signed
+relay dispatcher. Service Bus scale-out, provider-native workers, WAF/APIM policy, and a
+dead-letter operator remain later milestones.
 
 ## Safe order
 
@@ -17,6 +17,25 @@ policy, or dead-letter queue.
 6. Put credentials in Key Vault and deploy the Bicep stack.
 7. Register webhook URLs and signing secrets.
 8. Run contract tests in dry-run, then enable one route at a time.
+
+## Outbound control-run relays
+
+Each enabled destination requires an HTTPS callback and a unique HMAC secret of
+at least 32 bytes. Inject them as Container Apps environment values through
+Key Vault references; never place them in Bicep parameter files or workflow
+logs. Names follow `HELIOS_CONNECTOR_<NAME>_URL` and
+`HELIOS_CONNECTOR_<NAME>_HMAC_SECRET`, where `<NAME>` is `GITHUB`, `LINEAR`,
+`SLACK`, `SHAREPOINT`, `TEAMS`, or `COPILOT`. Each binding also requires an exact
+comma-separated `HELIOS_CONNECTOR_<NAME>_ALLOWED_HOSTS`; optional
+`HELIOS_CONNECTOR_<NAME>_HMAC_KEY_ID` defaults to `v1`.
+
+Keep `HELIOS_CONNECTOR_DELIVERY_MODE=dry-run` until the receiving relay verifies
+`X-Helios-Signature`, enforces freshness using the signed body and
+`X-Helios-Timestamp`, selects the key through `X-Helios-Key-Id`, persists
+`X-Helios-Idempotency-Key` before side effects, and returns success only after
+its own provider receipt is durable. Promote one
+destination at a time. The Edge connector-status endpoint reports binding and
+mode without disclosing endpoints or secrets.
 
 ## Webhook endpoints
 

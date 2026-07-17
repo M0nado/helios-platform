@@ -232,6 +232,43 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Edge_control_routes_expose_safe_connector_state_and_require_idempotency()
+    {
+        using var connectors = await _client.GetAsync("/control/connectors");
+        var connectorBody = await connectors.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, connectors.StatusCode);
+        Assert.Contains("no-store", connectors.Headers.CacheControl?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("github", connectorBody);
+        Assert.DoesNotContain("HMAC_SECRET", connectorBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("https://", connectorBody, StringComparison.OrdinalIgnoreCase);
+
+        using var content = new StringContent("{\"intent\":\"provision-resources\",\"environment\":\"dev\"}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/control/runs", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edge_control_route_rejects_oversized_chunked_bodies()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/control/runs")
+        {
+            Content = new ChunkedJsonContent(Encoding.UTF8.GetBytes($"{{\"intent\":\"provision-resources\",\"environment\":\"dev\",\"padding\":\"{new string('a', 20_000)}\"}}"))
+        };
+        request.Headers.Add("Idempotency-Key", "chunked-control-0001");
+
+        using var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edge_manifest_is_served_with_installable_content_type()
+    {
+        using var response = await _client.GetAsync("/wizard/manifest.webmanifest");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/manifest+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
     public async Task Readiness_fails_closed_when_cloud_identity_configuration_is_missing()
     {
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
@@ -349,6 +386,97 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("azure_list_foundry_resources", body);
         Assert.DoesNotContain("deploy", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("role_assignment", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Automation_plan_is_deterministic_and_never_applies_from_rest()
+    {
+        const string payload = "{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}";
+        using var firstContent = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var secondContent = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var first = await _client.PostAsync("/automation/plan", firstContent);
+        using var second = await _client.PostAsync("/automation/plan", secondContent);
+        var firstBody = await first.Content.ReadAsStringAsync();
+        var secondBody = await second.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(firstBody, secondBody);
+        Assert.Contains("\"mode\":\"plan-only\"", firstBody);
+        Assert.Contains("\"canApplyFromMcp\":false", firstBody);
+        Assert.Contains("\"directMainWrite\":false", firstBody);
+        Assert.Contains("open-draft-pull-request", firstBody);
+    }
+
+    [Fact]
+    public async Task Automation_plan_rejects_secret_rotation_without_target()
+    {
+        using var content = new StringContent("{\"intent\":\"rotate-secret\",\"environment\":\"dev\"}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/automation/plan", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_exposes_plan_only_automation_tool()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("helios_plan_automation", body);
+        Assert.Contains("readOnlyHint", body);
+        Assert.DoesNotContain("helios_apply", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_returns_issue_repair_plan_without_apply_capability()
+    {
+        const string payload = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_plan_automation\",\"arguments\":{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}}}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("canApplyFromMcp", body);
+        Assert.Contains("open-draft-pull-request", body);
+        Assert.DoesNotContain("automaticMerge\\\":true", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Setup_wizard_is_served_and_bootstrap_remains_plan_only()
+    {
+        using var page = await _client.GetAsync("/setup");
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("Azure Setup Wizard", html);
+
+        const string payload = "{\"tenantId\":\"11111111-1111-1111-1111-111111111111\",\"subscriptionId\":\"22222222-2222-2222-2222-222222222222\",\"resourceGroup\":\"helios-dev-rg\",\"environment\":\"dev\"}";
+        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/setup/bootstrap", content);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("-Mode Diagnose", body);
+        Assert.Contains("-Mode Plan", body);
+        Assert.DoesNotContain("-Mode Apply", body);
+        Assert.Contains("\"appliesChanges\":false", body);
+    }
+
+    [Fact]
+    public async Task Mcp_exposes_upgrade_proposals_but_no_upgrade_apply_tool()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("helios_propose_upgrade", body);
+        Assert.DoesNotContain("helios_apply_upgrade", body, StringComparison.OrdinalIgnoreCase);
     }
 
     private static HttpRequestMessage CreateSignedGitHubWebhook(string deliveryId, string body)

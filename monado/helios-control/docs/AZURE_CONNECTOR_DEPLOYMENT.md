@@ -14,7 +14,9 @@ clients, and governed agent workflows.
   remote MCP routes require Entra; provider webhook ingress remains a separate
   signature/validation boundary and fails closed in every execution mode.
 - An application-level check requires the Easy Auth principal header.
-- The user-assigned managed identity receives Reader only on the deployment resource group.
+- The user-assigned managed identity receives operator-bootstrapped Reader on
+  the deployment resource group and template-owned Cosmos Data Contributor only
+  on the `control-runs` container.
 - Returned inventory is limited to resource ID, name, type, and location.
 - No deploy, delete, role-assignment, consent, secret-read, or publication tool exists.
 - Production remains `dry-run`; deploying the connector does not unlock Helios mutations.
@@ -36,10 +38,16 @@ authentication and environment-inspection client only. Use
 or the protected GitHub workflow for reviewed preview and deployment. The
 deployment identity's `AZURE_CLIENT_ID` remains separate from the connector app
 registration. `infra/main.bicep` is only a wrapper around the hardened
-`connector.bicep`; it cannot create a registry or grant roles.
+`connector.bicep`; it cannot create a registry or grant Azure management roles.
+The connector module owns only its container-scoped Cosmos SQL data role.
 
 These identifiers are not secrets. Do not place app secrets, tokens, or passwords
 in the parameter file.
+
+For a reviewed Edge/custom-DNS front door, set `publicBaseUrl` to the canonical
+HTTPS origin and preserve that host through the proxy. The default remains the
+Container Apps FQDN. Custom DNS, TLS certificates, Entra redirect URIs, and
+private-origin networking are separate what-if and administrator gates.
 
 ## Preview and deploy
 

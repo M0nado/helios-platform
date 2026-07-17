@@ -56,9 +56,9 @@ approved enterprise software distribution.
    Azure what-if. `azd` does not preview or apply Helios infrastructure.
 4. Approve the separate protected deployment job for identity, runtime, and observability resources.
 5. After an administrator selects and approves a Foundry project, deployment,
-   identity, and RBAC, register the deployed `connectorMcpUrl` toolbox. Its only
-   current tools are `azure_get_context`, `azure_list_resources`, and
-   `azure_list_foundry_resources`.
+   identity, and RBAC, register the deployed `connectorMcpUrl` toolbox. Its
+   current tools are the three Azure inventory tools plus read-only HELIOS plan,
+   proposal, run-status, and connector-status tools.
 6. As a later vertical slice, deploy and evaluate Hermes/XCore agents in the
    approved development Foundry project.
 7. Evaluate and trace before publishing to Microsoft 365 Copilot or Teams.
@@ -74,7 +74,6 @@ silently transfer to published versions; production permissions are reassigned
 explicitly after publication and before traffic promotion.
 
 APIM with a private Container Apps backend, Container Apps Jobs, Service Bus,
-Cosmos DB, Data Lake, Azure AI Search, and Foundry are target-architecture gates,
-not resources implemented by the current Bicep. They require separate designs,
-administrator authorization, and protected deployments before documentation or
-agent manifests may treat them as available.
+Data Lake, Azure AI Search, Foundry, and broader Cosmos learning stores are
+target-architecture gates. The current Bicep implements only the serverless
+Cosmos control-run container with a container-scoped managed-identity data role.

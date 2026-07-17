@@ -13,6 +13,9 @@ param environmentName string = 'dev'
 
 param serviceName string = 'helios-connector'
 
+@description('Additional organization tags. HELIOS ownership and environment tags are always enforced by the connector module.')
+param commonTags object = {}
+
 @description('Approved immutable image in the dedicated Helios Azure Container Registry.')
 param containerImage string
 
@@ -34,10 +37,14 @@ param entraTenantId string = subscription().tenantId
 @minLength(1)
 param allowedPrincipalObjectId string
 
+@description('Optional canonical HTTPS origin for Edge/custom DNS. Leave empty to use the Container Apps FQDN.')
+param publicBaseUrl string = ''
+
 // azure.yaml/azd resolves this reviewed entry point. The hardened connector
 // module remains the single implementation of Container Apps, managed identity,
 // Key Vault, monitoring, immutable image binding, and Entra authentication.
-// No registry or role assignment is created by this template.
+// No registry or Azure management-plane role assignment is created here. The
+// module owns one container-scoped Cosmos SQL data role for its runtime identity.
 module connector './connector.bicep' = {
   name: 'helios-connector-${environmentName}'
   params: {
@@ -50,6 +57,8 @@ module connector './connector.bicep' = {
     entraClientId: entraClientId
     entraTenantId: entraTenantId
     allowedPrincipalObjectId: allowedPrincipalObjectId
+    publicBaseUrl: publicBaseUrl
+    commonTags: commonTags
   }
 }
 
@@ -63,3 +72,4 @@ output connectorMcpUrl string = connector.outputs.connectorMcpUrl
 output connectorEntraClientId string = connector.outputs.connectorEntraClientId
 output connectorEntraTenantId string = connector.outputs.connectorEntraTenantId
 output managedIdentityClientId string = connector.outputs.managedIdentityClientId
+output controlRunStoreName string = connector.outputs.controlRunStoreName
