@@ -30,6 +30,7 @@ public sealed class AzureInventoryService : IAzureInventoryService
     private readonly IConfiguration _configuration;
     private readonly TokenCredential _credential;
 
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
     public AzureInventoryService(HttpClient httpClient, IConfiguration configuration)
         : this(httpClient, configuration, CreateCredential(configuration))
     {
