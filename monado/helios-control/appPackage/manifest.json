@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
   "manifestVersion": "1.19",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "id": "${{TEAMS_APP_ID}}",
   "packageName": "com.helios.control",
   "developer": {
@@ -12,12 +12,21 @@
   },
   "name": { "short": "Helios Control", "full": "Helios Hermes/XCore Control" },
   "description": {
-    "short": "Governed Hermes status and approvals.",
-    "full": "Read Helios status, inspect approved Hermes candidates, and route governed approvals through Microsoft 365 Copilot and Teams."
+    "short": "Guided Azure setup, diagnosis, and upgrades.",
+    "full": "Run the HELIOS Azure setup wizard, generate safe Cloud Shell diagnosis and what-if plans, and propose tested agent upgrades through Microsoft 365 Copilot and Teams."
   },
   "icons": { "outline": "outline.png", "color": "color.png" },
   "accentColor": "#4F46E5",
   "validDomains": ["${{PUBLIC_HOSTNAME}}"],
+  "staticTabs": [
+    {
+      "entityId": "helios-azure-setup",
+      "name": "Azure Setup",
+      "contentUrl": "${{PUBLIC_BASE_URL}}/wizard/index.html",
+      "websiteUrl": "${{PUBLIC_BASE_URL}}/setup",
+      "scopes": ["personal"]
+    }
+  ],
   "webApplicationInfo": { "id": "${{ENTRA_APP_ID}}", "resource": "api://${{ENTRA_APP_ID}}" },
   "authorization": { "permissions": { "resourceSpecific": [] } }
 }
