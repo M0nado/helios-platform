@@ -14,6 +14,12 @@ try {
   if (widget.includes(".innerHTML") || !widget.includes("safeHttpsUrl")) {
     throw new Error("Widget must use safe DOM rendering and HTTPS-only links");
   }
+  const serverSource = await readFile(new URL("../src/server.ts", import.meta.url), "utf8");
+  for (const canonicalTarget of ["C0BHWDBHG1W", "C0B8PU2RGLF", "Helios Integration Fabric", "JOH-35", "helios-azure-cli"]) {
+    if (!serverSource.includes(canonicalTarget) && !process.env.HELIOS_LINEAR_ISSUE_URL?.includes(canonicalTarget)) {
+      throw new Error(`Missing canonical integration target: ${canonicalTarget}`);
+    }
+  }
   let health;
   while (Date.now() < deadline) {
     try {

@@ -6,6 +6,8 @@ One Streamable HTTP MCP server for ChatGPT Apps and Microsoft Copilot Studio, wi
 
 This first slice is read-only. It reports setup state, searches/fetches canonical integration records, validates the expected Azure workload-identity subject, and renders the dashboard. It cannot deploy, merge, message, or mutate external systems.
 
+The canonical project is Linear **Helios Integration Fabric** (`JOH-35`). Slack engineering authority is `#helios-control-plane`; `#all-helios` is announcements only.
+
 ## Run locally
 
 ```bash
@@ -17,6 +19,18 @@ curl http://127.0.0.1:8000/health
 ```
 
 The MCP endpoint is `http://127.0.0.1:8000/mcp`.
+
+## Easy Azure CLI plugin
+
+The repository plugin at `plugins/helios-azure-cli` provides one guarded wizard for local Azure setup:
+
+```bash
+python3 plugins/helios-azure-cli/scripts/helios_azure.py doctor
+python3 plugins/helios-azure-cli/scripts/helios_azure.py plan
+python3 plugins/helios-azure-cli/scripts/helios_azure.py what-if --template path/to/main.bicep
+```
+
+Its OIDC and deployment commands require exact confirmation phrases and refuse to mutate Azure until PRs #174 and #176 are merged. It does not create or store client secrets.
 
 ## Connect to ChatGPT
 
