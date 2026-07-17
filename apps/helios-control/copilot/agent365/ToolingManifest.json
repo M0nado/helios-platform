@@ -1,0 +1,34 @@
+{
+  "mcpServers": [
+    {
+      "mcpServerName": "mcp_M365Copilot",
+      "mcpServerUniqueName": "mcp_M365Copilot",
+      "scope": "McpServers.CopilotMCP.All",
+      "audience": "api://05879165-0320-489e-b644-f72b33f3edf0"
+    },
+    {
+      "mcpServerName": "mcp_TeamsServer",
+      "mcpServerUniqueName": "mcp_TeamsServer",
+      "scope": "McpServers.Teams.All",
+      "audience": "api://05879165-0320-489e-b644-f72b33f3edf0"
+    },
+    {
+      "mcpServerName": "mcp_ODSPRemoteServer",
+      "mcpServerUniqueName": "mcp_ODSPRemoteServer",
+      "scope": "McpServers.OneDriveSharepoint.All",
+      "audience": "api://05879165-0320-489e-b644-f72b33f3edf0"
+    },
+    {
+      "mcpServerName": "mcp_MailTools",
+      "mcpServerUniqueName": "mcp_MailTools",
+      "scope": "McpServers.Mail.All",
+      "audience": "api://05879165-0320-489e-b644-f72b33f3edf0"
+    },
+    {
+      "mcpServerName": "mcp_CalendarTools",
+      "mcpServerUniqueName": "mcp_CalendarTools",
+      "scope": "McpServers.Calendar.All",
+      "audience": "api://05879165-0320-489e-b644-f72b33f3edf0"
+    }
+  ]
+}
