@@ -1,0 +1,27 @@
+name: HELIOS Control App
+on:
+  pull_request:
+    paths:
+      - 'apps/helios-control/**'
+      - '.github/workflows/helios-control-app.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/helios-control
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/helios-control/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: docker build -t helios-control:test .
+
