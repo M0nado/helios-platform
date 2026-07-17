@@ -47,7 +47,7 @@ jobs:
         id: discover
         run: |
           echo "Discovering components..."
-          COMPONENTS=$(find . \( -name "package.json" -o -name "manifest.json" \) -not -path "*/node_modules/*" | jq -R 'split("/")[1:3] | join("/")' | sort -u | jq -cs .)
+          COMPONENTS=$(find . \( -name "package.json" -o -name "manifest.json" \) -not -path "*/node_modules/*" -printf '%h\n' | sed 's#^\./##' | sort -u | jq -R . | jq -cs .)
           COUNT=$(jq 'length' <<<"$COMPONENTS")
           echo "components=$COMPONENTS" >> "$GITHUB_OUTPUT"
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
@@ -165,4 +165,3 @@ jobs:
               repo: context.repo.repo,
               body: `## ✓ Component Version Validation\n\n- Total components validated: ${{ needs.discover-components.outputs.component_count }}\n- All version formats valid\n- No conflicts detected\n\n[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
             })
-
