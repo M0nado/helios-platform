@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <Compile Include="Models/AnalyticsModels.fs" />
+    <Compile Include="Merge/MergeScoring.fs" />
+    <Compile Include="Learning/LearningSummary.fs" />
     <Compile Include="Statistics/MathWorkloads.fs" />
     <Compile Include="Statistics/AnalyticsWorkloads.fs" />
     <Compile Include="Prediction/PredictionWorkloads.fs" />

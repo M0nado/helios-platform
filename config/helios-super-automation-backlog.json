@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "description": "Highest-impact additions for fully automatic HELIOS Hermes XCore orchestration, agent GUIs, model routing, safety vaults, fleet ML, and webhooks.",
+  "items": [
+    {
+      "id": "event-driven-control-plane",
+      "title": "Event-driven control plane and webhook router",
+      "impact": 100,
+      "difficulty": 75,
+      "domains": ["github", "azure", "microsoft-365", "slack", "mcp", "agents"],
+      "adds": ["typed event bus", "webhook signature validation", "retry/dead-letter queues", "agent dispatch rules", "audit timeline"],
+      "firstFiles": ["src/core/HELIOS.Platform.Contracts", "scripts/integrations", "config/helios-capabilities.json"]
+    },
+    {
+      "id": "agent-command-gui",
+      "title": "Deep local/hybrid GUI for agent control",
+      "impact": 98,
+      "difficulty": 70,
+      "domains": ["csharp", "winui", "web", "agents", "hermes-xcore"],
+      "adds": ["agent graph", "variable/model controls", "run buttons", "live logs", "approval policy toggles", "fleet status cards"],
+      "firstFiles": ["src/gui", "docs/ui-xenoblade", "reports/auto-upgrade/gui"]
+    },
+    {
+      "id": "llm-router-token-optimizer",
+      "title": "Multi-LLM router with token/cost optimization",
+      "impact": 97,
+      "difficulty": 80,
+      "domains": ["openai", "codex", "local-llm", "azure-openai", "python-aihub"],
+      "adds": ["cheap-first routing", "prompt dedupe", "context compression", "quality scoring", "provider fallback", "local/cloud model policies"],
+      "firstFiles": ["scripts/ai", "scripts/ai-services", "config/ai-services", "scripts/automation/helios_auto_upgrade.py"]
+    },
+    {
+      "id": "safety-vault-policy-engine",
+      "title": "Automatic safety vault and policy engine",
+      "impact": 96,
+      "difficulty": 78,
+      "domains": ["security", "azure-keyvault", "github-secrets", "mcp", "agents"],
+      "adds": ["secret inventory", "key rotation hints", "least-privilege policies", "redaction", "signed audit records", "agent permission scopes"],
+      "firstFiles": ["config/secrets-map.example.json", "installer/security", "src/Security"]
+    },
+    {
+      "id": "fleet-learning-store",
+      "title": "Fleet telemetry learning store and ML feedback loops",
+      "impact": 95,
+      "difficulty": 82,
+      "domains": ["fsharp", "python", "azure", "hermes", "xcore", "ml"],
+      "adds": ["telemetry schema", "feature store", "prediction feedback", "anomaly detection", "model evaluation", "branch/fleet recommendations"],
+      "firstFiles": ["src/analytics/HELIOS.Analytics.FSharp", "scripts/analysis", "reports/branch-intelligence"]
+    },
+    {
+      "id": "autofix-patch-pipeline",
+      "title": "Autofix patch pipeline with test-gated commits",
+      "impact": 94,
+      "difficulty": 76,
+      "domains": ["github-actions", "codex", "csharp", "python", "security"],
+      "adds": ["failure classifier", "patch generator", "sandbox validation", "risk score", "auto-commit", "auto-PR update"],
+      "firstFiles": [".github/workflows", "tools/helios.ps1", "scripts/github"]
+    },
+    {
+      "id": "branch-submodule-fusion",
+      "title": "Branch/submodule fusion engine",
+      "impact": 92,
+      "difficulty": 72,
+      "domains": ["git", "submodules", "mass-integration", "analytics"],
+      "adds": ["submodule scoring", "conflict forecasting", "merge replay", "branch lineage graph", "duplicate module detection"],
+      "firstFiles": ["scripts/github/mass_integration.py", "docs/integration/remote-manifest.json", "config/helios-mass-integration.json"]
+    },
+    {
+      "id": "runner-fleet-bootstrap",
+      "title": "Local/cloud/self-hosted runner fleet bootstrap",
+      "impact": 91,
+      "difficulty": 74,
+      "domains": ["github-runners", "azure", "microsoft-365", "cloud-shell", "local"],
+      "adds": ["runner profiles", "ephemeral agents", "GPU/native labels", "toolchain image checks", "capacity scoring"],
+      "firstFiles": [".github/workflows", "scripts/cloudshell", "tools/azure"]
+    },
+    {
+      "id": "mcp-plugin-marketplace",
+      "title": "MCP/plugin marketplace and tool skill registry",
+      "impact": 90,
+      "difficulty": 68,
+      "domains": ["mcp", "plugins", "skills", "openai", "github"],
+      "adds": ["tool manifest", "skill permissions", "server health probes", "provider adapters", "agent tool selection"],
+      "firstFiles": ["config/github-mcp.example.json", "config/helios-agents.json", "scripts/integrations"]
+    },
+    {
+      "id": "xcore-digital-twin",
+      "title": "Hermes XCore digital twin simulator",
+      "impact": 88,
+      "difficulty": 85,
+      "domains": ["cpp", "fsharp", "csharp", "ml", "gui"],
+      "adds": ["native simulation", "load model", "what-if planner", "benchmark replay", "GUI controls"],
+      "firstFiles": ["src/native/HELIOS.Native.Performance", "src/analytics/HELIOS.Analytics.FSharp", "src/gui"]
+    }
+  ]
+}

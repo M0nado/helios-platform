@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "currency": "fleet-xp",
+  "agentTypes": [
+    {"agentType": "csharp-center", "label": "C# Center", "cost": 120, "language": "csharp", "specialties": ["core-build", "contracts", "autofix"], "command": "./tools/helios.ps1 fix csharp", "ownedPaths": ["src/core", "tests"]},
+    {"agentType": "cpp-accelerator", "label": "C++ Accelerator", "cost": 150, "language": "cpp", "specialties": ["native-build", "benchmark", "performance"], "command": "./tools/helios.ps1 test native-benchmark", "ownedPaths": ["src/native"]},
+    {"agentType": "fsharp-oracle", "label": "F# Analytics Oracle", "cost": 130, "language": "fsharp", "specialties": ["analytics", "prediction", "test-stability"], "command": "./tools/helios.ps1 test fsharp-report", "ownedPaths": ["src/analytics", "tests/analytics"]},
+    {"agentType": "python-aihub", "label": "Python AIHub Connector", "cost": 100, "language": "python", "specialties": ["aihub", "schemas", "smoke-tests"], "command": "./tools/helios.ps1 test python-aihub", "ownedPaths": ["tools/aihub", "scripts/ai"]},
+    {"agentType": "azure-warden", "label": "Azure Warden", "cost": 140, "language": "bicep", "specialties": ["bicep", "key-vault", "what-if"], "command": "./tools/helios.ps1 azure report-what-if", "ownedPaths": ["infra", "tools/azure"]},
+    {"agentType": "github-admiral", "label": "GitHub Admiral", "cost": 160, "language": "yaml", "specialties": ["mass-integration", "workflows", "auto-merge"], "command": "./tools/helios.ps1 github takeover", "ownedPaths": [".github", "scripts/github"]}
+  ]
+}

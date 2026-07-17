@@ -1,0 +1,60 @@
+name: HELIOS Command Shell
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop, 'integration/**' ]
+
+jobs:
+  helios-status:
+    name: Status and registry validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run HELIOS status
+        shell: pwsh
+        run: ./tools/helios.ps1 status
+      - name: Validate HELIOS agents
+        shell: pwsh
+        run: ./tools/helios.ps1 agents validate
+      - name: Verify deep HELIOS capabilities
+        shell: pwsh
+        run: ./tools/helios.ps1 setup verify
+      - name: Upload HELIOS reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-shell-status-reports
+          path: reports/generated/helios-shell
+          if-no-files-found: warn
+
+  helios-final-gate:
+    name: Blocking final gate
+    runs-on: windows-latest
+    needs: helios-status
+    steps:
+      - uses: actions/checkout@v4
+      - name: Whitespace check
+        run: git diff --check
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run blocking final gate
+        run: python3 scripts/automation/final_gate.py
+      - name: Upload HELIOS gate reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-shell-gate-reports
+          path: |
+            reports/generated/helios-shell
+            reports/final-gate
+            reports/mass-integration
+          if-no-files-found: warn
