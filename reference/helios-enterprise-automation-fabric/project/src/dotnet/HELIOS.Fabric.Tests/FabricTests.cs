@@ -2,6 +2,7 @@ using System.Text.Json;
 using HELIOS.Fabric.Broker.Security;
 using HELIOS.Fabric.Contracts;
 using HELIOS.Fabric.Worker.Delivery;
+using Xunit;
 
 namespace HELIOS.Fabric.Tests;
 
