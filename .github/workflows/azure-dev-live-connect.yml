@@ -1,0 +1,183 @@
+name: HELIOS Azure Dev Live Connect
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/azure-dev-live-connect.yml'
+      - 'integration/azure-dev-live-connect/**'
+  workflow_dispatch:
+    inputs:
+      run_what_if:
+        description: Authenticate with azure-dev OIDC and run the development Bicep what-if
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: helios-azure-dev-live-connect-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TEMPLATE_FILE: integration/azure-dev-live-connect/infra/main.bicep
+  EVIDENCE_DIR: artifacts/azure-dev-live-connect
+  BICEP_VERSION: v0.45.6
+
+jobs:
+  validate:
+    name: Validate reconciled Azure development slice
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Install Bicep
+        run: |
+          set -euo pipefail
+          az bicep install --version "$BICEP_VERSION"
+          az bicep version
+
+      - name: Compile Bicep
+        run: |
+          set -euo pipefail
+          az bicep build --file "$TEMPLATE_FILE"
+
+      - name: Parse PowerShell connector
+        shell: pwsh
+        run: |
+          $errors = $null
+          $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            'integration/azure-dev-live-connect/scripts/Connect-HeliosAzureDev.ps1',
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+
+  what_if:
+    name: Authenticate and run azure-dev what-if
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.run_what_if == true &&
+      github.repository == 'M0nado/helios-platform' &&
+      github.ref == 'refs/heads/main' &&
+      github.ref_protected == true
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: azure-dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+    steps:
+      - name: Require exact azure-dev bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required azure-dev variable: $name" >&2
+              exit 1
+            fi
+          done
+
+      - name: Check out reviewed main
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Sign in with GitHub OIDC
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure context and resource group
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(az account show --query id --output tsv)" = "$AZURE_SUBSCRIPTION_ID"
+          test "$(az account show --query tenantId --output tsv)" = "$AZURE_TENANT_ID"
+          az group show --name "$AZURE_RESOURCE_GROUP" --query '{id:id,location:location}' --output json
+
+      - name: Install and compile Bicep
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install --version "$BICEP_VERSION"
+          az bicep build --file "$TEMPLATE_FILE"
+
+      - name: Validate development deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          az deployment group validate \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name helios-dev-live-connect-validate \
+            --template-file "$TEMPLATE_FILE" \
+            --parameters environmentName=dev \
+            --mode Incremental \
+            --validation-level ProviderNoRbac \
+            --output json > "$EVIDENCE_DIR/validation.json"
+
+      - name: Run development what-if
+        shell: bash
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name helios-dev-live-connect \
+            --template-file "$TEMPLATE_FILE" \
+            --parameters environmentName=dev \
+            --mode Incremental \
+            --no-prompt true \
+            --result-format FullResourcePayloads \
+            --no-pretty-print \
+            --output json > "$EVIDENCE_DIR/what-if.json"
+
+      - name: Write non-secret binding evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = {
+              'repository': os.environ['GITHUB_REPOSITORY'],
+              'sourceSha': os.environ['GITHUB_SHA'],
+              'environment': 'azure-dev',
+              'subscriptionId': os.environ['AZURE_SUBSCRIPTION_ID'],
+              'tenantId': os.environ['AZURE_TENANT_ID'],
+              'resourceGroup': os.environ['AZURE_RESOURCE_GROUP'],
+              'federationSubject': 'repo:M0nado/helios-platform:environment:azure-dev',
+              'deploymentPerformed': False,
+          }
+          path = Path(os.environ['EVIDENCE_DIR']) / 'binding-summary.json'
+          path.write_text(json.dumps(evidence, indent=2), encoding='utf-8')
+          PY
+
+      - name: Upload what-if evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: helios-azure-dev-what-if-${{ github.sha }}
+          path: artifacts/azure-dev-live-connect/
+          if-no-files-found: error
+          retention-days: 30
