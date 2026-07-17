@@ -8,8 +8,14 @@ namespace Helios.Connect.Tests;
 
 public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
-    public WebhookTests(WebApplicationFactory<Program> factory) => _client = factory.CreateClient();
+
+    public WebhookTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory;
+        _client = factory.CreateClient();
+    }
 
     [Fact]
     public async Task Unknown_provider_is_not_found() =>
@@ -34,7 +40,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Readiness_fails_closed_when_cloud_identity_configuration_is_missing()
     {
-        await using var securedFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        await using var securedFactory = _factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
             builder.UseSetting("AZURE_TENANT_ID", string.Empty);
@@ -61,7 +67,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Azure_connector_fails_closed_without_Entra_identity()
     {
-        await using var securedFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        await using var securedFactory = _factory.WithWebHostBuilder(builder =>
             builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true"));
         using var client = securedFactory.CreateClient();
         var response = await client.GetAsync("/connector/context");
@@ -71,7 +77,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Azure_mcp_exposes_only_inventory_tools()
     {
-        await using var securedFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        await using var securedFactory = _factory.WithWebHostBuilder(builder =>
             builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true"));
         using var client = securedFactory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
