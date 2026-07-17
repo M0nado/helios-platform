@@ -11,19 +11,21 @@ The original all-in-one draft was not adopted unchanged.
   `connector.bicep` do not grant roles. An authenticated operator separately
   grants Reader to the connector identity and the registry's least-privileged
   pull role to the connector and GitHub identities.
-- Replaced branch-only and environment-only OIDC trust with a flexible Entra
-  credential that matches both the protected environment subject and the exact
-  deployment workflow `job_workflow_ref`. The wizard resolves immutable
-  owner/repository IDs when enabled, rejects unsupported custom subject
-  templates, and blocks publication while a legacy environment-only credential
-  remains.
+- Replaced branch-only OIDC trust with an exact protected-environment subject.
+  The wizard resolves immutable owner/repository IDs when enabled, rejects
+  unsupported custom subject templates, and verifies the environment's required
+  reviewer and exact deployment branch before creating trust. The deployment
+  uses ordinary jobs, so it does not depend on the reusable-workflow-only
+  `job_workflow_ref` claim.
 - Separated the connector API app from the GitHub deployment app.
 - Replaced the Python function labeled as MCP with the actual .NET JSON-RPC MCP
   endpoint already covered by tests.
 - Replaced push-to-main live deployment with pull-request validation plus a
   manually dispatched, protected workflow. The workflow captures and hashes a
-  canonical ARM what-if artifact; a separate protected-environment approval
-  revalidates the artifact, image digest, and what-if before deployment.
+  property-complete canonical ARM what-if. Its evidence also binds the compiled
+  template hash and every deployment parameter; a separate protected-environment
+  approval revalidates the artifact, image digest, template, parameters, and
+  what-if before deployment. Only the redacted what-if copy is uploaded.
 - Retired every direct local application apply path. The interactive wizard
   separates Plan, Configure, and Publish and requires exact confirmations
   before each Azure or GitHub bootstrap mutation. Only the protected GitHub
