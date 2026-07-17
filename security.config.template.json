@@ -148,7 +148,11 @@
         "httpOnly": true,
         "sameSite": "Strict",
         "timeoutMinutes": 30,
-        "renewalThresholdMinutes": 5
+        "renewalThresholdMinutes": 5,
+        "accessMode": "full-read-write",
+        "readEnabled": true,
+        "writeEnabled": true,
+        "mergeRequiresReview": true
       }
     },
     "mfa": {
