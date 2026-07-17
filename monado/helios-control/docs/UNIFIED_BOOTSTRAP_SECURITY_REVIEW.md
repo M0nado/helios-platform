@@ -11,10 +11,12 @@ The original all-in-one draft was not adopted unchanged.
   `connector.bicep` do not grant roles. An authenticated operator separately
   grants Reader to the connector identity and the registry's least-privileged
   pull role to the connector and GitHub identities.
-- Replaced branch-only OIDC trust with the protected GitHub environment's
-  current subject template. The wizard resolves immutable owner/repository IDs
-  when GitHub has immutable subjects enabled and rejects unsupported custom
-  subject templates.
+- Replaced branch-only and environment-only OIDC trust with a flexible Entra
+  credential that matches both the protected environment subject and the exact
+  deployment workflow `job_workflow_ref`. The wizard resolves immutable
+  owner/repository IDs when enabled, rejects unsupported custom subject
+  templates, and blocks publication while a legacy environment-only credential
+  remains.
 - Separated the connector API app from the GitHub deployment app.
 - Replaced the Python function labeled as MCP with the actual .NET JSON-RPC MCP
   endpoint already covered by tests.
@@ -25,7 +27,7 @@ The original all-in-one draft was not adopted unchanged.
 - Retired every direct local application apply path. The interactive wizard
   separates Plan, Configure, and Publish and requires exact confirmations
   before each Azure or GitHub bootstrap mutation. Only the protected GitHub
-  workflow can deploy the application.
+  workflow can build the deployable image or deploy the application.
 - Added Entra allowlisting, Container Apps authentication, managed identity,
   operator-owned resource-group Reader and ACR pull assignments, immutable ACR
   image verification, OAuth resource metadata, and a read-only MCP surface.
