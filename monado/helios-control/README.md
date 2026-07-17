@@ -5,10 +5,13 @@ Slack, Microsoft Teams, SharePoint, Microsoft Copilot/Foundry, Azure, and MCP.
 Local processes are development and administration clients only; the governed
 runtime is hosted in Azure.
 
-It uses one normalized event envelope, an allowlisted router, idempotency keys,
-and per-connector workers. Secrets never live in source control: local secrets
-come from environment variables or .NET user-secrets; Azure secrets come from
-Key Vault through managed identity.
+The implemented slice validates signed webhooks, emits a normalized event
+envelope, exposes read-only MCP inventory, and rejects duplicate deliveries with
+a bounded process-local cache. Durable routing, per-connector workers, Service
+Bus, Cosmos DB idempotency, and dead-letter replay remain target architecture.
+Secrets never live in source control: local secrets come from environment
+variables or .NET user-secrets; approved Azure secrets will come from Key Vault
+through managed identity after their separate administrator gate.
 
 ## Development quick start
 
@@ -22,9 +25,11 @@ Key Vault through managed identity.
 
 The default profile is `dry-run`: every incoming webhook still requires a valid
 provider signature, while no external writes occur. Replay identifiers are kept
-in a bounded, expiring in-process cache. Set `HELIOS_EXECUTION_MODE=live` only
-after Key Vault, signing secrets, and destination allowlists are configured.
-Providers without an implemented verifier remain fail-closed.
+in a bounded, expiring in-process cache; they do not survive restart or coordinate
+across replicas. Set `HELIOS_EXECUTION_MODE=live` only after durable idempotency,
+Key Vault references, signing secrets, outbound workers, and destination
+allowlists are implemented and reviewed. Providers without an implemented
+verifier remain fail-closed.
 
 See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`, and
 `config/integrations.json`.
@@ -54,12 +59,21 @@ health, fail-closed Entra protection, connector context, MCP initialization, and
 the exact read-only Azure tool inventory. Its optional token remains in memory
 and is never printed.
 
+The Microsoft 365 package stays staged until tenant approval. Run
+`pwsh ./scripts/New-HeliosTeamsPackage.ps1` to materialize and verify the
+versioned 192x192 color and 32x32 transparent outline icons before packaging.
+Its SSO resource URI matches the Entra app registration created by the wizard;
+the repository workflow validates the manifest, icon dimensions, and policy
+routes without publishing to Teams or Copilot.
+
 ## Online-only production target
 
-`config/cloud-runtime.json` is the production contract: Azure hosts the API,
-remote MCP, durable queues, agent jobs, state, evidence, and telemetry. Local
-VS Code, Claude Code, and CLI processes are administration clients only and are
-never a production runtime dependency.
+`config/cloud-runtime.json` distinguishes the implemented hosted connector slice
+from the target production architecture. The current Bicep hosts the API, remote
+MCP, Key Vault shell, and telemetry in Azure. Durable queues, agent jobs, state,
+evidence stores, APIM/private ingress, and Foundry agents are explicitly marked
+unimplemented. Local VS Code, Claude Code, and CLI processes are administration
+clients only and are never a production runtime dependency.
 
 Set `HELIOS_CLOUD_RUNTIME_ONLY=true` in Azure. The local-development MCP route
 is mapped only when `HELIOS_LOCAL_RUNTIME_ALLOWED=true` and cloud-only mode is
