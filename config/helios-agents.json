@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "description": "HELIOS Hermes XCore agent registry consumed by tools/helios.ps1.",
+  "safeByDefault": true,
+  "agents": [
+    {
+      "name": "branch-integrator",
+      "responsibility": "Fetch, list, and safely integrate HELIOS/Hermes branches with helios-control and hermes-fleet-production first.",
+      "command": "./tools/helios.ps1 branches list",
+      "requiredTools": ["git", "pwsh"],
+      "requiredEnvironment": [],
+      "allowedPaths": [".git", "reports/generated/helios-shell"],
+      "timeoutSeconds": 600,
+      "canModifyFiles": false
+    },
+    {
+      "name": "csharp-core-builder",
+      "responsibility": "Build the managed C# core and shared contract projects before downstream integration.",
+      "command": "./tools/helios.ps1 build csharp",
+      "requiredTools": ["dotnet", "pwsh"],
+      "requiredEnvironment": [],
+      "allowedPaths": ["HELIOS.Platform.csproj", "src/core", "reports/generated/helios-shell"],
+      "timeoutSeconds": 900,
+      "canModifyFiles": false
+    },
+    {
+      "name": "security-validator",
+      "responsibility": "Run security validation before optimization, Azure deployment, or AIHub integration.",
+      "command": "./tools/helios.ps1 test security",
+      "requiredTools": ["dotnet", "pwsh"],
+      "requiredEnvironment": [],
+      "allowedPaths": ["src/Security", "installer/security", "tests", "reports/generated/helios-shell"],
+      "timeoutSeconds": 900,
+      "canModifyFiles": false
+    },
+    {
+      "name": "azure-bootstrapper",
+      "responsibility": "Bootstrap and verify Azure CLI defaults, extensions, resource group, and HELIOS session variables.",
+      "command": "./tools/helios.ps1 azure verify",
+      "requiredTools": ["az", "pwsh"],
+      "requiredEnvironment": ["HELIOS_AZURE_LOCATION", "HELIOS_RESOURCE_GROUP"],
+      "allowedPaths": ["tools/azure", "reports/generated/helios-shell"],
+      "timeoutSeconds": 600,
+      "canModifyFiles": false
+    },
+    {
+      "name": "fsharp-analytics-validator",
+      "responsibility": "Build and test F# math, prediction, analytics, and parallel workload contracts.",
+      "command": "./tools/helios.ps1 test fsharp",
+      "requiredTools": ["dotnet", "pwsh"],
+      "requiredEnvironment": [],
+      "allowedPaths": ["src/analytics", "tests/analytics", "reports/generated/helios-shell"],
+      "timeoutSeconds": 900,
+      "canModifyFiles": false
+    },
+    {
+      "name": "native-performance-benchmarker",
+      "responsibility": "Configure and build native C++ performance acceleration before runtime integration.",
+      "command": "./tools/helios.ps1 test native",
+      "requiredTools": ["cmake", "pwsh"],
+      "requiredEnvironment": [],
+      "allowedPaths": ["src/native", "build/native-performance", "reports/generated/helios-shell"],
+      "timeoutSeconds": 900,
+      "canModifyFiles": false
+    },
+    {
+      "name": "frontend-observability-checker",
+      "responsibility": "Build the frontend shell after contracts and backend services stabilize.",
+      "command": "./tools/helios.ps1 build frontend",
+      "requiredTools": ["dotnet", "pwsh"],
+      "requiredEnvironment": [],
+      "allowedPaths": ["docs/ui-xenoblade", "src/gui", "reports/generated/helios-shell"],
+      "timeoutSeconds": 900,
+      "canModifyFiles": false
+    },
+    {
+      "name": "python-aihub-integrator",
+      "responsibility": "Run Python AIHub smoke checks after contracts, Azure, and analytics stabilize.",
+      "command": "./tools/helios.ps1 test python-aihub",
+      "requiredTools": ["python", "pwsh"],
+      "requiredEnvironment": [],
+      "allowedPaths": ["tools/aihub", "src", "reports/generated/helios-shell"],
+      "timeoutSeconds": 600,
+      "canModifyFiles": false
+    },
+    {
+      "name": "final-gate-runner",
+      "responsibility": "Run the final HELIOS Hermes XCore integration gate before push or PR.",
+      "command": "./tools/helios.ps1 gate final",
+      "requiredTools": ["git", "dotnet", "pwsh", "az", "cmake", "python"],
+      "requiredEnvironment": [],
+      "allowedPaths": [".", "reports/generated/helios-shell"],
+      "timeoutSeconds": 3600,
+      "canModifyFiles": false
+    }
+  ]
+}
