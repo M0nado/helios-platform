@@ -3,7 +3,7 @@
   "policy": "pinned-declarative-pr-first",
   "tools": [
     { "id": "azure-cli", "command": "az", "channel": "stable", "purpose": "Azure resource and identity operations" },
-    { "id": "azure-developer-cli", "command": "azd", "minimumVersion": "1.25.3", "purpose": "Environment provisioning and application deployment" },
+    { "id": "azure-developer-cli", "command": "azd", "minimumVersion": "1.25.3", "purpose": "Authentication and environment inspection; direct Helios provisioning is blocked" },
     { "id": "bicep", "command": "az bicep", "channel": "azure-cli-managed", "purpose": "Infrastructure as code" },
     { "id": "azure-functions-core-tools", "command": "func", "channel": "4", "purpose": "Local MCP and webhook Functions runtime" },
     { "id": "power-platform-cli", "command": "pac", "channel": "stable", "purpose": "Copilot Studio and Power Platform solution lifecycle" },
