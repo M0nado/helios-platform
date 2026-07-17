@@ -1,0 +1,65 @@
+repos:
+  - M0nado/helios-platform
+  - M0nado/helios-control
+  - M0nado/hermes-core
+  - M0nado/hermes-fleet-production
+  - M0nado/hermes-fleet-public
+  - M0nado/hermes-fleet-private
+  - M0nado/xcore-agent
+  - M0nado/usb-wizard
+  - M0nado/os-setup
+
+branches:
+  clean: hermes-clean
+  merge: hermes-merge
+
+setup:
+  baseDirectory: repos
+  defaultRemoteBranch: main
+  mergeAllRemoteBranches: true
+  pushMergeBranches: false
+  requireGitHubToken: true
+  installAzureCliIfMissing: false
+  requireAzureLogin: false
+  summaryPath: autosetup/summary.md
+
+focus:
+  primary:
+    - helios-control
+    - hermes-fleet-production
+  languages:
+    csharp: frontend orchestration, installer, security, Azure integration
+    winui3: Windows desktop shell and setup UX
+    cpp: performance backend and native optimization hooks
+    fsharp: math predictions, analytics, and parallel computation models
+    python: AIHub integration and automation adapters
+    xcore: Hermes specialist agent setup and fleet coordination
+
+repoProfiles:
+  helios-platform:
+    role: C# platform shell, installer orchestration, Azure/security integration
+    priority: high
+  helios-control:
+    role: C# and WinUI 3 control-plane frontend and operator setup flow
+    priority: critical
+  hermes-fleet-production:
+    role: production Hermes fleet coordination, security hardening, rollout gates
+    priority: critical
+  hermes-core:
+    role: Hermes core services and XCore specialist integration
+    priority: high
+  xcore-agent:
+    role: specialist agent runtime and cross-repo automation hooks
+    priority: high
+  hermes-fleet-public:
+    role: public fleet templates and examples
+    priority: normal
+  hermes-fleet-private:
+    role: private fleet configuration and sensitive deployment adapters
+    priority: high
+  usb-wizard:
+    role: Windows setup, boot media, and installer references
+    priority: normal
+  os-setup:
+    role: host provisioning, drivers, security baseline, and Azure CLI bootstrap
+    priority: normal
