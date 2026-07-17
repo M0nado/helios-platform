@@ -1,0 +1,11 @@
+.venv/
+.python-deps/
+.pytest_cache/
+*.egg-info/
+__pycache__/
+artifacts/
+**/bin/
+**/obj/
+*.local.json
+.env
+.env.local

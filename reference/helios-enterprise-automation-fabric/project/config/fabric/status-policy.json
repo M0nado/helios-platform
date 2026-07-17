@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "mappings": [
+    {
+      "github": "issue.opened",
+      "linear": "Todo"
+    },
+    {
+      "github": "pull_request.opened",
+      "linear": "In Progress"
+    },
+    {
+      "github": "pull_request.ready_for_review",
+      "linear": "In Review"
+    },
+    {
+      "github": "pull_request.merged",
+      "linear": "Done"
+    },
+    {
+      "github": "deployment.failed",
+      "linear": "In Progress"
+    },
+    {
+      "github": "deployment.succeeded",
+      "linear": "Done"
+    }
+  ],
+  "conflictResolution": "GitHub controls deployment state; Linear controls planning metadata. Conflicts open a reconciliation comment instead of silently overwriting.",
+  "idempotencyKey": "github repository + item number + event action"
+}

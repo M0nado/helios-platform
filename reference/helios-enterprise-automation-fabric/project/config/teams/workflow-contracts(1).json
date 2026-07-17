@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "authoritativeApprovalSystem": "github-protected-environments",
+  "workflows": [
+    {
+      "id": "helios-event-notifier",
+      "trigger": "When a Teams webhook request is received",
+      "actions": [
+        "validate shared correlation header",
+        "select adaptive card by eventType",
+        "post card in configured channel"
+      ],
+      "inputSchema": "../fabric/event-envelope.schema.json",
+      "secretReference": "TEAMS_WORKFLOW_WEBHOOK_URL",
+      "writeEffect": "posts a Teams channel message",
+      "idempotency": "correlationId + eventId"
+    },
+    {
+      "id": "helios-acknowledgement-callback",
+      "trigger": "Adaptive Card acknowledgement",
+      "actions": [
+        "record acknowledgement",
+        "send signed callback to HELIOS broker"
+      ],
+      "secretReference": "TEAMS_APPROVAL_CALLBACK_SECRET",
+      "writeEffect": "records advisory acknowledgement only",
+      "doesNotAuthorize": [
+        "Azure deployment",
+        "GitHub merge",
+        "RBAC change",
+        "tenant consent"
+      ]
+    }
+  ]
+}

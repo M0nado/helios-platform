@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "authoritativeSystem": "github-protected-environments",
+  "policies": [
+    {
+      "id": "prod-deploy-v1",
+      "description": "Production deployment gate",
+      "requiredApprovals": 2,
+      "requiredChannels": [
+        "github"
+      ],
+      "advisoryChannels": [
+        "slack",
+        "teams"
+      ],
+      "conditions": [
+        {
+          "type": "github-environment",
+          "environment": "helios-prod",
+          "required": true
+        },
+        {
+          "type": "plan-hash-match",
+          "required": true
+        },
+        {
+          "type": "source-sha-match",
+          "required": true
+        },
+        {
+          "type": "required-checks-green",
+          "required": true
+        },
+        {
+          "type": "blocker-issue-closed",
+          "repository": "M0nado/helios-platform",
+          "issueNumber": 162,
+          "required": true
+        },
+        {
+          "type": "self-review-prohibited",
+          "required": true
+        }
+      ],
+      "expiresMinutes": 1440,
+      "onExpiry": "reject"
+    },
+    {
+      "id": "connector-enable-v1",
+      "description": "Enable or widen a connector route",
+      "requiredApprovals": 1,
+      "requiredChannels": [
+        "github"
+      ],
+      "advisoryChannels": [
+        "slack",
+        "teams",
+        "linear"
+      ],
+      "conditions": [
+        {
+          "type": "config-change-via-pr",
+          "required": true
+        },
+        {
+          "type": "connector-health-green",
+          "required": true
+        },
+        {
+          "type": "secret-readback-denied",
+          "required": true
+        }
+      ],
+      "expiresMinutes": 2880,
+      "onExpiry": "reject"
+    },
+    {
+      "id": "emergency-quarantine-v1",
+      "description": "Disable connector routes without deleting infrastructure",
+      "requiredApprovals": 1,
+      "requiredChannels": [
+        "github"
+      ],
+      "advisoryChannels": [
+        "slack",
+        "teams"
+      ],
+      "conditions": [
+        {
+          "type": "reason-required",
+          "required": true
+        },
+        {
+          "type": "environment",
+          "environment": "helios-emergency",
+          "required": true
+        }
+      ],
+      "expiresMinutes": 60,
+      "onExpiry": "reject"
+    }
+  ],
+  "rules": [
+    "Slack and Teams approvals are recorded evidence but never authorize Azure deployment alone.",
+    "Linear status changes never authorize deployment.",
+    "SharePoint documents never execute configuration.",
+    "The deployed source SHA and approved plan hash must be identical to the reviewed evidence."
+  ]
+}

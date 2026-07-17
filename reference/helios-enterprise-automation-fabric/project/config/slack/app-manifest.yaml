@@ -1,0 +1,33 @@
+display_information:
+  name: HELIOS Control Plane
+  description: Governed deployment, incident, and evidence workflows for HELIOS.
+  background_color: "#111827"
+features:
+  bot_user:
+    display_name: HELIOS
+    always_online: false
+  slash_commands:
+    - command: /helios
+      url: https://REPLACE_WITH_BROKER_HOST/hooks/slack
+      description: Inspect HELIOS status or request a governed operation.
+      usage_hint: "status | incident | plan | evidence <correlation-id>"
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:read
+      - chat:write
+      - commands
+      - reactions:write
+settings:
+  event_subscriptions:
+    request_url: https://REPLACE_WITH_BROKER_HOST/hooks/slack
+    bot_events:
+      - app_mention
+  interactivity:
+    is_enabled: true
+    request_url: https://REPLACE_WITH_BROKER_HOST/hooks/slack
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: true

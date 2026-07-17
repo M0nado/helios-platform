@@ -1,0 +1,264 @@
+{
+  "version": "1.0",
+  "defaultMode": "deny",
+  "connectors": [
+    {
+      "id": "azure-events",
+      "displayName": "Azure Service Bus Event Backbone",
+      "type": "azure-servicebus",
+      "enabled": true,
+      "direction": "bidirectional",
+      "owner": "platform-engineering",
+      "auth": {
+        "kind": "managed-identity",
+        "runtimeIdentity": "uami-helios-fabric",
+        "approvalBoundary": "Azure RBAC at the namespace/entity scope"
+      },
+      "capabilities": [
+        "event.enqueue",
+        "event.receive",
+        "deadletter.inspect"
+      ],
+      "secretReferences": [],
+      "dataClassification": "confidential",
+      "rateLimit": {
+        "requests": 5000,
+        "windowSeconds": 60
+      },
+      "retry": {
+        "maxAttempts": 10,
+        "baseDelaySeconds": 2,
+        "maxDelaySeconds": 900
+      },
+      "health": {
+        "mode": "active",
+        "target": "servicebus://helios-events",
+        "intervalMinutes": 5
+      }
+    },
+    {
+      "id": "github-control",
+      "displayName": "GitHub Control Plane",
+      "type": "github",
+      "enabled": false,
+      "direction": "bidirectional",
+      "owner": "platform-engineering",
+      "auth": {
+        "kind": "github-app",
+        "runtimeIdentity": "HELIOS GitHub App plus workflow GITHUB_TOKEN",
+        "approvalBoundary": "Repository rulesets and protected environments"
+      },
+      "capabilities": [
+        "webhook.receive",
+        "check.write",
+        "issue.write",
+        "pull-request.comment",
+        "deployment.status",
+        "repository-dispatch"
+      ],
+      "secretReferences": [
+        "GITHUB_WEBHOOK_SECRET",
+        "GITHUB_APP_ID",
+        "GITHUB_APP_INSTALLATION_ID",
+        "GITHUB_APP_PRIVATE_KEY"
+      ],
+      "dataClassification": "confidential",
+      "rateLimit": {
+        "requests": 3000,
+        "windowSeconds": 3600
+      },
+      "retry": {
+        "maxAttempts": 5,
+        "baseDelaySeconds": 2,
+        "maxDelaySeconds": 120
+      },
+      "health": {
+        "mode": "active",
+        "target": "https://api.github.com/app",
+        "intervalMinutes": 15
+      }
+    },
+    {
+      "id": "slack-ops",
+      "displayName": "Slack Operations",
+      "type": "slack",
+      "enabled": false,
+      "direction": "bidirectional",
+      "owner": "operations",
+      "auth": {
+        "kind": "signed-webhook",
+        "runtimeIdentity": "HELIOS Slack App",
+        "approvalBoundary": "Slack app admin approval and channel allowlist"
+      },
+      "capabilities": [
+        "message.post",
+        "thread.reply",
+        "interaction.receive",
+        "command.receive",
+        "reaction.write"
+      ],
+      "secretReferences": [
+        "SLACK_BOT_TOKEN",
+        "SLACK_SIGNING_SECRET"
+      ],
+      "dataClassification": "confidential",
+      "rateLimit": {
+        "requests": 50,
+        "windowSeconds": 60
+      },
+      "retry": {
+        "maxAttempts": 5,
+        "baseDelaySeconds": 2,
+        "maxDelaySeconds": 120
+      },
+      "health": {
+        "mode": "active",
+        "target": "https://slack.com/api/auth.test",
+        "intervalMinutes": 15
+      }
+    },
+    {
+      "id": "linear-work",
+      "displayName": "Linear Work Tracking",
+      "type": "linear",
+      "enabled": false,
+      "direction": "bidirectional",
+      "owner": "program-management",
+      "auth": {
+        "kind": "signed-webhook",
+        "runtimeIdentity": "HELIOS Linear OAuth app or service token",
+        "approvalBoundary": "Linear workspace administrator authorization"
+      },
+      "capabilities": [
+        "issue.create",
+        "issue.update",
+        "comment.create",
+        "project.update",
+        "webhook.receive"
+      ],
+      "secretReferences": [
+        "LINEAR_API_KEY",
+        "LINEAR_WEBHOOK_SECRET"
+      ],
+      "dataClassification": "confidential",
+      "rateLimit": {
+        "requests": 1000,
+        "windowSeconds": 3600
+      },
+      "retry": {
+        "maxAttempts": 5,
+        "baseDelaySeconds": 2,
+        "maxDelaySeconds": 120
+      },
+      "health": {
+        "mode": "active",
+        "target": "https://api.linear.app/graphql",
+        "intervalMinutes": 15
+      }
+    },
+    {
+      "id": "sharepoint-evidence",
+      "displayName": "SharePoint Governance and Evidence",
+      "type": "sharepoint",
+      "enabled": false,
+      "direction": "outbound",
+      "owner": "governance",
+      "auth": {
+        "kind": "managed-identity",
+        "runtimeIdentity": "uami-helios-fabric with Microsoft Graph Sites.Selected",
+        "approvalBoundary": "SharePoint site-scoped grant plus Entra admin consent"
+      },
+      "capabilities": [
+        "site.read",
+        "drive.upload",
+        "metadata.write",
+        "evidence.archive"
+      ],
+      "secretReferences": [],
+      "dataClassification": "restricted",
+      "rateLimit": {
+        "requests": 300,
+        "windowSeconds": 60
+      },
+      "retry": {
+        "maxAttempts": 8,
+        "baseDelaySeconds": 3,
+        "maxDelaySeconds": 300
+      },
+      "health": {
+        "mode": "active",
+        "target": "graph://sharepoint-site",
+        "intervalMinutes": 15
+      }
+    },
+    {
+      "id": "teams-ops",
+      "displayName": "Microsoft Teams Operations",
+      "type": "teams-workflow",
+      "enabled": false,
+      "direction": "bidirectional",
+      "owner": "operations",
+      "auth": {
+        "kind": "workflow-webhook",
+        "runtimeIdentity": "Teams Workflows / Power Automate flow",
+        "approvalBoundary": "Flow owner, Teams channel, and protected callback secret"
+      },
+      "capabilities": [
+        "adaptive-card.post",
+        "approval.request",
+        "approval.callback"
+      ],
+      "secretReferences": [
+        "TEAMS_WORKFLOW_WEBHOOK_URL",
+        "TEAMS_APPROVAL_CALLBACK_SECRET"
+      ],
+      "dataClassification": "confidential",
+      "rateLimit": {
+        "requests": 100,
+        "windowSeconds": 60
+      },
+      "retry": {
+        "maxAttempts": 5,
+        "baseDelaySeconds": 3,
+        "maxDelaySeconds": 180
+      },
+      "health": {
+        "mode": "passive",
+        "target": "teams-workflow",
+        "intervalMinutes": 30
+      }
+    },
+    {
+      "id": "openai-optional",
+      "displayName": "OpenAI Platform Optional Provider",
+      "type": "openai-platform",
+      "enabled": false,
+      "direction": "outbound",
+      "owner": "ai-platform",
+      "auth": {
+        "kind": "disabled",
+        "runtimeIdentity": "Not provisioned by this package",
+        "approvalBoundary": "Separate OpenAI project and credential approval"
+      },
+      "capabilities": [
+        "event.summarize"
+      ],
+      "secretReferences": [],
+      "dataClassification": "confidential",
+      "rateLimit": {
+        "requests": 10,
+        "windowSeconds": 60
+      },
+      "retry": {
+        "maxAttempts": 2,
+        "baseDelaySeconds": 3,
+        "maxDelaySeconds": 30
+      },
+      "health": {
+        "mode": "disabled",
+        "target": null,
+        "intervalMinutes": 60
+      }
+    }
+  ]
+}
