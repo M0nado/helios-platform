@@ -103,7 +103,7 @@ resource workerBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-
   }
 }
 
-module privateEndpoint 'private-endpoint.bicep' = if (enablePrivateNetworking) {
+module privateEndpoint 'modules/private-endpoint.bicep' = if (enablePrivateNetworking) {
   name: 'storage-private-endpoint'
   params: {
     location: location

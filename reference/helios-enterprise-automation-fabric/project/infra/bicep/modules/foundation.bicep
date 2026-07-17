@@ -12,7 +12,7 @@ param tags object
 
 var compactPrefix = toLower(replace(prefix, '-', ''))
 var keyVaultName = take('${compactPrefix}-${environment}-${uniqueSuffix}-kv', 24)
-var registryName = take('${compactPrefix}${environment}${uniqueSuffix}acr', 50)
+var registryName = take('${compactPrefix}he${environment}${uniqueSuffix}acr', 50)
 var storageName = take('${compactPrefix}${environment}${uniqueSuffix}st', 24)
 var serviceBusName = take('${compactPrefix}-${environment}-${uniqueSuffix}-sb', 50)
 var appConfigName = take('${compactPrefix}-${environment}-${uniqueSuffix}-appcs', 50)
@@ -218,7 +218,7 @@ var keyVaultSecretsUserRoleId = subscriptionResourceId('Microsoft.Authorization/
 var appConfigReaderRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '516239f1-63e1-4d78-a4de-a74fb236a071')
 
 resource ingressAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(registry.id, ingressIdentity.properties.principalId, acrPullRoleId)
+  name: guid(registry.id, ingressIdentity.id, acrPullRoleId)
   scope: registry
   properties: {
     principalId: ingressIdentity.properties.principalId
@@ -228,7 +228,7 @@ resource ingressAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 resource workerAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(registry.id, workerIdentity.properties.principalId, acrPullRoleId)
+  name: guid(registry.id, workerIdentity.id, acrPullRoleId)
   scope: registry
   properties: {
     principalId: workerIdentity.properties.principalId
@@ -238,7 +238,7 @@ resource workerAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 resource ingressVaultReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(vault.id, ingressIdentity.properties.principalId, keyVaultSecretsUserRoleId)
+  name: guid(vault.id, ingressIdentity.id, keyVaultSecretsUserRoleId)
   scope: vault
   properties: {
     principalId: ingressIdentity.properties.principalId
@@ -248,7 +248,7 @@ resource ingressVaultReader 'Microsoft.Authorization/roleAssignments@2022-04-01'
 }
 
 resource workerVaultReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(vault.id, workerIdentity.properties.principalId, keyVaultSecretsUserRoleId)
+  name: guid(vault.id, workerIdentity.id, keyVaultSecretsUserRoleId)
   scope: vault
   properties: {
     principalId: workerIdentity.properties.principalId
@@ -258,7 +258,7 @@ resource workerVaultReader 'Microsoft.Authorization/roleAssignments@2022-04-01' 
 }
 
 resource ingressConfigReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(appConfiguration.id, ingressIdentity.properties.principalId, appConfigReaderRoleId)
+  name: guid(appConfiguration.id, ingressIdentity.id, appConfigReaderRoleId)
   scope: appConfiguration
   properties: {
     principalId: ingressIdentity.properties.principalId
@@ -268,7 +268,7 @@ resource ingressConfigReader 'Microsoft.Authorization/roleAssignments@2022-04-01
 }
 
 resource workerConfigReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(appConfiguration.id, workerIdentity.properties.principalId, appConfigReaderRoleId)
+  name: guid(appConfiguration.id, workerIdentity.id, appConfigReaderRoleId)
   scope: appConfiguration
   properties: {
     principalId: workerIdentity.properties.principalId
@@ -359,7 +359,7 @@ module workloads '../containerapps.bicep' = if (deployWorkloads) {
   ]
 }
 
-output brokerUrl string = deployWorkloads ? workloads.outputs.brokerUrl : ''
+output brokerUrl string = deployWorkloads ? workloads!.outputs.brokerUrl : ''
 output keyVaultName string = vault.name
 output serviceBusNamespace string = serviceBus.outputs.namespaceName
 output evidenceStorageAccount string = storage.outputs.accountName

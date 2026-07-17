@@ -111,7 +111,7 @@ resource workerSender 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-module privateEndpoint 'private-endpoint.bicep' = if (enablePrivateNetworking) {
+module privateEndpoint 'modules/private-endpoint.bicep' = if (enablePrivateNetworking) {
   name: 'servicebus-private-endpoint'
   params: {
     location: location
