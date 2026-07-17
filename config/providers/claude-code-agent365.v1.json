@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "1.0",
+  "providerId": "helios-claude-code-agent365",
+  "productionEnabled": false,
+  "productionBlockerIssue": 162,
+  "claudeCode": {
+    "package": "@anthropic-ai/claude-code",
+    "install": "npm install -g @anthropic-ai/claude-code",
+    "verify": ["claude --version", "claude doctor", "claude mcp list"],
+    "defaultPermissionMode": "plan",
+    "projectInstructions": "CLAUDE.md",
+    "projectSettings": ".claude/settings.json",
+    "projectMcp": ".mcp.json",
+    "authentication": "interactive-oauth-or-approved-enterprise-provider",
+    "prohibited": [
+      "permission-bypass",
+      "unapproved-cloud-write",
+      "credential-output",
+      "automatic-merge",
+      "production-deployment"
+    ]
+  },
+  "agent365": {
+    "developerCommands": [
+      "a365 setup requirements",
+      "a365 setup all --dry-run"
+    ],
+    "administratorCommands": [
+      "a365 config display",
+      "a365 setup admin --config-dir <reviewed-config-directory>"
+    ],
+    "mcpServers": [
+      "Microsoft 365 Copilot",
+      "Teams",
+      "OneDrive and SharePoint",
+      "Mail",
+      "Calendar"
+    ],
+    "adminConsentRequired": true,
+    "automaticAdminConsent": false
+  },
+  "azureMcp": {
+    "package": "@azure/mcp@latest",
+    "command": "npx -y @azure/mcp@latest server start",
+    "authentication": "active-azure-cli-context",
+    "implicitSubscriptionSelection": false
+  },
+  "evidence": [
+    "tool-version-inventory",
+    "mcp-server-list",
+    "agent365-dry-run",
+    "admin-handoff-record",
+    "azure-context-summary",
+    "connector-health-summary"
+  ]
+}
