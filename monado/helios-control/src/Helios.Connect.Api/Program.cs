@@ -51,18 +51,24 @@ app.MapGet("/.well-known/oauth-protected-resource", (HttpContext context) =>
 app.MapGet("/.well-known/oauth-protected-resource/mcp", (HttpContext context) =>
     BuildProtectedResourceMetadata(context));
 
-app.MapGet("/connector/context", (HttpContext context, IAzureInventoryService inventory) =>
-    IsConnectorAuthorized(context) ? Results.Ok(inventory.GetContext()) : Results.Unauthorized());
-
-app.MapGet("/connector/resources", async (HttpContext context, IAzureInventoryService inventory, string? typePrefix, CancellationToken cancellationToken) =>
+app.MapGet("/connector/context", (HttpContext context) =>
 {
     if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
+    return Results.Ok(inventory.GetContext());
+});
+
+app.MapGet("/connector/resources", async (HttpContext context, string? typePrefix, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
     return await RunInventoryQuery(() => inventory.ListResourcesAsync(typePrefix, cancellationToken));
 });
 
-app.MapGet("/connector/foundry", async (HttpContext context, IAzureInventoryService inventory, CancellationToken cancellationToken) =>
+app.MapGet("/connector/foundry", async (HttpContext context, CancellationToken cancellationToken) =>
 {
     if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
     return await RunInventoryQuery(() => inventory.ListFoundryResourcesAsync(cancellationToken));
 });
 
@@ -85,7 +91,7 @@ app.MapDelete("/mcp", (HttpContext context) =>
     return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
 });
 
-app.MapPost("/mcp", async (HttpContext context, IAzureInventoryService inventory, CancellationToken cancellationToken) =>
+app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationToken) =>
 {
     if (!IsMcpOriginAllowed(context)) return McpError(null, -32000, "Invalid Origin header.", StatusCodes.Status403Forbidden);
     if (!IsConnectorAuthorized(context)) return McpUnauthorized(context);
@@ -171,6 +177,7 @@ app.MapPost("/mcp", async (HttpContext context, IAzureInventoryService inventory
         {
             if (!TryValidateAzureToolCall(root, out var validationError))
                 return McpError(id, -32602, validationError);
+            var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
             return McpResult(id, await BuildAzureToolResultAsync(root, inventory, cancellationToken));
         }
 
@@ -368,7 +375,7 @@ static bool AcceptsMcpPostResponse(HttpRequest request)
     // when present, the Streamable HTTP contract is enforced exactly.
     var acceptHeaders = request.Headers["Accept"];
     if (acceptHeaders.Count == 0) return true;
-    var values = acceptHeaders.SelectMany(value => value?.Split(',') ?? Array.Empty<string>())
+    var values = acceptHeaders.SelectMany(value => value.Split(','))
         .Select(value => value.Split(';')[0].Trim())
         .ToArray();
     return values.Contains("application/json", StringComparer.OrdinalIgnoreCase) &&
