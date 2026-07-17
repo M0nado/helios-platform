@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "1.0",
+  "environment": "azure-dev",
+  "productionEnabled": false,
+  "github": {
+    "repository": "M0nado/helios-platform",
+    "environment": "azure-dev",
+    "federationSubject": "repo:M0nado/helios-platform:environment:azure-dev",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "audience": "api://AzureADTokenExchange"
+  },
+  "mcpServers": {
+    "azure": {
+      "transport": "stdio",
+      "command": "npx -y @azure/mcp@latest server start",
+      "authentication": "active Azure CLI context"
+    },
+    "github": {
+      "transport": "streamable-http",
+      "url": "https://api.githubcopilot.com/mcp",
+      "authentication": "GitHub OAuth"
+    },
+    "linear": {
+      "transport": "streamable-http",
+      "url": "https://mcp.linear.app/mcp",
+      "authentication": "OAuth 2.1"
+    },
+    "slack": {
+      "transport": "streamable-http",
+      "url": "https://mcp.slack.com/mcp",
+      "authentication": "Slack OAuth"
+    },
+    "foundry": {
+      "transport": "streamable-http",
+      "url": "https://mcp.ai.azure.com",
+      "authentication": "Azure identity"
+    },
+    "m365Copilot": {
+      "transport": "streamable-http",
+      "urlTemplate": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenantId}/servers/mcp_M365Copilot",
+      "authentication": "Agent 365 / Microsoft identity"
+    },
+    "teams": {
+      "transport": "streamable-http",
+      "urlTemplate": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenantId}/servers/mcp_TeamsServer",
+      "authentication": "Agent 365 / Microsoft identity"
+    },
+    "sharePointOneDrive": {
+      "transport": "streamable-http",
+      "urlTemplate": "https://agent365.svc.cloud.microsoft/agents/tenants/{tenantId}/servers/mcp_ODSPRemoteServer",
+      "authentication": "Agent 365 / Microsoft identity"
+    }
+  },
+  "localServices": {
+    "aihub": "http://127.0.0.1:8787/health",
+    "hermesGateway": "http://127.0.0.1:8700/health",
+    "xcore": "http://127.0.0.1:8703/health"
+  },
+  "collaborationDestinations": {
+    "linearProject": "Helios Integration Fabric",
+    "slackChannels": ["#helios-control-plane", "#helios-ops"],
+    "teams": "Helios / Helios Ops",
+    "sharePoint": "Helios/Governance"
+  }
+}
