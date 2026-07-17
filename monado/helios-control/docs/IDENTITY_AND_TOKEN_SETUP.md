@@ -7,6 +7,9 @@ permissions, never credential values.
 
 1. Developers authenticate interactively with `az login`, `azd auth login`, `gh auth login`, and `pac auth create`.
 2. GitHub Actions uses Entra workload identity federation and `id-token: write`.
+   Its credential matches the exact protected-environment subject; required
+   reviewers and the exact deployment branch are verified before federation is
+   configured. No client secret is created.
 3. Azure Pipelines uses an Azure Resource Manager service connection with workload identity federation.
 4. The implemented Container App uses a user-assigned managed identity. Functions,
    workers, and Foundry/Agent 365 identities are later administrator-controlled
