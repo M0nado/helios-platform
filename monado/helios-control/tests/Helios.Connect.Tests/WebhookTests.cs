@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Helios.Connect.Tests;
 
-public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
@@ -18,23 +18,38 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Unknown_provider_is_not_found() =>
-        Assert.Equal(HttpStatusCode.NotFound, (await _client.PostAsync("/webhooks/nope", new StringContent("{}", Encoding.UTF8, "application/json"))).StatusCode);
+    public async Task Unknown_provider_is_not_found()
+    {
+        using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/webhooks/nope", content);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 
     [Fact]
-    public async Task Empty_payload_is_rejected() =>
-        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsync("/webhooks/github", new StringContent(""))).StatusCode);
+    public async Task Empty_payload_is_rejected()
+    {
+        using var content = new StringContent("");
+        using var response = await _client.PostAsync("/webhooks/github", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 
     [Fact]
-    public async Task Invalid_json_is_rejected() =>
-        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsync("/webhooks/github", new StringContent("not-json", Encoding.UTF8, "application/json"))).StatusCode);
+    public async Task Invalid_json_is_rejected()
+    {
+        using var content = new StringContent("not-json", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/webhooks/github", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 
     [Fact]
     public async Task Health_routes_preserve_legacy_and_report_live_and_ready()
     {
-        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/health")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/health/live")).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/health/ready")).StatusCode);
+        using var legacy = await _client.GetAsync("/health");
+        using var live = await _client.GetAsync("/health/live");
+        using var ready = await _client.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.OK, legacy.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
     }
 
     [Fact]
@@ -50,14 +65,15 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         });
         using var client = securedFactory.CreateClient();
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.GetAsync("/health/ready")).StatusCode);
+        using var response = await client.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
     [Fact]
     public async Task Local_mcp_lists_only_read_tools()
     {
-        var request = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json");
-        var response = await _client.PostAsync("/runtime/webhooks/mcp", request);
+        using var request = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/runtime/webhooks/mcp", request);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("hermes_get_status", body);
@@ -70,7 +86,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
             builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true"));
         using var client = securedFactory.CreateClient();
-        var response = await client.GetAsync("/connector/context");
+        using var response = await client.GetAsync("/connector/context");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
@@ -85,7 +101,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
             Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
         };
         request.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
-        var response = await client.SendAsync(request);
+        using var response = await client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("azure_list_resources", body);
@@ -93,4 +109,6 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.DoesNotContain("deploy", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("role_assignment", body, StringComparison.OrdinalIgnoreCase);
     }
+
+    public void Dispose() => _client.Dispose();
 }
