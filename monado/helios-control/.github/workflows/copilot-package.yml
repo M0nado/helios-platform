@@ -43,5 +43,28 @@ jobs:
       - name: Verify pinned Microsoft 365 Agents Toolkit CLI
         run: npx --yes @microsoft/m365agentstoolkit-cli@1.1.12 --version
 
-      - name: Parse Copilot package manifest
-        run: python -m json.tool "${{ steps.project.outputs.directory }}/appPackage/manifest.json" >/dev/null
+      - name: Materialize Teams package icons
+        shell: pwsh
+        run: ./scripts/New-HeliosTeamsPackage.ps1
+        working-directory: ${{ steps.project.outputs.directory }}
+
+      - name: Validate Copilot package contract
+        shell: bash
+        working-directory: ${{ steps.project.outputs.directory }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import struct
+          from pathlib import Path
+
+          root = Path("appPackage")
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          assert manifest["version"] == "0.3.0"
+          expected_resource = "api://" + "$" + "{{ENTRA_APP_ID}}"
+          assert manifest["webApplicationInfo"]["resource"] == expected_resource
+          for name, expected in (("color.png", (192, 192)), ("outline.png", (32, 32))):
+              data = (root / name).read_bytes()
+              assert data[:8] == b"\x89PNG\r\n\x1a\n"
+              assert struct.unpack(">II", data[16:24]) == expected
+          PY
