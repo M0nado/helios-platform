@@ -27,7 +27,7 @@
       card.append(node('div','muted',system?.purpose||''));
       card.append(node('p','muted',system?.nextAction||''));
       const href=safeHttpsUrl(system?.url);
-      if(href){const link=node('a','', 'Open system ↗');link.href=href;link.target='_blank';link.rel='noreferrer';card.append(link)}
+      if(href){const link=node('a','', 'Open system ↗');link.href=href;link.target='_blank';link.rel='noreferrer';card.append(link);}
       grid.append(card);
     }
   }
