@@ -5,14 +5,15 @@ This slice reconciles the reviewed Azure concepts from PR #176 and the operator/
 It provides:
 
 - a runnable PowerShell Azure CLI connector;
-- explicit subscription and tenant selection;
+- browser or device-code Azure login plus an interactive subscription picker;
 - optional secretless Entra application and GitHub OIDC federation;
 - optional protected `azure-dev` GitHub environment configuration;
 - environment variables for GitHub Actions OIDC;
 - Bicep compilation and resource-group validation;
 - a development-only Azure what-if operation;
 - current Azure, GitHub, Linear, Slack, Foundry, Agent 365, Teams, and SharePoint connection metadata;
-- local AIHub, Hermes, and XCore health checks.
+- authenticated read-only Azure/GitHub cloud preflight evidence;
+- optional local AIHub, Hermes, and XCore health checks.
 
 No deployment or secret creation is included.
 
@@ -26,7 +27,12 @@ App/setup:      PR #177, reviewed concepts only
 Branch:         integration/azure-dev-live-connect-v1
 ```
 
-## 1. Install the required local tools
+## 1. Open the operator shell
+
+Use Azure Cloud Shell PowerShell when you want the operator session to run in
+Azure. A workstation is optional; it is never part of the deployed runtime.
+
+For a Windows workstation, install the required administration clients:
 
 Open **PowerShell 7 as Administrator**:
 
@@ -50,16 +56,13 @@ git fetch origin
 git checkout integration/azure-dev-live-connect-v1
 ```
 
-## 3. Connect Azure and run a local what-if
+## 3. Connect Azure and run an Azure what-if
 
-Replace the subscription and tenant IDs with the values shown by `az account list`.
+Choose the login UX explicitly. When `-SubscriptionId` is omitted, the script lists enabled subscriptions in the selected tenant and prompts for the approved one. Pass `-SubscriptionId` to make automation non-interactive.
 
 ```powershell
-az login --use-device-code
-az account list --output table
-
 pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Connect-HeliosAzureDev.ps1 `
-  -SubscriptionId '<approved-subscription-id>' `
+  -LoginMode DeviceCode `
   -TenantId '<approved-tenant-id>' `
   -ResourceGroup 'rg-helios-dev' `
   -Location 'eastus2' `
@@ -67,6 +70,8 @@ pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Connect-Helio
   -ResourceGroupConfirmation 'CREATE HELIOS AZURE DEV RESOURCE GROUP' `
   -RunWhatIf
 ```
+
+Use `-LoginMode Browser` for browser-based Azure CLI authentication. The login mode is used only when the current Azure CLI session is not authenticated.
 
 This command performs validation and what-if only. It writes evidence under:
 
@@ -95,6 +100,8 @@ pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Connect-Helio
 
 No client secret is generated.
 
+The repository and environment are immutable for this connector: `M0nado/helios-platform` and `azure-dev`. An existing `github-azure-dev` federated credential must exactly match the canonical issuer, subject, and audience; a mismatch fails closed and is never overwritten.
+
 ## 5. Create the protected GitHub environment and variables
 
 Authenticate GitHub CLI:
@@ -103,7 +110,7 @@ Authenticate GitHub CLI:
 gh auth login
 ```
 
-A required reviewer can be supplied as the numeric GitHub user ID. Omitting it still creates the environment with protected-branch deployment policy and self-review prevention, but a reviewer should be added before promotion.
+A positive numeric GitHub user ID is mandatory. Environment configuration fails closed when `-RequiredReviewerId` is omitted or invalid. Self-review prevention and protected-branch deployment policy remain enabled.
 
 ```powershell
 pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Connect-HeliosAzureDev.ps1 `
@@ -126,8 +133,15 @@ AZURE_RESOURCE_GROUP
 
 ## 6. Start and inspect connections
 
+After the GitHub environment exists, run the authenticated read-only cloud
+preflight. This avoids requiring that environment during the initial bootstrap.
+
 ```powershell
 pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Start-HeliosConnections.ps1 `
+  -CheckCloudConnections `
+  -SubscriptionId '<approved-subscription-id>' `
+  -TenantId '<approved-tenant-id>' `
+  -ResourceGroup 'rg-helios-dev' `
   -CheckClaudeMcp `
   -CheckAzureDevOps `
   -CheckLocalServices
@@ -140,6 +154,8 @@ integration/azure-dev-live-connect/config/connections.json
 ```
 
 Remote MCP OAuth is completed by the MCP client when the server is first used. The registry contains no OAuth tokens.
+
+`-CheckCloudConnections` performs authenticated reads only: Azure account/context, resource-group lookup, resource inventory, GitHub repository lookup, and `azure-dev` environment lookup. It never requests an access token, changes RBAC, updates an environment, or invokes an MCP tool.
 
 ## 7. Run the protected GitHub what-if
 
