@@ -1,17 +1,22 @@
 {
   "schemaVersion": 1,
   "runtime": "microsoft-foundry-agent-service",
+  "runtimeState": "planned-admin-gate",
   "distribution": ["microsoft-365-copilot", "microsoft-teams", "agent-365-registry"],
+  "distributionState": "not-published",
   "sharedToolbox": {
     "protocol": "mcp",
-    "endpoint": "azure-functions:/runtime/webhooks/mcp",
+    "endpoint": "https://<container-app-host>/mcp",
+    "endpointSource": "infra/main.bicep output connectorMcpUrl",
+    "deploymentState": "not-published",
     "authentication": "entra-managed-identity",
-    "tools": ["hermes.get_status", "hermes.list_routes", "hermes.list_candidates", "github.read_pr", "azuredevops.read_work_item"]
+    "tools": ["azure_get_context", "azure_list_resources", "azure_list_foundry_resources"]
   },
   "agents": [
     {
       "id": "hermes-orchestrator",
       "type": "hosted",
+      "deploymentState": "not-published",
       "purpose": "Route XCore tasks across inference, feature engineering, and training nodes.",
       "permissionTier": 2,
       "writes": "draft-only"
@@ -19,6 +24,7 @@
     {
       "id": "xcore-teacher",
       "type": "hosted",
+      "deploymentState": "not-published",
       "purpose": "Generate weakness-aware synthetic tasks and controlled curriculum mutations.",
       "permissionTier": 2,
       "writes": "sandbox-memory-only"
@@ -26,6 +32,7 @@
     {
       "id": "xcore-evaluator",
       "type": "prompt",
+      "deploymentState": "not-published",
       "purpose": "Score quality, latency, safety, regression, and evidence completeness.",
       "permissionTier": 1,
       "writes": "evaluation-store-only"
@@ -33,6 +40,7 @@
     {
       "id": "helios-governor",
       "type": "prompt",
+      "deploymentState": "not-published",
       "purpose": "Enforce data classification, approval thresholds, promotion gates, and rollback policy.",
       "permissionTier": 3,
       "writes": "pull-request-only"
@@ -41,9 +49,10 @@
   "learningPolicy": {
     "rawCopilotConversationsAsTrainingData": false,
     "allowedSources": ["approved-tests", "synthetic-curriculum", "reviewed-documents", "sanitized-telemetry"],
-    "candidateStore": "cosmosdb:hermes-learning/candidates",
-    "vectorStore": "azure-ai-search:hermes-memory",
-    "evidenceStore": "datalake:helios/evaluations",
+    "candidateStore": "planned:cosmosdb:hermes-learning/candidates",
+    "vectorStore": "planned:azure-ai-search:hermes-memory",
+    "evidenceStore": "planned:datalake:helios/evaluations",
+    "cloudStoresImplemented": false,
     "promotion": "evaluation-pass-plus-human-approval-plus-pull-request",
     "automaticProductionMutation": false,
     "rollbackRequired": true
