@@ -24,6 +24,14 @@ app.MapGet("/health/live", () => Results.Ok(new
 
 app.MapGet("/health/ready", (IConfiguration configuration) => BuildReadinessResult(configuration));
 
+app.MapGet("/privacy", () => Results.Text(
+    "Helios processes only administrator-approved integration metadata. The tenant administrator supplies the governing privacy notice.",
+    "text/plain; charset=utf-8"));
+
+app.MapGet("/terms", () => Results.Text(
+    "Use is limited to authorized users and approved read-only or governed workflows under tenant policy.",
+    "text/plain; charset=utf-8"));
+
 app.MapGet("/openapi/v1.json", (HttpRequest request) =>
 {
     var origin = $"{request.Scheme}://{request.Host}";
@@ -33,7 +41,7 @@ app.MapGet("/openapi/v1.json", (HttpRequest request) =>
         ["/connector/resources"] = new { get = new { operationId = "ListAzureResources", summary = "List read-only resource metadata.", parameters = new[] { new { name = "typePrefix", @in = "query", required = false, schema = new { type = "string" } } }, responses = new Dictionary<string, object> { ["200"] = new { description = "Azure resources" }, ["401"] = new { description = "Entra authentication required" } } } },
         ["/connector/foundry"] = new { get = new { operationId = "ListFoundryResources", summary = "List Foundry-related resources.", responses = new Dictionary<string, object> { ["200"] = new { description = "Foundry resources" }, ["401"] = new { description = "Entra authentication required" } } } }
     };
-    return Results.Json(new { openapi = "3.0.1", info = new { title = "Helios Azure Connector", version = "0.2.0" }, servers = new[] { new { url = origin } }, paths });
+    return Results.Json(new { openapi = "3.0.1", info = new { title = "Helios Azure Connector", version = "0.3.0" }, servers = new[] { new { url = origin } }, paths });
 });
 
 // RFC 9728 discovery for OAuth-protected MCP clients. Both the root and the
@@ -83,15 +91,17 @@ app.MapPost("/mcp", async (HttpContext context, IAzureInventoryService inventory
     if (!IsConnectorAuthorized(context)) return McpUnauthorized(context);
     if (!context.Request.HasJsonContentType())
         return McpError(null, -32600, "Content-Type must be application/json.", StatusCodes.Status415UnsupportedMediaType);
-    if (context.Request.ContentLength is > 0 && context.Request.ContentLength > GetMaxMcpRequestBytes(context))
+    var maxMcpBytes = GetMaxMcpRequestBytes(context);
+    if (!BoundedRequestBody.Prepare(context, maxMcpBytes))
         return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
-    var maxBodyFeature = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
-    if (maxBodyFeature is { IsReadOnly: false }) maxBodyFeature.MaxRequestBodySize = GetMaxMcpRequestBytes(context);
     if (!AcceptsMcpPostResponse(context.Request))
         return McpError(null, -32600, "Accept must include application/json and text/event-stream.", StatusCodes.Status406NotAcceptable);
 
+    var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maxMcpBytes, cancellationToken);
+    if (body.IsTooLarge)
+        return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
     JsonDocument document;
-    try { document = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: cancellationToken); }
+    try { document = JsonDocument.Parse(body.Bytes); }
     catch (JsonException) { return McpError(null, -32700, "Parse error.", StatusCodes.Status400BadRequest); }
 
     using (document)
@@ -176,7 +186,7 @@ app.MapPost("/mcp", async (HttpContext context, IAzureInventoryService inventory
 
 if (localMcpEnabled)
 {
-    app.MapPost("/runtime/webhooks/mcp", async (HttpContext context) =>
+    app.MapPost("/runtime/webhooks/mcp", async (HttpContext context, CancellationToken cancellationToken) =>
     {
         var mode = Environment.GetEnvironmentVariable("HELIOS_EXECUTION_MODE") ?? "dry-run";
         if (mode.Equals("live", StringComparison.OrdinalIgnoreCase)) return Results.StatusCode(StatusCodes.Status403Forbidden);
@@ -184,11 +194,14 @@ if (localMcpEnabled)
         if (remote is not null && !System.Net.IPAddress.IsLoopback(remote)) return Results.StatusCode(StatusCodes.Status403Forbidden);
         if (!IsMcpOriginAllowed(context)) return McpError(null, -32000, "Invalid Origin header.", StatusCodes.Status403Forbidden);
         if (!context.Request.HasJsonContentType()) return McpError(null, -32600, "Content-Type must be application/json.", StatusCodes.Status415UnsupportedMediaType);
-        if (context.Request.ContentLength is > 0 && context.Request.ContentLength > GetMaxMcpRequestBytes(context)) return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
+        var maxMcpBytes = GetMaxMcpRequestBytes(context);
+        if (!BoundedRequestBody.Prepare(context, maxMcpBytes)) return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
         if (!AcceptsMcpPostResponse(context.Request)) return McpError(null, -32600, "Accept must include application/json and text/event-stream.", StatusCodes.Status406NotAcceptable);
 
+        var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maxMcpBytes, cancellationToken);
+        if (body.IsTooLarge) return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
         JsonDocument document;
-        try { document = await JsonDocument.ParseAsync(context.Request.Body); }
+        try { document = JsonDocument.Parse(body.Bytes); }
         catch (JsonException) { return McpError(null, -32700, "Parse error.", StatusCodes.Status400BadRequest); }
         using (document)
         {
@@ -204,7 +217,7 @@ if (localMcpEnabled)
             var method = methodValue.GetString();
             return method switch
             {
-                "initialize" => McpResult(id, new { protocolVersion = "2025-03-26", capabilities = new { tools = new { listChanged = false } }, serverInfo = new { name = "helios-local", version = "0.2.0" } }),
+                "initialize" => McpResult(id, new { protocolVersion = "2025-03-26", capabilities = new { tools = new { listChanged = false } }, serverInfo = new { name = "helios-local", version = "0.3.0" } }),
                 "tools/list" => McpResult(id, new { tools = new object[] {
                     new { name = "hermes_get_status", description = "Read Helios/Hermes local status.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false } },
                     new { name = "hermes_list_routes", description = "List configured integration route names without secrets.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false } }
@@ -216,7 +229,7 @@ if (localMcpEnabled)
     });
 }
 
-app.MapPost("/webhooks/{provider}", async (string provider, HttpRequest request) =>
+app.MapPost("/webhooks/{provider}", async (string provider, HttpRequest request, CancellationToken cancellationToken) =>
 {
     var supported = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "github", "linear", "slack", "teams", "sharepoint", "foundry", "copilot" };
     if (!supported.Contains(provider)) return Results.NotFound();
@@ -226,30 +239,30 @@ app.MapPost("/webhooks/{provider}", async (string provider, HttpRequest request)
         1_048_576,
         1_024,
         10_485_760);
-    if (request.ContentLength is > 0 && request.ContentLength > maxBytes) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
-
-    using var reader = new StreamReader(request.Body, Encoding.UTF8);
-    var body = await reader.ReadToEndAsync();
-    if (string.IsNullOrWhiteSpace(body)) return Results.BadRequest(new { error = "empty payload" });
-    if (Encoding.UTF8.GetByteCount(body) > maxBytes) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
-    try { using var _ = JsonDocument.Parse(body); }
-    catch (JsonException) { return Results.BadRequest(new { error = "invalid JSON" }); }
+    if (!BoundedRequestBody.Prepare(request.HttpContext, maxBytes)) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    var body = await BoundedRequestBody.ReadAsync(request.Body, maxBytes, cancellationToken);
+    if (body.IsTooLarge) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    if (body.Bytes.Length == 0) return Results.BadRequest(new { error = "empty payload" });
 
     // Dry-run controls downstream side effects; it never weakens ingress
     // authentication. Unsupported providers remain fail-closed in the verifier.
-    if (!WebhookVerifier.Verify(provider, request.Headers, body))
+    // Verify the provider's signature over the exact raw bytes before parsing
+    // attacker-controlled JSON.
+    if (!WebhookVerifier.Verify(provider, request.Headers, body.Bytes))
         return Results.Unauthorized();
+    try { using var _ = JsonDocument.Parse(body.Bytes); }
+    catch (JsonException) { return Results.BadRequest(new { error = "invalid JSON" }); }
 
     var deliveryId = request.Headers["X-GitHub-Delivery"].FirstOrDefault()
         ?? request.Headers["X-Linear-Delivery"].FirstOrDefault();
     if (string.IsNullOrWhiteSpace(deliveryId))
-        deliveryId = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
+        deliveryId = Convert.ToHexString(SHA256.HashData(body.Bytes)).ToLowerInvariant();
     var replayKey = Convert.ToHexString(SHA256.HashData(
         Encoding.UTF8.GetBytes($"{provider.ToLowerInvariant()}\n{deliveryId}"))).ToLowerInvariant();
     if (!deliveries.TryRegister(replayKey, DateTimeOffset.UtcNow)) return Results.Ok(new { duplicate = true, deliveryId });
     var evt = new HeliosEvent(deliveryId, $"{provider}.received", provider, provider,
         DateTimeOffset.UtcNow, Guid.NewGuid().ToString("n"), request.Headers["traceparent"].FirstOrDefault(),
-        "internal", new Dictionary<string, object?> { ["rawSize"] = body.Length });
+        "internal", new Dictionary<string, object?> { ["rawSize"] = body.Bytes.Length });
     return Results.Accepted(value: evt);
 });
 
@@ -305,7 +318,7 @@ static string GetMcpPublicOrigin(HttpContext context)
         return configuredUri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
     }
 
-    var requiresEntra = bool.TryParse(configuration["HELIOS_REQUIRE_ENTRA_AUTH"], out var parsed) && parsed;
+    var requiresEntra = RequiresEntraAuthorization(configuration);
     var scheme = requiresEntra ? Uri.UriSchemeHttps : context.Request.Scheme;
     return $"{scheme}://{context.Request.Host}".TrimEnd('/');
 }
@@ -327,7 +340,7 @@ static bool IsMcpOriginAllowed(HttpContext context)
             return true;
     }
 
-    var requiresEntra = bool.TryParse(configuration["HELIOS_REQUIRE_ENTRA_AUTH"], out var parsed) && parsed;
+    var requiresEntra = RequiresEntraAuthorization(configuration);
     if (requiresEntra) return false; // Cloud/browser origins must be explicitly allowlisted.
     return TryNormalizeOrigin(GetMcpPublicOrigin(context), out var sameOrigin) &&
         string.Equals(origin, sameOrigin, StringComparison.OrdinalIgnoreCase);
@@ -362,10 +375,10 @@ static bool AcceptsMcpPostResponse(HttpRequest request)
         values.Contains("text/event-stream", StringComparer.OrdinalIgnoreCase);
 }
 
-static long GetMaxMcpRequestBytes(HttpContext context)
+static int GetMaxMcpRequestBytes(HttpContext context)
 {
     var configured = context.RequestServices.GetRequiredService<IConfiguration>()["HELIOS_MAX_MCP_BYTES"];
-    return long.TryParse(configured, out var parsed) && parsed is >= 1_024 and <= 10_485_760
+    return int.TryParse(configured, out var parsed) && parsed is >= 1_024 and <= 10_485_760
         ? parsed
         : 1_048_576;
 }
@@ -489,13 +502,13 @@ static object BuildToolResult(JsonElement root)
 
 static bool IsConnectorAuthorized(HttpContext context)
 {
-    var required = bool.TryParse(context.RequestServices.GetRequiredService<IConfiguration>()["HELIOS_REQUIRE_ENTRA_AUTH"], out var parsed) && parsed;
+    var required = RequiresEntraAuthorization(context.RequestServices.GetRequiredService<IConfiguration>());
     return !required || !string.IsNullOrWhiteSpace(context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault());
 }
 
 static IResult BuildReadinessResult(IConfiguration configuration)
 {
-    var requiresAzureConfiguration = bool.TryParse(configuration["HELIOS_REQUIRE_ENTRA_AUTH"], out var requiresAuth) && requiresAuth;
+    var requiresAzureConfiguration = RequiresEntraAuthorization(configuration);
     if (!requiresAzureConfiguration)
     {
         return Results.Ok(new { service = "helios-connect", status = "ready", runtime = "development" });
@@ -520,6 +533,10 @@ static IResult BuildReadinessResult(IConfiguration configuration)
             new { service = "helios-connect", status = "not-ready", missingConfiguration = missingSettings },
             statusCode: StatusCodes.Status503ServiceUnavailable);
 }
+
+static bool RequiresEntraAuthorization(IConfiguration configuration) =>
+    IsEnabled(configuration["HELIOS_REQUIRE_ENTRA_AUTH"]) ||
+    IsEnabled(configuration["HELIOS_CLOUD_RUNTIME_ONLY"]);
 
 static async Task<IResult> RunInventoryQuery(Func<Task<IReadOnlyList<AzureInventoryResource>>> query)
 {
