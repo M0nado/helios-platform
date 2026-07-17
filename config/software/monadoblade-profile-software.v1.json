@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "installation": {
+    "mode": "plan-first",
+    "automaticInstallDefault": false,
+    "approvedSources": ["winget", "microsoft-store", "visual-studio-installer", "official-vendor", "internal-signed-catalog"],
+    "requireHashOrPackageIdentity": true,
+    "requireSignatureVerification": true,
+    "requireCatalogReceipt": true,
+    "requireSysAdminForDriversOrMachineWide": true,
+    "blockUnknownSources": true
+  },
+  "bundles": {
+    "common-core": {
+      "scope": "all-interactive-non-admin",
+      "packages": [
+        { "id": "Microsoft.WindowsTerminal", "purpose": "terminal" },
+        { "id": "Microsoft.PowerShell", "purpose": "automation-shell" },
+        { "id": "Microsoft.Edge", "purpose": "browser-copilot-workspace" },
+        { "id": "Git.Git", "purpose": "source-control" },
+        { "id": "GitHub.cli", "purpose": "github-cli" },
+        { "id": "GitHub.GitHubDesktop", "purpose": "github-gui", "optional": true },
+        { "id": "7zip.7zip", "purpose": "archive-inspection" },
+        { "id": "Microsoft.PowerToys", "purpose": "windows-productivity", "optional": true },
+        { "id": "HELIOS.ControlCenter", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.ProfileBroker", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.CrossPartitionClient", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.TelemetryAgent", "source": "internal-signed-catalog" }
+      ]
+    },
+    "common-core-minimal": {
+      "scope": "sysadmin",
+      "packages": [
+        { "id": "Microsoft.WindowsTerminal" },
+        { "id": "Microsoft.PowerShell" },
+        { "id": "Git.Git", "optional": true },
+        { "id": "HELIOS.ControlCenter.Admin", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.AuthorizationBroker", "source": "internal-signed-catalog" }
+      ]
+    },
+    "developer-core": {
+      "scope": "developer",
+      "packages": [
+        { "id": "Microsoft.VisualStudio.2022.Enterprise", "installer": "visual-studio-installer", "workloads": ["managed-desktop", "aspnet-web", "native-desktop", "azure", "data", "python"] },
+        { "id": "Microsoft.VisualStudioCode" },
+        { "id": "Microsoft.DotNet.SDK.8" },
+        { "id": "Microsoft.DotNet.SDK.10", "optional": true },
+        { "id": "Kitware.CMake" },
+        { "id": "Ninja-build.Ninja" },
+        { "id": "Python.Python.3.13" },
+        { "id": "OpenJS.NodeJS.LTS" },
+        { "id": "Microsoft.NuGet" },
+        { "id": "Microsoft.VCRedist.2015+.x64" },
+        { "id": "Microsoft.VCRedist.2015+.x86" }
+      ]
+    },
+    "developer-native": {
+      "scope": "developer",
+      "packages": [
+        { "id": "Microsoft.VisualStudio.2022.BuildTools", "installer": "visual-studio-installer", "workloads": ["native-desktop", "managed-desktop"] },
+        { "id": "Microsoft.Vcpkg", "optional": true },
+        { "id": "LLVM.LLVM", "optional": true }
+      ]
+    },
+    "developer-ai": {
+      "scope": "developer",
+      "packages": [
+        { "id": "Docker.DockerDesktop" },
+        { "id": "Ollama.Ollama", "optional": true },
+        { "id": "LMStudio.LMStudio", "optional": true },
+        { "id": "Microsoft.WSL", "windowsFeature": true },
+        { "id": "HELIOS.AIHub", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.Hermes", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.XCore", "source": "internal-signed-catalog" }
+      ]
+    },
+    "developer-azure": {
+      "scope": "developer",
+      "packages": [
+        { "id": "Microsoft.AzureCLI" },
+        { "id": "Microsoft.Azd" },
+        { "id": "Microsoft.Azure.FunctionsCoreTools" },
+        { "id": "Microsoft.Bicep" },
+        { "id": "Microsoft.PowerAppsCLI" },
+        { "id": "Microsoft.Azure.StorageExplorer", "optional": true },
+        { "id": "GitHub.Copilot", "delivery": "ide-extension" },
+        { "id": "Microsoft.TeamsToolkit", "delivery": "ide-extension", "optional": true }
+      ]
+    },
+    "sysadmin-security": {
+      "scope": "sysadmin",
+      "packages": [
+        { "id": "Microsoft.Sysinternals.Suite" },
+        { "id": "Microsoft.WindowsADK", "optional": true },
+        { "id": "HELIOS.Security", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.DriverTrust", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.QuarantineAdmin", "source": "internal-signed-catalog" }
+      ]
+    },
+    "sysadmin-recovery": {
+      "scope": "sysadmin",
+      "packages": [
+        { "id": "HELIOS.Recovery", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.WinREBuilder", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.BackupRestore", "source": "internal-signed-catalog" }
+      ]
+    },
+    "sysadmin-driver-disk": {
+      "scope": "sysadmin",
+      "packages": [
+        { "id": "HELIOS.StorageAdmin", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.DriverCatalog", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.FirmwareInventory", "source": "internal-signed-catalog" }
+      ]
+    },
+    "sysops-security": {
+      "scope": "sysops",
+      "packages": [
+        { "id": "Microsoft.Sysinternals.Suite" },
+        { "id": "WiresharkFoundation.Wireshark", "optional": true },
+        { "id": "HELIOS.SecurityConsole", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.IncidentConsole", "source": "internal-signed-catalog" }
+      ]
+    },
+    "sysops-observability": {
+      "scope": "sysops",
+      "packages": [
+        { "id": "Microsoft.PerfView", "optional": true },
+        { "id": "Microsoft.Azure.StorageExplorer", "optional": true },
+        { "id": "HELIOS.Observability", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.VMContainerWatcher", "source": "internal-signed-catalog" }
+      ]
+    },
+    "sysops-cloud": {
+      "scope": "sysops",
+      "packages": [
+        { "id": "Microsoft.AzureCLI" },
+        { "id": "Microsoft.Azd" },
+        { "id": "GitHub.cli" },
+        { "id": "Microsoft.PowerAppsCLI", "optional": true },
+        { "id": "HELIOS.AzureOps", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.GitHubOps", "source": "internal-signed-catalog" }
+      ]
+    },
+    "sysops-performance": {
+      "scope": "sysops",
+      "packages": [
+        { "id": "Microsoft.WindowsPerformanceToolkit", "installer": "windows-adk", "optional": true },
+        { "id": "HELIOS.PerformanceConsole", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.NetworkOptimizer", "source": "internal-signed-catalog" }
+      ]
+    },
+    "gamer-launchers": {
+      "scope": "gamer",
+      "packages": [
+        { "id": "Valve.Steam" },
+        { "id": "EpicGames.EpicGamesLauncher", "optional": true },
+        { "id": "GOG.Galaxy", "optional": true },
+        { "id": "Microsoft.XboxApp", "optional": true }
+      ]
+    },
+    "gamer-capture": {
+      "scope": "gamer",
+      "packages": [
+        { "id": "OBSProject.OBSStudio", "optional": true },
+        { "id": "HELIOS.GameMetrics", "source": "internal-signed-catalog" }
+      ]
+    },
+    "gamer-peripherals": {
+      "scope": "gamer",
+      "packages": [
+        { "id": "Razer.Synapse", "optional": true, "requiresDriverReview": true },
+        { "id": "HELIOS.ChromaBridge", "source": "internal-signed-catalog", "optional": true }
+      ]
+    },
+    "studio-audio": {
+      "scope": "studio",
+      "packages": [
+        { "id": "Cockos.REAPER" },
+        { "id": "Audacity.Audacity", "optional": true },
+        { "id": "VB-Audio.Voicemeeter", "optional": true, "requiresDriverReview": true },
+        { "id": "HELIOS.AudioLatency", "source": "internal-signed-catalog" }
+      ]
+    },
+    "studio-video": {
+      "scope": "studio",
+      "packages": [
+        { "id": "Adobe.CreativeCloud", "source": "official-vendor", "optional": true },
+        { "id": "BlackmagicDesign.DaVinciResolve", "optional": true },
+        { "id": "OBSProject.OBSStudio", "optional": true }
+      ]
+    },
+    "studio-3d": {
+      "scope": "studio",
+      "packages": [
+        { "id": "BlenderFoundation.Blender" },
+        { "id": "EpicGames.UnrealEngine", "source": "official-vendor", "optional": true }
+      ]
+    },
+    "studio-plugins": {
+      "scope": "studio",
+      "packages": [
+        { "id": "HELIOS.PluginScanner", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.SampleIndexer", "source": "internal-signed-catalog" }
+      ]
+    },
+    "personal-productivity": {
+      "scope": "personal",
+      "packages": [
+        { "id": "Microsoft.Office", "source": "official-vendor", "optional": true },
+        { "id": "Microsoft.OneDrive", "optional": true },
+        { "id": "Microsoft.Teams", "optional": true }
+      ]
+    },
+    "personal-media": {
+      "scope": "personal",
+      "packages": [
+        { "id": "VideoLAN.VLC", "optional": true },
+        { "id": "Microsoft.Photos", "optional": true }
+      ]
+    },
+    "personal-communications": {
+      "scope": "personal",
+      "packages": [
+        { "id": "SlackTechnologies.Slack", "optional": true },
+        { "id": "Discord.Discord", "optional": true }
+      ]
+    },
+    "server-runtime": {
+      "scope": "server-background",
+      "packages": [
+        { "id": "Microsoft.DotNet.AspNetCore.8" },
+        { "id": "Microsoft.DotNet.Runtime.8" },
+        { "id": "Microsoft.PowerShell" }
+      ]
+    },
+    "server-containers": {
+      "scope": "server-background",
+      "packages": [
+        { "id": "Docker.DockerDesktop", "developmentOnly": true },
+        { "id": "HELIOS.ContainerSupervisor", "source": "internal-signed-catalog" }
+      ]
+    },
+    "server-observability": {
+      "scope": "server-background",
+      "packages": [
+        { "id": "HELIOS.MetricsAgent", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.LogAgent", "source": "internal-signed-catalog" }
+      ]
+    },
+    "server-security": {
+      "scope": "server-background",
+      "packages": [
+        { "id": "HELIOS.FirewallService", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.QuarantineScanner", "source": "internal-signed-catalog" }
+      ]
+    },
+    "server-ai-workers": {
+      "scope": "server-background",
+      "packages": [
+        { "id": "HELIOS.AIHub.Worker", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.Hermes.Worker", "source": "internal-signed-catalog" },
+        { "id": "HELIOS.XCore.Worker", "source": "internal-signed-catalog" }
+      ]
+    }
+  }
+}
