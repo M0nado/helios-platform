@@ -16,7 +16,6 @@ No client secret is created. No Azure deployment is performed.
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    [Parameter(Mandatory)]
     [ValidatePattern('^[0-9a-fA-F-]{36}$')]
     [string]$SubscriptionId,
 
@@ -31,10 +30,13 @@ param(
     [string]$TemplateFile = (Join-Path $PSScriptRoot '..\infra\main.bicep'),
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '..\evidence'),
 
-    [switch]$UseDeviceCode,
+    [ValidateSet('Browser', 'DeviceCode')]
+    [string]$LoginMode = 'Browser',
+
     [switch]$CreateResourceGroup,
     [switch]$ConfigureOidc,
     [switch]$ConfigureGitHubEnvironment,
+    [switch]$RunCloudPreflight,
     [switch]$RunWhatIf,
 
     [string]$RequiredReviewerId,
@@ -50,8 +52,19 @@ $ErrorActionPreference = 'Stop'
 $ExpectedResourceGroupConfirmation = 'CREATE HELIOS AZURE DEV RESOURCE GROUP'
 $ExpectedOidcConfirmation = 'CONFIGURE HELIOS AZURE DEV OIDC'
 $ExpectedGitHubEnvironmentConfirmation = 'CONFIGURE HELIOS AZURE DEV ENVIRONMENT'
-$FederationSubject = "repo:$Repository`:environment:$GitHubEnvironment"
+$CanonicalRepository = 'M0nado/helios-platform'
+$CanonicalGitHubEnvironment = 'azure-dev'
+$CanonicalFederationSubject = 'repo:M0nado/helios-platform:environment:azure-dev'
+$CanonicalIssuer = 'https://token.actions.githubusercontent.com'
+$FederationSubject = $CanonicalFederationSubject
 $FederationAudience = 'api://AzureADTokenExchange'
+
+if ($Repository -cne $CanonicalRepository) {
+    throw "Repository must be the canonical value: $CanonicalRepository"
+}
+if ($GitHubEnvironment -cne $CanonicalGitHubEnvironment) {
+    throw "GitHubEnvironment must be the canonical value: $CanonicalGitHubEnvironment"
+}
 
 function Require-Command {
     param([Parameter(Mandatory)][string]$Name)
@@ -86,9 +99,55 @@ function Require-Confirmation {
     }
 }
 
+function Select-AzureSubscription {
+    param(
+        [Parameter(Mandatory)][string]$AzPath,
+        [string]$RequestedSubscriptionId,
+        [string]$RequestedTenantId
+    )
+
+    $subscriptions = @(Invoke-JsonCommand -FilePath $AzPath -ArgumentList @(
+        'account', 'list', '--all',
+        '--query', '[].{id:id,name:name,tenantId:tenantId,state:state}',
+        '--output', 'json'
+    ))
+    $subscriptions = @($subscriptions | Where-Object { $_.state -eq 'Enabled' })
+    if ($RequestedTenantId) {
+        $subscriptions = @($subscriptions | Where-Object { $_.tenantId -ieq $RequestedTenantId })
+    }
+
+    if ($RequestedSubscriptionId) {
+        $match = @($subscriptions | Where-Object { $_.id -ieq $RequestedSubscriptionId })
+        if ($match.Count -ne 1) {
+            throw 'The requested subscription is not an enabled subscription in the approved tenant.'
+        }
+        return [string]$match[0].id
+    }
+
+    if ($subscriptions.Count -eq 0) {
+        throw 'No enabled Azure subscriptions are available. Authenticate the approved tenant or pass -SubscriptionId.'
+    }
+    $subscriptions = @($subscriptions | Sort-Object name, id)
+    if ($subscriptions.Count -eq 1) {
+        Write-Host "Using the only enabled subscription: $($subscriptions[0].name) [$($subscriptions[0].id)]"
+        return [string]$subscriptions[0].id
+    }
+
+    Write-Host 'Select the approved Azure subscription:'
+    for ($index = 0; $index -lt $subscriptions.Count; $index++) {
+        Write-Host ("[{0}] {1}  {2}  tenant={3}" -f ($index + 1), $subscriptions[$index].name, $subscriptions[$index].id, $subscriptions[$index].tenantId)
+    }
+    $answer = Read-Host 'Enter the subscription number'
+    [int]$selection = 0
+    if (-not [int]::TryParse($answer, [ref]$selection) -or $selection -lt 1 -or $selection -gt $subscriptions.Count) {
+        throw 'Subscription selection was invalid. No Azure state was changed.'
+    }
+    [string]$subscriptions[$selection - 1].id
+}
+
 $az = Require-Command -Name 'az'
 $gh = $null
-if ($ConfigureGitHubEnvironment) {
+if ($ConfigureGitHubEnvironment -or $RunCloudPreflight) {
     $gh = Require-Command -Name 'gh'
 }
 
@@ -104,11 +163,16 @@ try {
     )
 } catch {
     $loginArgs = @('login', '--output', 'none')
-    if ($UseDeviceCode) { $loginArgs += '--use-device-code' }
+    if ($LoginMode -eq 'DeviceCode') { $loginArgs += '--use-device-code' }
     if ($TenantId) { $loginArgs += @('--tenant', $TenantId) }
     & $az @loginArgs
     if ($LASTEXITCODE -ne 0) { throw 'Azure interactive login failed.' }
 }
+
+$SubscriptionId = Select-AzureSubscription `
+    -AzPath $az `
+    -RequestedSubscriptionId $SubscriptionId `
+    -RequestedTenantId $TenantId
 
 & $az account set --subscription $SubscriptionId
 if ($LASTEXITCODE -ne 0) { throw 'Unable to select the approved subscription.' }
@@ -181,10 +245,20 @@ if ($ConfigureOidc) {
         'ad', 'app', 'federated-credential', 'list', '--id', $appObjectId,
         '--query', "[?name=='$credentialName'] | [0]", '--output', 'json'
     )
-    if (-not $existingCredential) {
+    if ($existingCredential) {
+        $existingAudiences = @($existingCredential.audiences)
+        if (
+            [string]$existingCredential.issuer -cne $CanonicalIssuer -or
+            [string]$existingCredential.subject -cne $CanonicalFederationSubject -or
+            $existingAudiences.Count -ne 1 -or
+            [string]$existingAudiences[0] -cne $FederationAudience
+        ) {
+            throw "Existing federated credential '$credentialName' does not match the canonical HELIOS issuer, subject, and audience. Refusing to overwrite it."
+        }
+    } else {
         $credential = [ordered]@{
             name = $credentialName
-            issuer = 'https://token.actions.githubusercontent.com'
+            issuer = $CanonicalIssuer
             subject = $FederationSubject
             audiences = @($FederationAudience)
             description = 'HELIOS GitHub Actions azure-dev environment'
@@ -204,6 +278,14 @@ if ($ConfigureOidc) {
 
 if ($ConfigureGitHubEnvironment) {
     Require-Confirmation -Actual $GitHubEnvironmentConfirmation -Expected $ExpectedGitHubEnvironmentConfirmation
+    [int64]$reviewerId = 0
+    if (
+        [string]::IsNullOrWhiteSpace($RequiredReviewerId) -or
+        -not [int64]::TryParse($RequiredReviewerId, [ref]$reviewerId) -or
+        $reviewerId -le 0
+    ) {
+        throw 'ConfigureGitHubEnvironment requires a positive numeric -RequiredReviewerId. Environment creation fails closed without a reviewer.'
+    }
     if (-not $clientId) {
         $app = Invoke-JsonCommand -FilePath $az -ArgumentList @(
             'ad', 'app', 'list', '--display-name', $EntraAppDisplayName,
@@ -219,15 +301,13 @@ if ($ConfigureGitHubEnvironment) {
     $environmentPayload = [ordered]@{
         wait_timer = 0
         prevent_self_review = $true
+        reviewers = @(
+            [ordered]@{ type = 'User'; id = $reviewerId }
+        )
         deployment_branch_policy = [ordered]@{
             protected_branches = $true
             custom_branch_policies = $false
         }
-    }
-    if ($RequiredReviewerId) {
-        $environmentPayload.reviewers = @(
-            [ordered]@{ type = 'User'; id = [int64]$RequiredReviewerId }
-        )
     }
     $environmentFile = Join-Path $env:TEMP "helios-github-environment-$([guid]::NewGuid().ToString('N')).json"
     try {
@@ -249,6 +329,26 @@ if ($ConfigureGitHubEnvironment) {
     foreach ($entry in $variables.GetEnumerator()) {
         & $gh variable set $entry.Key --repo $Repository --env $GitHubEnvironment --body ([string]$entry.Value)
         if ($LASTEXITCODE -ne 0) { throw "Unable to set GitHub environment variable: $($entry.Key)" }
+    }
+}
+
+$cloudPreflightPath = $null
+if ($RunCloudPreflight) {
+    $preflightScript = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'Start-HeliosConnections.ps1')).Path
+    $cloudPreflightPath = Join-Path $resolvedEvidence 'cloud-preflight.json'
+    $preflightJson = & $preflightScript `
+        -CheckCloudConnections `
+        -SubscriptionId $SubscriptionId `
+        -TenantId $TenantId `
+        -ResourceGroup $ResourceGroup `
+        -Repository $CanonicalRepository `
+        -GitHubEnvironment $CanonicalGitHubEnvironment
+    $preflight = $preflightJson | ConvertFrom-Json -Depth 100
+    $preflight | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $cloudPreflightPath -Encoding utf8NoBOM
+    $failedPreflight = @($preflight.cloudConnections | Where-Object { -not $_.healthy })
+    if ($failedPreflight.Count -gt 0) {
+        $names = $failedPreflight.name -join ', '
+        throw "Authenticated read-only cloud preflight failed: $names"
     }
 }
 
@@ -292,6 +392,7 @@ $summary = [ordered]@{
     federationSubject = $FederationSubject
     clientId = $clientId
     servicePrincipalObjectId = $servicePrincipalObjectId
+    cloudPreflightEvidence = $cloudPreflightPath
     validationEvidence = (Join-Path $resolvedEvidence 'validation.json')
     whatIfEvidence = if ($RunWhatIf) { Join-Path $resolvedEvidence 'what-if.json' } else { $null }
 }
