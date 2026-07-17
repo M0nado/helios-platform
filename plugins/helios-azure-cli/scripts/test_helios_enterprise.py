@@ -33,6 +33,18 @@ class EnterpriseSetupTests(unittest.TestCase):
         ids = [item["id"] for item in setup["phases"]]
         self.assertEqual(len(ids), len(set(ids)))
 
+    def test_every_operation_is_supported(self) -> None:
+        setup = helios_enterprise.load_setup()
+        environment = {
+            "HELIOS_AZURE_DEVOPS_ORG": "https://dev.azure.com/example",
+            "HELIOS_AZURE_DEVOPS_PROJECT": "Helios",
+        }
+        with patch.dict(os.environ, environment, clear=False):
+            for phase in setup["phases"]:
+                for operation in phase["operations"]:
+                    with self.subTest(operation=operation):
+                        helios_enterprise.operation_commands(operation)
+
 
 if __name__ == "__main__":
     unittest.main()
