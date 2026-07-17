@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
@@ -8,12 +9,16 @@ namespace Helios.Connect.Tests;
 
 public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
+    private const string GitHubWebhookSecret = "helios-test-webhook-secret";
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
+    private readonly string? _originalGitHubWebhookSecret;
 
     public WebhookTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;
+        _originalGitHubWebhookSecret = Environment.GetEnvironmentVariable("GITHUB_WEBHOOK_SECRET");
+        Environment.SetEnvironmentVariable("GITHUB_WEBHOOK_SECRET", GitHubWebhookSecret);
         _client = factory.CreateClient();
     }
 
@@ -39,6 +44,65 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         using var content = new StringContent("not-json", Encoding.UTF8, "application/json");
         using var response = await _client.PostAsync("/webhooks/github", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Dry_run_still_rejects_unsigned_webhooks()
+    {
+        using var content = new StringContent("{}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/webhooks/github", content);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Valid_signed_webhook_is_accepted_and_immediate_replay_is_detected()
+    {
+        using var firstRequest = CreateSignedGitHubWebhook("signed-replay", "{\"event\":1}");
+        using var firstResponse = await _client.SendAsync(firstRequest);
+        Assert.Equal(HttpStatusCode.Accepted, firstResponse.StatusCode);
+
+        using var replayRequest = CreateSignedGitHubWebhook("signed-replay", "{\"event\":1}");
+        using var replayResponse = await _client.SendAsync(replayRequest);
+        var replayBody = await replayResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, replayResponse.StatusCode);
+        Assert.Contains("\"duplicate\":true", replayBody);
+    }
+
+    [Fact]
+    public async Task Replay_cache_is_bounded_and_evicts_the_oldest_delivery()
+    {
+        await using var boundedFactory = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("HELIOS_WEBHOOK_REPLAY_CACHE_CAPACITY", "2"));
+        using var client = boundedFactory.CreateClient();
+
+        foreach (var deliveryId in new[] { "bounded-a", "bounded-b", "bounded-c" })
+        {
+            using var request = CreateSignedGitHubWebhook(deliveryId, $"{{\"delivery\":\"{deliveryId}\"}}");
+            using var response = await client.SendAsync(request);
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        }
+
+        using var oldestRequest = CreateSignedGitHubWebhook("bounded-a", "{\"delivery\":\"bounded-a\"}");
+        using var oldestResponse = await client.SendAsync(oldestRequest);
+        Assert.Equal(HttpStatusCode.Accepted, oldestResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Replay_cache_entry_expires()
+    {
+        await using var expiringFactory = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("HELIOS_WEBHOOK_REPLAY_TTL_SECONDS", "1"));
+        using var client = expiringFactory.CreateClient();
+
+        using (var firstRequest = CreateSignedGitHubWebhook("expiring", "{\"event\":2}"))
+        using (var firstResponse = await client.SendAsync(firstRequest))
+            Assert.Equal(HttpStatusCode.Accepted, firstResponse.StatusCode);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(1_100));
+
+        using var expiredRequest = CreateSignedGitHubWebhook("expiring", "{\"event\":2}");
+        using var expiredResponse = await client.SendAsync(expiredRequest);
+        Assert.Equal(HttpStatusCode.Accepted, expiredResponse.StatusCode);
     }
 
     [Fact]
@@ -70,14 +134,42 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Local_mcp_lists_only_read_tools()
+    public async Task Local_mcp_is_not_mapped_without_explicit_opt_in()
     {
         using var request = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json");
         using var response = await _client.PostAsync("/runtime/webhooks/mcp", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Explicit_local_runtime_maps_read_only_local_mcp()
+    {
+        await using var localFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("HELIOS_LOCAL_RUNTIME_ALLOWED", "true");
+            builder.UseSetting("HELIOS_CLOUD_RUNTIME_ONLY", "false");
+        });
+        using var client = localFactory.CreateClient();
+        using var request = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/runtime/webhooks/mcp", request);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("hermes_get_status", body);
         Assert.DoesNotContain("run_sandbox", body);
+    }
+
+    [Fact]
+    public async Task Cloud_runtime_never_maps_local_mcp_even_if_local_flag_is_true()
+    {
+        await using var cloudFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("HELIOS_LOCAL_RUNTIME_ALLOWED", "true");
+            builder.UseSetting("HELIOS_CLOUD_RUNTIME_ONLY", "true");
+        });
+        using var client = cloudFactory.CreateClient();
+        using var request = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/runtime/webhooks/mcp", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -110,5 +202,23 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.DoesNotContain("role_assignment", body, StringComparison.OrdinalIgnoreCase);
     }
 
-    public void Dispose() => _client.Dispose();
+    private static HttpRequestMessage CreateSignedGitHubWebhook(string deliveryId, string body)
+    {
+        var signature = Convert.ToHexString(HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(GitHubWebhookSecret),
+            Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
+        var request = new HttpRequestMessage(HttpMethod.Post, "/webhooks/github")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        request.Headers.Add("X-Hub-Signature-256", $"sha256={signature}");
+        request.Headers.Add("X-GitHub-Delivery", deliveryId);
+        return request;
+    }
+
+    public void Dispose()
+    {
+        _client.Dispose();
+        Environment.SetEnvironmentVariable("GITHUB_WEBHOOK_SECRET", _originalGitHubWebhookSecret);
+    }
 }
