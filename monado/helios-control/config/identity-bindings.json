@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "environments": ["development", "test", "production"],
   "bindings": [
-    { "workload": "github-actions", "credential": "workflow-bound-flexible-entra-federated-oidc", "secret": false, "scope": "selected-resource-group-plus-approved-registry-write", "roles": ["Contributor", "AcrPush or Container Registry Repository Writer"] },
+    { "workload": "github-actions", "credential": "exact-environment-subject-entra-federated-oidc", "secret": false, "scope": "selected-resource-group-plus-approved-registry-write", "roles": ["Contributor", "AcrPush or Container Registry Repository Writer"] },
     { "workload": "azure-pipelines", "credential": "workload-identity-service-connection", "secret": false, "roles": ["Reader", "Deployment Stack Contributor"] },
     { "workload": "helios-api", "credential": "user-assigned-managed-identity", "secret": false, "roles": ["Key Vault Secrets User", "Azure Service Bus Data Sender"] },
     { "workload": "connector-workers", "credential": "user-assigned-managed-identity", "secret": false, "roles": ["Azure Service Bus Data Receiver", "Storage Blob Data Contributor", "Cosmos DB Built-in Data Contributor"] },
