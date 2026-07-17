@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "mode": "trusted-major-tags-until-reviewed-sha-pin",
+  "trustedOwners": [
+    "actions",
+    "azure",
+    "docker"
+  ],
+  "forbiddenRefs": [
+    "main",
+    "master",
+    "latest",
+    "develop",
+    "head"
+  ],
+  "approvedMajorTags": {
+    "actions/attest": "v4",
+    "actions/checkout": "v6",
+    "actions/download-artifact": "v8",
+    "actions/setup-dotnet": "v5",
+    "actions/setup-go": "v6",
+    "actions/setup-python": "v6",
+    "actions/upload-artifact": "v7",
+    "azure/cli": "v2",
+    "azure/login": "v3",
+    "docker/build-push-action": "v7",
+    "docker/login-action": "v4",
+    "docker/metadata-action": "v6",
+    "docker/setup-buildx-action": "v4"
+  },
+  "productionRequirement": {
+    "fullLengthCommitSha": true,
+    "generatedLockFile": "config/github/action-pins.lock.json",
+    "generator": "scripts/github/pin_actions.py",
+    "confirmation": "PIN HELIOS GITHUB ACTIONS"
+  }
+}

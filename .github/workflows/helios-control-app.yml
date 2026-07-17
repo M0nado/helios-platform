@@ -1,0 +1,88 @@
+name: HELIOS Control App
+on:
+  pull_request:
+    paths:
+      - 'apps/helios-control/**'
+      - 'plugins/helios-azure-cli/**'
+      - 'reference/helios-enterprise-automation-fabric/**'
+      - '.agents/plugins/marketplace.json'
+      - '.github/workflows/helios-control-app.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/helios-control
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/helios-control/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: npm run smoke
+      - run: docker build -t helios-control:test .
+  plugin-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m json.tool plugins/helios-azure-cli/.codex-plugin/plugin.json
+      - run: python -m json.tool plugins/helios-azure-cli/assets/helios-targets.json
+      - run: python -m unittest discover -s plugins/helios-azure-cli/scripts -p 'test_*.py'
+      - run: python plugins/helios-azure-cli/scripts/helios_azure.py --help
+  fabric-reference-validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reference/helios-enterprise-automation-fabric/project
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: reference/helios-enterprise-automation-fabric/project/pyproject.toml
+      - name: Validate, simulate, and test the plan-first control plane
+        run: |
+          python -m pip install -e '.[test]'
+          python -m compileall -q src scripts tests
+          fabricctl validate --root .
+          fabricctl simulate --root . --fixture tests/fixtures/deployment-plan.json --include-disabled
+          fabricctl evidence --root . --fixture tests/fixtures/deployment-plan.json --include-disabled --output artifacts/generated
+          pytest
+          python scripts/validation/assert_no_secret_values.py .
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build and test the broker and worker
+        run: |
+          dotnet restore src/dotnet/HELIOS.Fabric.sln
+          dotnet build src/dotnet/HELIOS.Fabric.sln -c Release --no-restore --warnaserror
+          dotnet test src/dotnet/HELIOS.Fabric.sln -c Release --no-build
+      - name: Parse the PowerShell safety layer
+        shell: pwsh
+        run: ./scripts/validation/Validate-PowerShell.ps1 -Root .
+      - name: Compile the deployment template without Azure authentication
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            cd reference/helios-enterprise-automation-fabric/project
+            az bicep build --file infra/bicep/main.bicep --stdout >/dev/null
+            az bicep build-params --file infra/bicep/parameters/dev.bicepparam --stdout >/dev/null
+            az bicep build-params --file infra/bicep/parameters/stage.bicepparam --stdout >/dev/null
+            az bicep build-params --file infra/bicep/parameters/prod.bicepparam --stdout >/dev/null
+      - name: Build the broker and worker images without publishing
+        run: |
+          docker build -f docker/broker.Dockerfile -t helios-fabric-broker:test .
+          docker build -f docker/worker.Dockerfile -t helios-fabric-worker:test .

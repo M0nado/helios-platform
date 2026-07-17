@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "tenantId": "00000000-0000-0000-0000-000000000000",
+  "teamId": "00000000-0000-0000-0000-000000000000",
+  "channels": {
+    "operations": {
+      "displayName": "Helios Ops",
+      "channelId": "REPLACE"
+    },
+    "incidents": {
+      "displayName": "Helios Incidents",
+      "channelId": "REPLACE"
+    },
+    "releases": {
+      "displayName": "Helios Releases",
+      "channelId": "REPLACE"
+    }
+  },
+  "workflowSecretReference": "TEAMS_WORKFLOW_WEBHOOK_URL",
+  "notes": [
+    "Store the generated workflow URL in Azure Key Vault, never in this file.",
+    "Cards acknowledge or deep-link to GitHub; they do not independently approve production."
+  ]
+}

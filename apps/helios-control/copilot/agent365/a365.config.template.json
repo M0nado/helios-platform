@@ -1,0 +1,22 @@
+{
+  "$schema": "./a365.config.schema.json",
+  "tenantId": "${AZURE_TENANT_ID}",
+  "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
+  "resourceGroup": "rg-helios-dev",
+  "location": "${AZURE_LOCATION}",
+  "appServicePlanName": "asp-helios-control-dev",
+  "appServicePlanSku": "B1",
+  "webAppName": "helios-control-dev",
+  "agentBlueprintDisplayName": "HELIOS Control Agent Blueprint",
+  "agentIdentityDisplayName": "HELIOS Control Agent",
+  "agentUserPrincipalName": "${HELIOS_AGENT_USER_PRINCIPAL_NAME}",
+  "agentUserDisplayName": "HELIOS Control Agent",
+  "managerEmail": "${HELIOS_AGENT_MANAGER_EMAIL}",
+  "agentUserUsageLocation": "US",
+  "agentIdentityScopes": ["User.Read"],
+  "agentApplicationScopes": [],
+  "deploymentProjectPath": "../..",
+  "deploymentProjectFile": "package.json",
+  "botName": "helios-control-agent",
+  "botDescription": "Governed HELIOS setup, status, evidence, and collaboration agent"
+}

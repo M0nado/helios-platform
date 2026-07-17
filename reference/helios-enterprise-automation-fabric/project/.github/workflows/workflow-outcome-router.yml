@@ -1,0 +1,70 @@
+name: Route HELIOS workflow outcomes
+
+'on':
+  workflow_run:
+    workflows: ['HELIOS Fabric CI', 'HELIOS Azure plan', 'HELIOS Azure deploy', 'HELIOS broker images']
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  publish-outcome:
+    if: ${{ vars.HELIOS_FABRIC_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      OUTCOME: ${{ github.event.workflow_run.conclusion }}
+      WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+      WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Build outcome payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = {
+              'outcome': os.environ['OUTCOME'],
+              'workflow': os.environ['WORKFLOW_NAME'],
+              'workflowUrl': os.environ['WORKFLOW_URL'],
+              'headSha': os.environ['HEAD_SHA'],
+          }
+          Path('payload.json').write_text(json.dumps(payload), encoding='utf-8')
+          Path('summary.txt').write_text(
+              f"{payload['workflow']} completed with {payload['outcome']}",
+              encoding='utf-8',
+          )
+          PY
+      - name: Build canonical event
+        shell: bash
+        run: |
+          set -euo pipefail
+          severity=notice
+          actions=notify,track
+          event_type=github.workflow.succeeded
+          if [[ "$OUTCOME" != success ]]; then
+            severity=error
+            event_type=github.workflow.failed
+          fi
+          python scripts/github/build_event.py \
+            --event-type "$event_type" \
+            --summary "$(cat summary.txt)" \
+            --environment global \
+            --severity "$severity" \
+            --actions "$actions" \
+            --payload @payload.json \
+            --output event.json
+      - name: Publish replay-bounded signed event
+        env:
+          HELIOS_FABRIC_INGRESS_URL: ${{ vars.HELIOS_FABRIC_INGRESS_URL }}
+          HELIOS_FABRIC_INGRESS_HMAC: ${{ secrets.HELIOS_FABRIC_INGRESS_HMAC }}
+        shell: bash
+        run: python scripts/github/publish_event.py --event event.json --apply

@@ -1,0 +1,55 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "TextBlock",
+      "size": "Large",
+      "weight": "Bolder",
+      "color": "Attention",
+      "text": "Critical HELIOS incident"
+    },
+    {
+      "type": "TextBlock",
+      "wrap": true,
+      "text": "${summary}"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Environment",
+          "value": "${environment}"
+        },
+        {
+          "title": "Severity",
+          "value": "${severity}"
+        },
+        {
+          "title": "Correlation",
+          "value": "${correlationId}"
+        },
+        {
+          "title": "Owner",
+          "value": "${owner}"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "Open incident",
+      "url": "${incidentUrl}"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "Open runbook",
+      "url": "${runbookUrl}"
+    }
+  ]
+}

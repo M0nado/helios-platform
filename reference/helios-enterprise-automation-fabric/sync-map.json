@@ -1,0 +1,104 @@
+{
+  "version": "1.0",
+  "workspace": "REPLACE_AT_BOOTSTRAP",
+  "teamKey": "JOH",
+  "projectSlug": "helios-integration-fabric",
+  "branchIssuePattern": "(?:^|[\\/_-])(JOH-\\d+)(?:$|[\\/_-])",
+  "idempotencyLabel": "helios-managed",
+  "mappings": [
+    {
+      "eventType": "github.pull-request.opened",
+      "operation": "upsert-related-issue",
+      "title": "PR opened: {{pullRequestTitle}}",
+      "state": "In Progress",
+      "labels": [
+        "helios-managed",
+        "github-pr"
+      ],
+      "commentTemplate": "Pull request opened: {{pullRequestUrl}}\nCommit: `{{commitSha}}`\nCorrelation: `{{correlationId}}`"
+    },
+    {
+      "eventType": "github.pull-request.ready-for-review",
+      "operation": "update-related-issue",
+      "state": "In Review",
+      "labels": [
+        "helios-managed",
+        "github-pr"
+      ],
+      "commentTemplate": "Ready for review: {{pullRequestUrl}}"
+    },
+    {
+      "eventType": "github.pull-request.merged",
+      "operation": "update-related-issue",
+      "state": "Done",
+      "labels": [
+        "helios-managed",
+        "github-pr"
+      ],
+      "commentTemplate": "Merged at `{{commitSha}}`; promotion evidence: {{evidenceUrl}}"
+    },
+    {
+      "eventType": "github.workflow.failed",
+      "operation": "upsert-incident",
+      "title": "CI failure: {{repository}} / {{workflow}}",
+      "state": "In Progress",
+      "priority": 2,
+      "labels": [
+        "helios-managed",
+        "ci-failure"
+      ],
+      "commentTemplate": "Run: {{runUrl}}\nCommit: `{{commitSha}}`\nCorrelation: `{{correlationId}}`"
+    },
+    {
+      "eventType": "deployment.plan.created",
+      "operation": "upsert-deployment",
+      "title": "Deployment plan: {{environment}} / {{commitShaShort}}",
+      "state": "In Review",
+      "priority": 2,
+      "labels": [
+        "helios-managed",
+        "deployment"
+      ],
+      "commentTemplate": "Plan hash: `{{planHash}}`\nEvidence: {{evidenceUrl}}"
+    },
+    {
+      "eventType": "deployment.applied",
+      "operation": "update-related-issue",
+      "state": "Done",
+      "labels": [
+        "helios-managed",
+        "deployment"
+      ],
+      "commentTemplate": "Deployment applied: {{deploymentName}}\nEvidence: {{evidenceUrl}}"
+    },
+    {
+      "eventType": "incident.*",
+      "operation": "upsert-incident",
+      "title": "{{severity}} incident: {{summary}}",
+      "state": "In Progress",
+      "priority": 1,
+      "labels": [
+        "helios-managed",
+        "incident"
+      ],
+      "commentTemplate": "Correlation: `{{correlationId}}`\nEvidence: {{evidenceUrl}}"
+    },
+    {
+      "eventType": "connector.health.recovered",
+      "operation": "update-related-issue",
+      "state": "Done",
+      "labels": [
+        "helios-managed",
+        "connector-health"
+      ],
+      "commentTemplate": "Connector recovered at {{occurredAt}}."
+    }
+  ],
+  "safety": {
+    "doNotCloseUserCreatedIssues": true,
+    "onlyMutateLabeledIssues": true,
+    "maximumDescriptionBytes": 32000,
+    "webhookTimestampSkewSeconds": 60,
+    "webhookAckMilliseconds": 4000
+  }
+}

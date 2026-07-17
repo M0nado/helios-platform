@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "templates": {
+    "incident": {
+      "title": "[HELIOS] {{severity}} incident \u2014 {{summary}}",
+      "description": "## Incident\n\n- Correlation: `{{correlationId}}`\n- Environment: `{{environment}}`\n- Source: `{{source}}`\n- Evidence: {{evidenceUrl}}\n- GitHub: {{githubUrl}}\n\n## Current state\n\n{{details}}",
+      "priority": 1,
+      "labels": [
+        "helios-managed",
+        "incident"
+      ]
+    },
+    "deployment": {
+      "title": "[HELIOS] {{environment}} deployment \u2014 {{commitShaShort}}",
+      "description": "## Deployment\n\n- Plan hash: `{{planHash}}`\n- Commit: `{{commitSha}}`\n- Evidence: {{evidenceUrl}}\n- GitHub run: {{runUrl}}\n\nProduction authority remains the GitHub protected environment.",
+      "priority": 2,
+      "labels": [
+        "helios-managed",
+        "deployment"
+      ]
+    },
+    "ci-failure": {
+      "title": "[HELIOS] CI failure \u2014 {{workflow}}",
+      "description": "- Repository: `{{repository}}`\n- Commit: `{{commitSha}}`\n- Run: {{runUrl}}\n- Correlation: `{{correlationId}}`",
+      "priority": 2,
+      "labels": [
+        "helios-managed",
+        "ci-failure"
+      ]
+    },
+    "pull-request": {
+      "title": "{{pullRequestTitle}}",
+      "description": "GitHub PR: {{pullRequestUrl}}\nCorrelation: `{{correlationId}}`",
+      "priority": 3,
+      "labels": [
+        "helios-managed",
+        "github-pr"
+      ]
+    },
+    "release": {
+      "title": "[HELIOS] Release {{tag}} evidence",
+      "description": "- Commit: `{{commitSha}}`\n- Artifact hash: `{{artifactSha256}}`\n- Evidence: {{evidenceUrl}}",
+      "priority": 3,
+      "labels": [
+        "helios-managed",
+        "release"
+      ]
+    }
+  }
+}

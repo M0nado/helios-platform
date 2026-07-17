@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "commands": [
+    {
+      "command": "/helios status",
+      "effect": "read-only",
+      "requiredRole": "channel-member"
+    },
+    {
+      "command": "/helios incident",
+      "effect": "creates a governed incident event",
+      "requiredRole": "operations"
+    },
+    {
+      "command": "/helios evidence <correlation-id>",
+      "effect": "returns evidence links",
+      "requiredRole": "channel-member"
+    },
+    {
+      "command": "/helios quarantine <connector>",
+      "effect": "opens a GitHub emergency workflow link; does not execute directly",
+      "requiredRole": "incident-commander"
+    }
+  ],
+  "workflowBuilder": [
+    {
+      "name": "HELIOS incident intake",
+      "trigger": "shortcut",
+      "result": "signed event submitted to broker"
+    },
+    {
+      "name": "HELIOS release digest",
+      "trigger": "webhook",
+      "result": "release card posted in #helios-releases"
+    },
+    {
+      "name": "HELIOS connector degradation",
+      "trigger": "webhook",
+      "result": "incident thread opened in #helios-incidents"
+    }
+  ],
+  "guardrails": [
+    "No Slack action directly deploys Azure.",
+    "Interactive requests are signature-verified and replay-bounded.",
+    "Privileged actions deep-link to a protected GitHub workflow."
+  ]
+}

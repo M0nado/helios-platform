@@ -1,0 +1,108 @@
+name: HELIOS emergency connector quarantine
+
+'on':
+  workflow_dispatch:
+    inputs:
+      connector:
+        required: true
+        type: choice
+        options: [slack-ops, linear-work, sharepoint-evidence, teams-ops, github-control]
+      reason:
+        required: true
+        type: string
+      confirmation:
+        description: Type QUARANTINE HELIOS CONNECTOR
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  quarantine:
+    if: ${{ inputs.confirmation == 'QUARANTINE HELIOS CONNECTOR' }}
+    runs-on: ubuntu-latest
+    environment: helios-emergency
+    env:
+      CONNECTOR_ID: ${{ inputs.connector }}
+      QUARANTINE_REASON: ${{ inputs.reason }}
+      WORKER_APP_NAME: ${{ vars.HELIOS_WORKER_APP_NAME }}
+      RESOURCE_GROUP: ${{ vars.HELIOS_AZURE_RESOURCE_GROUP }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RESOURCE_GROUP"
+          test -n "$WORKER_APP_NAME"
+          test -n "$QUARANTINE_REASON"
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Read current emergency disable list
+        id: current
+        shell: bash
+        run: |
+          set -euo pipefail
+          current=$(az containerapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$WORKER_APP_NAME" \
+            --query "properties.template.containers[0].env[?name=='HELIOS_DISABLED_CONNECTORS'].value | [0]" \
+            --output tsv)
+          python - "$current" "$CONNECTOR_ID" <<'PY' >> "$GITHUB_OUTPUT"
+          import sys
+          current = {value for value in sys.argv[1].split(',') if value}
+          current.add(sys.argv[2])
+          print('disabled=' + ','.join(sorted(current)))
+          PY
+      - name: Apply non-destructive route quarantine
+        shell: bash
+        run: |
+          set -euo pipefail
+          az containerapp update \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$WORKER_APP_NAME" \
+            --set-env-vars "HELIOS_DISABLED_CONNECTORS=${{ steps.current.outputs.disabled }}"
+      - name: Record hash-linked evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          evidence = {
+              'specVersion': '1.0',
+              'occurredAt': datetime.now(timezone.utc).isoformat(),
+              'connector': os.environ['CONNECTOR_ID'],
+              'reason': os.environ['QUARANTINE_REASON'],
+              'disabledConnectors': '${{ steps.current.outputs.disabled }}'.split(','),
+              'actor': os.environ['GITHUB_ACTOR'],
+              'runId': os.environ['GITHUB_RUN_ID'],
+              'sourceSha': os.environ['GITHUB_SHA'],
+              'destructive': False,
+          }
+          Path('quarantine-evidence.json').write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+      - uses: actions/attest@v4
+        with:
+          subject-path: quarantine-evidence.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: quarantine-${{ inputs.connector }}-${{ github.run_id }}
+          path: quarantine-evidence.json
+          if-no-files-found: error
+          retention-days: 90

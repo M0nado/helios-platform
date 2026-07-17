@@ -1,0 +1,198 @@
+name: HELIOS Fabric CI
+
+'on':
+  pull_request:
+    paths:
+      - '.github/**'
+      - 'config/**'
+      - 'docs/**'
+      - 'infra/**'
+      - 'power-platform/**'
+      - 'scripts/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'azure.yaml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/**'
+      - 'config/**'
+      - 'docs/**'
+      - 'infra/**'
+      - 'power-platform/**'
+      - 'scripts/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - 'azure.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fabric-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fabric-validation:
+    name: fabric-validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install validation package
+        run: python -m pip install -e '.[test]'
+      - name: Compile every Python module
+        run: python -m compileall -q src scripts tests
+      - name: Validate schemas, cross-references, templates, workflows, and Bicep structure
+        run: fabricctl validate --root .
+      - name: Simulate production approval fan-out
+        run: fabricctl simulate --root . --fixture tests/fixtures/deployment-plan.json --include-disabled
+      - name: Generate redacted evidence fixture
+        run: fabricctl evidence --root . --fixture tests/fixtures/deployment-plan.json --include-disabled --output artifacts/generated
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fabric-validation-evidence
+          path: artifacts/generated
+          if-no-files-found: error
+          retention-days: 30
+
+  workflow-lint:
+    name: workflow-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.x'
+          cache: false
+      - name: Install and run actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.9
+          "$(go env GOPATH)/bin/actionlint" -color
+
+  python-tests:
+    name: python-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e '.[test]'
+      - run: mkdir -p artifacts/test-results && pytest --junitxml=artifacts/test-results/python.xml
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: python-test-results
+          path: artifacts/test-results
+          if-no-files-found: warn
+          retention-days: 30
+
+  dotnet-build:
+    name: dotnet-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore src/dotnet/HELIOS.Fabric.sln
+      - run: dotnet build src/dotnet/HELIOS.Fabric.sln -c Release --no-restore --warnaserror
+      - run: mkdir -p artifacts/test-results && dotnet test src/dotnet/HELIOS.Fabric.sln -c Release --no-build --logger trx --results-directory artifacts/test-results
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: dotnet-test-results
+          path: artifacts/test-results
+          if-no-files-found: warn
+          retention-days: 30
+
+  bicep-static:
+    name: bicep-static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: azure/CLI@v2
+        with:
+          inlineScript: bash scripts/validation/validate_bicep.sh .
+
+  powershell-static:
+    name: powershell-static
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Parse every active PowerShell file
+        shell: pwsh
+        run: ./scripts/validation/Validate-PowerShell.ps1 -Root $PWD
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e .
+      - run: python scripts/validation/assert_no_secret_values.py .
+      - name: Reject accidentally tracked local environment files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)(\.env|\.env\.local|local\.settings\.json)$'; then
+            echo 'A secret-bearing local configuration file is tracked.' >&2
+            exit 1
+          fi
+
+  required-gate:
+    name: HELIOS Fabric required gate
+    if: always()
+    needs: [fabric-validation, workflow-lint, python-tests, dotnet-build, bicep-static, powershell-static, secret-scan]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert all gates passed
+        env:
+          RESULTS: ${{ toJson(needs) }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import sys
+
+          needs = json.loads(os.environ['RESULTS'])
+          bad = {
+              name: value['result']
+              for name, value in needs.items()
+              if value['result'] != 'success'
+          }
+          if bad:
+              print(json.dumps(bad, indent=2), file=sys.stderr)
+              raise SystemExit(1)
+          print('All HELIOS Fabric gates passed.')
+          PY

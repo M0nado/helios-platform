@@ -1,0 +1,41 @@
+name: HELIOS release evidence
+
+'on':
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[test]'
+      - run: |
+          fabricctl validate --root . > validation.json
+          pytest > pytest.txt
+          mkdir -p release-evidence
+          cp validation.json pytest.txt release-evidence/
+          find config infra scripts src .github -type f -print0 | sort -z | xargs -0 sha256sum > release-evidence/source-manifest.sha256
+          tar -czf helios-fabric-source-${{ github.sha }}.tar.gz config infra scripts src .github pyproject.toml README.md
+          sha256sum helios-fabric-source-${{ github.sha }}.tar.gz > release-evidence/archive.sha256
+      - uses: actions/attest@v4
+        with:
+          subject-path: helios-fabric-source-${{ github.sha }}.tar.gz
+      - uses: actions/upload-artifact@v7
+        with:
+          name: helios-release-evidence-${{ github.sha }}
+          path: |
+            release-evidence
+            helios-fabric-source-${{ github.sha }}.tar.gz
+          if-no-files-found: error
+          retention-days: 90

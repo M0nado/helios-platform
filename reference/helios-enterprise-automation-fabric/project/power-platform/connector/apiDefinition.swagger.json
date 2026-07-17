@@ -1,0 +1,182 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "HELIOS Automation Fabric",
+    "description": "Governed HELIOS event and status operations.",
+    "version": "2.0"
+  },
+  "host": "REPLACE_WITH_BROKER_HOST",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/events": {
+      "post": {
+        "summary": "Publish a governed HELIOS event",
+        "operationId": "PublishEvent",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/EventEnvelope"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "schema": {
+              "$ref": "#/definitions/Accepted"
+            }
+          }
+        },
+        "x-ms-visibility": "important"
+      }
+    },
+    "/api/status/{correlationId}": {
+      "get": {
+        "summary": "Get status by correlation identifier",
+        "operationId": "GetCorrelationStatus",
+        "parameters": [
+          {
+            "name": "correlationId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status result"
+          }
+        },
+        "x-ms-visibility": "important"
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Check connector readiness",
+        "operationId": "GetReadiness",
+        "responses": {
+          "200": {
+            "description": "Ready"
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-HELIOS-Connector-Key"
+    }
+  },
+  "security": [
+    {
+      "api_key": []
+    }
+  ],
+  "definitions": {
+    "EventEnvelope": {
+      "type": "object",
+      "required": [
+        "specVersion",
+        "eventId",
+        "correlationId",
+        "eventType",
+        "source",
+        "subject",
+        "occurredAt",
+        "environment",
+        "severity",
+        "sensitivity",
+        "summary",
+        "provenance",
+        "payload",
+        "requestedActions",
+        "links"
+      ],
+      "properties": {
+        "specVersion": {
+          "type": "string",
+          "enum": [
+            "1.0"
+          ]
+        },
+        "eventId": {
+          "type": "string"
+        },
+        "correlationId": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "sensitivity": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "provenance": {
+          "type": "object"
+        },
+        "payload": {
+          "type": "object"
+        },
+        "requestedActions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "Accepted": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "eventId": {
+          "type": "string"
+        },
+        "correlationId": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
