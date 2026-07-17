@@ -24,19 +24,22 @@ public interface IAzureInventoryService
 public sealed class AzureInventoryService : IAzureInventoryService
 {
     private const string ManagementScope = "https://management.azure.com/.default";
+    private const int MaximumPages = 100;
+    private const int MaximumResources = 10_000;
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly TokenCredential _credential;
 
     public AzureInventoryService(HttpClient httpClient, IConfiguration configuration)
+        : this(httpClient, configuration, CreateCredential(configuration))
+    {
+    }
+
+    public AzureInventoryService(HttpClient httpClient, IConfiguration configuration, TokenCredential credential)
     {
         _httpClient = httpClient;
         _configuration = configuration;
-        var clientId = configuration["AZURE_CLIENT_ID"];
-        _credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
-        {
-            ManagedIdentityClientId = string.IsNullOrWhiteSpace(clientId) ? null : clientId
-        });
+        _credential = credential;
     }
 
     public AzureConnectorContext GetContext()
@@ -64,32 +67,43 @@ public sealed class AzureInventoryService : IAzureInventoryService
 
         var subscription = Uri.EscapeDataString(context.SubscriptionId!);
         var resourceGroup = Uri.EscapeDataString(context.ResourceGroup!);
-        var uri = new Uri(
+        Uri? uri = new Uri(
             $"https://management.azure.com/subscriptions/{subscription}/resourceGroups/{resourceGroup}/resources?api-version=2021-04-01");
 
         var token = await _credential.GetTokenAsync(
             new TokenRequestContext(new[] { ManagementScope }),
             cancellationToken);
-        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         var resources = new List<AzureInventoryResource>();
-        if (!document.RootElement.TryGetProperty("value", out var values)) return resources;
-
-        foreach (var item in values.EnumerateArray())
+        for (var page = 0; uri is not null; page++)
         {
-            var type = ReadString(item, "type") ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(typePrefix)
-                && !type.StartsWith(typePrefix, StringComparison.OrdinalIgnoreCase)) continue;
-            resources.Add(new AzureInventoryResource(
-                ReadString(item, "id") ?? string.Empty,
-                ReadString(item, "name") ?? string.Empty,
-                type,
-                ReadString(item, "location")));
+            if (page >= MaximumPages)
+                throw new InvalidOperationException($"Azure inventory exceeded the {MaximumPages}-page safety limit.");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            if (document.RootElement.TryGetProperty("value", out var values) && values.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in values.EnumerateArray())
+                {
+                    var type = ReadString(item, "type") ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(typePrefix)
+                        && !type.StartsWith(typePrefix, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (resources.Count >= MaximumResources)
+                        throw new InvalidOperationException($"Azure inventory exceeded the {MaximumResources}-resource safety limit.");
+                    resources.Add(new AzureInventoryResource(
+                        ReadString(item, "id") ?? string.Empty,
+                        ReadString(item, "name") ?? string.Empty,
+                        type,
+                        ReadString(item, "location")));
+                }
+            }
+
+            uri = ReadValidatedNextLink(document.RootElement);
         }
 
         return resources;
@@ -109,4 +123,26 @@ public sealed class AzureInventoryService : IAzureInventoryService
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    private static Uri? ReadValidatedNextLink(JsonElement root)
+    {
+        var nextLink = ReadString(root, "nextLink");
+        if (string.IsNullOrWhiteSpace(nextLink)) return null;
+        if (!Uri.TryCreate(nextLink, UriKind.Absolute, out var uri)
+            || uri.Scheme != Uri.UriSchemeHttps
+            || !string.Equals(uri.Host, "management.azure.com", StringComparison.OrdinalIgnoreCase)
+            || !string.IsNullOrEmpty(uri.UserInfo)
+            || !string.IsNullOrEmpty(uri.Fragment))
+            throw new InvalidOperationException("Azure inventory returned an invalid pagination link.");
+        return uri;
+    }
+
+    private static TokenCredential CreateCredential(IConfiguration configuration)
+    {
+        var clientId = configuration["AZURE_CLIENT_ID"];
+        return new DefaultAzureCredential(new DefaultAzureCredentialOptions
+        {
+            ManagedIdentityClientId = string.IsNullOrWhiteSpace(clientId) ? null : clientId
+        });
+    }
 }
