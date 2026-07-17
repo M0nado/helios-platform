@@ -20,8 +20,13 @@ solution pipelines.
 - VS Code Insiders is the isolated local workbench. GitHub Copilot and Claude Code
   consume the same reviewed repository and MCP boundary but retain separate sign-in
   sessions and never exchange provider credentials.
-- Azure Functions exposes the Helios MCP endpoint at `/runtime/webhooks/mcp`.
-- Foundry Hosted Agents run Hermes orchestration code with dedicated Entra identities.
+- Azure Container Apps is the implemented hosting target. Its deployment output
+  `connectorMcpUrl` resolves to `https://<container-app-host>/mcp`; the legacy
+  Azure Functions `/runtime/webhooks/mcp` route is local compatibility only and
+  is not the Microsoft agent toolbox endpoint.
+- Foundry Hosted Agents are a later administrator-controlled target. No Foundry
+  project, model deployment, hosted Hermes agent, or Agent 365 identity is
+  created by the current connector.
 
 ## Authentication
 
@@ -29,6 +34,13 @@ Developer login is interactive. CI uses federated workload identity. Production
 agents use managed identity. Key Vault is used only for services that cannot use
 federation. PATs, client secrets, raw tokens, and recovery material never enter
 source control or agent memory.
+
+The deployed Bicep currently creates an empty, RBAC-enabled Key Vault but does
+not grant the connector access to provider secrets or map any secret into the
+Container App. Online OpenAI is therefore disabled and fails closed. Enabling it
+requires an administrator-reviewed Key Vault secret/reference, managed-identity
+RBAC, explicit model selection, and a new protected what-if/deployment; repository
+scripts never accept or persist a plaintext provider key.
 
 Run `scripts/Invoke-HeliosCliMatrix.ps1` to check independent CLI installations
 in parallel. The command reports versions only; optional authentication probes
@@ -42,8 +54,12 @@ approved enterprise software distribution.
 2. Create Entra groups, workload identities, and least-privilege roles.
 3. Run `azd provision --preview`, Bicep lint, and the protected Azure what-if.
 4. Approve the separate protected deployment job for identity, runtime, and observability resources.
-5. Register the Foundry toolbox and Helios MCP endpoint.
-6. Deploy Hermes/XCore agents into a development Foundry project.
+5. After an administrator selects and approves a Foundry project, deployment,
+   identity, and RBAC, register the deployed `connectorMcpUrl` toolbox. Its only
+   current tools are `azure_get_context`, `azure_list_resources`, and
+   `azure_list_foundry_resources`.
+6. As a later vertical slice, deploy and evaluate Hermes/XCore agents in the
+   approved development Foundry project.
 7. Evaluate and trace before publishing to Microsoft 365 Copilot or Teams.
 8. Export Copilot Studio solutions and promote through governed environments.
 
@@ -55,3 +71,9 @@ but cannot approve one. See `MULTI_AGENT_WORKBENCH.md`.
 Published Foundry agents receive dedicated identities. Development RBAC does not
 silently transfer to published versions; production permissions are reassigned
 explicitly after publication and before traffic promotion.
+
+APIM with a private Container Apps backend, Container Apps Jobs, Service Bus,
+Cosmos DB, Data Lake, Azure AI Search, and Foundry are target-architecture gates,
+not resources implemented by the current Bicep. They require separate designs,
+administrator authorization, and protected deployments before documentation or
+agent manifests may treat them as available.
