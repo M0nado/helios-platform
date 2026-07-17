@@ -329,14 +329,16 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
         secret = configuration[$"{prefix}_HMAC_SECRET"];
         var allowedHosts = (configuration[$"{prefix}_ALLOWED_HOSTS"] ?? string.Empty)
             .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return Uri.TryCreate(rawEndpoint, UriKind.Absolute, out endpoint)
-            && endpoint.Scheme == Uri.UriSchemeHttps
-            && string.IsNullOrEmpty(endpoint.UserInfo)
-            && Uri.CheckHostName(endpoint.Host) == UriHostNameType.Dns
-            && !endpoint.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
-            && !endpoint.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
-            && !endpoint.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase)
-            && allowedHosts.Any(host => string.Equals(host, endpoint.Host, StringComparison.OrdinalIgnoreCase))
+        if (!Uri.TryCreate(rawEndpoint, UriKind.Absolute, out var parsedEndpoint)) return false;
+        endpoint = parsedEndpoint;
+        var host = parsedEndpoint.Host;
+        return parsedEndpoint.Scheme == Uri.UriSchemeHttps
+            && string.IsNullOrEmpty(parsedEndpoint.UserInfo)
+            && Uri.CheckHostName(host) == UriHostNameType.Dns
+            && !host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            && !host.EndsWith(".local", StringComparison.OrdinalIgnoreCase)
+            && !host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase)
+            && allowedHosts.Any(allowedHost => string.Equals(allowedHost, host, StringComparison.OrdinalIgnoreCase))
             && !string.IsNullOrWhiteSpace(secret)
             && Encoding.UTF8.GetByteCount(secret) >= 32;
     }
