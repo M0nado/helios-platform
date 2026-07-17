@@ -351,6 +351,64 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.DoesNotContain("role_assignment", body, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Automation_plan_is_deterministic_and_never_applies_from_rest()
+    {
+        const string payload = "{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}";
+        using var firstContent = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var secondContent = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var first = await _client.PostAsync("/automation/plan", firstContent);
+        using var second = await _client.PostAsync("/automation/plan", secondContent);
+        var firstBody = await first.Content.ReadAsStringAsync();
+        var secondBody = await second.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(firstBody, secondBody);
+        Assert.Contains("\"mode\":\"plan-only\"", firstBody);
+        Assert.Contains("\"canApplyFromMcp\":false", firstBody);
+        Assert.Contains("\"directMainWrite\":false", firstBody);
+        Assert.Contains("open-draft-pull-request", firstBody);
+    }
+
+    [Fact]
+    public async Task Automation_plan_rejects_secret_rotation_without_target()
+    {
+        using var content = new StringContent("{\"intent\":\"rotate-secret\",\"environment\":\"dev\"}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/automation/plan", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_exposes_plan_only_automation_tool()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("helios_plan_automation", body);
+        Assert.Contains("readOnlyHint", body);
+        Assert.DoesNotContain("helios_apply", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_returns_issue_repair_plan_without_apply_capability()
+    {
+        const string payload = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_plan_automation\",\"arguments\":{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}}}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("canApplyFromMcp", body);
+        Assert.Contains("open-draft-pull-request", body);
+        Assert.DoesNotContain("automaticMerge\\\":true", body, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static HttpRequestMessage CreateSignedGitHubWebhook(string deliveryId, string body)
     {
         var signature = Convert.ToHexString(HMACSHA256.HashData(
