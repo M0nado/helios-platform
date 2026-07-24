@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/helios-edge-automation-validate.yml'
       - 'monado/helios-control/config/edge-automation.json'
+      - 'monado/helios-control/config/identity-bindings.json'
+      - 'monado/helios-control/infra/**'
       - 'monado/helios-control/docs/EDGE_AUTOMATION.md'
       - 'monado/helios-control/appPackage/manifest.json'
       - 'monado/helios-control/config/agent-fabric.json'
@@ -37,6 +39,15 @@ jobs:
             .defaultMode == "plan" and
             .mcp.canApplyFromMcp == false and
             .mcp.mutationToolsAllowed == false and
+            (.mcp.exposedTools | sort) == ([
+              "azure_get_context",
+              "azure_list_resources",
+              "azure_list_foundry_resources",
+              "helios_plan_automation",
+              "helios_propose_upgrade",
+              "helios_get_run",
+              "helios_list_connectors"
+            ] | sort) and
             .intents["repair-issue"].directMainWrite == false and
             .intents["repair-issue"].automaticMerge == false
           ' monado/helios-control/config/edge-automation.json > /dev/null
@@ -48,6 +59,10 @@ jobs:
             .learning.promotionRequiresPullRequest == true and
             .vault.automaticReadback == false
           ' monado/helios-control/config/agent-fabric.json > /dev/null
+          jq --exit-status '
+            ([.bindings[] | select(.workload == "helios-api" and .scope == "selected-resource-group") | .roles[]] | index("Reader")) != null and
+            ([.bindings[] | select(.workload == "helios-api" and .scope == "control-runs-container") | .roles[]] | index("Cosmos DB Built-in Data Contributor")) != null
+          ' monado/helios-control/config/identity-bindings.json > /dev/null
 
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -76,9 +91,9 @@ jobs:
           [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
           if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
           $content = Get-Content $path -Raw
-          foreach ($required in @('ApprovedPlanSha256', 'APPLY HELIOS EDGE', 'Incremental', 'Read-Host', 'AsSecureString')) {
+          foreach ($required in @('ApprovedPlanSha256', 'APPLY HELIOS EDGE', 'Incremental', 'Read-Host', 'AsSecureString', 'FullResourcePayloads', 'ContainerImage', 'sourceCommitSha')) {
             if ($content -notmatch [regex]::Escape($required)) { throw "Missing guardrail: $required" }
           }
-          foreach ($forbidden in @('keyvault secret show', 'keyvault secret download', '--mode Complete')) {
+          foreach ($forbidden in @('keyvault secret show', 'keyvault secret download', '--mode Complete', 'ResourceIdOnly')) {
             if ($content -match [regex]::Escape($forbidden)) { throw "Forbidden operation: $forbidden" }
           }
