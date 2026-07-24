@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
   "manifestVersion": "1.19",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "id": "${{TEAMS_APP_ID}}",
   "packageName": "com.helios.control",
   "developer": {
@@ -15,8 +15,8 @@
     "full": "Helios Hermes/XCore Control"
   },
   "description": {
-    "short": "Guided Azure setup, diagnosis, and upgrades.",
-    "full": "Run the HELIOS Azure setup wizard, create safe Cloud Shell diagnosis and what-if plans, and propose tested agent upgrades through Microsoft 365 Copilot and Teams."
+    "short": "Shared MCP control, Azure setup, diagnosis, and upgrades.",
+    "full": "Use the shared HELIOS MCP Apps endpoint and Monado control center for safe Azure Edge setup, GitHub OIDC readiness, DevOps synchronization planning, and governed Hermes/XCore upgrades."
   },
   "icons": {
     "outline": "outline.png",
