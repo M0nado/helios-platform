@@ -6,6 +6,16 @@
     "preview",
     "prod"
   ],
+  "environmentPolicy": {
+    "protectedDeployment": [
+      "dev",
+      "test",
+      "prod"
+    ],
+    "planOnly": [
+      "preview"
+    ]
+  },
   "bindings": [
     {
       "workload": "github-actions",

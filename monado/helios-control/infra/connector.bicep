@@ -276,7 +276,7 @@ resource apiAuth 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
           openIdIssuer: 'https://login.microsoftonline.com/${entraTenantId}/v2.0'
         }
         validation: {
-          allowedAudiences: [ entraClientId, 'api://${entraClientId}', teamsSsoApplicationIdUri ]
+          allowedAudiences: [ teamsSsoApplicationIdUri ]
           defaultAuthorizationPolicy: {
             allowedPrincipals: { identities: [ allowedPrincipalObjectId ] }
           }

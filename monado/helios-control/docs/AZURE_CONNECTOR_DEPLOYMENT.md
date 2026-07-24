@@ -13,7 +13,9 @@ clients, and governed agent workflows.
   protected-resource metadata are public discovery routes. Connector REST and
   remote MCP routes require Entra; provider webhook ingress remains a separate
   signature/validation boundary and fails closed in every execution mode.
-- An application-level check requires the Easy Auth principal header.
+- An application-level check requires the sanitized Easy Auth principal ID,
+  exact origin-bound audience, and delegated `access_as_user` claim. Legacy
+  client-ID audiences are not accepted.
 - The user-assigned managed identity receives operator-bootstrapped Reader on
   the deployment resource group and template-owned Cosmos Data Contributor only
   on the `control-runs` container.
@@ -146,7 +148,8 @@ For Power Platform/Copilot Studio, replace the placeholders in
 `connector/helios-azure-connector.openapi.yaml`, then import it as a custom
 connector and configure the Entra OAuth connection. For an MCP client, start from
 `connector/mcp-manifest.example.json` and use an access token whose audience is
-the connector app registration.
+the origin-bound connector Application ID URI and whose delegated scope is
+`access_as_user`.
 
 ## Verification
 
@@ -156,7 +159,8 @@ the connector app registration.
    `read-only-resource-group`.
 4. Confirm resource inventory contains no properties, keys, connection strings,
    tags, or secret values.
-5. Confirm MCP `tools/list` exposes only the three inventory tools.
+5. Confirm MCP `tools/list` exposes exactly the seven approved read-only and
+   plan-only tools.
 
 Run the checks with `scripts/Test-HeliosCloudConnection.ps1`; add
 `-InteractiveAuth` for the authenticated context and MCP checks. The access

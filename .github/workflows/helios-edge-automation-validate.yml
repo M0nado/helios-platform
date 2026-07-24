@@ -13,8 +13,13 @@ on:
       - 'monado/helios-control/appPackage/manifest.json'
       - 'monado/helios-control/config/agent-fabric.json'
       - 'monado/helios-control/docs/AGENT_AUTOFIX.md'
+      - 'monado/helios-control/docs/AZURE_CONNECTOR_DEPLOYMENT.md'
+      - 'monado/helios-control/docs/AZURE_INTERACTIVE_ONBOARDING.md'
+      - 'monado/helios-control/connector/**'
       - 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/**'
+      - 'monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1'
       - 'monado/helios-control/scripts/Invoke-HeliosEdgeAutomation.ps1'
+      - 'monado/helios-control/scripts/Test-HeliosCloudConnection.ps1'
       - 'monado/helios-control/src/Helios.Connect.Api/**'
       - 'monado/helios-control/tests/Helios.Connect.Tests/**'
   workflow_dispatch:
@@ -67,7 +72,9 @@ jobs:
           ' monado/helios-control/config/agent-fabric.json > /dev/null
           jq --exit-status '
             ([.bindings[] | select(.workload == "helios-api" and .scope == "selected-resource-group") | .roles[]] | index("Reader")) != null and
-            ([.bindings[] | select(.workload == "helios-api" and .scope == "control-runs-container") | .roles[]] | index("Cosmos DB Built-in Data Contributor")) != null
+            ([.bindings[] | select(.workload == "helios-api" and .scope == "control-runs-container") | .roles[]] | index("Cosmos DB Built-in Data Contributor")) != null and
+            .environmentPolicy.protectedDeployment == ["dev", "test", "prod"] and
+            .environmentPolicy.planOnly == ["preview"]
           ' monado/helios-control/config/identity-bindings.json > /dev/null
           jq --exit-status '
             .schemaVersion == 2 and
@@ -78,7 +85,7 @@ jobs:
             .webApplicationInfo.resource == ("api://" + "$" + "{{PUBLIC_HOSTNAME}}/" + "$" + "{{ENTRA_APP_ID}}")
           ' monado/helios-control/appPackage/manifest.json > /dev/null
           grep -Fq 'var teamsSsoApplicationIdUri' monado/helios-control/infra/connector.bicep
-          grep -Fq 'allowedAudiences:' monado/helios-control/infra/connector.bicep
+          grep -Fq 'allowedAudiences: [ teamsSsoApplicationIdUri ]' monado/helios-control/infra/connector.bicep
           grep -Fq 'teamsSsoApplicationIdUri ]' monado/helios-control/infra/connector.bicep
 
           cloud_workflow='.github/workflows/helios-cloud-deploy.yml'
@@ -92,6 +99,35 @@ jobs:
           fi
           grep -Fq 'common_tags_sha256' "${cloud_workflow}"
           grep -Fq 'commonTagsSha256' "${cloud_workflow}"
+
+          runtime='monado/helios-control/src/Helios.Connect.Api/Program.cs'
+          verifier='monado/helios-control/scripts/Test-HeliosCloudConnection.ps1'
+          openapi='monado/helios-control/connector/helios-azure-connector.openapi.yaml'
+          mcp_manifest='monado/helios-control/connector/mcp-manifest.example.json'
+          if rg -n 'user_impersonation' "${runtime}" "${verifier}" "${openapi}" "${mcp_manifest}"; then
+            echo 'The retired user_impersonation scope must not reappear in the runtime or client contracts.' >&2
+            exit 1
+          fi
+          grep -Fq 'HELIOS_ENTRA_APPLICATION_ID_URI' "${runtime}"
+          grep -Fq '/access_as_user' "${runtime}"
+          grep -Fq 'X-MS-CLIENT-PRINCIPAL' "${runtime}"
+          grep -Fq 'Get-AzureCliAccessToken -DelegatedScope $script:delegatedScope' "${verifier}"
+          grep -Fq "'X-MS-CLIENT-PRINCIPAL' = \$forgedPrincipal" "${verifier}"
+          grep -Fq 'api://${HELIOS_CONNECTOR_HOST}/${ENTRA_CLIENT_ID}/access_as_user' "${openapi}"
+          jq --exit-status '
+            .version == "0.4.0" and
+            .authentication.audience == ("api://" + "$" + "{HELIOS_CONNECTOR_HOST}/" + "$" + "{ENTRA_CLIENT_ID}") and
+            .authentication.scope == ("api://" + "$" + "{HELIOS_CONNECTOR_HOST}/" + "$" + "{ENTRA_CLIENT_ID}/access_as_user") and
+            .tools == [
+              "azure_get_context",
+              "azure_list_resources",
+              "azure_list_foundry_resources",
+              "helios_plan_automation",
+              "helios_propose_upgrade",
+              "helios_get_run",
+              "helios_list_connectors"
+            ]
+          ' "${mcp_manifest}" > /dev/null
 
           control_runs='monado/helios-control/src/Helios.Connect.Api/ControlRuns.cs'
           grep -Fq 'MaintainLeaseAsync' "${control_runs}"

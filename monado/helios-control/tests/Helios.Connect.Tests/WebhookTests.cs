@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 using Xunit;
@@ -398,23 +399,101 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Azure_mcp_exposes_only_inventory_tools()
+    public async Task Azure_mcp_requires_scope_and_exposes_only_the_approved_tools()
     {
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
-            builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true"));
+        {
+            builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
+            builder.UseSetting("HELIOS_ENTRA_CLIENT_ID", "11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", "api://helios.example.test/11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test");
+        });
         using var client = securedFactory.CreateClient();
+
+        using (var missingScopeRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        })
+        {
+            missingScopeRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
+            missingScopeRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal("wrong_scope"));
+            using var missingScopeResponse = await client.SendAsync(missingScopeRequest);
+            Assert.Equal(HttpStatusCode.Unauthorized, missingScopeResponse.StatusCode);
+            Assert.Contains("access_as_user", Assert.Single(missingScopeResponse.Headers.WwwAuthenticate).ToString());
+        }
+
+        using (var wrongAudienceRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        })
+        {
+            wrongAudienceRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
+            wrongAudienceRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL",
+                CreateEasyAuthPrincipal("access_as_user", "api://wrong.example.test/11111111-1111-1111-1111-111111111111"));
+            using var wrongAudienceResponse = await client.SendAsync(wrongAudienceRequest);
+            Assert.Equal(HttpStatusCode.Unauthorized, wrongAudienceResponse.StatusCode);
+        }
+
         using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
             Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
         };
         request.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
+        request.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal("openid access_as_user"));
         using var response = await client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("azure_list_resources", body);
-        Assert.Contains("azure_list_foundry_resources", body);
-        Assert.DoesNotContain("deploy", body, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("role_assignment", body, StringComparison.OrdinalIgnoreCase);
+        using var document = JsonDocument.Parse(body);
+        var names = document.RootElement.GetProperty("result").GetProperty("tools")
+            .EnumerateArray()
+            .Select(tool => tool.GetProperty("name").GetString()!)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(new[]
+        {
+            "azure_get_context",
+            "azure_list_foundry_resources",
+            "azure_list_resources",
+            "helios_get_run",
+            "helios_list_connectors",
+            "helios_plan_automation",
+            "helios_propose_upgrade"
+        }, names);
+    }
+
+    [Fact]
+    public async Task OAuth_metadata_and_challenge_use_the_origin_bound_access_scope()
+    {
+        const string applicationIdUri = "api://helios.example.test/11111111-1111-1111-1111-111111111111";
+        await using var securedFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
+            builder.UseSetting("HELIOS_ENTRA_CLIENT_ID", "11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", applicationIdUri);
+            builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test");
+        });
+        using var client = securedFactory.CreateClient();
+
+        using (var metadataResponse = await client.GetAsync("/.well-known/oauth-protected-resource/mcp"))
+        {
+            var body = await metadataResponse.Content.ReadAsStringAsync();
+            Assert.Equal(HttpStatusCode.OK, metadataResponse.StatusCode);
+            using var metadata = JsonDocument.Parse(body);
+            Assert.Equal("https://helios.example.test/mcp", metadata.RootElement.GetProperty("resource").GetString());
+            Assert.Equal($"{applicationIdUri}/access_as_user",
+                Assert.Single(metadata.RootElement.GetProperty("scopes_supported").EnumerateArray()).GetString());
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        };
+        using var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var challenge = Assert.Single(response.Headers.WwwAuthenticate).ToString();
+        Assert.Contains("resource_metadata=\"https://helios.example.test/.well-known/oauth-protected-resource/mcp\"", challenge);
+        Assert.Contains($"scope=\"{applicationIdUri}/access_as_user\"", challenge);
+        Assert.Contains("error=\"invalid_token\"", challenge);
     }
 
     [Fact]
@@ -520,6 +599,21 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         request.Headers.Add("X-Hub-Signature-256", $"sha256={signature}");
         request.Headers.Add("X-GitHub-Delivery", deliveryId);
         return request;
+    }
+
+    private static string CreateEasyAuthPrincipal(
+        string scopes,
+        string audience = "api://helios.example.test/11111111-1111-1111-1111-111111111111")
+    {
+        var principal = JsonSerializer.Serialize(new
+        {
+            claims = new[]
+            {
+                new { typ = "aud", val = audience },
+                new { typ = "scp", val = scopes }
+            }
+        });
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(principal));
     }
 
     private static HttpRequestMessage CreateSignedSlackWebhook(long timestamp, string body)
