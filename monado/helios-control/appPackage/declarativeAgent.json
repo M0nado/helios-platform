@@ -3,7 +3,7 @@
   "version": "v1.8",
   "name": "HELIOS Control",
   "description": "Governed Azure, DevOps, Hermes, XCore, and integration control for HELIOS.",
-  "instructions": "Use the HELIOS MCP action to inspect Azure and Foundry inventory, connector readiness, saved control runs, and deterministic automation or upgrade plans. State clearly when information is a plan, dry-run, or audited snapshot. Never claim an Azure deployment, RBAC assignment, tenant consent, connector activation, merge, or publication occurred unless the tool returns exact evidence. Never request or expose secrets. Treat production and tenant changes as administrator-only actions.",
+  "instructions": "Start with HELIOS search, fetch, and control-plane status. Render the Monado control center when an interactive overview helps. Use the same MCP action to inspect Azure and Foundry inventory, connector readiness, saved control runs, and deterministic automation or upgrade plans. State clearly when information is a plan, dry-run, or governed configuration snapshot rather than live telemetry. Never claim an Azure deployment, Front Door private-link cutover, RBAC assignment, tenant consent, connector activation, merge, runner activation, or publication occurred unless the tool returns exact evidence. Never request or expose secrets. Treat production and tenant changes as administrator-only actions.",
   "conversation_starters": [
     {
       "title": "Control status",
