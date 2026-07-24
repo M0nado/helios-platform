@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using Azure.Core;
 using Azure.Identity;
+using Helios.Connect.Contracts;
 using Microsoft.Azure.Cosmos;
 
 namespace Helios.Connect.Api;
@@ -261,21 +262,29 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
             }
 
             var occurredAt = DateTimeOffset.UtcNow;
-            var payload = JsonSerializer.Serialize(new
-            {
-                schema = "helios.connectorDelivery.v1",
-                connector,
-                runId = run.Id,
-                run.CorrelationId,
-                run.Status,
-                run.Intent,
-                run.Environment,
-                run.Target,
-                run.EvidenceSha256,
-                run.ResourceCount,
-                planId = run.Plan?.PlanId,
-                occurredAt
-            });
+            var envelope = new HeliosEvent(
+                Id: $"{run.Id}:{connector}:status",
+                Type: "helios.control-run.status",
+                Source: "helios-control",
+                Subject: $"control-runs/{run.Id}",
+                OccurredAt: occurredAt,
+                CorrelationId: run.CorrelationId,
+                TraceParent: null,
+                DataClassification: "internal",
+                Payload: new Dictionary<string, object?>
+                {
+                    ["schema"] = "helios.connectorDelivery.v1",
+                    ["connector"] = connector,
+                    ["runId"] = run.Id,
+                    ["status"] = run.Status,
+                    ["intent"] = run.Intent,
+                    ["environment"] = run.Environment,
+                    ["target"] = run.Target,
+                    ["evidenceSha256"] = run.EvidenceSha256,
+                    ["resourceCount"] = run.ResourceCount,
+                    ["planId"] = run.Plan?.PlanId
+                });
+            var payload = JsonSerializer.Serialize(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web));
             var signature = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret!), Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
             var keyId = configuration[$"HELIOS_CONNECTOR_{connector.ToUpperInvariant()}_HMAC_KEY_ID"] ?? "v1";
             if (!IsSafeKeyId(keyId))
@@ -463,7 +472,7 @@ public sealed partial class ControlRunCoordinator(
             {
                 logger.LogInformation("Control run {RunId} lease or ETag ownership moved to another worker.", id);
             }
-            catch (Exception exception) when (exception is CosmosException or HttpRequestException or InvalidOperationException or ArgumentException or CryptographicException or JsonException or AuthenticationFailedException)
+            catch (Exception exception) when (IsExpectedOperationalFailure(exception))
             {
                 logger.LogError(exception, "Control run {RunId} failed with an expected operational error.", id);
                 await FailAsync(id, stoppingToken);
@@ -484,7 +493,7 @@ public sealed partial class ControlRunCoordinator(
                     foreach (var run in runnable) _queue.Writer.TryWrite(run.Id);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
-                catch (Exception exception) when (exception is CosmosException or HttpRequestException or InvalidOperationException or ArgumentException or CryptographicException or JsonException or AuthenticationFailedException)
+                catch (Exception exception) when (IsExpectedOperationalFailure(exception))
                 {
                     logger.LogWarning(exception, "Control run recovery scan failed; the next bounded scan will retry.");
                 }
@@ -575,25 +584,46 @@ public sealed partial class ControlRunCoordinator(
 
     private async Task FailAsync(string id, CancellationToken cancellationToken)
     {
-        var run = await store.GetAsync(id, cancellationToken);
-        if (run is null || run.Status is "completed" or "awaiting-approval" ||
-            !string.Equals(run.LeaseOwner, _workerId, StringComparison.Ordinal)) return;
         try
         {
-            await ReplaceAsync(run, run with
+            var run = await store.GetAsync(id, cancellationToken);
+            if (run is null || run.Status is "completed" or "awaiting-approval" ||
+                !string.Equals(run.LeaseOwner, _workerId, StringComparison.Ordinal)) return;
+            try
             {
-                Status = "failed",
-                Error = "The run failed. Review server telemetry using the correlation ID; secret-bearing exception text is never returned.",
-                LeaseOwner = null,
-                LeaseExpiresAt = null,
-                UpdatedAt = DateTimeOffset.UtcNow
-            }, cancellationToken);
+                await ReplaceAsync(run, run with
+                {
+                    Status = "failed",
+                    Error = "The run failed. Review server telemetry using the correlation ID; secret-bearing exception text is never returned.",
+                    LeaseOwner = null,
+                    LeaseExpiresAt = null,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                }, cancellationToken);
+            }
+            catch (ControlRunConcurrencyException)
+            {
+                logger.LogDebug("Control run {RunId} failure state was superseded by another worker.", id);
+            }
         }
-        catch (ControlRunConcurrencyException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            logger.LogDebug("Control run {RunId} failure state was superseded by another worker.", id);
+            throw;
+        }
+        catch (Exception exception) when (IsExpectedOperationalFailure(exception))
+        {
+            logger.LogWarning(exception, "Could not persist failed state for control run {RunId}; its lease will expire for bounded recovery.", id);
         }
     }
+
+    private static bool IsExpectedOperationalFailure(Exception exception) =>
+        exception is CosmosException or
+            HttpRequestException or
+            InvalidOperationException or
+            ArgumentException or
+            CryptographicException or
+            JsonException or
+            AuthenticationFailedException or
+            OperationCanceledException;
 
     private async Task<ControlRunSnapshot> SetStepAsync(ControlRunSnapshot run, string name, string status, string detail, CancellationToken cancellationToken)
     {
