@@ -17,7 +17,17 @@ public interface ISetupWizardService
 
 public sealed partial class SetupWizardService : ISetupWizardService
 {
+    private const string UnconfiguredSourceSha = "0000000000000000000000000000000000000000";
     private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "dev", "test", "preview", "prod" };
+    private readonly string _sourceCommitSha;
+
+    public SetupWizardService(IConfiguration? configuration = null)
+    {
+        var candidate = configuration?["HELIOS_SOURCE_SHA"] ?? Environment.GetEnvironmentVariable("HELIOS_SOURCE_SHA");
+        _sourceCommitSha = !string.IsNullOrWhiteSpace(candidate) && SourceCommitPattern().IsMatch(candidate)
+            ? candidate.ToLowerInvariant()
+            : UnconfiguredSourceSha;
+    }
 
     public SetupBootstrapResult CreateBootstrap(SetupBootstrapRequest request)
     {
@@ -35,6 +45,8 @@ public sealed partial class SetupWizardService : ISetupWizardService
             $"$subscriptionId = '{subscription ?? string.Empty}'",
             $"$resourceGroup = '{group}'",
             $"$environmentName = '{environment}'",
+            $"$sourceSha = '{_sourceCommitSha}'",
+            "if ($sourceSha -eq '0000000000000000000000000000000000000000') { throw 'HELIOS_SOURCE_SHA is not configured on the deployed API; refusing to clone a moving branch.' }",
             "az login --tenant $tenantId --use-device-code",
             "if (-not $subscriptionId) {",
             "  $enabled = @(az account list --all --query \"[?tenantId=='$tenantId' && state=='Enabled'].id\" -o tsv)",
@@ -44,11 +56,18 @@ public sealed partial class SetupWizardService : ISetupWizardService
             "if ($subscriptionId -notmatch '^[0-9a-fA-F-]{36}$') { throw 'A valid subscription ID is required.' }",
             "az account set --subscription $subscriptionId",
             "az account show --query '{tenantId:tenantId,subscriptionId:id,subscriptionName:name}' --output table",
-            "git clone https://github.com/M0nado/helios-platform.git",
+            "$containerImage = if ($env:HELIOS_CONTAINER_IMAGE) { $env:HELIOS_CONTAINER_IMAGE } else { Read-Host 'Enter the immutable ACR image reference ending in @sha256:<digest>' }",
+            "$registryName = if ($env:HELIOS_CONTAINER_REGISTRY_NAME) { $env:HELIOS_CONTAINER_REGISTRY_NAME } else { Read-Host 'Enter the Azure Container Registry resource name' }",
+            "$entraClientId = if ($env:HELIOS_ENTRA_CLIENT_ID) { $env:HELIOS_ENTRA_CLIENT_ID } else { Read-Host 'Enter the HELIOS Entra application client ID' }",
+            "$allowedPrincipalObjectId = if ($env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID) { $env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID } else { Read-Host 'Enter the allowed principal object ID' }",
+            "git clone --filter=blob:none --no-checkout https://github.com/M0nado/helios-platform.git",
+            "git -C ./helios-platform fetch --depth 1 origin $sourceSha",
+            "git -C ./helios-platform checkout --detach $sourceSha",
+            "if ((git -C ./helios-platform rev-parse HEAD) -ne $sourceSha) { throw 'Checked-out HELIOS source does not match the API build SHA.' }",
             "Set-Location ./helios-platform/monado/helios-control",
             "$evidence = Join-Path $HOME 'clouddrive/helios-evidence'",
             "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Diagnose -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -EvidenceDirectory $evidence",
-            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -EvidenceDirectory $evidence",
+            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -ContainerImage $containerImage -ContainerRegistryName $registryName -EntraClientId $entraClientId -AllowedPrincipalObjectId $allowedPrincipalObjectId -SourceCommitSha $sourceSha -EvidenceDirectory $evidence",
             "Write-Host 'STOP: review the what-if file and SHA-256. This bootstrap never applies.'"
         });
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(script))).ToLowerInvariant();
@@ -92,6 +111,7 @@ public sealed partial class SetupWizardService : ISetupWizardService
         return normalized;
     }
 
+    [GeneratedRegex("^[0-9a-fA-F]{40}$")] private static partial Regex SourceCommitPattern();
     [GeneratedRegex("^[A-Za-z0-9._()\\-]+$")] private static partial Regex ResourceGroupPattern();
     [GeneratedRegex("^[A-Za-z0-9-]+$")] private static partial Regex SimpleNamePattern();
     [GeneratedRegex("^[a-zA-Z0-9][a-zA-Z0-9._/-]*$")] private static partial Regex CapabilityPattern();
