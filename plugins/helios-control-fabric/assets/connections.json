@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "state": {
+    "controlCenter": "online",
+    "azure": "not-live",
+    "connectorDelivery": "dry-run",
+    "hermesLearning": "candidate-only",
+    "xcore": "standby"
+  },
+  "authorities": {
+    "controlCenter": "https://helios-control-center.thepatman64.chatgpt.site",
+    "github": "https://github.com/M0nado/helios-platform",
+    "githubChange": "https://github.com/M0nado/helios-platform/pull/188",
+    "linear": "https://linear.app/641974/project/helios-integration-fabric-40e1dd9caa39",
+    "slack": "https://helios-xk97943.slack.com/archives/C0BHWDBHG1W",
+    "teams": "Helios / Helios Ops",
+    "sharepoint": "https://heli0s-my.sharepoint.com/personal/jmore_heli0s_onmicrosoft_com/Documents/Helios/Governance/Architecture/Integration-Fabric/HELIOS_CHATGPT_COPILOT_MCP_SETUP_V1.md"
+  },
+  "runtime": {
+    "mcpEnvironmentVariable": "HELIOS_AZURE_CONNECTOR_URL",
+    "mcpPath": "/mcp",
+    "authentication": "Microsoft Entra ID",
+    "federationSubject": "repo:M0nado/helios-platform:environment:azure-dev"
+  }
+}

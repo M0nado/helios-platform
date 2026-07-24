@@ -1,0 +1,41 @@
+{
+  "name": "helios-control-fabric",
+  "version": "0.5.0",
+  "description": "Governed HELIOS control plane for Azure, GitHub, DevOps, Microsoft Copilot, and collaboration systems.",
+  "author": {
+    "name": "HELIOS Platform",
+    "url": "https://github.com/M0nado"
+  },
+  "homepage": "https://helios-control-center.thepatman64.chatgpt.site",
+  "repository": "https://github.com/M0nado/helios-platform",
+  "license": "MIT",
+  "keywords": [
+    "helios",
+    "azure",
+    "mcp",
+    "copilot",
+    "foundry",
+    "devops"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "HELIOS Control Fabric",
+    "shortDescription": "Plan and govern the HELIOS cloud control plane.",
+    "longDescription": "Connect HELIOS to GitHub, Linear, Slack, Teams, SharePoint, Azure, Azure DevOps, Foundry, ChatGPT, Codex, and Microsoft Copilot through one plan-first control fabric.",
+    "developerName": "HELIOS Platform",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Planning",
+      "Interactive"
+    ],
+    "websiteURL": "https://helios-control-center.thepatman64.chatgpt.site",
+    "defaultPrompt": [
+      "Show the HELIOS control-plane status.",
+      "Create an Azure readiness plan.",
+      "Explain the remaining release gates."
+    ],
+    "brandColor": "#4DE7F0"
+  }
+}

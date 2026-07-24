@@ -1,0 +1,41 @@
+name: HELIOS Unified Plugin
+
+on:
+  pull_request:
+    paths:
+      - "plugins/helios-control-fabric/**"
+      - ".agents/plugins/marketplace.json"
+      - ".github/agents/helios-control.agent.md"
+      - ".github/instructions/helios-control.instructions.md"
+      - "monado/helios-control/appPackage/**"
+      - "monado/helios-control/docs/UNIFIED_PLUGIN_SETUP.md"
+      - ".github/workflows/helios-unified-plugin-validate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Parse manifests
+        run: |
+          python -m json.tool .agents/plugins/marketplace.json >/dev/null
+          python -m json.tool plugins/helios-control-fabric/.codex-plugin/plugin.json >/dev/null
+          python -m json.tool plugins/helios-control-fabric/.mcp.json >/dev/null
+          python -m json.tool plugins/helios-control-fabric/assets/connections.json >/dev/null
+          python -m json.tool plugins/helios-control-fabric/assets/microsoft-mcp.template.json >/dev/null
+          python -m json.tool monado/helios-control/appPackage/manifest.json >/dev/null
+          python -m json.tool monado/helios-control/appPackage/declarativeAgent.json >/dev/null
+          python -m json.tool monado/helios-control/appPackage/ai-plugin.json >/dev/null
+      - name: Test setup helper
+        run: python -m unittest discover -s plugins/helios-control-fabric/scripts -p "test_*.py" -v
+      - name: Enforce plan-first contract
+        run: |
+          python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev --json > /tmp/helios-plan.json
+          python -c 'import json; p=json.load(open("/tmp/helios-plan.json")); assert p["executionMode"] == "plan-only"; assert "Azure deployment approval" in p["administratorGates"]'
