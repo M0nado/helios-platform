@@ -1,0 +1,60 @@
+{
+  "mcpServers": {
+    "helios-azure": {
+      "type": "http",
+      "url": "${HELIOS_AZURE_CONNECTOR_URL}/mcp"
+    },
+    "azure-mcp-readonly": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure/mcp@3.0.0-beta.27",
+        "server",
+        "start",
+        "--read-only",
+        "--mode",
+        "namespace",
+        "--namespace",
+        "subscription",
+        "--namespace",
+        "group",
+        "--namespace",
+        "containerapps",
+        "--namespace",
+        "applicationinsights",
+        "--namespace",
+        "monitor",
+        "--namespace",
+        "foundryextensions",
+        "--namespace",
+        "quota",
+        "--namespace",
+        "pricing"
+      ]
+    },
+    "azure-devops-readonly": {
+      "type": "http",
+      "url": "https://mcp.dev.azure.com/${AZURE_DEVOPS_ORGANIZATION}",
+      "headers": {
+        "X-MCP-Toolsets": "repos,wit,pipelines,wiki",
+        "X-MCP-Readonly": "true"
+      }
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp"
+    },
+    "linear": {
+      "type": "http",
+      "url": "https://mcp.linear.app/mcp"
+    },
+    "slack": {
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp"
+    },
+    "foundry": {
+      "type": "http",
+      "url": "https://mcp.ai.azure.com"
+    }
+  }
+}
