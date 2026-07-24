@@ -2,8 +2,8 @@
   "schema_version": "v2.4",
   "name_for_human": "HELIOS Control",
   "namespace": "HeliosControl",
-  "description_for_human": "Governed HELIOS Azure and agent control.",
-  "description_for_model": "Use this plugin to inspect HELIOS Azure and Foundry inventory, connector readiness, saved control runs, and non-executing automation or upgrade plans. It cannot deploy, merge, assign RBAC, grant tenant consent, or activate connectors.",
+  "description_for_human": "Governed HELIOS MCP Apps, Azure Edge, OIDC, DevOps, and agent control.",
+  "description_for_model": "Use this Remote MCP server to search and fetch HELIOS authorities, render the Monado control center, inspect read-only Azure and Foundry inventory and connector readiness, read saved control runs, and create non-executing automation or upgrade plans. It cannot deploy, merge, assign RBAC, grant tenant consent, approve private endpoints, enable runners, or activate connectors.",
   "functions": [],
   "runtimes": [
     {
