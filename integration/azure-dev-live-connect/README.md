@@ -81,11 +81,11 @@ integration/azure-dev-live-connect/evidence/
 
 ## 4. Configure secretless GitHub OIDC
 
-This creates or reuses one Entra application, creates its service principal, and adds the exact environment-bound federated credential:
-
-```text
-repo:M0nado/helios-platform:environment:azure-dev
-```
+This creates or reuses one Entra application, creates its service principal,
+and adds the exact environment-bound federated credential. Before any Entra
+write, the script reads GitHub's current repository metadata and effective OIDC
+policy. It uses immutable owner/repository IDs when GitHub enables them and
+fails closed for custom templates or missing policy/identity fields.
 
 Run:
 
@@ -100,7 +100,12 @@ pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Connect-Helio
 
 No client secret is generated.
 
-The repository and environment are immutable for this connector: `M0nado/helios-platform` and `azure-dev`. An existing `github-azure-dev` federated credential must exactly match the canonical issuer, subject, and audience; a mismatch fails closed and is never overwritten.
+The repository and environment are fixed for this connector:
+`M0nado/helios-platform` and `azure-dev`. The resolved subject itself is not
+copied into this guide because GitHub owns that effective policy. An existing
+`github-azure-dev` federated credential must exactly match the live-resolved
+issuer, subject, and audience; a mismatch fails closed and is never
+overwritten.
 
 ## 5. Create the protected GitHub environment and variables
 

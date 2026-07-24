@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +43,10 @@ ENVIRONMENT_KEYS = (
     "AZURE_RESOURCE_GROUP",
     "AZURE_CLIENT_ID",
 )
+
+SUPPORTED_ENVIRONMENTS = ("azure-dev", "azure-test", "azure-prod")
+GITHUB_API_VERSION = "2026-03-10"
+GitHubApiReader = Callable[[str], dict[str, Any]]
 
 
 def read_asset(name: str) -> dict[str, Any]:
@@ -105,9 +109,128 @@ def doctor() -> dict[str, Any]:
     }
 
 
-def release_plan(environment: str) -> dict[str, Any]:
-    if environment not in {"azure-dev", "azure-test", "azure-prod"}:
+def validate_environment(environment: str) -> None:
+    if environment not in SUPPORTED_ENVIRONMENTS:
         raise ValueError("environment must be azure-dev, azure-test, or azure-prod")
+
+
+def run_gh_api(endpoint: str) -> dict[str, Any]:
+    gh = shutil.which("gh")
+    if gh is None:
+        raise RuntimeError(
+            "GitHub CLI is required to resolve the effective OIDC subject. "
+            "Install gh and authenticate with `gh auth login`."
+        )
+    try:
+        process = subprocess.run(
+            [
+                gh,
+                "api",
+                "--method",
+                "GET",
+                "--header",
+                f"X-GitHub-Api-Version: {GITHUB_API_VERSION}",
+                endpoint,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RuntimeError(
+            f"GitHub API read could not complete for {endpoint}."
+        ) from error
+    if process.returncode != 0:
+        detail = first_line(process.stderr or process.stdout)
+        raise RuntimeError(f"GitHub API read failed for {endpoint}: {detail}")
+    try:
+        payload = json.loads(process.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError(
+            f"GitHub API returned invalid JSON for {endpoint}."
+        ) from error
+    if not isinstance(payload, dict):
+        raise RuntimeError(
+            f"GitHub API returned an unexpected payload for {endpoint}."
+        )
+    return payload
+
+
+def required_text(value: Any, field: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise RuntimeError(
+            f"GitHub did not return {field}; refusing to guess the OIDC subject."
+        )
+    return text
+
+
+def resolve_github_oidc_trust(
+    repository: str,
+    environment: str,
+    api_reader: GitHubApiReader | None = None,
+) -> dict[str, Any]:
+    validate_environment(environment)
+    if repository.count("/") != 1:
+        raise ValueError("repository must use owner/name format")
+
+    reader = api_reader or run_gh_api
+    repository_info = reader(f"repos/{repository}")
+    oidc_policy = reader(f"repos/{repository}/actions/oidc/customization/sub")
+
+    if oidc_policy.get("use_default") is not True:
+        raise RuntimeError(
+            f"Repository '{repository}' uses a customized OIDC subject template. "
+            "HELIOS will not infer or overwrite it."
+        )
+    if "use_immutable_subject" not in oidc_policy:
+        raise RuntimeError(
+            "GitHub did not return use_immutable_subject; refusing to guess "
+            "the OIDC subject format."
+        )
+
+    owner = repository_info.get("owner")
+    if not isinstance(owner, dict):
+        raise RuntimeError(
+            "GitHub did not return canonical repository-owner metadata; "
+            "refusing to guess the OIDC subject."
+        )
+    canonical_owner = required_text(owner.get("login"), "the canonical owner name")
+    owner_id = required_text(owner.get("id"), "the immutable owner ID")
+    canonical_repository = required_text(
+        repository_info.get("name"),
+        "the canonical repository name",
+    )
+    repository_id = required_text(
+        repository_info.get("id"),
+        "the immutable repository ID",
+    )
+
+    use_immutable_subject = bool(oidc_policy["use_immutable_subject"])
+    if use_immutable_subject:
+        repository_segment = (
+            f"{canonical_owner}@{owner_id}/"
+            f"{canonical_repository}@{repository_id}"
+        )
+    else:
+        repository_segment = f"{canonical_owner}/{canonical_repository}"
+
+    return {
+        "subject": f"repo:{repository_segment}:environment:{environment}",
+        "canonicalRepository": f"{canonical_owner}/{canonical_repository}",
+        "repositoryId": repository_id,
+        "ownerId": owner_id,
+        "useImmutableSubject": use_immutable_subject,
+        "policyEndpoint": (
+            f"repos/{repository}/actions/oidc/customization/sub"
+        ),
+        "apiVersion": GITHUB_API_VERSION,
+    }
+
+
+def release_plan(environment: str) -> dict[str, Any]:
+    validate_environment(environment)
     return {
         "environment": environment,
         "executionMode": "plan-only",
@@ -141,21 +264,36 @@ def release_plan(environment: str) -> dict[str, Any]:
             "GitHub Actions: HELIOS Azure → what-if",
             "GitHub protected environment: " + environment + " → deployment approval",
         ],
-        "federationSubject": (
-            "repo:M0nado/helios-platform:environment:" + environment
+        "federationSubjectResolution": (
+            "Run the authenticated `oidc` command; HELIOS resolves GitHub's "
+            "effective default/immutable subject policy and fails closed."
         ),
     }
 
 
-def oidc_contract(environment: str) -> dict[str, Any]:
+def oidc_contract(
+    environment: str,
+    api_reader: GitHubApiReader | None = None,
+) -> dict[str, Any]:
+    validate_environment(environment)
     contract = read_asset("oidc.json")
-    subjects = contract["subjects"]
-    if environment not in subjects:
-        raise ValueError("environment must be azure-dev, azure-test, or azure-prod")
+    resolution = resolve_github_oidc_trust(
+        contract["repository"],
+        environment,
+        api_reader=api_reader,
+    )
     return {
         **contract,
         "environment": environment,
-        "selectedSubject": subjects[environment],
+        "selectedSubject": resolution["subject"],
+        "resolvedRepository": resolution["canonicalRepository"],
+        "repositoryId": resolution["repositoryId"],
+        "ownerId": resolution["ownerId"],
+        "useImmutableSubject": resolution["useImmutableSubject"],
+        "resolutionEvidence": {
+            "policyEndpoint": resolution["policyEndpoint"],
+            "apiVersion": resolution["apiVersion"],
+        },
         "configuredVariables": {
             key: bool(os.environ.get(key))
             for key in contract["requiredVariables"]
@@ -181,8 +319,7 @@ def runner_plan() -> dict[str, Any]:
 
 
 def edge_plan(environment: str) -> dict[str, Any]:
-    if environment not in {"azure-dev", "azure-test", "azure-prod"}:
-        raise ValueError("environment must be azure-dev, azure-test, or azure-prod")
+    validate_environment(environment)
     return {
         **read_asset("edge-runtime.json"),
         "environment": environment,
@@ -209,6 +346,7 @@ def print_human(payload: dict[str, Any]) -> None:
         print(f"  issuer: {payload['issuer']}")
         print(f"  audience: {payload['audience']}")
         print(f"  subject: {payload['selectedSubject']}")
+        print(f"  immutable subject: {str(payload['useImmutableSubject']).lower()}")
         print("  No identity or RBAC mutation was performed.")
     elif "sourceOfTruth" in payload:
         print("HELIOS Azure DevOps sync plan")
@@ -263,20 +401,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    if args.command == "doctor":
-        payload = doctor()
-    elif args.command == "targets":
-        payload = read_targets()
-    elif args.command == "plan":
-        payload = release_plan(args.environment)
-    elif args.command == "oidc":
-        payload = oidc_contract(args.environment)
-    elif args.command == "devops-sync":
-        payload = devops_sync_plan()
-    elif args.command == "runners":
-        payload = runner_plan()
-    else:
-        payload = edge_plan(args.environment)
+    try:
+        if args.command == "doctor":
+            payload = doctor()
+        elif args.command == "targets":
+            payload = read_targets()
+        elif args.command == "plan":
+            payload = release_plan(args.environment)
+        elif args.command == "oidc":
+            payload = oidc_contract(args.environment)
+        elif args.command == "devops-sync":
+            payload = devops_sync_plan()
+        elif args.command == "runners":
+            payload = runner_plan()
+        else:
+            payload = edge_plan(args.environment)
+    except (RuntimeError, ValueError) as error:
+        print(f"HELIOS: {error}", file=sys.stderr)
+        return 2
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
