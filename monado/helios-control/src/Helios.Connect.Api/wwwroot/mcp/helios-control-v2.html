@@ -53,7 +53,15 @@
       const href=safeHttpsUrl(system?.url);
       if(href){
         const link=node("a","","Open authority ↗");
-        link.href=href;link.target="_blank";link.rel="noreferrer";
+        link.href=href;link.target="_blank";link.rel="noopener noreferrer";
+        link.addEventListener("click",event=>{
+          event.preventDefault();
+          if(window.openai?.openExternal){
+            window.openai.openExternal({href,redirectUrl:false});
+            return;
+          }
+          window.open(href,"_blank","noopener,noreferrer");
+        });
         card.append(link);
       }
       grid.append(card);
