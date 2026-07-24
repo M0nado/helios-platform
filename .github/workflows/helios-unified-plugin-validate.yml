@@ -75,11 +75,22 @@ jobs:
           from pathlib import Path
           html=Path("monado/helios-control/src/Helios.Connect.Api/wwwroot/mcp/helios-control-v2.html").read_text()
           program=Path("monado/helios-control/src/Helios.Connect.Api/Program.cs").read_text()
+          manifest=Path("monado/helios-control/appPackage/manifest.json").read_text()
           assert "innerHTML" not in html
           assert "textContent" in html
           assert 'event.source!==window.parent' in html
+          assert "ui/notifications/tool-result" in html
+          assert "openExternal" in html
           assert "text/html;profile=mcp-app" in program
           assert "ui://helios/control-center-v2.html" in program
+          assert "securitySchemes" in program
+          assert "outputSchema" in program
+          assert "mcp/www_authenticate" in program
+          assert "openai/widgetDomain" in program
+          assert "redirect_domains" in program
+          assert "/access_as_user" in program
+          assert "user_impersonation" not in program
+          assert "api://${{PUBLIC_HOSTNAME}}/${{ENTRA_APP_ID}}" in manifest
           PY
 
   mcp-contract:
