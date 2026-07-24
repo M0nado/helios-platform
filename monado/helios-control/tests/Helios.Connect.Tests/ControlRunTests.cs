@@ -158,9 +158,17 @@ public sealed class ControlRunTests
             EvidenceSha256: new string('a', 64), ResourceCount: 2);
 
         var receipts = await dispatcher.DispatchAsync(run, CancellationToken.None);
+        var firstBody = handler.Body;
+        var firstTimestamp = handler.Timestamp;
+        var firstSignature = handler.Signature;
+        var retryReceipts = await dispatcher.DispatchAsync(run, CancellationToken.None);
 
         Assert.Single(receipts);
+        Assert.Single(retryReceipts);
         Assert.Equal("delivered", receipts[0].Status);
+        Assert.Equal(firstBody, handler.Body);
+        Assert.Equal(firstTimestamp, handler.Timestamp);
+        Assert.Equal(firstSignature, handler.Signature);
         Assert.Equal("0123456789abcdef0123456789abcdef:github", handler.IdempotencyKey);
         Assert.Matches("^sha256=[0-9a-f]{64}$", handler.Signature);
         var signedEnvelope = $"{handler.Timestamp}\n{handler.IdempotencyKey}\n{handler.Body}";
