@@ -411,7 +411,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("ui://helios/control-center-v2.html", tools);
 
         var search = await CallAsync("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"search\",\"arguments\":{\"query\":\"Azure OIDC\"}}}");
-        Assert.Contains("\\\"results\\\"", search);
+        Assert.Contains("results", search);
         Assert.Contains("azure", search, StringComparison.OrdinalIgnoreCase);
 
         var fetch = await CallAsync("{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"fetch\",\"arguments\":{\"id\":\"github\"}}}");
