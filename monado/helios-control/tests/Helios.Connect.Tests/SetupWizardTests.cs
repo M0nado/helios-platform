@@ -24,7 +24,8 @@ public sealed class SetupWizardTests
         Assert.Contains("-Mode Plan", first.Script);
         Assert.DoesNotContain("-Mode Apply", first.Script);
         Assert.DoesNotContain("keyvault secret", first.Script, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains($"git -C ./helios-platform checkout --detach {SourceSha}", first.Script);
+        Assert.Contains($"$sourceSha = '{SourceSha}'", first.Script);
+        Assert.Contains("git -C ./helios-platform checkout --detach $sourceSha", first.Script);
         Assert.Contains("-SourceCommitSha $sourceSha", first.Script);
         Assert.DoesNotContain("git clone https://github.com", first.Script);
     }
