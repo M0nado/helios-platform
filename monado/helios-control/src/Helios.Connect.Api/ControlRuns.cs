@@ -261,7 +261,8 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
                 continue;
             }
 
-            var occurredAt = DateTimeOffset.UtcNow;
+            // Retries must reproduce the exact body for the same idempotency key.
+            var occurredAt = run.CreatedAt;
             var envelope = new HeliosEvent(
                 Id: $"{run.Id}:{connector}:status",
                 Type: "helios.control-run.status",
@@ -370,6 +371,7 @@ public sealed partial class ControlRunCoordinator(
     ILogger<ControlRunCoordinator> logger) : BackgroundService
 {
     private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan LeaseHeartbeatInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan RecoveryInterval = TimeSpan.FromSeconds(5);
     private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "dev", "test", "preview", "prod" };
     private static readonly HashSet<string> Intents = new(StringComparer.OrdinalIgnoreCase) { "provision-resources", "cleanup-owned-resources" };
@@ -381,6 +383,7 @@ public sealed partial class ControlRunCoordinator(
         SingleWriter = false
     });
     private readonly string _workerId = $"{Environment.MachineName}-{Guid.NewGuid():n}";
+    private readonly SemaphoreSlim _leaseWriteGate = new(1, 1);
 
     public async Task<ControlRunSnapshot> StartAsync(ControlRunRequest request, string idempotencyKey, string requestedBy, CancellationToken cancellationToken)
     {
@@ -528,61 +531,122 @@ public sealed partial class ControlRunCoordinator(
         }
         catch (ControlRunConcurrencyException) { return; }
 
-        run = await SetStepAsync(run, "context", "running", "Verifying tenant, subscription, and resource group.", cancellationToken);
-        var context = inventory.GetContext();
-        if (!context.Configured || !string.Equals(context.ResourceGroup, run.Target, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("The server Azure context does not match the requested resource group.");
-        run = await SetStepAsync(run, "context", "completed", "Configured Azure boundary verified.", cancellationToken);
+        using var leaseLostCts = new CancellationTokenSource();
+        using var heartbeatStopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var workCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, leaseLostCts.Token);
+        var heartbeatTask = MaintainLeaseAsync(id, heartbeatStopCts.Token, leaseLostCts);
+        try
+        {
+            var workToken = workCts.Token;
+            run = await SetStepAsync(run, "context", "running", "Verifying tenant, subscription, and resource group.", workToken);
+            var context = inventory.GetContext();
+            if (!context.Configured || !string.Equals(context.ResourceGroup, run.Target, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The server Azure context does not match the requested resource group.");
+            run = await SetStepAsync(run, "context", "completed", "Configured Azure boundary verified.", workToken);
 
-        run = await SetStepAsync(run, "inventory", "running", "Reading Azure resource metadata with managed identity.", cancellationToken);
-        var resources = await inventory.ListResourcesAsync(null, cancellationToken);
-        run = await ReplaceAsync(run, run with { ResourceCount = resources.Count, UpdatedAt = DateTimeOffset.UtcNow }, cancellationToken);
-        run = await SetStepAsync(run, "inventory", "completed", $"Read metadata for {resources.Count} resources.", cancellationToken);
+            run = await SetStepAsync(run, "inventory", "running", "Reading Azure resource metadata with managed identity.", workToken);
+            var resources = await inventory.ListResourcesAsync(null, workToken);
+            run = await ReplaceAsync(run, run with { ResourceCount = resources.Count, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+            run = await SetStepAsync(run, "inventory", "completed", $"Read metadata for {resources.Count} resources.", workToken);
 
-        run = await SetStepAsync(run, "plan", "running", "Creating deterministic plan-only automation.", cancellationToken);
-        var plan = planner.CreatePlan(new EdgeAutomationRequest(run.Intent, run.Environment, run.Target, "all"));
-        run = await ReplaceAsync(run, run with { Plan = plan, UpdatedAt = DateTimeOffset.UtcNow }, cancellationToken);
-        run = await SetStepAsync(run, "plan", "completed", $"Plan {plan.PlanId[..12]} created; apply is unavailable from Edge.", cancellationToken);
+            run = await SetStepAsync(run, "plan", "running", "Creating deterministic plan-only automation.", workToken);
+            var plan = planner.CreatePlan(new EdgeAutomationRequest(run.Intent, run.Environment, run.Target, "all"));
+            run = await ReplaceAsync(run, run with { Plan = plan, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+            run = await SetStepAsync(run, "plan", "completed", $"Plan {plan.PlanId[..12]} created; apply is unavailable from Edge.", workToken);
 
-        run = await SetStepAsync(run, "evidence", "running", "Canonicalizing non-secret evidence.", cancellationToken);
-        var resourceEvidence = resources.OrderBy(resource => resource.Id, StringComparer.Ordinal)
-            .Select(resource => new
+            run = await SetStepAsync(run, "evidence", "running", "Canonicalizing non-secret evidence.", workToken);
+            var resourceEvidence = resources.OrderBy(resource => resource.Id, StringComparer.Ordinal)
+                .Select(resource => new
+                {
+                    resource.Id,
+                    resource.Name,
+                    resource.Type,
+                    resource.Location,
+                    tags = resource.Tags?.OrderBy(tag => tag.Key, StringComparer.Ordinal)
+                });
+            var canonical = JsonSerializer.Serialize(new
             {
-                resource.Id,
-                resource.Name,
-                resource.Type,
-                resource.Location,
-                tags = resource.Tags?.OrderBy(tag => tag.Key, StringComparer.Ordinal)
+                schema = "helios.orchestrationEvidence.v1",
+                azure = new { context.TenantId, context.SubscriptionId, context.ResourceGroup },
+                request = new { run.Intent, run.Environment, run.Target, run.Connectors },
+                plan,
+                resources = resourceEvidence
             });
-        var canonical = JsonSerializer.Serialize(new
-        {
-            schema = "helios.orchestrationEvidence.v1",
-            azure = new { context.TenantId, context.SubscriptionId, context.ResourceGroup },
-            request = new { run.Intent, run.Environment, run.Target, run.Connectors },
-            plan,
-            resources = resourceEvidence
-        });
-        var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
-        run = await ReplaceAsync(run, run with { EvidenceSha256 = digest, UpdatedAt = DateTimeOffset.UtcNow }, cancellationToken);
-        run = await SetStepAsync(run, "evidence", "completed", $"Evidence SHA-256 {digest}.", cancellationToken);
+            var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+            run = await ReplaceAsync(run, run with { EvidenceSha256 = digest, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+            run = await SetStepAsync(run, "evidence", "completed", $"Evidence SHA-256 {digest}.", workToken);
 
-        run = await SetStepAsync(run, "connectors", "running", "Reconciling external status receipts.", cancellationToken);
-        var awaitsApproval = plan.Steps.Any(step => step.Mutating);
-        var receipts = await dispatcher.DispatchAsync(run with { Status = awaitsApproval ? "awaiting-approval" : "completed" }, cancellationToken);
-        run = await ReplaceAsync(run, run with { Receipts = receipts, UpdatedAt = DateTimeOffset.UtcNow }, cancellationToken);
-        run = await SetStepAsync(run, "connectors", "completed", $"Recorded {receipts.Count} connector receipts.", cancellationToken);
+            run = await SetStepAsync(run, "connectors", "running", "Reconciling external status receipts.", workToken);
+            var awaitsApproval = plan.Steps.Any(step => step.Mutating);
+            var receipts = await dispatcher.DispatchAsync(run with { Status = awaitsApproval ? "awaiting-approval" : "completed" }, workToken);
+            run = await ReplaceAsync(run, run with { Receipts = receipts, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+            run = await SetStepAsync(run, "connectors", "completed", $"Recorded {receipts.Count} connector receipts.", workToken);
 
-        run = await SetStepAsync(run, "approval", "running", "Evaluating protected mutation gates.", cancellationToken);
-        run = await SetStepAsync(run, "approval", "completed", awaitsApproval
-            ? "Stopped before mutation. Review what-if evidence and approve through the protected workflow."
-            : "No mutating step is present.", cancellationToken);
-        await ReplaceAsync(run, run with
+            run = await SetStepAsync(run, "approval", "running", "Evaluating protected mutation gates.", workToken);
+            run = await SetStepAsync(run, "approval", "completed", awaitsApproval
+                ? "Stopped before mutation. Review what-if evidence and approve through the protected workflow."
+                : "No mutating step is present.", workToken);
+            await ReplaceAsync(run, run with
+            {
+                Status = awaitsApproval ? "awaiting-approval" : "completed",
+                LeaseOwner = null,
+                LeaseExpiresAt = null,
+                UpdatedAt = DateTimeOffset.UtcNow
+            }, workToken);
+        }
+        catch (OperationCanceledException) when (leaseLostCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
-            Status = awaitsApproval ? "awaiting-approval" : "completed",
-            LeaseOwner = null,
-            LeaseExpiresAt = null,
-            UpdatedAt = DateTimeOffset.UtcNow
-        }, cancellationToken);
+            throw new ControlRunConcurrencyException();
+        }
+        finally
+        {
+            heartbeatStopCts.Cancel();
+            await heartbeatTask;
+        }
+    }
+
+    private async Task MaintainLeaseAsync(string id, CancellationToken cancellationToken, CancellationTokenSource leaseLostCts)
+    {
+        using var timer = new PeriodicTimer(LeaseHeartbeatInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await _leaseWriteGate.WaitAsync(cancellationToken);
+                try
+                {
+                    var current = await store.GetAsync(id, cancellationToken);
+                    if (current is not null && current.Status is "completed" or "awaiting-approval" or "failed") return;
+                    if (current is null || current.Status != "running" ||
+                        !string.Equals(current.LeaseOwner, _workerId, StringComparison.Ordinal))
+                        throw new ControlRunConcurrencyException();
+
+                    _ = await store.ReplaceAsync(current with
+                    {
+                        LeaseOwner = _workerId,
+                        LeaseExpiresAt = DateTimeOffset.UtcNow.Add(LeaseDuration)
+                    }, current.ETag, cancellationToken);
+                }
+                finally
+                {
+                    _leaseWriteGate.Release();
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogDebug("Control run {RunId} lease heartbeat stopped.", id);
+        }
+        catch (ControlRunConcurrencyException)
+        {
+            logger.LogWarning("Control run {RunId} lease heartbeat lost ETag ownership; active work is being cancelled.", id);
+            leaseLostCts.Cancel();
+        }
+        catch (Exception exception) when (IsExpectedOperationalFailure(exception))
+        {
+            logger.LogWarning(exception, "Control run {RunId} lease heartbeat failed; active work is being cancelled for safe recovery.", id);
+            leaseLostCts.Cancel();
+        }
     }
 
     private async Task FailAsync(string id, CancellationToken cancellationToken)
@@ -643,11 +707,39 @@ public sealed partial class ControlRunCoordinator(
         return await ReplaceAsync(run, run with { Steps = steps, UpdatedAt = now }, cancellationToken);
     }
 
-    private Task<ControlRunSnapshot> ReplaceAsync(ControlRunSnapshot current, ControlRunSnapshot replacement, CancellationToken cancellationToken)
+    private async Task<ControlRunSnapshot> ReplaceAsync(ControlRunSnapshot current, ControlRunSnapshot replacement, CancellationToken cancellationToken)
     {
-        if (string.Equals(current.LeaseOwner, _workerId, StringComparison.Ordinal) && replacement.Status == "running")
-            replacement = replacement with { LeaseOwner = _workerId, LeaseExpiresAt = DateTimeOffset.UtcNow.Add(LeaseDuration) };
-        return store.ReplaceAsync(replacement, current.ETag, cancellationToken);
+        await _leaseWriteGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (string.Equals(current.LeaseOwner, _workerId, StringComparison.Ordinal))
+            {
+                var latest = await store.GetAsync(current.Id, cancellationToken);
+                if (latest is null || latest.Status != "running" ||
+                    !string.Equals(latest.LeaseOwner, _workerId, StringComparison.Ordinal))
+                    throw new ControlRunConcurrencyException();
+
+                if (replacement.Status == "running")
+                    replacement = replacement with
+                    {
+                        LeaseOwner = _workerId,
+                        LeaseExpiresAt = DateTimeOffset.UtcNow.Add(LeaseDuration)
+                    };
+                return await store.ReplaceAsync(replacement, latest.ETag, cancellationToken);
+            }
+
+            return await store.ReplaceAsync(replacement, current.ETag, cancellationToken);
+        }
+        finally
+        {
+            _leaseWriteGate.Release();
+        }
+    }
+
+    public override void Dispose()
+    {
+        _leaseWriteGate.Dispose();
+        base.Dispose();
     }
 
     private static ControlRunStep Step(string name, string status, string detail) => new(name, status, detail);
