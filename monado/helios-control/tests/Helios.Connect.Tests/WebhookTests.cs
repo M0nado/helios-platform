@@ -369,7 +369,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Azure_mcp_exposes_only_inventory_tools()
+    public async Task Azure_mcp_exposes_governed_read_only_tools()
     {
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
             builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true"));
@@ -386,6 +386,51 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("azure_list_foundry_resources", body);
         Assert.DoesNotContain("deploy", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("role_assignment", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_exposes_standard_search_fetch_and_app_resource()
+    {
+        async Task<string> CallAsync(string payload)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+            };
+            using var response = await _client.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            return body;
+        }
+
+        var tools = await CallAsync("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
+        Assert.Contains("\"search\"", tools);
+        Assert.Contains("\"fetch\"", tools);
+        Assert.Contains("helios_get_control_plane_status", tools);
+        Assert.Contains("helios_render_control_center", tools);
+        Assert.Contains("ui://helios/control-center-v2.html", tools);
+
+        var search = await CallAsync("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"search\",\"arguments\":{\"query\":\"Azure OIDC\"}}}");
+        Assert.Contains("\\\"results\\\"", search);
+        Assert.Contains("azure", search, StringComparison.OrdinalIgnoreCase);
+
+        var fetch = await CallAsync("{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"fetch\",\"arguments\":{\"id\":\"github\"}}}");
+        Assert.Contains("Canonical source", fetch);
+        Assert.Contains("connected", fetch);
+
+        var resources = await CallAsync("{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"resources/list\"}");
+        Assert.Contains("text/html;profile=mcp-app", resources);
+        Assert.Contains("ui://helios/control-center-v2.html", resources);
+
+        var resource = await CallAsync("{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"resources/read\",\"params\":{\"uri\":\"ui://helios/control-center-v2.html\"}}");
+        Assert.Contains("textContent", resource);
+        Assert.DoesNotContain("innerHTML", resource, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ui/notifications/tool-result", resource);
+
+        var render = await CallAsync("{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_render_control_center\",\"arguments\":{}}}");
+        Assert.Contains("structuredContent", render);
+        Assert.Contains("governed-configuration-snapshot", render);
+        Assert.Contains("ui://helios/control-center-v2.html", render);
     }
 
     [Fact]
