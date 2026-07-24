@@ -274,7 +274,8 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         using var page = await _client.GetAsync("/wizard/index.html");
         var html = await page.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
-        Assert.Contains("https://res.cdn.office.net/teams-js/2.31.0/", html);
+        Assert.Contains("https://res.cdn.office.net/teams-js/2.53.1/", html);
+        Assert.Contains("sha384-PIuQ2V7hlz4b1x3G1mPCYYZiWTjxzRTL6bf547xR9ARsAeNv2DAzti86LQnFCwlo", html);
 
         Assert.True(page.Headers.TryGetValues("Content-Security-Policy", out var policies));
         var policy = Assert.Single(policies!);
