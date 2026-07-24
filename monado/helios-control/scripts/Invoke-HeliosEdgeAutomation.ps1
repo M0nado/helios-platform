@@ -176,47 +176,51 @@ if ($Mode -eq 'Diagnose') {
 }
 
 Assert-DeploymentInputs
-if ($Mode -eq 'Plan') {
-    $validationArguments = @(
-        'deployment', 'group', 'validate', '--resource-group', $ResourceGroup,
-        '--template-file', $script:ResolvedTemplate
-    )
-    $validationArguments += $script:ResolvedDeploymentParameters
-    [void] (Invoke-AzJson -Arguments $validationArguments -Operation 'Validating Bicep deployment')
-    $whatIf = Invoke-WhatIf
-    $directory = Join-Path $EvidenceDirectory "$EnvironmentName-$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))"
-    [void] (New-Item -ItemType Directory -Path $directory -Force)
-    $whatIfPath = Join-Path $directory 'what-if.json'
-    Write-Utf8NoBom -Path $whatIfPath -Value $whatIf
-    $sha256 = Get-FileSha256 $whatIfPath
-    $request = [ordered]@{
-        schema = 'helios.edgePlan.v1'
-        mode = 'plan'
-        environment = $EnvironmentName
-        tenantId = $TenantId
-        subscriptionId = $SubscriptionId
-        resourceGroup = $ResourceGroup
-        resourceGroupEnvironment = $context.environment
-        templateFile = $script:ResolvedTemplate
-        parametersFile = $script:ResolvedParameters
-        resolvedParameters = [ordered]@{
-            environmentName = $EnvironmentName
-            containerImage = $ContainerImage
-            containerRegistryName = $ContainerRegistryName
-            allowPreviewPlaceholder = $false
-            entraClientId = $EntraClientId
-            entraTenantId = $TenantId
-            allowedPrincipalObjectId = $AllowedPrincipalObjectId
-            sourceCommitSha = $SourceCommitSha.ToLowerInvariant()
-        }
-        whatIfSha256 = $sha256
-        applyRequires = @('protected-github-environment', 'immutable-image-digest', 'full-resource-what-if', 'fresh-drift-match', 'second-environment-approval', 'explicit-deploy-confirmation')
+$validationArguments = @(
+    'deployment', 'group', 'validate', '--resource-group', $ResourceGroup,
+    '--template-file', $script:ResolvedTemplate
+)
+$validationArguments += $script:ResolvedDeploymentParameters
+[void] (Invoke-AzJson -Arguments $validationArguments -Operation 'Validating Bicep deployment')
+$whatIf = Invoke-WhatIf
+$directory = Join-Path $EvidenceDirectory "$EnvironmentName-$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))"
+[void] (New-Item -ItemType Directory -Path $directory -Force)
+$whatIfPath = Join-Path $directory 'what-if.json'
+Write-Utf8NoBom -Path $whatIfPath -Value $whatIf
+$sha256 = Get-FileSha256 $whatIfPath
+$request = [ordered]@{
+    schema = 'helios.edgePlan.v1'
+    mode = 'plan'
+    environment = $EnvironmentName
+    tenantId = $TenantId
+    subscriptionId = $SubscriptionId
+    resourceGroup = $ResourceGroup
+    resourceGroupEnvironment = $context.environment
+    templateFile = $script:ResolvedTemplate
+    parametersFile = $script:ResolvedParameters
+    resolvedParameters = [ordered]@{
+        environmentName = $EnvironmentName
+        containerImage = $ContainerImage
+        containerRegistryName = $ContainerRegistryName
+        allowPreviewPlaceholder = $false
+        entraClientId = $EntraClientId
+        entraTenantId = $TenantId
+        allowedPrincipalObjectId = $AllowedPrincipalObjectId
+        sourceCommitSha = $SourceCommitSha.ToLowerInvariant()
     }
-    $requestPath = Join-Path $directory 'request.json'
-    Write-Utf8NoBom -Path $requestPath -Value (Get-CanonicalJson $request)
-    $requestSha256 = Get-FileSha256 $requestPath
-    [pscustomobject]@{ mode = 'plan'; evidenceDirectory = $directory; whatIfFile = $whatIfPath; whatIfSha256 = $sha256; requestFile = $requestPath; requestSha256 = $requestSha256; mutations = 0 } | ConvertTo-Json -Depth 10
-    return
+    whatIfSha256 = $sha256
+    applyRequires = @('protected-github-environment', 'immutable-image-digest', 'full-resource-what-if', 'fresh-drift-match', 'second-environment-approval', 'explicit-deploy-confirmation')
 }
-
-throw "Mode '$Mode' is not supported. Use Diagnose or Plan; deployment is protected-workflow only."
+$requestPath = Join-Path $directory 'request.json'
+Write-Utf8NoBom -Path $requestPath -Value (Get-CanonicalJson $request)
+$requestSha256 = Get-FileSha256 $requestPath
+[pscustomobject]@{
+    mode = 'plan'
+    evidenceDirectory = $directory
+    whatIfFile = $whatIfPath
+    whatIfSha256 = $sha256
+    requestFile = $requestPath
+    requestSha256 = $requestSha256
+    mutations = 0
+    applyAvailableLocally = $false
+} | ConvertTo-Json -Depth 10

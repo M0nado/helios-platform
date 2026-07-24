@@ -82,14 +82,16 @@ jobs:
           grep -Fq 'teamsSsoApplicationIdUri ]' monado/helios-control/infra/connector.bicep
 
           cloud_workflow='.github/workflows/helios-cloud-deploy.yml'
-          if [[ "$(grep -F -c 'commonTags="${HELIOS_COMMON_TAGS_JSON}"' "${cloud_workflow}")" -ne 3 ]]; then
-            echo 'Organization tags must be bound identically in preview, drift check, and deploy.' >&2
+          if [[ "$(grep -F -c 'commonTags="${COMMON_TAGS_JSON}"' "${cloud_workflow}")" -ne 3 ]]; then
+            echo 'Canonical organization tags must be bound identically in preview, drift check, and deploy.' >&2
             exit 1
           fi
           if [[ "$(grep -F -c 'commonTags: $commonTags' "${cloud_workflow}")" -ne 2 ]]; then
             echo 'Organization tags must be locked into request creation and evidence verification.' >&2
             exit 1
           fi
+          grep -Fq 'common_tags_sha256' "${cloud_workflow}"
+          grep -Fq 'commonTagsSha256' "${cloud_workflow}"
 
           control_runs='monado/helios-control/src/Helios.Connect.Api/ControlRuns.cs'
           grep -Fq 'MaintainLeaseAsync' "${control_runs}"
@@ -123,14 +125,18 @@ jobs:
           [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
           if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
           $content = Get-Content $path -Raw
-          foreach ($required in @("[ValidateSet('Diagnose', 'Plan')]", 'FullResourcePayloads', 'ContainerImage', 'sourceCommitSha', 'mutations = 0', 'protected-github-environment', 'second-environment-approval')) {
+          foreach ($required in @("[ValidateSet('Diagnose', 'Plan')]", 'FullResourcePayloads', 'ContainerImage', 'sourceCommitSha', 'mutations = 0', 'protected-github-environment', 'second-environment-approval', 'applyAvailableLocally')) {
             if ($content -notmatch [regex]::Escape($required)) { throw "Missing guardrail: $required" }
           }
           foreach ($forbidden in @("'deployment', 'group', 'create'", "'keyvault', 'secret', 'set'", 'Read-Host', 'AsSecureString', 'ApprovedPlanSha256', 'ApprovedRequestSha256', 'Write-RestrictedSecretFile', '--mode Complete', 'ResourceIdOnly')) {
             if ($content -match [regex]::Escape($forbidden)) { throw "Forbidden local mutation path: $forbidden" }
           }
           $serviceWorker = Get-Content 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/sw.js' -Raw
-          if ($serviceWorker -notmatch 'startsWith\(cachePrefix\)') { throw 'Wizard cache cleanup is not scoped to its own prefix.' }
+          if ($serviceWorker -notmatch "cachePrefix = 'helios-control-wizard-'" -or
+              $serviceWorker -notmatch 'startsWith\(cachePrefix\)' -or
+              $serviceWorker -notmatch 'caches\.open\(cacheName\)') {
+            throw 'Wizard cache cleanup and fallback must remain scoped to the wizard-owned cache.'
+          }
 
           $onboardingPath = 'monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1'
           $onboardingTokens = $null

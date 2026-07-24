@@ -462,7 +462,9 @@ function New-ConfirmedResourceGroup {
             'group', 'create',
             '--subscription', $Context.SubscriptionId,
             '--name', $Name,
-            '--location', $LocationName
+            '--location', $LocationName,
+            '--tags', 'system=helios', "environment=$EnvironmentName",
+            "helios-environment=$EnvironmentName", 'managed-by=helios-operator'
         ) `
         -Operation "Creating resource group '$Name'"
     if ($created.name -ne $Name) {

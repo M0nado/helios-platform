@@ -363,19 +363,41 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
     }
 }
 
+public sealed record ControlRunCoordinatorTiming(
+    TimeSpan LeaseDuration,
+    TimeSpan HeartbeatInterval,
+    TimeSpan RecoveryInterval)
+{
+    public static ControlRunCoordinatorTiming Default { get; } = new(
+        TimeSpan.FromMinutes(2),
+        TimeSpan.FromSeconds(30),
+        TimeSpan.FromSeconds(5));
+
+    public static ControlRunCoordinatorTiming Validate(ControlRunCoordinatorTiming? timing)
+    {
+        var value = timing ?? Default;
+        if (value.LeaseDuration <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(timing), "Lease duration must be positive.");
+        if (value.HeartbeatInterval <= TimeSpan.Zero || value.HeartbeatInterval > value.LeaseDuration / 3)
+            throw new ArgumentOutOfRangeException(nameof(timing), "Heartbeat interval must be positive and no more than one third of the lease duration.");
+        if (value.RecoveryInterval <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(timing), "Recovery interval must be positive.");
+        return value;
+    }
+}
+
 public sealed partial class ControlRunCoordinator(
     IControlRunStore store,
     IAzureInventoryService inventory,
     IEdgeAutomationPlanner planner,
     IConnectorDispatcher dispatcher,
-    ILogger<ControlRunCoordinator> logger) : BackgroundService
+    ILogger<ControlRunCoordinator> logger,
+    ControlRunCoordinatorTiming? timing = null) : BackgroundService
 {
-    private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(2);
-    private static readonly TimeSpan LeaseHeartbeatInterval = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan RecoveryInterval = TimeSpan.FromSeconds(5);
     private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "dev", "test", "preview", "prod" };
     private static readonly HashSet<string> Intents = new(StringComparer.OrdinalIgnoreCase) { "provision-resources", "cleanup-owned-resources" };
     private static readonly HashSet<string> Connectors = new(StringComparer.OrdinalIgnoreCase) { "github", "linear", "slack", "sharepoint", "teams", "copilot" };
+    private readonly ControlRunCoordinatorTiming _timing = ControlRunCoordinatorTiming.Validate(timing);
     private readonly Channel<string> _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(256)
     {
         FullMode = BoundedChannelFullMode.Wait,
@@ -495,7 +517,7 @@ public sealed partial class ControlRunCoordinator(
 
     private async Task RecoverRunnableAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(RecoveryInterval);
+        using var timer = new PeriodicTimer(_timing.RecoveryInterval);
         try
         {
             do
@@ -532,7 +554,7 @@ public sealed partial class ControlRunCoordinator(
             {
                 Status = "running",
                 LeaseOwner = _workerId,
-                LeaseExpiresAt = now.Add(LeaseDuration),
+                LeaseExpiresAt = now.Add(_timing.LeaseDuration),
                 UpdatedAt = now
             }, cancellationToken);
         }
@@ -614,7 +636,7 @@ public sealed partial class ControlRunCoordinator(
 
     private async Task MaintainLeaseAsync(string id, CancellationToken cancellationToken, CancellationTokenSource leaseLostCts)
     {
-        using var timer = new PeriodicTimer(LeaseHeartbeatInterval);
+        using var timer = new PeriodicTimer(_timing.HeartbeatInterval);
         try
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
@@ -631,7 +653,7 @@ public sealed partial class ControlRunCoordinator(
                     _ = await store.ReplaceAsync(current with
                     {
                         LeaseOwner = _workerId,
-                        LeaseExpiresAt = DateTimeOffset.UtcNow.Add(LeaseDuration)
+                        LeaseExpiresAt = DateTimeOffset.UtcNow.Add(_timing.LeaseDuration)
                     }, current.ETag, cancellationToken);
                 }
                 finally
@@ -730,7 +752,7 @@ public sealed partial class ControlRunCoordinator(
                     replacement = replacement with
                     {
                         LeaseOwner = _workerId,
-                        LeaseExpiresAt = DateTimeOffset.UtcNow.Add(LeaseDuration)
+                        LeaseExpiresAt = DateTimeOffset.UtcNow.Add(_timing.LeaseDuration)
                     };
                 return await store.ReplaceAsync(replacement, latest.ETag, cancellationToken);
             }

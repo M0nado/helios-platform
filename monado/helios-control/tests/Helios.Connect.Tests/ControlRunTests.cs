@@ -151,6 +151,104 @@ public sealed class ControlRunTests
     }
 
     [Fact]
+    public async Task Lease_heartbeat_prevents_a_second_replica_from_dispatching_a_long_run()
+    {
+        var store = new InMemoryControlRunStore();
+        var dispatcher = new BlockingDispatcher();
+        var timing = new ControlRunCoordinatorTiming(
+            TimeSpan.FromMilliseconds(120),
+            TimeSpan.FromMilliseconds(20),
+            TimeSpan.FromMilliseconds(15));
+        using var firstCoordinator = new ControlRunCoordinator(
+            store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher,
+            NullLogger<ControlRunCoordinator>.Instance, timing);
+        using var secondCoordinator = new ControlRunCoordinator(
+            store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher,
+            NullLogger<ControlRunCoordinator>.Instance, timing);
+        await firstCoordinator.StartAsync(CancellationToken.None);
+        await secondCoordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var run = await firstCoordinator.StartAsync(
+                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                "edge-heartbeat-0001", "principal-1", CancellationToken.None);
+            await dispatcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            await Task.Delay(TimeSpan.FromMilliseconds(420));
+
+            Assert.Equal(1, dispatcher.CallCount);
+            dispatcher.Release();
+            var completed = await WaitForTerminalAsync(firstCoordinator, run.Id);
+            Assert.Equal("awaiting-approval", completed.Status);
+            Assert.Single(completed.Receipts);
+        }
+        finally
+        {
+            dispatcher.Release();
+            await firstCoordinator.StopAsync(CancellationToken.None);
+            await secondCoordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task Losing_the_lease_cancels_dispatch_and_does_not_persist_receipts()
+    {
+        var store = new InMemoryControlRunStore();
+        var dispatcher = new BlockingDispatcher();
+        var timing = new ControlRunCoordinatorTiming(
+            TimeSpan.FromMilliseconds(120),
+            TimeSpan.FromMilliseconds(20),
+            TimeSpan.FromMilliseconds(15));
+        using var coordinator = new ControlRunCoordinator(
+            store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher,
+            NullLogger<ControlRunCoordinator>.Instance, timing);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var run = await coordinator.StartAsync(
+                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                "edge-heartbeat-loss-0001", "principal-1", CancellationToken.None);
+            await dispatcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            while (true)
+            {
+                var current = await store.GetAsync(run.Id, CancellationToken.None)
+                    ?? throw new InvalidOperationException("Run disappeared.");
+                try
+                {
+                    await store.ReplaceAsync(
+                        current with
+                        {
+                            LeaseOwner = "replacement-worker",
+                            LeaseExpiresAt = DateTimeOffset.UtcNow.AddMinutes(1)
+                        },
+                        current.ETag,
+                        CancellationToken.None);
+                    break;
+                }
+                catch (ControlRunConcurrencyException)
+                {
+                    // The heartbeat renewed between read and replace; retry with its ETag.
+                }
+            }
+
+            await dispatcher.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromMilliseconds(75));
+            var persisted = await store.GetAsync(run.Id, CancellationToken.None)
+                ?? throw new InvalidOperationException("Run disappeared.");
+
+            Assert.Equal("replacement-worker", persisted.LeaseOwner);
+            Assert.Empty(persisted.Receipts);
+            Assert.Equal(1, dispatcher.CallCount);
+        }
+        finally
+        {
+            dispatcher.Release();
+            await coordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task Live_connector_relay_is_signed_and_idempotent_without_exposing_secret()
     {
         var handler = new CaptureHandler();
@@ -235,6 +333,38 @@ public sealed class ControlRunTests
         public Task<IReadOnlyList<ConnectorReceipt>> DispatchAsync(ControlRunSnapshot run, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ConnectorReceipt>>(run.Connectors.Select(connector =>
                 new ConnectorReceipt(connector, "delivered", 1, "Test receipt.", DateTimeOffset.UtcNow)).ToArray());
+    }
+
+    private sealed class BlockingDispatcher : IConnectorDispatcher
+    {
+        private readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _cancellationObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _callCount;
+
+        public TaskCompletionSource Entered => _entered;
+        public TaskCompletionSource CancellationObserved => _cancellationObserved;
+        public int CallCount => Volatile.Read(ref _callCount);
+
+        public IReadOnlyList<ConnectorBindingStatus> GetStatus() => [new("github", true, "test")];
+
+        public async Task<IReadOnlyList<ConnectorReceipt>> DispatchAsync(ControlRunSnapshot run, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _callCount);
+            _entered.TrySetResult();
+            try
+            {
+                await _release.Task.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _cancellationObserved.TrySetResult();
+                throw;
+            }
+            return [new ConnectorReceipt("github", "delivered", 1, "Test receipt.", DateTimeOffset.UtcNow)];
+        }
+
+        public void Release() => _release.TrySetResult();
     }
 
     private sealed class StaticHttpClientFactory(HttpClient client) : IHttpClientFactory

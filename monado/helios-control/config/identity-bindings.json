@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
   "environments": [
-    "development",
+    "dev",
     "test",
-    "production"
+    "preview",
+    "prod"
   ],
   "bindings": [
     {
