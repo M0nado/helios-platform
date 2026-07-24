@@ -267,8 +267,8 @@ $('generate').addEventListener('click', async () => {
       environment: $('environment').value
     }, 'setupStatus');
     $('script').textContent = result.script;
-    const roles = Object.keys(result.shellPackets).join(', ');
-    $('digest').textContent = `SHA-256: ${result.scriptSha256} · ${result.subscriptionSelection} · roles: ${roles} · plan only · no secrets`;
+    const stages = Object.keys(result.operatorStages).join(', ');
+    $('digest').textContent = `SHA-256: ${result.scriptSha256} · ${result.subscriptionSelection} · stages: ${stages} · one authenticated shell · plan only · no secrets`;
   } catch (error) {
     $('setupStatus').textContent = error.message;
   }
