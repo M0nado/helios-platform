@@ -269,6 +269,34 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Microsoft_tab_uses_Teams_SSO_popup_fallback_and_current_cloud_hosts()
+    {
+        using var page = await _client.GetAsync("/wizard/index.html");
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("https://res.cdn.office.net/teams-js/2.31.0/", html);
+
+        Assert.True(page.Headers.TryGetValues("Content-Security-Policy", out var policies));
+        var policy = Assert.Single(policies!);
+        Assert.Contains("https://res.cdn.office.net", policy);
+        Assert.Contains("https://*.cloud.microsoft", policy);
+
+        var script = await _client.GetStringAsync("/wizard/wizard.js");
+        Assert.Contains("authentication.getAuthToken", script);
+        Assert.Contains("authentication.authenticate", script);
+        Assert.True(
+            script.IndexOf("if (embeddedHost)", StringComparison.Ordinal) <
+            script.IndexOf("window.location.assign", StringComparison.Ordinal),
+            "Embedded Microsoft hosts must never navigate their iframe into Entra login.");
+
+        var authStart = await _client.GetStringAsync("/wizard/auth-start.html");
+        var authEnd = await _client.GetStringAsync("/wizard/auth-end.js");
+        Assert.Contains("/.auth/login/aad", authStart);
+        Assert.Contains("authentication.notifySuccess('session-established')", authEnd);
+        Assert.DoesNotContain("notifySuccess(accessToken", authEnd, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Readiness_fails_closed_when_cloud_identity_configuration_is_missing()
     {
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
