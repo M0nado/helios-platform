@@ -23,6 +23,11 @@ param(
     [Parameter(Mandatory)] [string] $ResourceGroup,
     [string] $TemplateFile = (Join-Path $PSScriptRoot '../infra/main.bicep'),
     [string] $ParametersFile = (Join-Path $PSScriptRoot '../infra/main.parameters.json'),
+    [string] $ContainerImage = $env:HELIOS_CONTAINER_IMAGE,
+    [string] $ContainerRegistryName = $env:HELIOS_CONTAINER_REGISTRY_NAME,
+    [string] $EntraClientId = $env:HELIOS_ENTRA_CLIENT_ID,
+    [string] $AllowedPrincipalObjectId = $env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID,
+    [string] $SourceCommitSha = $env:HELIOS_SOURCE_SHA,
     [string] $EvidenceDirectory = (Join-Path (Get-Location) 'evidence/helios-edge'),
     [string] $ApprovedPlanFile,
     [string] $ApprovedPlanSha256,
@@ -129,16 +134,355 @@ function Assert-AzureContext {
 function Assert-DeploymentInputs {
     $script:ResolvedTemplate = (Resolve-Path -LiteralPath $TemplateFile).Path
     $script:ResolvedParameters = (Resolve-Path -LiteralPath $ParametersFile).Path
+    if ($ContainerImage -notmatch '^[a-z0-9]{5,50}\.azurecr\.io/[a-z0-9._/-]+@sha256:[0-9a-fA-F]{64}
+
+$az = Get-Command az -CommandType Application -ErrorAction Stop
+$script:AzPath = $az.Source
+$context = Assert-AzureContext
+
+if ($Mode -eq 'Diagnose') {
+    $resources = Invoke-AzJson -Arguments @(
+        'resource', 'list', '--resource-group', $ResourceGroup,
+        '--query', '[].{name:name,type:type,location:location}'
+    ) -Operation 'Listing resource metadata'
+    [pscustomobject]@{
+        mode = 'diagnose'
+        context = $context
+        resources = $resources
+        mutations = 0
+    } | ConvertTo-Json -Depth 20
+    return
+}
+
+if ($Mode -eq 'VaultSet') {
+    Assert-ProductionGate
+    if ($KeyVaultName -notmatch '^[a-zA-Z0-9-]{3,24}$') { throw 'VaultSet requires a valid -KeyVaultName.' }
+    if ($SecretName -notmatch '^[0-9a-zA-Z-]{1,127}$') { throw 'VaultSet requires a valid -SecretName.' }
+    Assert-ExactConfirmation -Expected "SET HELIOS VAULT SECRET $SecretName"
+
+    $secureValue = Read-Host "Enter the new value for '$SecretName'" -AsSecureString
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
+    $temporaryPath = Join-Path ([IO.Path]::GetTempPath()) "helios-secret-$([guid]::NewGuid().ToString('n')).txt"
+    try {
+        $plainValue = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+        Write-Utf8NoBom -Path $temporaryPath -Value $plainValue
+        $plainValue = $null
+        if (-not $IsWindows) { [void] (Invoke-Native -FilePath (Get-Command chmod).Source -Arguments @('600', $temporaryPath) -Operation 'Restricting temporary secret permissions') }
+        $metadata = Invoke-AzJson -Arguments @(
+            'keyvault', 'secret', 'set', '--vault-name', $KeyVaultName,
+            '--name', $SecretName, '--file', $temporaryPath,
+            '--query', '{id:id,name:name,enabled:attributes.enabled,created:attributes.created}'
+        ) -Operation 'Creating a Key Vault secret version'
+        [pscustomobject]@{ mode = 'vault-set'; metadata = $metadata; secretValueReturned = $false } | ConvertTo-Json -Depth 10
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        if (Test-Path -LiteralPath $temporaryPath) { Remove-Item -LiteralPath $temporaryPath -Force }
+    }
+    return
+}
+
+Assert-DeploymentInputs
+if ($Mode -eq 'Plan') {
+    [void] (Invoke-AzJson -Arguments @(
+        'deployment', 'group', 'validate', '--resource-group', $ResourceGroup,
+        '--template-file', $script:ResolvedTemplate, '--parameters', "@$script:ResolvedParameters"
+    ) -Operation 'Validating Bicep deployment')
+    $whatIf = Invoke-WhatIf
+    $directory = Join-Path $EvidenceDirectory "$EnvironmentName-$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))"
+    [void] (New-Item -ItemType Directory -Path $directory -Force)
+    $whatIfPath = Join-Path $directory 'what-if.json'
+    Write-Utf8NoBom -Path $whatIfPath -Value $whatIf
+    $sha256 = Get-FileSha256 $whatIfPath
+    $request = [ordered]@{
+        schema = 'helios.edgePlan.v1'
+        mode = 'plan'
+        environment = $EnvironmentName
+        tenantId = $TenantId
+        subscriptionId = $SubscriptionId
+        resourceGroup = $ResourceGroup
+        templateFile = $script:ResolvedTemplate
+        parametersFile = $script:ResolvedParameters
+        whatIfSha256 = $sha256
+        applyRequires = @('approved-plan-sha256', 'fresh-matching-what-if', 'protected-environment-reviewer', 'typed-confirmation')
+    }
+    Write-Utf8NoBom -Path (Join-Path $directory 'request.json') -Value (Get-CanonicalJson $request)
+    [pscustomobject]@{ mode = 'plan'; evidenceDirectory = $directory; whatIfFile = $whatIfPath; whatIfSha256 = $sha256; mutations = 0 } | ConvertTo-Json -Depth 10
+    return
+}
+
+Assert-ProductionGate
+if (-not (Test-Path -LiteralPath $ApprovedPlanFile -PathType Leaf)) { throw 'Apply requires -ApprovedPlanFile.' }
+if ($ApprovedPlanSha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Apply requires a valid -ApprovedPlanSha256.' }
+$approvedHash = Get-FileSha256 (Resolve-Path -LiteralPath $ApprovedPlanFile).Path
+if ($approvedHash -ne $ApprovedPlanSha256.ToLowerInvariant()) { throw 'Approved plan file hash does not match -ApprovedPlanSha256.' }
+$freshWhatIfPath = Join-Path ([IO.Path]::GetTempPath()) "helios-what-if-$([guid]::NewGuid().ToString('n')).json"
+try {
+    Write-Utf8NoBom -Path $freshWhatIfPath -Value (Invoke-WhatIf)
+    if ((Get-FileSha256 $freshWhatIfPath) -ne $approvedHash) { throw 'Azure state or deployment inputs changed after plan approval.' }
+}
+finally {
+    if (Test-Path -LiteralPath $freshWhatIfPath) { Remove-Item -LiteralPath $freshWhatIfPath -Force }
+}
+Assert-ExactConfirmation -Expected "APPLY HELIOS EDGE $($EnvironmentName.ToUpperInvariant())"
+$deployment = Invoke-AzJson -Arguments @(
+    'deployment', 'group', 'create', '--resource-group', $ResourceGroup,
+    '--name', "helios-edge-$EnvironmentName-$((Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss'))",
+    '--template-file', $script:ResolvedTemplate, '--parameters', "@$script:ResolvedParameters",
+    '--mode', 'Incremental'
+) -Operation 'Applying reviewed HELIOS edge deployment'
+[pscustomobject]@{
+    mode = 'apply'
+    deploymentId = [string] $deployment.id
+    provisioningState = [string] $deployment.properties.provisioningState
+    approvedPlanSha256 = $approvedHash
+    secretValuesReturned = $false
+} | ConvertTo-Json -Depth 10
+) {
+        throw 'Plan and Apply require -ContainerImage with an immutable Azure Container Registry sha256 digest.'
+    }
+    if ($ContainerRegistryName -notmatch '^[a-z0-9]{5,50}
+
+$az = Get-Command az -CommandType Application -ErrorAction Stop
+$script:AzPath = $az.Source
+$context = Assert-AzureContext
+
+if ($Mode -eq 'Diagnose') {
+    $resources = Invoke-AzJson -Arguments @(
+        'resource', 'list', '--resource-group', $ResourceGroup,
+        '--query', '[].{name:name,type:type,location:location}'
+    ) -Operation 'Listing resource metadata'
+    [pscustomobject]@{
+        mode = 'diagnose'
+        context = $context
+        resources = $resources
+        mutations = 0
+    } | ConvertTo-Json -Depth 20
+    return
+}
+
+if ($Mode -eq 'VaultSet') {
+    Assert-ProductionGate
+    if ($KeyVaultName -notmatch '^[a-zA-Z0-9-]{3,24}$') { throw 'VaultSet requires a valid -KeyVaultName.' }
+    if ($SecretName -notmatch '^[0-9a-zA-Z-]{1,127}$') { throw 'VaultSet requires a valid -SecretName.' }
+    Assert-ExactConfirmation -Expected "SET HELIOS VAULT SECRET $SecretName"
+
+    $secureValue = Read-Host "Enter the new value for '$SecretName'" -AsSecureString
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
+    $temporaryPath = Join-Path ([IO.Path]::GetTempPath()) "helios-secret-$([guid]::NewGuid().ToString('n')).txt"
+    try {
+        $plainValue = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+        Write-Utf8NoBom -Path $temporaryPath -Value $plainValue
+        $plainValue = $null
+        if (-not $IsWindows) { [void] (Invoke-Native -FilePath (Get-Command chmod).Source -Arguments @('600', $temporaryPath) -Operation 'Restricting temporary secret permissions') }
+        $metadata = Invoke-AzJson -Arguments @(
+            'keyvault', 'secret', 'set', '--vault-name', $KeyVaultName,
+            '--name', $SecretName, '--file', $temporaryPath,
+            '--query', '{id:id,name:name,enabled:attributes.enabled,created:attributes.created}'
+        ) -Operation 'Creating a Key Vault secret version'
+        [pscustomobject]@{ mode = 'vault-set'; metadata = $metadata; secretValueReturned = $false } | ConvertTo-Json -Depth 10
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        if (Test-Path -LiteralPath $temporaryPath) { Remove-Item -LiteralPath $temporaryPath -Force }
+    }
+    return
+}
+
+Assert-DeploymentInputs
+if ($Mode -eq 'Plan') {
+    [void] (Invoke-AzJson -Arguments @(
+        'deployment', 'group', 'validate', '--resource-group', $ResourceGroup,
+        '--template-file', $script:ResolvedTemplate, '--parameters', "@$script:ResolvedParameters"
+    ) -Operation 'Validating Bicep deployment')
+    $whatIf = Invoke-WhatIf
+    $directory = Join-Path $EvidenceDirectory "$EnvironmentName-$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))"
+    [void] (New-Item -ItemType Directory -Path $directory -Force)
+    $whatIfPath = Join-Path $directory 'what-if.json'
+    Write-Utf8NoBom -Path $whatIfPath -Value $whatIf
+    $sha256 = Get-FileSha256 $whatIfPath
+    $request = [ordered]@{
+        schema = 'helios.edgePlan.v1'
+        mode = 'plan'
+        environment = $EnvironmentName
+        tenantId = $TenantId
+        subscriptionId = $SubscriptionId
+        resourceGroup = $ResourceGroup
+        templateFile = $script:ResolvedTemplate
+        parametersFile = $script:ResolvedParameters
+        whatIfSha256 = $sha256
+        applyRequires = @('approved-plan-sha256', 'fresh-matching-what-if', 'protected-environment-reviewer', 'typed-confirmation')
+    }
+    Write-Utf8NoBom -Path (Join-Path $directory 'request.json') -Value (Get-CanonicalJson $request)
+    [pscustomobject]@{ mode = 'plan'; evidenceDirectory = $directory; whatIfFile = $whatIfPath; whatIfSha256 = $sha256; mutations = 0 } | ConvertTo-Json -Depth 10
+    return
+}
+
+Assert-ProductionGate
+if (-not (Test-Path -LiteralPath $ApprovedPlanFile -PathType Leaf)) { throw 'Apply requires -ApprovedPlanFile.' }
+if ($ApprovedPlanSha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Apply requires a valid -ApprovedPlanSha256.' }
+$approvedHash = Get-FileSha256 (Resolve-Path -LiteralPath $ApprovedPlanFile).Path
+if ($approvedHash -ne $ApprovedPlanSha256.ToLowerInvariant()) { throw 'Approved plan file hash does not match -ApprovedPlanSha256.' }
+$freshWhatIfPath = Join-Path ([IO.Path]::GetTempPath()) "helios-what-if-$([guid]::NewGuid().ToString('n')).json"
+try {
+    Write-Utf8NoBom -Path $freshWhatIfPath -Value (Invoke-WhatIf)
+    if ((Get-FileSha256 $freshWhatIfPath) -ne $approvedHash) { throw 'Azure state or deployment inputs changed after plan approval.' }
+}
+finally {
+    if (Test-Path -LiteralPath $freshWhatIfPath) { Remove-Item -LiteralPath $freshWhatIfPath -Force }
+}
+Assert-ExactConfirmation -Expected "APPLY HELIOS EDGE $($EnvironmentName.ToUpperInvariant())"
+$deployment = Invoke-AzJson -Arguments @(
+    'deployment', 'group', 'create', '--resource-group', $ResourceGroup,
+    '--name', "helios-edge-$EnvironmentName-$((Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss'))",
+    '--template-file', $script:ResolvedTemplate, '--parameters', "@$script:ResolvedParameters",
+    '--mode', 'Incremental'
+) -Operation 'Applying reviewed HELIOS edge deployment'
+[pscustomobject]@{
+    mode = 'apply'
+    deploymentId = [string] $deployment.id
+    provisioningState = [string] $deployment.properties.provisioningState
+    approvedPlanSha256 = $approvedHash
+    secretValuesReturned = $false
+} | ConvertTo-Json -Depth 10
+ -or -not $ContainerImage.StartsWith("$ContainerRegistryName.azurecr.io/", [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Container image and -ContainerRegistryName must identify the same Azure Container Registry.'
+    }
+    foreach ($binding in @(
+        @{ Name = 'EntraClientId'; Value = $EntraClientId },
+        @{ Name = 'AllowedPrincipalObjectId'; Value = $AllowedPrincipalObjectId }
+    )) {
+        $parsed = [guid]::Empty
+        if (-not [guid]::TryParse([string] $binding.Value, [ref] $parsed)) { throw "$($binding.Name) must be a GUID." }
+    }
+    if ($SourceCommitSha -notmatch '^[0-9a-fA-F]{40}
+
+$az = Get-Command az -CommandType Application -ErrorAction Stop
+$script:AzPath = $az.Source
+$context = Assert-AzureContext
+
+if ($Mode -eq 'Diagnose') {
+    $resources = Invoke-AzJson -Arguments @(
+        'resource', 'list', '--resource-group', $ResourceGroup,
+        '--query', '[].{name:name,type:type,location:location}'
+    ) -Operation 'Listing resource metadata'
+    [pscustomobject]@{
+        mode = 'diagnose'
+        context = $context
+        resources = $resources
+        mutations = 0
+    } | ConvertTo-Json -Depth 20
+    return
+}
+
+if ($Mode -eq 'VaultSet') {
+    Assert-ProductionGate
+    if ($KeyVaultName -notmatch '^[a-zA-Z0-9-]{3,24}$') { throw 'VaultSet requires a valid -KeyVaultName.' }
+    if ($SecretName -notmatch '^[0-9a-zA-Z-]{1,127}$') { throw 'VaultSet requires a valid -SecretName.' }
+    Assert-ExactConfirmation -Expected "SET HELIOS VAULT SECRET $SecretName"
+
+    $secureValue = Read-Host "Enter the new value for '$SecretName'" -AsSecureString
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
+    $temporaryPath = Join-Path ([IO.Path]::GetTempPath()) "helios-secret-$([guid]::NewGuid().ToString('n')).txt"
+    try {
+        $plainValue = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+        Write-Utf8NoBom -Path $temporaryPath -Value $plainValue
+        $plainValue = $null
+        if (-not $IsWindows) { [void] (Invoke-Native -FilePath (Get-Command chmod).Source -Arguments @('600', $temporaryPath) -Operation 'Restricting temporary secret permissions') }
+        $metadata = Invoke-AzJson -Arguments @(
+            'keyvault', 'secret', 'set', '--vault-name', $KeyVaultName,
+            '--name', $SecretName, '--file', $temporaryPath,
+            '--query', '{id:id,name:name,enabled:attributes.enabled,created:attributes.created}'
+        ) -Operation 'Creating a Key Vault secret version'
+        [pscustomobject]@{ mode = 'vault-set'; metadata = $metadata; secretValueReturned = $false } | ConvertTo-Json -Depth 10
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        if (Test-Path -LiteralPath $temporaryPath) { Remove-Item -LiteralPath $temporaryPath -Force }
+    }
+    return
+}
+
+Assert-DeploymentInputs
+if ($Mode -eq 'Plan') {
+    [void] (Invoke-AzJson -Arguments @(
+        'deployment', 'group', 'validate', '--resource-group', $ResourceGroup,
+        '--template-file', $script:ResolvedTemplate, '--parameters', "@$script:ResolvedParameters"
+    ) -Operation 'Validating Bicep deployment')
+    $whatIf = Invoke-WhatIf
+    $directory = Join-Path $EvidenceDirectory "$EnvironmentName-$((Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ'))"
+    [void] (New-Item -ItemType Directory -Path $directory -Force)
+    $whatIfPath = Join-Path $directory 'what-if.json'
+    Write-Utf8NoBom -Path $whatIfPath -Value $whatIf
+    $sha256 = Get-FileSha256 $whatIfPath
+    $request = [ordered]@{
+        schema = 'helios.edgePlan.v1'
+        mode = 'plan'
+        environment = $EnvironmentName
+        tenantId = $TenantId
+        subscriptionId = $SubscriptionId
+        resourceGroup = $ResourceGroup
+        templateFile = $script:ResolvedTemplate
+        parametersFile = $script:ResolvedParameters
+        whatIfSha256 = $sha256
+        applyRequires = @('approved-plan-sha256', 'fresh-matching-what-if', 'protected-environment-reviewer', 'typed-confirmation')
+    }
+    Write-Utf8NoBom -Path (Join-Path $directory 'request.json') -Value (Get-CanonicalJson $request)
+    [pscustomobject]@{ mode = 'plan'; evidenceDirectory = $directory; whatIfFile = $whatIfPath; whatIfSha256 = $sha256; mutations = 0 } | ConvertTo-Json -Depth 10
+    return
+}
+
+Assert-ProductionGate
+if (-not (Test-Path -LiteralPath $ApprovedPlanFile -PathType Leaf)) { throw 'Apply requires -ApprovedPlanFile.' }
+if ($ApprovedPlanSha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Apply requires a valid -ApprovedPlanSha256.' }
+$approvedHash = Get-FileSha256 (Resolve-Path -LiteralPath $ApprovedPlanFile).Path
+if ($approvedHash -ne $ApprovedPlanSha256.ToLowerInvariant()) { throw 'Approved plan file hash does not match -ApprovedPlanSha256.' }
+$freshWhatIfPath = Join-Path ([IO.Path]::GetTempPath()) "helios-what-if-$([guid]::NewGuid().ToString('n')).json"
+try {
+    Write-Utf8NoBom -Path $freshWhatIfPath -Value (Invoke-WhatIf)
+    if ((Get-FileSha256 $freshWhatIfPath) -ne $approvedHash) { throw 'Azure state or deployment inputs changed after plan approval.' }
+}
+finally {
+    if (Test-Path -LiteralPath $freshWhatIfPath) { Remove-Item -LiteralPath $freshWhatIfPath -Force }
+}
+Assert-ExactConfirmation -Expected "APPLY HELIOS EDGE $($EnvironmentName.ToUpperInvariant())"
+$deployment = Invoke-AzJson -Arguments @(
+    'deployment', 'group', 'create', '--resource-group', $ResourceGroup,
+    '--name', "helios-edge-$EnvironmentName-$((Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss'))",
+    '--template-file', $script:ResolvedTemplate, '--parameters', "@$script:ResolvedParameters",
+    '--mode', 'Incremental'
+) -Operation 'Applying reviewed HELIOS edge deployment'
+[pscustomobject]@{
+    mode = 'apply'
+    deploymentId = [string] $deployment.id
+    provisioningState = [string] $deployment.properties.provisioningState
+    approvedPlanSha256 = $approvedHash
+    secretValuesReturned = $false
+} | ConvertTo-Json -Depth 10
+) { throw 'SourceCommitSha must be the exact 40-character Git commit built into the image.' }
+    $script:ResolvedDeploymentParameters = @(
+        '--parameters',
+        "@$script:ResolvedParameters",
+        "environmentName=$EnvironmentName",
+        "containerImage=$ContainerImage",
+        "containerRegistryName=$ContainerRegistryName",
+        'allowPreviewPlaceholder=false',
+        "entraClientId=$EntraClientId",
+        "entraTenantId=$TenantId",
+        "allowedPrincipalObjectId=$AllowedPrincipalObjectId",
+        "sourceCommitSha=$($SourceCommitSha.ToLowerInvariant())"
+    )
 }
 
 function Invoke-WhatIf {
-    $result = Invoke-AzJson -Arguments @(
+    $arguments = @(
         'deployment', 'group', 'what-if',
         '--resource-group', $ResourceGroup,
-        '--template-file', $script:ResolvedTemplate,
-        '--parameters', "@$script:ResolvedParameters",
-        '--result-format', 'ResourceIdOnly'
-    ) -Operation 'Running ARM what-if'
+        '--template-file', $script:ResolvedTemplate
+    )
+    $arguments += $script:ResolvedDeploymentParameters
+    $arguments += @('--result-format', 'FullResourcePayloads')
+    $result = Invoke-AzJson -Arguments $arguments -Operation 'Running ARM what-if'
     return Get-CanonicalJson $result
 }
 
