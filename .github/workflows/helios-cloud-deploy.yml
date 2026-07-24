@@ -43,6 +43,7 @@ concurrency:
 env:
   HELIOS_BICEP_VERSION: v0.43.8
   HELIOS_DOTNET_SDK_VERSION: 8.0.423
+  HELIOS_COMMON_TAGS_JSON: '{"cost-center":"platform","data-classification":"internal","lifecycle":"managed"}'
 
 jobs:
   validate:
@@ -83,6 +84,9 @@ jobs:
               exit 1
             fi
           fi
+          jq --exit-status '
+            . == {"cost-center":"platform","data-classification":"internal","lifecycle":"managed"}
+          ' <<<"${HELIOS_COMMON_TAGS_JSON}" > /dev/null
 
       - name: Build pinned Bicep template
         shell: bash
@@ -363,6 +367,7 @@ jobs:
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
+              commonTags="${HELIOS_COMMON_TAGS_JSON}" \
             --output json > "${raw_what_if}"
 
           full_what_if="${RUNNER_TEMP}/helios-what-if.full.canonical.json"
@@ -392,6 +397,7 @@ jobs:
           jq --null-input \
             --arg runId "${GITHUB_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
+            --argjson commonTags "${HELIOS_COMMON_TAGS_JSON}" \
             --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
             --arg templateSha256 "${TEMPLATE_SHA256}" \
             --arg location "${RESOURCE_GROUP_LOCATION}" \
@@ -406,7 +412,7 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, commonTags: $commonTags, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -580,6 +586,7 @@ jobs:
           jq --exit-status \
             --arg runId "${GITHUB_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
+            --argjson commonTags "${HELIOS_COMMON_TAGS_JSON}" \
             --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
             --arg templateSha256 "${ACTUAL_TEMPLATE_SHA256}" \
             --arg location "${EXPECTED_RESOURCE_GROUP_LOCATION}" \
@@ -594,7 +601,7 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, commonTags: $commonTags and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${evidence_dir}/request.json" > /dev/null
 
       - name: Re-verify configured registry and published digest
@@ -698,6 +705,7 @@ jobs:
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
+              commonTags="${HELIOS_COMMON_TAGS_JSON}" \
             --output json > "${raw_what_if}"
           jq --sort-keys . "${raw_what_if}" > "${canonical_what_if}"
           actual_what_if_sha256="$(sha256sum "${canonical_what_if}" | cut -d' ' -f1)"
@@ -738,6 +746,7 @@ jobs:
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
+              commonTags="${HELIOS_COMMON_TAGS_JSON}" \
             --output json)"
           connector_url="$(jq -r '.properties.outputs.connectorUrl.value' <<<"${deployment_json}")"
           if [[ ! "${connector_url}" =~ ^https://[^/]+$ ]]; then
