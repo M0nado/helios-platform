@@ -285,7 +285,10 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
                     ["planId"] = run.Plan?.PlanId
                 });
             var payload = JsonSerializer.Serialize(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web));
-            var signature = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret!), Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+            var idempotencyKey = $"{run.Id}:{connector}";
+            var timestamp = occurredAt.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var signedEnvelope = $"{timestamp}\n{idempotencyKey}\n{payload}";
+            var signature = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret!), Encoding.UTF8.GetBytes(signedEnvelope))).ToLowerInvariant();
             var keyId = configuration[$"HELIOS_CONNECTOR_{connector.ToUpperInvariant()}_HMAC_KEY_ID"] ?? "v1";
             if (!IsSafeKeyId(keyId))
             {
@@ -298,10 +301,10 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
                 try
                 {
                     using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
-                    request.Headers.Add("X-Helios-Idempotency-Key", $"{run.Id}:{connector}");
+                    request.Headers.Add("X-Helios-Idempotency-Key", idempotencyKey);
                     request.Headers.Add("X-Helios-Correlation-Id", run.CorrelationId);
                     request.Headers.Add("X-Helios-Signature", $"sha256={signature}");
-                    request.Headers.Add("X-Helios-Timestamp", occurredAt.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    request.Headers.Add("X-Helios-Timestamp", timestamp);
                     request.Headers.Add("X-Helios-Key-Id", keyId);
                     request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
                     using var response = await httpClient.SendAsync(request, cancellationToken);
