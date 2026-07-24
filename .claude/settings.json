@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebFetch(domain:learn.microsoft.com)",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(az account show:*)",
+      "Bash(az deployment * what-if:*)",
+      "Bash(az devops * list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh issue view:*)"
+    ],
+    "deny": [
+      "Bash(az deployment * create:*)",
+      "Bash(az role assignment create:*)",
+      "Bash(az ad * create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(pac solution import:*)",
+      "Bash(atk publish:*)",
+      "Bash(a365 deploy:*)"
+    ]
+  }
+}
