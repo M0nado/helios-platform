@@ -23,8 +23,12 @@ param entraTenantId string = subscription().tenantId
 @description('Object ID of the user or service principal allowed to call the connector.')
 @minLength(1)
 param allowedPrincipalObjectId string
-@description('Optional canonical HTTPS origin exposed to Edge, such as a reviewed Front Door or custom DNS hostname. Leave empty to use the Container Apps FQDN.')
+@description('Optional canonical HTTPS origin exposed to Edge, such as a reviewed Front Door or custom DNS hostname. It must be an origin with no path, query, fragment, or trailing slash. Leave empty to use the Container Apps FQDN.')
 param publicBaseUrl string = ''
+@description('Exact Git commit used to build the immutable connector image and pin generated setup scripts.')
+@minLength(40)
+@maxLength(40)
+param sourceCommitSha string
 @description('Additional organization tags. Reserved HELIOS governance tags cannot be overridden.')
 param commonTags object = {}
 
@@ -36,10 +40,19 @@ var governedTags = union(commonTags, {
   'helios-owner': 'platform-engineering'
   'helios-provisioner': 'bicep'
   'helios-repository': 'M0nado/helios-platform'
+  'helios-source-commit': toLower(sourceCommitSha)
 })
 var globalNamePrefix = take(replace('${serviceName}${environmentName}', '-', ''), 9)
 var cosmosNamePrefix = take(replace('${serviceName}${environmentName}', '-', ''), 20)
 var containerRegistryServer = '${containerRegistryName}.azurecr.io'
+var defaultPublicHostname = '${serviceName}-${environmentName}-api.${environment.properties.defaultDomain}'
+var suppliedPublicHostname = replace(toLower(publicBaseUrl), 'https://', '')
+var publicBaseUrlIsOrigin = empty(publicBaseUrl) || (startsWith(toLower(publicBaseUrl), 'https://') && !contains(suppliedPublicHostname, '/') && !contains(suppliedPublicHostname, '?') && !contains(suppliedPublicHostname, '#'))
+var validatedPublicHostname = publicBaseUrlIsOrigin
+  ? (empty(publicBaseUrl) ? defaultPublicHostname : suppliedPublicHostname)
+  : fail('publicBaseUrl must be one HTTPS origin without a path, query, fragment, or trailing slash.')
+var validatedPublicBaseUrl = 'https://${validatedPublicHostname}'
+var teamsSsoApplicationIdUri = 'api://${validatedPublicHostname}/${entraClientId}'
 var digestParts = split(toLower(containerImage), '@sha256:')
 var containerImageDigest = length(digestParts) == 2 ? digestParts[1] : ''
 var previewPlaceholderDigest = '0000000000000000000000000000000000000000000000000000000000000000'
@@ -194,7 +207,9 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
           { name: 'HELIOS_CLOUD_RUNTIME_ONLY', value: 'true' }
           { name: 'HELIOS_LOCAL_RUNTIME_ALLOWED', value: 'false' }
           { name: 'HELIOS_ENTRA_CLIENT_ID', value: entraClientId }
-          { name: 'HELIOS_PUBLIC_BASE_URL', value: empty(publicBaseUrl) ? 'https://${serviceName}-${environmentName}-api.${environment.properties.defaultDomain}' : (startsWith(toLower(publicBaseUrl), 'https://') ? publicBaseUrl : fail('publicBaseUrl must be an HTTPS origin.')) }
+          { name: 'HELIOS_SOURCE_SHA', value: toLower(sourceCommitSha) }
+          { name: 'HELIOS_PUBLIC_BASE_URL', value: validatedPublicBaseUrl }
+          { name: 'HELIOS_ENTRA_APPLICATION_ID_URI', value: teamsSsoApplicationIdUri }
           { name: 'AZURE_TENANT_ID', value: entraTenantId }
           { name: 'AZURE_SUBSCRIPTION_ID', value: subscription().subscriptionId }
           { name: 'AZURE_RESOURCE_GROUP', value: resourceGroup().name }
@@ -261,7 +276,7 @@ resource apiAuth 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
           openIdIssuer: 'https://login.microsoftonline.com/${entraTenantId}/v2.0'
         }
         validation: {
-          allowedAudiences: [ entraClientId, 'api://${entraClientId}' ]
+          allowedAudiences: [ teamsSsoApplicationIdUri ]
           defaultAuthorizationPolicy: {
             allowedPrincipals: { identities: [ allowedPrincipalObjectId ] }
           }
@@ -277,6 +292,7 @@ output containerAppName string = api.name
 output connectorUrl string = 'https://${api.properties.configuration.ingress.fqdn}'
 output connectorMcpUrl string = 'https://${api.properties.configuration.ingress.fqdn}/mcp'
 output connectorEntraClientId string = entraClientId
+output connectorEntraApplicationIdUri string = teamsSsoApplicationIdUri
 output connectorEntraTenantId string = entraTenantId
 output keyVaultName string = vault.name
 output managedIdentityClientId string = identity.properties.clientId

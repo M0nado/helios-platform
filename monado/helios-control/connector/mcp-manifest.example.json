@@ -1,6 +1,6 @@
 {
   "name": "helios-azure-connector",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "transport": {
     "type": "streamable-http",
     "url": "https://${HELIOS_CONNECTOR_HOST}/mcp"
@@ -8,12 +8,17 @@
   "authentication": {
     "type": "oauth2",
     "issuer": "https://login.microsoftonline.com/${ENTRA_TENANT_ID}/v2.0",
-    "audience": "api://${ENTRA_CLIENT_ID}"
+    "audience": "api://${HELIOS_CONNECTOR_HOST}/${ENTRA_CLIENT_ID}",
+    "scope": "api://${HELIOS_CONNECTOR_HOST}/${ENTRA_CLIENT_ID}/access_as_user"
   },
   "tools": [
     "azure_get_context",
     "azure_list_resources",
-    "azure_list_foundry_resources"
+    "azure_list_foundry_resources",
+    "helios_plan_automation",
+    "helios_propose_upgrade",
+    "helios_get_run",
+    "helios_list_connectors"
   ],
   "writeCapabilities": []
 }

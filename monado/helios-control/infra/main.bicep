@@ -40,6 +40,11 @@ param allowedPrincipalObjectId string
 @description('Optional canonical HTTPS origin for Edge/custom DNS. Leave empty to use the Container Apps FQDN.')
 param publicBaseUrl string = ''
 
+@description('Exact Git commit used to build the immutable connector image and generated setup bootstrap.')
+@minLength(40)
+@maxLength(40)
+param sourceCommitSha string
+
 // azure.yaml/azd resolves this reviewed entry point. The hardened connector
 // module remains the single implementation of Container Apps, managed identity,
 // Key Vault, monitoring, immutable image binding, and Entra authentication.
@@ -58,6 +63,7 @@ module connector './connector.bicep' = {
     entraTenantId: entraTenantId
     allowedPrincipalObjectId: allowedPrincipalObjectId
     publicBaseUrl: publicBaseUrl
+    sourceCommitSha: sourceCommitSha
     commonTags: commonTags
   }
 }

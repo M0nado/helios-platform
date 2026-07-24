@@ -51,6 +51,8 @@ jobs:
     timeout-minutes: 15
     outputs:
       project-directory: ${{ steps.project.outputs.directory }}
+      common_tags_json: ${{ steps.parameters.outputs.common_tags_json }}
+      common_tags_sha256: ${{ steps.parameters.outputs.common_tags_sha256 }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -69,6 +71,26 @@ jobs:
             exit 1
           fi
           echo "directory=${directory}" >> "${GITHUB_OUTPUT}"
+
+      - name: Validate canonical deployment parameters
+        id: parameters
+        shell: bash
+        env:
+          PROJECT_DIRECTORY: ${{ steps.project.outputs.directory }}
+        run: |
+          set -euo pipefail
+          common_tags_json="$(jq -cS '.parameters.commonTags.value' "${PROJECT_DIRECTORY}/infra/main.parameters.json")"
+          if ! jq --exit-status '
+            type == "object" and
+            has("cost-center") and has("data-classification") and has("lifecycle") and
+            all(.[]; type == "string" and length > 0)
+          ' <<<"${common_tags_json}" > /dev/null; then
+            echo "The canonical commonTags parameter must include non-empty cost-center, data-classification, and lifecycle string values." >&2
+            exit 1
+          fi
+          common_tags_sha256="$(printf '%s' "${common_tags_json}" | sha256sum | cut -d' ' -f1)"
+          echo "common_tags_json=${common_tags_json}" >> "${GITHUB_OUTPUT}"
+          echo "common_tags_sha256=${common_tags_sha256}" >> "${GITHUB_OUTPUT}"
 
       - name: Enforce explicit deploy confirmation
         shell: bash
@@ -341,6 +363,8 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
+          COMMON_TAGS_SHA256: ${{ needs.validate.outputs.common_tags_sha256 }}
         run: |
           set -euo pipefail
           environment_name="${TARGET_ENVIRONMENT#azure-}"
@@ -362,6 +386,8 @@ jobs:
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
+              sourceCommitSha="${GITHUB_SHA}" \
+              commonTags="${COMMON_TAGS_JSON}" \
             --output json > "${raw_what_if}"
 
           full_what_if="${RUNNER_TEMP}/helios-what-if.full.canonical.json"
@@ -391,6 +417,8 @@ jobs:
           jq --null-input \
             --arg runId "${GITHUB_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
+            --argjson commonTags "${COMMON_TAGS_JSON}" \
+            --arg commonTagsSha256 "${COMMON_TAGS_SHA256}" \
             --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
             --arg templateSha256 "${TEMPLATE_SHA256}" \
             --arg location "${RESOURCE_GROUP_LOCATION}" \
@@ -405,7 +433,7 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -558,6 +586,8 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
+          COMMON_TAGS_SHA256: ${{ needs.validate.outputs.common_tags_sha256 }}
         run: |
           set -euo pipefail
           evidence_dir="${RUNNER_TEMP}/approved-what-if"
@@ -579,6 +609,8 @@ jobs:
           jq --exit-status \
             --arg runId "${GITHUB_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
+            --argjson commonTags "${COMMON_TAGS_JSON}" \
+            --arg commonTagsSha256 "${COMMON_TAGS_SHA256}" \
             --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
             --arg templateSha256 "${ACTUAL_TEMPLATE_SHA256}" \
             --arg location "${EXPECTED_RESOURCE_GROUP_LOCATION}" \
@@ -593,7 +625,7 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${evidence_dir}/request.json" > /dev/null
 
       - name: Re-verify configured registry and published digest
@@ -677,6 +709,7 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
         run: |
           set -euo pipefail
           environment_name="${TARGET_ENVIRONMENT#azure-}"
@@ -696,6 +729,8 @@ jobs:
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
+              sourceCommitSha="${GITHUB_SHA}" \
+              commonTags="${COMMON_TAGS_JSON}" \
             --output json > "${raw_what_if}"
           jq --sort-keys . "${raw_what_if}" > "${canonical_what_if}"
           actual_what_if_sha256="$(sha256sum "${canonical_what_if}" | cut -d' ' -f1)"
@@ -718,6 +753,7 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
         run: |
           set -euo pipefail
           environment_name="${TARGET_ENVIRONMENT#azure-}"
@@ -735,18 +771,27 @@ jobs:
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
+              sourceCommitSha="${GITHUB_SHA}" \
+              commonTags="${COMMON_TAGS_JSON}" \
             --output json)"
           connector_url="$(jq -r '.properties.outputs.connectorUrl.value' <<<"${deployment_json}")"
+          connector_application_id_uri="$(jq -r '.properties.outputs.connectorEntraApplicationIdUri.value' <<<"${deployment_json}")"
           if [[ ! "${connector_url}" =~ ^https://[^/]+$ ]]; then
             echo "Azure deployment did not return a valid HTTPS connector URL." >&2
             exit 1
           fi
+          if [[ ! "${connector_application_id_uri}" =~ ^api://[^/]+/[0-9a-fA-F-]{36}$ ]]; then
+            echo "Azure deployment did not return a valid origin-bound Entra Application ID URI." >&2
+            exit 1
+          fi
           echo "connector_url=${connector_url}" >> "${GITHUB_OUTPUT}"
+          echo "connector_scope=${connector_application_id_uri}/access_as_user" >> "${GITHUB_OUTPUT}"
 
       - name: Verify cloud health and fail-closed boundary
         shell: bash
         env:
           CONNECTOR_URL: ${{ steps.deploy.outputs.connector_url }}
+          CONNECTOR_SCOPE: ${{ steps.deploy.outputs.connector_scope }}
         run: |
           set -euo pipefail
           ready=false
@@ -766,8 +811,14 @@ jobs:
             echo "Expected anonymous connector access to return 401; received ${status}." >&2
             exit 1
           fi
+          application_id_uri="${CONNECTOR_SCOPE%/access_as_user}"
+          forged_principal="$(jq -cn \
+            --arg audience "${application_id_uri}" \
+            '{claims: [{typ: "aud", val: $audience}, {typ: "scp", val: "access_as_user"}]}' |
+            base64 --wrap=0)"
           forged_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
             --header 'X-MS-CLIENT-PRINCIPAL-ID: forged-untrusted-principal' \
+            --header "X-MS-CLIENT-PRINCIPAL: ${forged_principal}" \
             "${CONNECTOR_URL}/connector/context")"
           if [[ "${forged_status}" != 401 ]]; then
             echo "The ingress did not strip a forged Easy Auth principal header; received ${forged_status}." >&2
@@ -776,7 +827,8 @@ jobs:
           metadata="$(curl --fail --silent --show-error "${CONNECTOR_URL}/.well-known/oauth-protected-resource/mcp")"
           jq --exit-status \
             --arg resource "${CONNECTOR_URL}/mcp" \
-            '.resource == $resource and (.authorization_servers | length) >= 1 and (.scopes_supported | length) == 1' \
+            --arg scope "${CONNECTOR_SCOPE}" \
+            '.resource == $resource and (.authorization_servers | length) >= 1 and .scopes_supported == [$scope]' \
             <<<"${metadata}" > /dev/null
           mcp_headers="$(mktemp)"
           mcp_status="$(curl --silent --output /dev/null --dump-header "${mcp_headers}" --write-out '%{http_code}' \
@@ -784,7 +836,10 @@ jobs:
             --header 'Content-Type: application/json' \
             --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
             "${CONNECTOR_URL}/mcp")"
-          if [[ "${mcp_status}" != 401 ]] || ! grep -qi 'resource_metadata=' "${mcp_headers}"; then
-            echo 'The anonymous MCP boundary did not return an RFC 9728 resource_metadata challenge.' >&2
+          if [[ "${mcp_status}" != 401 ]] ||
+             ! grep -Fqi 'resource_metadata=' "${mcp_headers}" ||
+             ! grep -Fqi 'error="invalid_token"' "${mcp_headers}" ||
+             ! grep -Fqi "scope=\"${CONNECTOR_SCOPE}\"" "${mcp_headers}"; then
+            echo 'The anonymous MCP boundary did not return the exact RFC 9728 invalid_token and delegated-scope challenge.' >&2
             exit 1
           fi

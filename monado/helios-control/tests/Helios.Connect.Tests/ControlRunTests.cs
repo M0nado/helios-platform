@@ -1,7 +1,10 @@
 using Helios.Connect.Api;
+using Helios.Connect.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Xunit;
 
 namespace Helios.Connect.Tests;
@@ -13,7 +16,7 @@ public sealed class ControlRunTests
     {
         var store = new InMemoryControlRunStore();
         var dispatcher = new FakeDispatcher();
-        var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher, NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher, NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
@@ -34,25 +37,35 @@ public sealed class ControlRunTests
         finally
         {
             await coordinator.StopAsync(CancellationToken.None);
-            coordinator.Dispose();
         }
     }
 
     [Fact]
     public async Task One_button_run_rejects_unknown_connectors_and_unsafe_idempotency_keys()
     {
-        var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         var unknown = new ControlRunRequest("provision-resources", "dev", null, ["unknown"]);
         await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(unknown, "edge-one-button-0002", "principal-1", CancellationToken.None));
         var valid = new ControlRunRequest("provision-resources", "dev");
         await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(valid, "bad key; delete", "principal-1", CancellationToken.None));
-        coordinator.Dispose();
+    }
+
+    [Fact]
+    public async Task Resource_group_override_is_rejected_before_a_run_is_saved()
+    {
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        var request = new ControlRunRequest("provision-resources", "dev", "different-resource-group", ["github"]);
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(
+            request, "edge-boundary-0001", "principal-1", CancellationToken.None));
+
+        Assert.Contains("cannot override", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task Reusing_an_idempotency_key_for_a_different_request_is_rejected()
     {
-        var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(new ControlRunRequest("provision-resources", "dev", null, ["github"]), "edge-conflict-0001", "principal-1", CancellationToken.None);
 
         await Assert.ThrowsAsync<ControlRunIdempotencyConflictException>(() => coordinator.StartAsync(
@@ -60,7 +73,6 @@ public sealed class ControlRunTests
             "edge-conflict-0001",
             "principal-1",
             CancellationToken.None));
-        coordinator.Dispose();
     }
 
     [Fact]
@@ -82,7 +94,7 @@ public sealed class ControlRunTests
             "provision-resources", "dev", "helios-dev-rg", [], "queued", "diagnose-plan-sync", now, now, steps, []);
         await store.CreateOrGetAsync(persisted, CancellationToken.None);
 
-        var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
@@ -94,14 +106,13 @@ public sealed class ControlRunTests
         finally
         {
             await coordinator.StopAsync(CancellationToken.None);
-            coordinator.Dispose();
         }
     }
 
     [Fact]
     public async Task Empty_connector_selection_is_respected_and_runs_are_owner_scoped()
     {
-        var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
@@ -118,14 +129,13 @@ public sealed class ControlRunTests
         finally
         {
             await coordinator.StopAsync(CancellationToken.None);
-            coordinator.Dispose();
         }
     }
 
     [Fact]
     public async Task Cleanup_run_remains_plan_only_and_protects_shared_resources()
     {
-        var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
@@ -137,7 +147,104 @@ public sealed class ControlRunTests
         finally
         {
             await coordinator.StopAsync(CancellationToken.None);
-            coordinator.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Lease_heartbeat_prevents_a_second_replica_from_dispatching_a_long_run()
+    {
+        var store = new InMemoryControlRunStore();
+        var dispatcher = new BlockingDispatcher();
+        var timing = new ControlRunCoordinatorTiming(
+            TimeSpan.FromMilliseconds(120),
+            TimeSpan.FromMilliseconds(20),
+            TimeSpan.FromMilliseconds(15));
+        using var firstCoordinator = new ControlRunCoordinator(
+            store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher,
+            NullLogger<ControlRunCoordinator>.Instance, timing);
+        using var secondCoordinator = new ControlRunCoordinator(
+            store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher,
+            NullLogger<ControlRunCoordinator>.Instance, timing);
+        await firstCoordinator.StartAsync(CancellationToken.None);
+        await secondCoordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var run = await firstCoordinator.StartAsync(
+                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                "edge-heartbeat-0001", "principal-1", CancellationToken.None);
+            await dispatcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            await Task.Delay(TimeSpan.FromMilliseconds(420));
+
+            Assert.Equal(1, dispatcher.CallCount);
+            dispatcher.Release();
+            var completed = await WaitForTerminalAsync(firstCoordinator, run.Id);
+            Assert.Equal("awaiting-approval", completed.Status);
+            Assert.Single(completed.Receipts);
+        }
+        finally
+        {
+            dispatcher.Release();
+            await firstCoordinator.StopAsync(CancellationToken.None);
+            await secondCoordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task Losing_the_lease_cancels_dispatch_and_does_not_persist_receipts()
+    {
+        var store = new InMemoryControlRunStore();
+        var dispatcher = new BlockingDispatcher();
+        var timing = new ControlRunCoordinatorTiming(
+            TimeSpan.FromMilliseconds(120),
+            TimeSpan.FromMilliseconds(20),
+            TimeSpan.FromMilliseconds(15));
+        using var coordinator = new ControlRunCoordinator(
+            store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher,
+            NullLogger<ControlRunCoordinator>.Instance, timing);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var run = await coordinator.StartAsync(
+                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                "edge-heartbeat-loss-0001", "principal-1", CancellationToken.None);
+            await dispatcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+            while (true)
+            {
+                var current = await store.GetAsync(run.Id, CancellationToken.None)
+                    ?? throw new InvalidOperationException("Run disappeared.");
+                try
+                {
+                    await store.ReplaceAsync(
+                        current with
+                        {
+                            LeaseOwner = "replacement-worker",
+                            LeaseExpiresAt = DateTimeOffset.UtcNow.AddMinutes(1)
+                        },
+                        current.ETag,
+                        CancellationToken.None);
+                    break;
+                }
+                catch (ControlRunConcurrencyException)
+                {
+                    // The heartbeat renewed between read and replace; retry with its ETag.
+                }
+            }
+
+            await dispatcher.CancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            await Task.Delay(TimeSpan.FromMilliseconds(75));
+            var persisted = await store.GetAsync(run.Id, CancellationToken.None)
+                ?? throw new InvalidOperationException("Run disappeared.");
+
+            Assert.Equal("replacement-worker", persisted.LeaseOwner);
+            Assert.Empty(persisted.Receipts);
+            Assert.Equal(1, dispatcher.CallCount);
+        }
+        finally
+        {
+            dispatcher.Release();
+            await coordinator.StopAsync(CancellationToken.None);
         }
     }
 
@@ -145,6 +252,7 @@ public sealed class ControlRunTests
     public async Task Live_connector_relay_is_signed_and_idempotent_without_exposing_secret()
     {
         var handler = new CaptureHandler();
+        using var httpClient = new HttpClient(handler);
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["HELIOS_CONNECTOR_DELIVERY_MODE"] = "live",
@@ -153,21 +261,43 @@ public sealed class ControlRunTests
             ["HELIOS_CONNECTOR_GITHUB_ALLOWED_HOSTS"] = "relay.example.test",
             ["HELIOS_CONNECTOR_GITHUB_HMAC_KEY_ID"] = "test-key-1"
         }).Build();
-        var dispatcher = new ConnectorDispatcher(new StaticHttpClientFactory(new HttpClient(handler)), configuration);
+        var dispatcher = new ConnectorDispatcher(new StaticHttpClientFactory(httpClient), configuration);
         var now = DateTimeOffset.UtcNow;
         var run = new ControlRunSnapshot("0123456789abcdef0123456789abcdef", "control-runs", "edge-relay-0001", "correlation-1", "principal-1",
             "provision-resources", "dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
             EvidenceSha256: new string('a', 64), ResourceCount: 2);
 
         var receipts = await dispatcher.DispatchAsync(run, CancellationToken.None);
+        var firstBody = handler.Body;
+        var firstTimestamp = handler.Timestamp;
+        var firstSignature = handler.Signature;
+        var retryReceipts = await dispatcher.DispatchAsync(run, CancellationToken.None);
 
         Assert.Single(receipts);
+        Assert.Single(retryReceipts);
         Assert.Equal("delivered", receipts[0].Status);
+        Assert.Equal(firstBody, handler.Body);
+        Assert.Equal(firstTimestamp, handler.Timestamp);
+        Assert.Equal(firstSignature, handler.Signature);
         Assert.Equal("0123456789abcdef0123456789abcdef:github", handler.IdempotencyKey);
         Assert.Matches("^sha256=[0-9a-f]{64}$", handler.Signature);
+        var signedEnvelope = $"{handler.Timestamp}\n{handler.IdempotencyKey}\n{handler.Body}";
+        var expectedSignature = Convert.ToHexString(HMACSHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(new string('s', 32)),
+            System.Text.Encoding.UTF8.GetBytes(signedEnvelope))).ToLowerInvariant();
+        Assert.Equal($"sha256={expectedSignature}", handler.Signature);
         Assert.Equal("test-key-1", handler.KeyId);
         Assert.True(long.TryParse(handler.Timestamp, out _));
         Assert.DoesNotContain(new string('s', 32), handler.Body);
+        var envelope = JsonSerializer.Deserialize<HeliosEvent>(handler.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.NotNull(envelope);
+        Assert.Equal("helios.control-run.status", envelope!.Type);
+        Assert.Equal("helios-control", envelope.Source);
+        Assert.Equal("control-runs/0123456789abcdef0123456789abcdef", envelope.Subject);
+        Assert.Equal("correlation-1", envelope.CorrelationId);
+        Assert.Equal("internal", envelope.DataClassification);
+        Assert.Equal("github", ((JsonElement)envelope.Payload["connector"]!).GetString());
+        Assert.Equal("0123456789abcdef0123456789abcdef", ((JsonElement)envelope.Payload["runId"]!).GetString());
     }
 
     private static async Task<ControlRunSnapshot> WaitForTerminalAsync(ControlRunCoordinator coordinator, string id)
@@ -203,6 +333,38 @@ public sealed class ControlRunTests
         public Task<IReadOnlyList<ConnectorReceipt>> DispatchAsync(ControlRunSnapshot run, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ConnectorReceipt>>(run.Connectors.Select(connector =>
                 new ConnectorReceipt(connector, "delivered", 1, "Test receipt.", DateTimeOffset.UtcNow)).ToArray());
+    }
+
+    private sealed class BlockingDispatcher : IConnectorDispatcher
+    {
+        private readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _cancellationObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _callCount;
+
+        public TaskCompletionSource Entered => _entered;
+        public TaskCompletionSource CancellationObserved => _cancellationObserved;
+        public int CallCount => Volatile.Read(ref _callCount);
+
+        public IReadOnlyList<ConnectorBindingStatus> GetStatus() => [new("github", true, "test")];
+
+        public async Task<IReadOnlyList<ConnectorReceipt>> DispatchAsync(ControlRunSnapshot run, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _callCount);
+            _entered.TrySetResult();
+            try
+            {
+                await _release.Task.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _cancellationObserved.TrySetResult();
+                throw;
+            }
+            return [new ConnectorReceipt("github", "delivered", 1, "Test receipt.", DateTimeOffset.UtcNow)];
+        }
+
+        public void Release() => _release.TrySetResult();
     }
 
     private sealed class StaticHttpClientFactory(HttpClient client) : IHttpClientFactory

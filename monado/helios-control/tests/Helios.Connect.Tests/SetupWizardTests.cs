@@ -1,11 +1,15 @@
 using Helios.Connect.Api;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Helios.Connect.Tests;
 
 public sealed class SetupWizardTests
 {
-    private readonly SetupWizardService _wizard = new();
+    private static readonly string SourceSha = new('a', 40);
+    private readonly SetupWizardService _wizard = new(new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string?> { ["HELIOS_SOURCE_SHA"] = SourceSha })
+        .Build());
 
     [Fact]
     public void Bootstrap_is_deterministic_plan_only_and_contains_no_secret()
@@ -20,6 +24,10 @@ public sealed class SetupWizardTests
         Assert.Contains("-Mode Plan", first.Script);
         Assert.DoesNotContain("-Mode Apply", first.Script);
         Assert.DoesNotContain("keyvault secret", first.Script, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"$sourceSha = '{SourceSha}'", first.Script);
+        Assert.Contains("git -C ./helios-platform checkout --detach $sourceSha", first.Script);
+        Assert.Contains("-SourceCommitSha $sourceSha", first.Script);
+        Assert.DoesNotContain("git clone https://github.com", first.Script);
     }
 
     [Theory]
@@ -41,7 +49,7 @@ public sealed class SetupWizardTests
         Assert.Contains("az account list --all", result.Script);
         Assert.Contains("az group exists", result.Script);
         Assert.Contains("clouddrive/helios-evidence", result.Script);
-        Assert.Equal(4, result.ShellPackets.Count);
+        Assert.Equal(4, result.OperatorStages.Count);
         Assert.False(result.AppliesChanges);
     }
 

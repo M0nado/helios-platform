@@ -1,11 +1,12 @@
-const cacheName = 'helios-control-v0.4.0';
+const cachePrefix = 'helios-control-wizard-';
+const cacheName = 'helios-control-wizard-v0.4.2';
 const shell = ['/wizard/index.html', '/wizard/wizard.css', '/wizard/wizard.js', '/wizard/icon.svg', '/wizard/icon-192.png', '/wizard/icon-512.png', '/wizard/manifest.webmanifest'];
 self.addEventListener('install', event => event.waitUntil(
   caches.open(cacheName).then(cache => cache.addAll(shell)).then(() => self.skipWaiting())
 ));
 self.addEventListener('activate', event => event.waitUntil(
   caches.keys()
-    .then(keys => Promise.all(keys.filter(key => key !== cacheName).map(key => caches.delete(key))))
+    .then(keys => Promise.all(keys.filter(key => key.startsWith(cachePrefix) && key !== cacheName).map(key => caches.delete(key))))
     .then(() => self.clients.claim())
 ));
 self.addEventListener('fetch', event => {
@@ -19,7 +20,8 @@ self.addEventListener('fetch', event => {
       }
       return response;
     } catch {
-      return await caches.match(event.request) || Response.error();
+      const cache = await caches.open(cacheName);
+      return await cache.match(event.request) || Response.error();
     }
   })());
 });

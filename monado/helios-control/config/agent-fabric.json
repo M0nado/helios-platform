@@ -1,9 +1,22 @@
 {
   "schemaVersion": 1,
   "mode": "interactive",
-  "reasoningProviders": ["openai-codex", "chatgpt", "github-copilot", "microsoft-365-copilot"],
+  "reasoningProviders": [
+    "openai-codex",
+    "chatgpt",
+    "github-copilot",
+    "microsoft-365-copilot"
+  ],
   "grounding": {
-    "sources": ["repository", "github-issues", "linear", "slack", "sharepoint", "azure-resource-graph", "azure-activity-log"],
+    "sources": [
+      "repository",
+      "github-issues",
+      "linear",
+      "slack",
+      "sharepoint",
+      "azure-resource-graph",
+      "azure-activity-log"
+    ],
     "freshnessRequired": true,
     "secretsExcluded": true
   },
@@ -12,17 +25,27 @@
     "durableRunStore": "cosmos-managed-identity",
     "connectorReceipts": "signed-idempotent-relay",
     "diagnoseAutomatically": true,
-    "createTaskBranch": true,
-    "openDraftPullRequest": true,
-    "runTests": true,
+    "createTaskBranch": false,
+    "openDraftPullRequest": false,
+    "runTests": false,
     "directMainWrite": false,
     "automaticMerge": false,
     "automaticTenantAdminConsent": false
   },
-  "cloudShellRoles": ["inventory", "identity-readiness", "deployment-preview", "health-verification"],
+  "cloudShellRoles": [
+    "inventory",
+    "identity-readiness",
+    "deployment-preview",
+    "health-verification"
+  ],
   "learning": {
     "mode": "candidate-only",
-    "inputs": ["test-results", "incident-evidence", "operator-feedback", "delivery-receipts"],
+    "inputs": [
+      "test-results",
+      "incident-evidence",
+      "operator-feedback",
+      "delivery-receipts"
+    ],
     "promotionRequiresPullRequest": true,
     "mayTrainOnSecrets": false
   },
@@ -32,7 +55,7 @@
     "roleAssignments": "approved-operator-or-protected-workflow"
   },
   "vault": {
-    "rotation": "secure-prompt-approved-cli",
+    "rotation": "protected-workflow-only-disabled-until-approved-executor",
     "automaticReadback": false,
     "automaticSecretGeneration": false
   },

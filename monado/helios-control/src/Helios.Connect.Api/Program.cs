@@ -35,7 +35,7 @@ app.UseStaticFiles(new StaticFileOptions
     ContentTypeProvider = staticContentTypes,
     OnPrepareResponse = static context =>
     {
-        context.Context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'self' https://*.microsoft.com https://*.office.com";
+        context.Context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://res.cdn.office.net; connect-src 'self'; frame-ancestors 'self' https://*.microsoft.com https://*.office.com https://*.cloud.microsoft";
         context.Context.Response.Headers["X-Content-Type-Options"] = "nosniff";
         context.Context.Response.Headers["Referrer-Policy"] = "no-referrer";
     }
@@ -474,11 +474,9 @@ static IResult BuildProtectedResourceMetadata(HttpContext context)
     var publicOrigin = GetMcpPublicOrigin(context);
     var resource = $"{publicOrigin}/mcp";
     var tenantId = configuration["AZURE_TENANT_ID"];
-    var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"];
     var authorizationTenant = string.IsNullOrWhiteSpace(tenantId) ? "common" : tenantId;
-    var scopes = string.IsNullOrWhiteSpace(clientId)
-        ? Array.Empty<string>()
-        : new[] { $"api://{clientId}/user_impersonation" };
+    var delegatedScope = GetMcpDelegatedScope(configuration);
+    var scopes = delegatedScope is null ? Array.Empty<string>() : new[] { delegatedScope };
 
     context.Response.Headers["Cache-Control"] = "public, max-age=300";
     return Results.Json(new Dictionary<string, object?>
@@ -495,13 +493,45 @@ static IResult BuildProtectedResourceMetadata(HttpContext context)
 static IResult McpUnauthorized(HttpContext context)
 {
     var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
-    var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"];
-    var scope = string.IsNullOrWhiteSpace(clientId) ? null : $"api://{clientId}/user_impersonation";
+    var scope = GetMcpDelegatedScope(configuration);
     var metadataUrl = $"{GetMcpPublicOrigin(context)}/.well-known/oauth-protected-resource/mcp";
-    var challenge = $"Bearer resource_metadata=\"{metadataUrl}\"";
+    var challenge = $"Bearer resource_metadata=\"{metadataUrl}\", error=\"invalid_token\", error_description=\"A valid Entra access token is required.\"";
     if (!string.IsNullOrWhiteSpace(scope)) challenge += $", scope=\"{scope}\"";
     context.Response.Headers["WWW-Authenticate"] = challenge;
     return McpError(null, -32000, "Authentication required.", StatusCodes.Status401Unauthorized);
+}
+
+static string? GetMcpDelegatedScope(IConfiguration configuration)
+{
+    var applicationIdUri = configuration["HELIOS_ENTRA_APPLICATION_ID_URI"]?.Trim().TrimEnd('/');
+    if (!string.IsNullOrWhiteSpace(applicationIdUri))
+    {
+        var expectedApplicationIdUri = GetExpectedApplicationIdUri(configuration);
+        if (expectedApplicationIdUri is null ||
+            !string.Equals(applicationIdUri, expectedApplicationIdUri, StringComparison.OrdinalIgnoreCase))
+            return null;
+    }
+    else
+    {
+        var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"];
+        if (string.IsNullOrWhiteSpace(clientId)) return null;
+        applicationIdUri = $"api://{clientId}";
+    }
+    return $"{applicationIdUri}/access_as_user";
+}
+
+static string? GetExpectedApplicationIdUri(IConfiguration configuration)
+{
+    var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"];
+    var publicBaseUrl = configuration["HELIOS_PUBLIC_BASE_URL"];
+    if (string.IsNullOrWhiteSpace(clientId) ||
+        !Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out var publicUri) ||
+        publicUri.Scheme != Uri.UriSchemeHttps ||
+        publicUri.AbsolutePath.Trim('/') != string.Empty ||
+        !string.IsNullOrEmpty(publicUri.Query) ||
+        !string.IsNullOrEmpty(publicUri.Fragment))
+        return null;
+    return $"api://{publicUri.DnsSafeHost.ToLowerInvariant()}/{clientId}";
 }
 
 static string GetMcpPublicOrigin(HttpContext context)
@@ -722,7 +752,43 @@ static object BuildToolResult(JsonElement root)
 static bool IsConnectorAuthorized(HttpContext context)
 {
     var required = RequiresEntraAuthorization(context.RequestServices.GetRequiredService<IConfiguration>());
-    return !required || !string.IsNullOrWhiteSpace(context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault());
+    if (!required) return true;
+    if (string.IsNullOrWhiteSpace(context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault())) return false;
+
+    var encodedPrincipal = context.Request.Headers["X-MS-CLIENT-PRINCIPAL"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(encodedPrincipal) || encodedPrincipal.Length > 32_768) return false;
+    try
+    {
+        var expectedAudience = GetExpectedApplicationIdUri(context.RequestServices.GetRequiredService<IConfiguration>());
+        if (expectedAudience is null) return false;
+        var hasRequiredAudience = false;
+        var hasRequiredScope = false;
+        using var principal = JsonDocument.Parse(Convert.FromBase64String(encodedPrincipal));
+        if (!principal.RootElement.TryGetProperty("claims", out var claims) ||
+            claims.ValueKind != JsonValueKind.Array)
+            return false;
+
+        foreach (var claim in claims.EnumerateArray())
+        {
+            if (!claim.TryGetProperty("typ", out var typeValue) ||
+                !claim.TryGetProperty("val", out var valueValue))
+                continue;
+            var type = typeValue.GetString();
+            var value = valueValue.GetString();
+            if (string.Equals(type, "aud", StringComparison.OrdinalIgnoreCase) ||
+                (type?.EndsWith("/audience", StringComparison.OrdinalIgnoreCase) ?? false))
+                hasRequiredAudience |= string.Equals(value, expectedAudience, StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(type, "scp", StringComparison.OrdinalIgnoreCase) ||
+                (type?.EndsWith("/scope", StringComparison.OrdinalIgnoreCase) ?? false))
+                hasRequiredScope |= value?.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Contains("access_as_user", StringComparer.Ordinal) == true;
+        }
+        return hasRequiredAudience && hasRequiredScope;
+    }
+    catch (FormatException) { }
+    catch (JsonException) { }
+    catch (InvalidOperationException) { }
+    return false;
 }
 
 static void SetControlResponseHeaders(HttpContext context)
@@ -749,6 +815,7 @@ static async Task<IResult> BuildReadinessResultAsync(
         "AZURE_RESOURCE_GROUP",
         "AZURE_CLIENT_ID",
         "HELIOS_ENTRA_CLIENT_ID",
+        "HELIOS_ENTRA_APPLICATION_ID_URI",
         "HELIOS_PUBLIC_BASE_URL",
         "HELIOS_COSMOS_ENDPOINT"
     };
@@ -759,6 +826,16 @@ static async Task<IResult> BuildReadinessResultAsync(
     if (missingSettings.Length > 0)
         return Results.Json(
             new { service = "helios-connect", status = "not-ready", missingConfiguration = missingSettings },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    var expectedApplicationIdUri = GetExpectedApplicationIdUri(configuration);
+    if (expectedApplicationIdUri is null ||
+        !string.Equals(
+            configuration["HELIOS_ENTRA_APPLICATION_ID_URI"]?.Trim().TrimEnd('/'),
+            expectedApplicationIdUri,
+            StringComparison.OrdinalIgnoreCase))
+        return Results.Json(
+            new { service = "helios-connect", status = "not-ready", invalidConfiguration = "HELIOS_ENTRA_APPLICATION_ID_URI" },
             statusCode: StatusCodes.Status503ServiceUnavailable);
 
     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

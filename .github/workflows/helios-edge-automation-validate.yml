@@ -4,13 +4,22 @@ on:
   pull_request:
     paths:
       - '.github/workflows/helios-edge-automation-validate.yml'
+      - '.github/workflows/helios-cloud-deploy.yml'
       - 'monado/helios-control/config/edge-automation.json'
+      - 'monado/helios-control/config/identity-bindings.json'
+      - 'monado/helios-control/config/integrations.json'
+      - 'monado/helios-control/infra/**'
       - 'monado/helios-control/docs/EDGE_AUTOMATION.md'
       - 'monado/helios-control/appPackage/manifest.json'
       - 'monado/helios-control/config/agent-fabric.json'
       - 'monado/helios-control/docs/AGENT_AUTOFIX.md'
+      - 'monado/helios-control/docs/AZURE_CONNECTOR_DEPLOYMENT.md'
+      - 'monado/helios-control/docs/AZURE_INTERACTIVE_ONBOARDING.md'
+      - 'monado/helios-control/connector/**'
       - 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/**'
+      - 'monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1'
       - 'monado/helios-control/scripts/Invoke-HeliosEdgeAutomation.ps1'
+      - 'monado/helios-control/scripts/Test-HeliosCloudConnection.ps1'
       - 'monado/helios-control/src/Helios.Connect.Api/**'
       - 'monado/helios-control/tests/Helios.Connect.Tests/**'
   workflow_dispatch:
@@ -37,17 +46,93 @@ jobs:
             .defaultMode == "plan" and
             .mcp.canApplyFromMcp == false and
             .mcp.mutationToolsAllowed == false and
+            (.mcp.exposedTools | sort) == ([
+              "azure_get_context",
+              "azure_list_resources",
+              "azure_list_foundry_resources",
+              "helios_plan_automation",
+              "helios_propose_upgrade",
+              "helios_get_run",
+              "helios_list_connectors"
+            ] | sort) and
             .intents["repair-issue"].directMainWrite == false and
             .intents["repair-issue"].automaticMerge == false
           ' monado/helios-control/config/edge-automation.json > /dev/null
           jq --exit-status '
             .schemaVersion == 1 and
+            .autoFix.createTaskBranch == false and
+            .autoFix.openDraftPullRequest == false and
+            .autoFix.runTests == false and
             .autoFix.directMainWrite == false and
             .autoFix.automaticMerge == false and
             .autoFix.automaticTenantAdminConsent == false and
             .learning.promotionRequiresPullRequest == true and
+            .vault.rotation == "protected-workflow-only-disabled-until-approved-executor" and
             .vault.automaticReadback == false
           ' monado/helios-control/config/agent-fabric.json > /dev/null
+          jq --exit-status '
+            ([.bindings[] | select(.workload == "helios-api" and .scope == "selected-resource-group") | .roles[]] | index("Reader")) != null and
+            ([.bindings[] | select(.workload == "helios-api" and .scope == "control-runs-container") | .roles[]] | index("Cosmos DB Built-in Data Contributor")) != null and
+            .environmentPolicy.protectedDeployment == ["dev", "test", "prod"] and
+            .environmentPolicy.planOnly == ["preview"]
+          ' monado/helios-control/config/identity-bindings.json > /dev/null
+          jq --exit-status '
+            .schemaVersion == 2 and
+            .routing[0].event == "helios.control-run.status" and
+            .relayAuthentication.canonicalTuple == "unixTimestamp + newline + idempotencyKey + newline + exactJsonBody"
+          ' monado/helios-control/config/integrations.json > /dev/null
+          jq --exit-status '
+            .webApplicationInfo.resource == ("api://" + "$" + "{{PUBLIC_HOSTNAME}}/" + "$" + "{{ENTRA_APP_ID}}")
+          ' monado/helios-control/appPackage/manifest.json > /dev/null
+          grep -Fq 'var teamsSsoApplicationIdUri' monado/helios-control/infra/connector.bicep
+          grep -Fq 'allowedAudiences: [ teamsSsoApplicationIdUri ]' monado/helios-control/infra/connector.bicep
+          grep -Fq 'teamsSsoApplicationIdUri ]' monado/helios-control/infra/connector.bicep
+
+          cloud_workflow='.github/workflows/helios-cloud-deploy.yml'
+          if [[ "$(grep -F -c 'commonTags="${COMMON_TAGS_JSON}"' "${cloud_workflow}")" -ne 3 ]]; then
+            echo 'Canonical organization tags must be bound identically in preview, drift check, and deploy.' >&2
+            exit 1
+          fi
+          if [[ "$(grep -F -c 'commonTags: $commonTags' "${cloud_workflow}")" -ne 2 ]]; then
+            echo 'Organization tags must be locked into request creation and evidence verification.' >&2
+            exit 1
+          fi
+          grep -Fq 'common_tags_sha256' "${cloud_workflow}"
+          grep -Fq 'commonTagsSha256' "${cloud_workflow}"
+
+          runtime='monado/helios-control/src/Helios.Connect.Api/Program.cs'
+          verifier='monado/helios-control/scripts/Test-HeliosCloudConnection.ps1'
+          openapi='monado/helios-control/connector/helios-azure-connector.openapi.yaml'
+          mcp_manifest='monado/helios-control/connector/mcp-manifest.example.json'
+          if rg -n 'user_impersonation' "${runtime}" "${verifier}" "${openapi}" "${mcp_manifest}"; then
+            echo 'The retired user_impersonation scope must not reappear in the runtime or client contracts.' >&2
+            exit 1
+          fi
+          grep -Fq 'HELIOS_ENTRA_APPLICATION_ID_URI' "${runtime}"
+          grep -Fq '/access_as_user' "${runtime}"
+          grep -Fq 'X-MS-CLIENT-PRINCIPAL' "${runtime}"
+          grep -Fq 'Get-AzureCliAccessToken -DelegatedScope $script:delegatedScope' "${verifier}"
+          grep -Fq "'X-MS-CLIENT-PRINCIPAL' = \$forgedPrincipal" "${verifier}"
+          grep -Fq 'api://${HELIOS_CONNECTOR_HOST}/${ENTRA_CLIENT_ID}/access_as_user' "${openapi}"
+          jq --exit-status '
+            .version == "0.4.0" and
+            .authentication.audience == ("api://" + "$" + "{HELIOS_CONNECTOR_HOST}/" + "$" + "{ENTRA_CLIENT_ID}") and
+            .authentication.scope == ("api://" + "$" + "{HELIOS_CONNECTOR_HOST}/" + "$" + "{ENTRA_CLIENT_ID}/access_as_user") and
+            .tools == [
+              "azure_get_context",
+              "azure_list_resources",
+              "azure_list_foundry_resources",
+              "helios_plan_automation",
+              "helios_propose_upgrade",
+              "helios_get_run",
+              "helios_list_connectors"
+            ]
+          ' "${mcp_manifest}" > /dev/null
+
+          control_runs='monado/helios-control/src/Helios.Connect.Api/ControlRuns.cs'
+          grep -Fq 'MaintainLeaseAsync' "${control_runs}"
+          grep -Fq 'lease heartbeat lost ETag ownership' "${control_runs}"
+          grep -Fq 'var occurredAt = run.CreatedAt;' "${control_runs}"
 
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -76,9 +161,25 @@ jobs:
           [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
           if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
           $content = Get-Content $path -Raw
-          foreach ($required in @('ApprovedPlanSha256', 'APPLY HELIOS EDGE', 'Incremental', 'Read-Host', 'AsSecureString')) {
+          foreach ($required in @("[ValidateSet('Diagnose', 'Plan')]", 'FullResourcePayloads', 'ContainerImage', 'sourceCommitSha', 'mutations = 0', 'protected-github-environment', 'second-environment-approval', 'applyAvailableLocally')) {
             if ($content -notmatch [regex]::Escape($required)) { throw "Missing guardrail: $required" }
           }
-          foreach ($forbidden in @('keyvault secret show', 'keyvault secret download', '--mode Complete')) {
-            if ($content -match [regex]::Escape($forbidden)) { throw "Forbidden operation: $forbidden" }
+          foreach ($forbidden in @("'deployment', 'group', 'create'", "'keyvault', 'secret', 'set'", 'Read-Host', 'AsSecureString', 'ApprovedPlanSha256', 'ApprovedRequestSha256', 'Write-RestrictedSecretFile', '--mode Complete', 'ResourceIdOnly')) {
+            if ($content -match [regex]::Escape($forbidden)) { throw "Forbidden local mutation path: $forbidden" }
+          }
+          $serviceWorker = Get-Content 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/sw.js' -Raw
+          if ($serviceWorker -notmatch "cachePrefix = 'helios-control-wizard-'" -or
+              $serviceWorker -notmatch 'startsWith\(cachePrefix\)' -or
+              $serviceWorker -notmatch 'caches\.open\(cacheName\)') {
+            throw 'Wizard cache cleanup and fallback must remain scoped to the wizard-owned cache.'
+          }
+
+          $onboardingPath = 'monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1'
+          $onboardingTokens = $null
+          $onboardingErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($onboardingPath, [ref]$onboardingTokens, [ref]$onboardingErrors)
+          if ($onboardingErrors.Count -gt 0) { $onboardingErrors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+          $onboarding = Get-Content $onboardingPath -Raw
+          foreach ($required in @('Ensure-GovernedResourceGroupEnvironmentTag', 'Assert-GovernedResourceGroupEnvironmentTag', "'tag', 'update'", "'--operation', 'Merge'", 'helios-environment', 'Resolve-DeployedApiHostname', 'access_as_user', 'api://$($ApiHostname.ToLowerInvariant())/$($application.appId)')) {
+            if ($onboarding -notmatch [regex]::Escape($required)) { throw "Onboarding does not enforce resource-group governance: $required" }
           }

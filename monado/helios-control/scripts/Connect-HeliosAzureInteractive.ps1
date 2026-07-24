@@ -462,7 +462,9 @@ function New-ConfirmedResourceGroup {
             'group', 'create',
             '--subscription', $Context.SubscriptionId,
             '--name', $Name,
-            '--location', $LocationName
+            '--location', $LocationName,
+            '--tags', 'system=helios', "environment=$EnvironmentName",
+            "helios-environment=$EnvironmentName", 'managed-by=helios-operator'
         ) `
         -Operation "Creating resource group '$Name'"
     if ($created.name -ne $Name) {
@@ -515,6 +517,7 @@ function Ensure-ServicePrincipal {
 function Ensure-EntraApplication {
     param(
         [Parameter(Mandatory)] [string] $DisplayName,
+        [string] $ApiHostname,
         [switch] $ExposeDelegatedScope
     )
 
@@ -551,11 +554,14 @@ function Ensure-EntraApplication {
     [void] (Ensure-ServicePrincipal -ApplicationId $application.appId -DisplayName $DisplayName)
 
     if ($ExposeDelegatedScope) {
-        $requiredIdentifierUri = "api://$($application.appId)"
+        if ($ApiHostname -and [Uri]::CheckHostName($ApiHostname) -ne [UriHostNameType]::Dns) {
+            throw "ApiHostname '$ApiHostname' is not a valid DNS hostname."
+        }
+        $requiredIdentifierUri = if ($ApiHostname) { "api://$($ApiHostname.ToLowerInvariant())/$($application.appId)" } else { "api://$($application.appId)" }
         $existingScopes = @($application.api.oauth2PermissionScopes)
-        $matchingScopes = @($existingScopes | Where-Object value -eq 'user_impersonation')
+        $matchingScopes = @($existingScopes | Where-Object value -eq 'access_as_user')
         if ($matchingScopes.Count -gt 1) {
-            throw "Entra application '$DisplayName' has duplicate user_impersonation scopes. Refusing to guess which grant is authoritative."
+            throw "Entra application '$DisplayName' has duplicate access_as_user scopes. Refusing to guess which grant is authoritative."
         }
         if ($matchingScopes.Count -eq 0) {
             $scope = [ordered]@{
@@ -566,7 +572,7 @@ function Ensure-EntraApplication {
                 type = 'User'
                 userConsentDescription = 'Allow this client to read governed Helios Azure inventory.'
                 userConsentDisplayName = 'Read Helios Azure inventory'
-                value = 'user_impersonation'
+                value = 'access_as_user'
             }
             $scopeJson = ConvertTo-Json @($existingScopes + $scope) -Compress -Depth 10
             [void] (Invoke-AzJson `
@@ -610,12 +616,12 @@ function Ensure-EntraApplication {
         }
 
         $finalScopes = @($application.api.oauth2PermissionScopes | Where-Object {
-            $_.value -eq 'user_impersonation' -and [bool] $_.isEnabled -and $_.type -eq 'User'
+            $_.value -eq 'access_as_user' -and [bool] $_.isEnabled -and $_.type -eq 'User'
         })
         if ($finalScopes.Count -ne 1 -or
             @($application.identifierUris) -notcontains $requiredIdentifierUri -or
             [int] $application.api.requestedAccessTokenVersion -ne 2) {
-            throw "Entra application '$DisplayName' did not converge to the exact v2 api:// client ID and user_impersonation scope contract."
+            throw "Entra application '$DisplayName' did not converge to the exact v2 api:// client ID and access_as_user scope contract."
         }
 
         # Microsoft documents Azure CLI as a governed public client for this
@@ -655,7 +661,7 @@ function Ensure-EntraApplication {
                     '--id', [string] $application.id,
                     '--set', "api.preAuthorizedApplications=$preauthorizedJson"
                 ) `
-                -Operation "Preauthorizing Azure CLI for '$DisplayName' user_impersonation" `
+                -Operation "Preauthorizing Azure CLI for '$DisplayName' access_as_user" `
                 -AllowEmptyOutput)
             $application = Find-EntraApplication -DisplayName $DisplayName
         }
@@ -663,7 +669,7 @@ function Ensure-EntraApplication {
             $_.appId -eq $azureCliClientId -and @($_.delegatedPermissionIds) -contains $scopeId
         })
         if ($verifiedAzureCli.Count -ne 1) {
-            throw "Entra application '$DisplayName' did not retain the exact Azure CLI preauthorization for user_impersonation."
+            throw "Entra application '$DisplayName' did not retain the exact Azure CLI preauthorization for access_as_user."
         }
     }
 
@@ -986,6 +992,57 @@ function Assert-PrincipalRoleAssignment {
     })
     if ($matching.Count -eq 0) {
         throw "Required role '$Role' is missing at '$Scope'. Run the administrator Configure/Publish phase first."
+    }
+}
+
+function Get-ResourceGroupEnvironmentTag {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
+
+    $group = Invoke-AzJson `
+        -Arguments @('group', 'show', '--subscription', $Context.SubscriptionId, '--name', $ResourceGroupName) `
+        -Operation "Reading governed environment tag on resource group '$ResourceGroupName'"
+    return if ($group.tags) { [string] $group.tags.'helios-environment' } else { '' }
+}
+
+function Ensure-GovernedResourceGroupEnvironmentTag {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
+
+    $current = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
+    if ($current -and $current -cne $EnvironmentName) {
+        throw "Resource group '$ResourceGroupName' is already governed as environment '$current'; refusing to reclassify it as '$EnvironmentName'."
+    }
+    if ($current -ceq $EnvironmentName) { return }
+
+    $resourceGroupId = "/subscriptions/$($Context.SubscriptionId)/resourceGroups/$ResourceGroupName"
+    [void] (Invoke-AzJson `
+        -Arguments @(
+            'tag', 'update',
+            '--resource-id', $resourceGroupId,
+            '--operation', 'Merge',
+            '--tags', "helios-environment=$EnvironmentName"
+        ) `
+        -Operation "Applying governed environment tag to resource group '$ResourceGroupName'")
+    $verified = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
+    if ($verified -cne $EnvironmentName) {
+        throw "Resource group '$ResourceGroupName' did not retain the required helios-environment tag."
+    }
+}
+
+function Assert-GovernedResourceGroupEnvironmentTag {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
+
+    $current = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
+    if ($current -cne $EnvironmentName) {
+        throw "Resource group '$ResourceGroupName' must have helios-environment=$EnvironmentName. Run -Mode Configure first."
     }
 }
 
@@ -1564,6 +1621,28 @@ function New-ConfirmedContainerRegistry {
     return $registry
 }
 
+function Resolve-DeployedApiHostname {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
+
+    $expectedName = "helios-connector-$EnvironmentName-api"
+    $apps = @(Invoke-AzJson `
+        -Arguments @(
+            'containerapp', 'list',
+            '--subscription', $Context.SubscriptionId,
+            '--resource-group', $ResourceGroupName,
+            '--query', "[?name=='$expectedName'].{name:name,fqdn:properties.configuration.ingress.fqdn}"
+        ) `
+        -Operation "Looking for deployed Container App '$expectedName'")
+    if ($apps.Count -eq 0) { return $null }
+    if ($apps.Count -ne 1 -or [Uri]::CheckHostName([string] $apps[0].fqdn) -ne [UriHostNameType]::Dns) {
+        throw "The deployed Container App '$expectedName' did not return one valid HTTPS hostname."
+    }
+    return ([string] $apps[0].fqdn).ToLowerInvariant()
+}
+
 function Get-ExistingEntraContext {
     $connectorApplication = Find-EntraApplication -DisplayName $ConnectorAppName
     $githubApplication = Find-EntraApplication -DisplayName $GitHubOidcAppName
@@ -1720,10 +1799,12 @@ try {
         Write-Host '  runtime RBAC: pre-created user-assigned identity with Reader; ACR pull is added during Publish'
         Write-Host "  GitHub environment: $GitHubOwner/$GitHubRepository / $GitHubEnvironment; reviewer-gated; branch $GitHubDeploymentBranch"
         Assert-ExactConfirmation -Expected 'CONFIGURE HELIOS AZURE' -Purpose 'Configuring Helios Entra, OIDC, RBAC, and GitHub bindings'
+        Ensure-GovernedResourceGroupEnvironmentTag -Context $azureContext -ResourceGroupName $selectedResourceGroup
         Ensure-RequiredResourceProviders -Context $azureContext
     }
 
     if ($Mode -eq 'Publish') {
+        Assert-GovernedResourceGroupEnvironmentTag -Context $azureContext -ResourceGroupName $selectedResourceGroup
         $runtimeIdentity = Get-RuntimeManagedIdentity -Context $azureContext -ResourceGroupName $selectedResourceGroup
         $publishGitHubApplication = Find-EntraApplication -DisplayName $GitHubOidcAppName
         if (-not $publishGitHubApplication) {
@@ -1819,7 +1900,11 @@ try {
 
     $entraContext = Get-ExistingEntraContext
     if ($Mode -eq 'Configure') {
-        $connectorApplication = Ensure-EntraApplication -DisplayName $ConnectorAppName -ExposeDelegatedScope
+        $deployedApiHostname = Resolve-DeployedApiHostname -Context $azureContext -ResourceGroupName $selectedResourceGroup
+        $connectorApplication = Ensure-EntraApplication -DisplayName $ConnectorAppName -ApiHostname $deployedApiHostname -ExposeDelegatedScope
+        if (-not $deployedApiHostname) {
+            Write-Warning 'The Container App is not deployed yet. Re-run Configure after deployment to bind the domain-qualified Teams SSO Application ID URI.'
+        }
         $githubApplication = Ensure-EntraApplication -DisplayName $GitHubOidcAppName
         $runtimeIdentity = Ensure-RuntimeManagedIdentity `
             -Context $azureContext `

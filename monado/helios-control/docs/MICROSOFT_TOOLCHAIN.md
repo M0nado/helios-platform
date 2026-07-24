@@ -35,6 +35,13 @@ agents use managed identity. Key Vault is used only for services that cannot use
 federation. PATs, client secrets, raw tokens, and recovery material never enter
 source control or agent memory.
 
+The Microsoft 365/Teams tab uses TeamsJS SSO with a domain-bound Entra
+Application ID URI (`api://<PUBLIC_HOSTNAME>/<client-id>`) and delegated
+`access_as_user`. The Container Apps auth policy accepts that audience, while
+the tab sends the short-lived token only in the request Authorization header.
+A user-initiated same-origin popup is the fallback for interactive consent; no
+token is returned through the popup result.
+
 The deployed Bicep currently creates an empty, RBAC-enabled Key Vault but does
 not grant the connector access to provider secrets or map any secret into the
 Container App. Online OpenAI is therefore disabled and fails closed. Enabling it

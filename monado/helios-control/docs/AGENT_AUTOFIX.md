@@ -7,10 +7,10 @@ This contract coordinates OpenAI Codex/ChatGPT, GitHub Copilot, and Microsoft 36
 - Refresh repository, issue, connector, Azure Resource Graph, and activity-log context.
 - Diagnose failures and produce a redacted evidence bundle.
 - Start one idempotent Edge control run and resume its saved Cosmos state after a browser or process interruption.
-- Create a task branch, apply a scoped code/configuration repair, run tests, and open a draft pull request.
-- Prepare separate Cloud Shell work packets for inventory, identity readiness, deployment preview, and health verification.
+- Propose a scoped code/configuration repair and its validation plan; branch and draft-PR execution remain disabled until an approved executor is implemented.
+- Render inventory, identity-readiness, deployment-preview, and health-verification stages inside one operator-authenticated Cloud Shell session.
 - Select a subscription deterministically from the tenant and target resource group, with an interactive fallback when the evidence is ambiguous.
-- Persist canonical deployment-preview evidence in Cloud Shell storage so another authorized shell can verify the same SHA-256.
+- Persist canonical deployment-preview evidence in Cloud Shell storage so another authorized session can verify the same SHA-256 without implying separate agent identities.
 - Enforce HELIOS ownership, environment, service, provisioner, repository, and organization tags through Bicep.
 - Deliver normalized status through HTTPS relays with destination-specific HMAC signatures, idempotency keys, bounded retries, and saved receipts.
 - Propose reusable knowledge updates from successful fixes.
@@ -28,8 +28,8 @@ This contract coordinates OpenAI Codex/ChatGPT, GitHub Copilot, and Microsoft 36
 1. Select a provider and issue or desired outcome.
 2. Refresh grounded evidence; redact tokens, secrets, and personal data.
 3. Generate a deterministic HELIOS plan and plan digest.
-4. Run read-only diagnostics in isolated Cloud Shell roles.
-5. For code repair, create a task branch and draft PR.
+4. Run read-only diagnostics as labeled stages in the operator's authenticated Cloud Shell context.
+5. For code repair, produce a proposal; an authorized repository workflow owns any branch or draft PR.
 6. For Azure change, generate Bicep/CLI preview evidence.
 7. Require the appropriate owner to approve identity, vault, DNS, or deployment gates.
 8. Recheck drift and execute only the approved scope.

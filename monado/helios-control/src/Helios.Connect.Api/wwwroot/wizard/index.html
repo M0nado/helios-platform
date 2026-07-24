@@ -25,6 +25,7 @@
       <button id="bootstrapTab" class="tab" role="tab" aria-selected="false" aria-controls="bootstrap" data-panel="bootstrap">Cloud Shell</button>
       <button id="upgradeTab" class="tab" role="tab" aria-selected="false" aria-controls="upgrade" data-panel="upgrade">Upgrade agent</button>
       <button id="installApp" class="install hidden">Install in Edge</button>
+      <button id="signIn" class="install hidden">Sign in to Microsoft</button>
     </nav>
 
     <section id="run" class="panel active" role="tabpanel" aria-labelledby="runTab">
@@ -43,9 +44,6 @@
         </label>
         <label>Run type
           <select id="runIntent"><option value="provision-resources">Diagnose and plan</option><option value="cleanup-owned-resources">Plan governed cleanup</option></select>
-        </label>
-        <label>Resource group override
-          <input id="runTarget" autocomplete="off" placeholder="Use server configuration">
         </label>
       </div>
 
@@ -105,6 +103,7 @@
 
     <footer>Edge, Copilot, ChatGPT, and Codex can start or inspect governed work. Entra consent, vault writes, DNS delegation, resource deletion, production apply, and merge remain protected approvals.</footer>
   </main>
+  <script src="https://res.cdn.office.net/teams-js/2.53.1/js/MicrosoftTeams.min.js" integrity="sha384-PIuQ2V7hlz4b1x3G1mPCYYZiWTjxzRTL6bf547xR9ARsAeNv2DAzti86LQnFCwlo" crossorigin="anonymous"></script>
   <script src="/wizard/wizard.js"></script>
 </body>
 </html>
