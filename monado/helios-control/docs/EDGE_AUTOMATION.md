@@ -19,11 +19,13 @@ Infrastructure apply requires all of the following:
 
 1. An authenticated Azure CLI context matching the requested tenant and subscription.
 2. A previously saved plan and its SHA-256 digest.
-3. A fresh what-if result that exactly matches that digest.
-4. A protected GitHub environment for production.
-5. The typed confirmation `APPLY HELIOS EDGE <ENVIRONMENT>`.
+3. A separately hashed `request.json` that binds tenant, subscription, resource group, environment, image, identities, and source commit.
+4. A resource-group `helios-environment` tag matching the reviewed environment.
+5. A fresh what-if result that exactly matches the approved digest.
+6. A protected GitHub environment for production.
+7. The typed confirmation `APPLY HELIOS EDGE <ENVIRONMENT>`.
 
-Vault updates use a secure prompt and a restricted temporary file. The secret is passed to `az keyvault secret set --file`, never supplied as a command-line value, never returned by the API, and never read back by the script.
+Vault updates use a secure prompt and a file created only inside an owner-restricted temporary directory; the file ACL/mode is restricted before plaintext is written. The secret is passed to `az keyvault secret set --file`, never supplied as a command-line value, never returned by the API, and never read back by the script.
 
 ## Edge and OpenAI app surface
 
@@ -53,7 +55,7 @@ Generate a Bicep what-if plan and evidence digest. Plan resolves every azd place
 After review, apply the exact approved plan. The script recomputes what-if and fails closed if the result changed:
 
 ~~~powershell
-./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Apply -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -EnvironmentName dev -ApprovedPlanFile ./evidence/helios-edge/dev/what-if.json -ApprovedPlanSha256 <sha256> -Confirmation "APPLY HELIOS EDGE DEV"
+./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Apply -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -EnvironmentName dev -ContainerImage <registry>/helios-connect@sha256:<digest> -ContainerRegistryName <registry> -EntraClientId <client-id> -AllowedPrincipalObjectId <object-id> -SourceCommitSha <git-sha> -ApprovedPlanFile ./evidence/helios-edge/dev/what-if.json -ApprovedPlanSha256 <sha256> -ApprovedRequestFile ./evidence/helios-edge/dev/request.json -ApprovedRequestSha256 <request-sha256> -Confirmation "APPLY HELIOS EDGE DEV"
 ~~~
 
 Set a Key Vault secret without exposing its value in shell history:
