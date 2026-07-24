@@ -55,10 +55,13 @@ jobs:
           ' monado/helios-control/config/edge-automation.json > /dev/null
           jq --exit-status '
             .schemaVersion == 1 and
+            .autoFix.createTaskBranch == false and
+            .autoFix.openDraftPullRequest == false and
             .autoFix.directMainWrite == false and
             .autoFix.automaticMerge == false and
             .autoFix.automaticTenantAdminConsent == false and
             .learning.promotionRequiresPullRequest == true and
+            .vault.rotation == "protected-workflow-only-disabled-until-approved-executor" and
             .vault.automaticReadback == false
           ' monado/helios-control/config/agent-fabric.json > /dev/null
           jq --exit-status '
