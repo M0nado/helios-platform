@@ -399,53 +399,25 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Azure_mcp_requires_scope_and_exposes_only_the_approved_tools()
+    public async Task Azure_mcp_exposes_host_compatible_approved_tool_contracts()
     {
+        const string applicationIdUri = "api://helios.example.test/11111111-1111-1111-1111-111111111111";
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
             builder.UseSetting("HELIOS_ENTRA_CLIENT_ID", "11111111-1111-1111-1111-111111111111");
-            builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", "api://helios.example.test/11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", applicationIdUri);
             builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test");
         });
         using var client = securedFactory.CreateClient();
 
-        using (var missingScopeRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
-        {
-            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
-        })
-        {
-            missingScopeRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
-            missingScopeRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal("wrong_scope"));
-            using var missingScopeResponse = await client.SendAsync(missingScopeRequest);
-            Assert.Equal(HttpStatusCode.Unauthorized, missingScopeResponse.StatusCode);
-            Assert.Contains("access_as_user", Assert.Single(missingScopeResponse.Headers.WwwAuthenticate).ToString());
-        }
-
-        using (var wrongAudienceRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
-        {
-            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
-        })
-        {
-            wrongAudienceRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
-            wrongAudienceRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL",
-                CreateEasyAuthPrincipal("access_as_user", "api://wrong.example.test/11111111-1111-1111-1111-111111111111"));
-            using var wrongAudienceResponse = await client.SendAsync(wrongAudienceRequest);
-            Assert.Equal(HttpStatusCode.Unauthorized, wrongAudienceResponse.StatusCode);
-        }
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
-        {
-            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
-        };
-        request.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
-        request.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal("openid access_as_user"));
-        using var response = await client.SendAsync(request);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var document = JsonDocument.Parse(body);
-        var names = document.RootElement.GetProperty("result").GetProperty("tools")
-            .EnumerateArray()
+        using var listRequest = CreateMcpRequest("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}");
+        using var listResponse = await client.SendAsync(listRequest);
+        var listBody = await listResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        using var listDocument = JsonDocument.Parse(listBody);
+        var tools = listDocument.RootElement.GetProperty("result").GetProperty("tools").EnumerateArray().ToArray();
+        var names = tools
             .Select(tool => tool.GetProperty("name").GetString()!)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
@@ -454,15 +426,107 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
             "azure_get_context",
             "azure_list_foundry_resources",
             "azure_list_resources",
+            "fetch",
+            "helios_get_control_plane_status",
             "helios_get_run",
             "helios_list_connectors",
             "helios_plan_automation",
-            "helios_propose_upgrade"
+            "helios_propose_upgrade",
+            "helios_render_control_center",
+            "search"
         }, names);
+
+        foreach (var tool in tools)
+        {
+            var scheme = Assert.Single(tool.GetProperty("securitySchemes").EnumerateArray());
+            Assert.Equal("oauth2", scheme.GetProperty("type").GetString());
+            Assert.Equal(applicationIdUri + "/access_as_user",
+                Assert.Single(scheme.GetProperty("scopes").EnumerateArray()).GetString());
+            var compatibilityScheme = Assert.Single(
+                tool.GetProperty("_meta").GetProperty("securitySchemes").EnumerateArray());
+            Assert.Equal(scheme.GetRawText(), compatibilityScheme.GetRawText());
+        }
+
+        foreach (var name in new[] { "search", "fetch", "helios_get_control_plane_status", "helios_render_control_center" })
+        {
+            var tool = Assert.Single(tools.Where(candidate => candidate.GetProperty("name").GetString() == name));
+            Assert.True(tool.TryGetProperty("outputSchema", out _));
+        }
+
+        var renderTool = Assert.Single(tools.Where(tool =>
+            tool.GetProperty("name").GetString() == "helios_render_control_center"));
+        Assert.Equal("ui://helios/control-center-v2.html",
+            renderTool.GetProperty("_meta").GetProperty("openai/outputTemplate").GetString());
+        Assert.True(renderTool.GetProperty("_meta").GetProperty("openai/widgetAccessible").GetBoolean());
+
+        using var resourcesRequest = CreateMcpRequest("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"resources/list\"}");
+        using var resourcesResponse = await client.SendAsync(resourcesRequest);
+        var resourcesBody = await resourcesResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, resourcesResponse.StatusCode);
+        using var resourcesDocument = JsonDocument.Parse(resourcesBody);
+        var resource = Assert.Single(resourcesDocument.RootElement.GetProperty("result")
+            .GetProperty("resources").EnumerateArray());
+        Assert.Equal("text/html;profile=mcp-app", resource.GetProperty("mimeType").GetString());
+        Assert.Equal("ui://helios/control-center-v2.html", resource.GetProperty("uri").GetString());
+        var resourceMetadata = resource.GetProperty("_meta");
+        Assert.Equal("https://helios.example.test",
+            resourceMetadata.GetProperty("ui").GetProperty("domain").GetString());
+        Assert.Equal("https://helios.example.test",
+            resourceMetadata.GetProperty("openai/widgetDomain").GetString());
+        var redirectDomains = resourceMetadata.GetProperty("openai/widgetCSP")
+            .GetProperty("redirect_domains").EnumerateArray()
+            .Select(value => value.GetString()!)
+            .ToArray();
+        Assert.Contains("https://github.com", redirectDomains);
+        Assert.Contains("https://heli0s-my.sharepoint.com", redirectDomains);
+        Assert.Contains("https://helios-xk97943.slack.com", redirectDomains);
+        Assert.Contains("https://linear.app", redirectDomains);
+        Assert.Contains("https://helios-control-center.thepatman64.chatgpt.site", redirectDomains);
+
+        using var resourceRequest = CreateMcpRequest(
+            "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"resources/read\",\"params\":{\"uri\":\"ui://helios/control-center-v2.html\"}}");
+        using var resourceResponse = await client.SendAsync(resourceRequest);
+        var resourceBody = await resourceResponse.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, resourceResponse.StatusCode);
+        using var resourceDocument = JsonDocument.Parse(resourceBody);
+        var widget = Assert.Single(resourceDocument.RootElement.GetProperty("result")
+            .GetProperty("contents").EnumerateArray()).GetProperty("text").GetString()!;
+        Assert.Contains("textContent", widget);
+        Assert.DoesNotContain("innerHTML", widget, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ui/notifications/tool-result", widget);
+        Assert.Contains("openExternal", widget);
+        Assert.Contains("event.source!==window.parent", widget);
+
+        using var searchRequest = CreateMcpRequest(
+            "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"tools/call\",\"params\":{\"name\":\"search\",\"arguments\":{\"query\":\"Azure OIDC\"}}}",
+            "openid access_as_user");
+        using var searchResponse = await client.SendAsync(searchRequest);
+        using var searchDocument = JsonDocument.Parse(await searchResponse.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, searchResponse.StatusCode);
+        Assert.True(searchDocument.RootElement.GetProperty("result")
+            .GetProperty("structuredContent").TryGetProperty("results", out _));
+
+        using var fetchRequest = CreateMcpRequest(
+            "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"fetch\",\"arguments\":{\"id\":\"github\"}}}",
+            "openid access_as_user");
+        using var fetchResponse = await client.SendAsync(fetchRequest);
+        using var fetchDocument = JsonDocument.Parse(await fetchResponse.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, fetchResponse.StatusCode);
+        Assert.Equal("github", fetchDocument.RootElement.GetProperty("result")
+            .GetProperty("structuredContent").GetProperty("id").GetString());
+
+        using var renderRequest = CreateMcpRequest(
+            "{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_render_control_center\",\"arguments\":{}}}",
+            "openid access_as_user");
+        using var renderResponse = await client.SendAsync(renderRequest);
+        using var renderDocument = JsonDocument.Parse(await renderResponse.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, renderResponse.StatusCode);
+        Assert.Equal("governed-configuration-snapshot", renderDocument.RootElement.GetProperty("result")
+            .GetProperty("structuredContent").GetProperty("source").GetString());
     }
 
     [Fact]
-    public async Task OAuth_metadata_and_challenge_use_the_origin_bound_access_scope()
+    public async Task OAuth_metadata_and_tool_challenge_use_the_origin_bound_access_scope()
     {
         const string applicationIdUri = "api://helios.example.test/11111111-1111-1111-1111-111111111111";
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
@@ -480,20 +544,55 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
             Assert.Equal(HttpStatusCode.OK, metadataResponse.StatusCode);
             using var metadata = JsonDocument.Parse(body);
             Assert.Equal("https://helios.example.test/mcp", metadata.RootElement.GetProperty("resource").GetString());
-            Assert.Equal($"{applicationIdUri}/access_as_user",
+            Assert.Equal(applicationIdUri + "/access_as_user",
                 Assert.Single(metadata.RootElement.GetProperty("scopes_supported").EnumerateArray()).GetString());
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        using (var discoveryRequest = CreateMcpRequest(
+            "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}"))
+        using (var discoveryResponse = await client.SendAsync(discoveryRequest))
         {
-            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
-        };
-        using var response = await client.SendAsync(request);
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        var challenge = Assert.Single(response.Headers.WwwAuthenticate).ToString();
-        Assert.Contains("resource_metadata=\"https://helios.example.test/.well-known/oauth-protected-resource/mcp\"", challenge);
-        Assert.Contains($"scope=\"{applicationIdUri}/access_as_user\"", challenge);
-        Assert.Contains("error=\"invalid_token\"", challenge);
+            Assert.Equal(HttpStatusCode.OK, discoveryResponse.StatusCode);
+            using var discoveryDocument = JsonDocument.Parse(await discoveryResponse.Content.ReadAsStringAsync());
+            var statusTool = Assert.Single(discoveryDocument.RootElement.GetProperty("result")
+                .GetProperty("tools").EnumerateArray()
+                .Where(tool => tool.GetProperty("name").GetString() == "helios_get_control_plane_status"));
+            Assert.Equal("oauth2", Assert.Single(statusTool.GetProperty("securitySchemes")
+                .EnumerateArray()).GetProperty("type").GetString());
+        }
+
+        const string toolCall =
+            "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_get_control_plane_status\",\"arguments\":{}}}";
+        using (var wrongScopeRequest = CreateMcpRequest(toolCall, "wrong_scope"))
+        using (var wrongScopeResponse = await client.SendAsync(wrongScopeRequest))
+        {
+            Assert.Equal(HttpStatusCode.OK, wrongScopeResponse.StatusCode);
+            using var challengeDocument = JsonDocument.Parse(await wrongScopeResponse.Content.ReadAsStringAsync());
+            var result = challengeDocument.RootElement.GetProperty("result");
+            Assert.True(result.GetProperty("isError").GetBoolean());
+            var challenge = Assert.Single(result.GetProperty("_meta")
+                .GetProperty("mcp/www_authenticate").EnumerateArray()).GetString()!;
+            Assert.Contains("resource_metadata=\"https://helios.example.test/.well-known/oauth-protected-resource/mcp\"", challenge);
+            Assert.Contains("scope=\"" + applicationIdUri + "/access_as_user\"", challenge);
+            Assert.Contains("error=\"invalid_token\"", challenge);
+        }
+
+        using (var wrongAudienceRequest = CreateMcpRequest(
+            toolCall,
+            "access_as_user",
+            "api://wrong.example.test/11111111-1111-1111-1111-111111111111"))
+        using (var wrongAudienceResponse = await client.SendAsync(wrongAudienceRequest))
+        {
+            Assert.Equal(HttpStatusCode.OK, wrongAudienceResponse.StatusCode);
+            using var challengeDocument = JsonDocument.Parse(await wrongAudienceResponse.Content.ReadAsStringAsync());
+            Assert.True(challengeDocument.RootElement.GetProperty("result").GetProperty("isError").GetBoolean());
+        }
+
+        using var getResponse = await client.GetAsync("/mcp");
+        Assert.Equal(HttpStatusCode.Unauthorized, getResponse.StatusCode);
+        var httpChallenge = Assert.Single(getResponse.Headers.WwwAuthenticate).ToString();
+        Assert.Contains("resource_metadata=\"https://helios.example.test/.well-known/oauth-protected-resource/mcp\"", httpChallenge);
+        Assert.Contains("scope=\"" + applicationIdUri + "/access_as_user\"", httpChallenge);
     }
 
     [Fact]
@@ -598,6 +697,23 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         };
         request.Headers.Add("X-Hub-Signature-256", $"sha256={signature}");
         request.Headers.Add("X-GitHub-Delivery", deliveryId);
+        return request;
+    }
+
+    private static HttpRequestMessage CreateMcpRequest(
+        string body,
+        string? scopes = null,
+        string audience = "api://helios.example.test/11111111-1111-1111-1111-111111111111")
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        if (scopes is not null)
+        {
+            request.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
+            request.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal(scopes, audience));
+        }
         return request;
     }
 
