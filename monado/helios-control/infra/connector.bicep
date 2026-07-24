@@ -25,6 +25,10 @@ param entraTenantId string = subscription().tenantId
 param allowedPrincipalObjectId string
 @description('Optional canonical HTTPS origin exposed to Edge, such as a reviewed Front Door or custom DNS hostname. Leave empty to use the Container Apps FQDN.')
 param publicBaseUrl string = ''
+@description('Exact Git commit used to build the immutable connector image and pin generated setup scripts.')
+@minLength(40)
+@maxLength(40)
+param sourceCommitSha string
 @description('Additional organization tags. Reserved HELIOS governance tags cannot be overridden.')
 param commonTags object = {}
 
@@ -36,6 +40,7 @@ var governedTags = union(commonTags, {
   'helios-owner': 'platform-engineering'
   'helios-provisioner': 'bicep'
   'helios-repository': 'M0nado/helios-platform'
+  'helios-source-commit': toLower(sourceCommitSha)
 })
 var globalNamePrefix = take(replace('${serviceName}${environmentName}', '-', ''), 9)
 var cosmosNamePrefix = take(replace('${serviceName}${environmentName}', '-', ''), 20)
@@ -194,6 +199,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
           { name: 'HELIOS_CLOUD_RUNTIME_ONLY', value: 'true' }
           { name: 'HELIOS_LOCAL_RUNTIME_ALLOWED', value: 'false' }
           { name: 'HELIOS_ENTRA_CLIENT_ID', value: entraClientId }
+          { name: 'HELIOS_SOURCE_SHA', value: toLower(sourceCommitSha) }
           { name: 'HELIOS_PUBLIC_BASE_URL', value: empty(publicBaseUrl) ? 'https://${serviceName}-${environmentName}-api.${environment.properties.defaultDomain}' : (startsWith(toLower(publicBaseUrl), 'https://') ? publicBaseUrl : fail('publicBaseUrl must be an HTTPS origin.')) }
           { name: 'AZURE_TENANT_ID', value: entraTenantId }
           { name: 'AZURE_SUBSCRIPTION_ID', value: subscription().subscriptionId }
