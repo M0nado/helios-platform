@@ -989,6 +989,57 @@ function Assert-PrincipalRoleAssignment {
     }
 }
 
+function Get-ResourceGroupEnvironmentTag {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
+
+    $group = Invoke-AzJson `
+        -Arguments @('group', 'show', '--subscription', $Context.SubscriptionId, '--name', $ResourceGroupName) `
+        -Operation "Reading governed environment tag on resource group '$ResourceGroupName'"
+    return if ($group.tags) { [string] $group.tags.'helios-environment' } else { '' }
+}
+
+function Ensure-GovernedResourceGroupEnvironmentTag {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
+
+    $current = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
+    if ($current -and $current -cne $EnvironmentName) {
+        throw "Resource group '$ResourceGroupName' is already governed as environment '$current'; refusing to reclassify it as '$EnvironmentName'."
+    }
+    if ($current -ceq $EnvironmentName) { return }
+
+    $resourceGroupId = "/subscriptions/$($Context.SubscriptionId)/resourceGroups/$ResourceGroupName"
+    [void] (Invoke-AzJson `
+        -Arguments @(
+            'tag', 'update',
+            '--resource-id', $resourceGroupId,
+            '--operation', 'Merge',
+            '--tags', "helios-environment=$EnvironmentName"
+        ) `
+        -Operation "Applying governed environment tag to resource group '$ResourceGroupName'")
+    $verified = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
+    if ($verified -cne $EnvironmentName) {
+        throw "Resource group '$ResourceGroupName' did not retain the required helios-environment tag."
+    }
+}
+
+function Assert-GovernedResourceGroupEnvironmentTag {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
+
+    $current = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
+    if ($current -cne $EnvironmentName) {
+        throw "Resource group '$ResourceGroupName' must have helios-environment=$EnvironmentName. Run -Mode Configure first."
+    }
+}
+
 function Ensure-RuntimeManagedIdentity {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Context,
@@ -1720,10 +1771,12 @@ try {
         Write-Host '  runtime RBAC: pre-created user-assigned identity with Reader; ACR pull is added during Publish'
         Write-Host "  GitHub environment: $GitHubOwner/$GitHubRepository / $GitHubEnvironment; reviewer-gated; branch $GitHubDeploymentBranch"
         Assert-ExactConfirmation -Expected 'CONFIGURE HELIOS AZURE' -Purpose 'Configuring Helios Entra, OIDC, RBAC, and GitHub bindings'
+        Ensure-GovernedResourceGroupEnvironmentTag -Context $azureContext -ResourceGroupName $selectedResourceGroup
         Ensure-RequiredResourceProviders -Context $azureContext
     }
 
     if ($Mode -eq 'Publish') {
+        Assert-GovernedResourceGroupEnvironmentTag -Context $azureContext -ResourceGroupName $selectedResourceGroup
         $runtimeIdentity = Get-RuntimeManagedIdentity -Context $azureContext -ResourceGroupName $selectedResourceGroup
         $publishGitHubApplication = Find-EntraApplication -DisplayName $GitHubOidcAppName
         if (-not $publishGitHubApplication) {
