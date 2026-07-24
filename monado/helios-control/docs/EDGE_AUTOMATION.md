@@ -17,17 +17,16 @@ Relay HMAC covers the canonical tuple `unix timestamp + newline + idempotency ke
 
 Automatic operations are limited to discovery, diagnostics, plan generation, validation, and draft-PR preparation. MCP cannot apply infrastructure, write secrets, write directly to `main`, or merge a repair.
 
-Infrastructure apply requires all of the following:
+Infrastructure apply is deliberately absent from the local CLI. The only supported deployment path is `.github/workflows/helios-cloud-deploy.yml`, which requires:
 
-1. An authenticated Azure CLI context matching the requested tenant and subscription.
-2. A previously saved plan and its SHA-256 digest.
-3. A separately hashed `request.json` that binds tenant, subscription, resource group, environment, image, identities, and source commit.
-4. A resource-group `helios-environment` tag matching the reviewed environment.
-5. A fresh what-if result that exactly matches the approved digest.
-6. A protected GitHub environment for production.
-7. The typed confirmation `APPLY HELIOS EDGE <ENVIRONMENT>`.
+1. GitHub OIDC bound to the selected protected environment.
+2. An immutable image built from the exact checked-out commit.
+3. A full-resource ARM what-if and request artifact containing the source, template, image, environment, identity, and organization-tag bindings.
+4. A second protected-environment approval.
+5. A fresh what-if whose canonical hash still matches.
+6. Explicit `mode=deploy` and `confirmDeployment=DEPLOY`.
 
-Vault updates use a secure prompt and a file created only inside an owner-restricted temporary directory; the file ACL/mode is restricted before plaintext is written. The secret is passed to `az keyvault secret set --file`, never supplied as a command-line value, never returned by the API, and never read back by the script.
+Local `Apply` and `VaultSet` modes are retired. Vault mutation remains unavailable until a separate protected secret-owner workflow and verifiable approval artifact are implemented.
 
 ## Edge and OpenAI app surface
 
@@ -54,17 +53,7 @@ Generate a Bicep what-if plan and evidence digest. Plan resolves every azd place
 ./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -EnvironmentName dev
 ~~~
 
-After review, apply the exact approved plan. The script recomputes what-if and fails closed if the result changed:
-
-~~~powershell
-./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Apply -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -EnvironmentName dev -ContainerImage <registry>/helios-connect@sha256:<digest> -ContainerRegistryName <registry> -EntraClientId <client-id> -AllowedPrincipalObjectId <object-id> -SourceCommitSha <git-sha> -ApprovedPlanFile ./evidence/helios-edge/dev/what-if.json -ApprovedPlanSha256 <sha256> -ApprovedRequestFile ./evidence/helios-edge/dev/request.json -ApprovedRequestSha256 <request-sha256> -Confirmation "APPLY HELIOS EDGE DEV"
-~~~
-
-Set a Key Vault secret without exposing its value in shell history:
-
-~~~powershell
-./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode VaultSet -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -KeyVaultName <vault-name> -SecretName <secret-name> -Confirmation "SET HELIOS VAULT SECRET <secret-name>"
-~~~
+The generated `request.json` is a handoff contract, not proof of approval. Reviewers use the protected GitHub workflow to build the immutable image, capture what-if evidence, approve a second environment gate, verify no drift, and deploy. The local helper has no apply or vault-write code path.
 
 ## Plan API
 
@@ -87,4 +76,4 @@ The branch validation workflow parses the guardrail configuration, runs the .NET
 
 This work is carried by PR #188 on current `main`. Require the Windows/.NET,
 Bicep/cloud, Copilot package, and repository CI checks before merge; deployment
-and typed apply remain separate protected-environment decisions.
+and deployment remain separate protected-environment decisions.
