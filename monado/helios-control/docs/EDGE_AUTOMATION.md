@@ -11,6 +11,8 @@ The design separates reasoning from mutation:
 - Edge starts a Cosmos-backed, resumable Diagnose → Plan → Save → Sync run.
 - GitHub, Linear, Slack, and SharePoint receive normalized status through signed, idempotent relay bindings.
 
+Relay HMAC covers the canonical tuple `unix timestamp + newline + idempotency key + newline + exact JSON body`. Receivers must verify that tuple before parsing, reject stale timestamps, and deduplicate the signed key; neither replay header can be substituted independently.
+
 ## Safety contract
 
 Automatic operations are limited to discovery, diagnostics, plan generation, validation, and draft-PR preparation. MCP cannot apply infrastructure, write secrets, write directly to `main`, or merge a repair.
