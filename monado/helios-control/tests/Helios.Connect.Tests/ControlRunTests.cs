@@ -162,6 +162,11 @@ public sealed class ControlRunTests
         Assert.Equal("delivered", receipts[0].Status);
         Assert.Equal("0123456789abcdef0123456789abcdef:github", handler.IdempotencyKey);
         Assert.Matches("^sha256=[0-9a-f]{64}$", handler.Signature);
+        var signedEnvelope = $"{handler.Timestamp}\n{handler.IdempotencyKey}\n{handler.Body}";
+        var expectedSignature = Convert.ToHexString(HMACSHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(new string('s', 32)),
+            System.Text.Encoding.UTF8.GetBytes(signedEnvelope))).ToLowerInvariant();
+        Assert.Equal($"sha256={expectedSignature}", handler.Signature);
         Assert.Equal("test-key-1", handler.KeyId);
         Assert.True(long.TryParse(handler.Timestamp, out _));
         Assert.DoesNotContain(new string('s', 32), handler.Body);
