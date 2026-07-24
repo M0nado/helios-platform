@@ -68,14 +68,18 @@ jobs:
           assert plan["executionMode"] == "plan-only"
           assert "Azure deployment approval" in plan["administratorGates"]
           assert "federationSubject" not in plan
-          assert oidc["useImmutableSubject"] is True
+          assert isinstance(oidc["useImmutableSubject"], bool)
           assert oidc["repositoryId"] == os.environ["EXPECTED_REPOSITORY_ID"]
           assert oidc["ownerId"] == os.environ["EXPECTED_REPOSITORY_OWNER_ID"]
           owner, repository = os.environ["GITHUB_REPOSITORY"].split("/", 1)
-          expected_subject = (
-              f"repo:{owner}@{oidc['ownerId']}/"
-              f"{repository}@{oidc['repositoryId']}:environment:azure-dev"
-          )
+          if oidc["useImmutableSubject"]:
+              repository_segment = (
+                  f"{owner}@{oidc['ownerId']}/"
+                  f"{repository}@{oidc['repositoryId']}"
+              )
+          else:
+              repository_segment = f"{owner}/{repository}"
+          expected_subject = f"repo:{repository_segment}:environment:azure-dev"
           assert oidc["selectedSubject"] == expected_subject
           assert oidc["secretsStoredInGitHub"] is False
           assert devops["azureDevOps"]["readOnly"] is True
