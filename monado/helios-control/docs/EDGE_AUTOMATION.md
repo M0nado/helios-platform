@@ -7,7 +7,7 @@ The design separates reasoning from mutation:
 - REST and MCP generate deterministic, reviewable plans.
 - Azure CLI performs diagnostics and produces deployment evidence.
 - A protected GitHub environment controls production execution.
-- GitHub branches and draft pull requests contain issue repairs.
+- Issue repair and upgrade requests produce proposal records only; branch and draft-PR executors remain disabled until implemented and reviewed.
 - Edge starts a Cosmos-backed, resumable Diagnose → Plan → Save → Sync run.
 - GitHub, Linear, Slack, and SharePoint receive normalized status through signed, idempotent relay bindings.
 
@@ -15,7 +15,7 @@ Relay HMAC covers the canonical tuple `unix timestamp + newline + idempotency ke
 
 ## Safety contract
 
-Automatic operations are limited to discovery, diagnostics, plan generation, validation, and draft-PR preparation. MCP cannot apply infrastructure, write secrets, write directly to `main`, or merge a repair.
+Automatic operations are limited to discovery, diagnostics, plan generation, validation, and proposal records. MCP cannot create a branch or pull request, apply infrastructure, write secrets, write directly to `main`, or merge a repair.
 
 Infrastructure apply is deliberately absent from the local CLI. The only supported deployment path is `.github/workflows/helios-cloud-deploy.yml`, which requires:
 
