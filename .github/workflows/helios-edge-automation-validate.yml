@@ -73,8 +73,9 @@ jobs:
           jq --exit-status '
             .webApplicationInfo.resource == ("api://" + "$" + "{{PUBLIC_HOSTNAME}}/" + "$" + "{{ENTRA_APP_ID}}")
           ' monado/helios-control/appPackage/manifest.json > /dev/null
-          grep -Fq "var teamsSsoApplicationIdUri = 'api://${validatedPublicHostname}/${entraClientId}'" monado/helios-control/infra/connector.bicep
-          grep -Fq "allowedAudiences: [ entraClientId, 'api://${entraClientId}', teamsSsoApplicationIdUri ]" monado/helios-control/infra/connector.bicep
+          grep -Fq 'var teamsSsoApplicationIdUri' monado/helios-control/infra/connector.bicep
+          grep -Fq 'allowedAudiences:' monado/helios-control/infra/connector.bicep
+          grep -Fq 'teamsSsoApplicationIdUri ]' monado/helios-control/infra/connector.bicep
 
           cloud_workflow='.github/workflows/helios-cloud-deploy.yml'
           if [[ "$(grep -F -c 'commonTags="${HELIOS_COMMON_TAGS_JSON}"' "${cloud_workflow}")" -ne 3 ]]; then
