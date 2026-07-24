@@ -10,7 +10,7 @@
   "authorities": {
     "controlCenter": "https://helios-control-center.thepatman64.chatgpt.site",
     "github": "https://github.com/M0nado/helios-platform",
-    "githubChange": "https://github.com/M0nado/helios-platform/issues/191",
+    "githubChange": "https://github.com/M0nado/helios-platform/pull/193",
     "linear": "https://linear.app/641974/project/helios-integration-fabric-40e1dd9caa39",
     "slack": "https://helios-xk97943.slack.com/archives/C0BHWDBHG1W",
     "teams": "Helios / Helios Ops",
