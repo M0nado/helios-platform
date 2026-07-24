@@ -484,7 +484,7 @@ public sealed partial class ControlRunCoordinator(
                     foreach (var run in runnable) _queue.Writer.TryWrite(run.Id);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
-                catch (Exception exception)
+                catch (Exception exception) when (exception is CosmosException or HttpRequestException or InvalidOperationException or ArgumentException or CryptographicException or JsonException or AuthenticationFailedException)
                 {
                     logger.LogWarning(exception, "Control run recovery scan failed; the next bounded scan will retry.");
                 }
