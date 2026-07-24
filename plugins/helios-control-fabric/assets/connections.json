@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "state": {
     "controlCenter": "online",
     "azure": "not-live",
@@ -10,7 +10,7 @@
   "authorities": {
     "controlCenter": "https://helios-control-center.thepatman64.chatgpt.site",
     "github": "https://github.com/M0nado/helios-platform",
-    "githubChange": "https://github.com/M0nado/helios-platform/pull/188",
+    "githubChange": "https://github.com/M0nado/helios-platform/pull/189",
     "linear": "https://linear.app/641974/project/helios-integration-fabric-40e1dd9caa39",
     "slack": "https://helios-xk97943.slack.com/archives/C0BHWDBHG1W",
     "teams": "Helios / Helios Ops",
@@ -20,6 +20,11 @@
     "mcpEnvironmentVariable": "HELIOS_AZURE_CONNECTOR_URL",
     "mcpPath": "/mcp",
     "authentication": "Microsoft Entra ID",
-    "federationSubject": "repo:M0nado/helios-platform:environment:azure-dev"
+    "federationSubject": "repo:M0nado/helios-platform:environment:azure-dev",
+    "transport": "Streamable HTTP",
+    "resourceUri": "ui://helios/control-center-v2.html",
+    "azureEdgeTarget": "Azure Front Door Premium with Private Link",
+    "azureDevOpsMode": "read-only plan-first",
+    "runnerMode": "GitHub-hosted; self-hosted disabled"
   }
 }
