@@ -51,6 +51,18 @@ public sealed class ControlRunTests
     }
 
     [Fact]
+    public async Task Resource_group_override_is_rejected_before_a_run_is_saved()
+    {
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        var request = new ControlRunRequest("provision-resources", "dev", "different-resource-group", ["github"]);
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(
+            request, "edge-boundary-0001", "principal-1", CancellationToken.None));
+
+        Assert.Contains("cannot override", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Reusing_an_idempotency_key_for_a_different_request_is_rejected()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
