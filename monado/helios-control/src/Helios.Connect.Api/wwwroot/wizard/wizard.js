@@ -5,6 +5,40 @@ let currentRunStatus;
 let pollTimer;
 let pollFailures = 0;
 let installPrompt;
+const embeddedHost = window.self !== window.top;
+const teamsReady = initializeTeamsHost();
+
+async function initializeTeamsHost() {
+  if (!embeddedHost || !window.microsoftTeams?.app?.initialize) return false;
+  try {
+    await window.microsoftTeams.app.initialize();
+    await window.microsoftTeams.app.getContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function getTeamsSsoToken() {
+  if (!(await teamsReady) || !window.microsoftTeams?.authentication?.getAuthToken) return null;
+  try {
+    // Teams owns token caching; HELIOS requests a token only for the API call that needs it.
+    return await window.microsoftTeams.authentication.getAuthToken();
+  } catch {
+    return null;
+  }
+}
+
+async function openTeamsSignInPopup() {
+  if (!(await teamsReady) || !window.microsoftTeams?.authentication?.authenticate) {
+    throw new Error('Microsoft host authentication is unavailable.');
+  }
+  await window.microsoftTeams.authentication.authenticate({
+    url: new URL('/wizard/auth-start.html', window.location.origin).toString(),
+    width: 600,
+    height: 535
+  });
+}
 
 window.addEventListener('beforeinstallprompt', event => {
   event.preventDefault();
@@ -23,6 +57,20 @@ $('installApp').addEventListener('click', async () => {
   await installPrompt.userChoice;
   installPrompt = undefined;
   $('installApp').classList.add('hidden');
+});
+
+$('signIn').addEventListener('click', async () => {
+  $('signIn').disabled = true;
+  try {
+    await openTeamsSignInPopup();
+    $('signIn').classList.add('hidden');
+    await loadConnectors();
+    if (currentRunId) await pollRun();
+  } catch (error) {
+    renderConnectionIssue(error instanceof Error ? error.message : 'Microsoft sign-in failed.');
+  } finally {
+    $('signIn').disabled = false;
+  }
 });
 
 if ('serviceWorker' in navigator) {
@@ -50,9 +98,24 @@ tabs.forEach((button, index) => {
   });
 });
 
+async function sendApiRequest(url, options, accessToken) {
+  const headers = new Headers(options.headers || {});
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  return fetch(url, { ...options, headers });
+}
+
 async function api(url, options = {}) {
-  const response = await fetch(url, options);
+  const teamsAvailable = await teamsReady;
+  const accessToken = teamsAvailable ? await getTeamsSsoToken() : null;
+  const response = await sendApiRequest(url, options, accessToken);
   if (response.status === 401) {
+    if (teamsAvailable) {
+      $('signIn').classList.remove('hidden');
+      throw new Error('Microsoft SSO needs interaction. Select “Sign in to Microsoft” to continue in this tab.');
+    }
+    if (embeddedHost) {
+      throw new Error('This embedded host could not establish Microsoft authentication.');
+    }
     window.location.assign(`/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent('/setup')}`);
     throw new Error('Microsoft sign-in is required.');
   }
@@ -62,6 +125,7 @@ async function api(url, options = {}) {
     error.status = response.status;
     throw error;
   }
+  $('signIn').classList.add('hidden');
   return result;
 }
 
