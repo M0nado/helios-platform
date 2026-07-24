@@ -10,7 +10,8 @@ same governed tools and Monado MCP Apps UI to approved hosts.
 - Control-center website:
   https://helios-control-center.thepatman64.chatgpt.site
 - Canonical repository: 'M0nado/helios-platform'
-- Current review line: PR #189
+- Runtime foundation: PR #188 merged at 'aebbd9bce5373509b91f311dcaf847948a7ae00d'
+- Current plugin review line: PR #190
 - Azure runtime: not live
 - Validated direct runtime: Entra-protected Azure Container Apps
 - Target edge: Azure Front Door Premium to Container Apps over Private Link
@@ -55,21 +56,35 @@ After deployment, '<approved-origin>/mcp' provides:
 
 The UI resource uses MIME type 'text/html;profile=mcp-app'. It communicates
 through the MCP Apps bridge and uses 'window.openai' only as an additive ChatGPT
-enhancement. CI rejects unsafe 'innerHTML'.
+enhancement. CI rejects unsafe 'innerHTML'. Approved external links use the host
+navigation API and an explicit HTTPS redirect allowlist.
+
+The server exposes initialize, tool/resource discovery, and the declared UI
+resource before account linking so ChatGPT and Copilot can discover the app.
+Every tool descriptor declares its OAuth 'securitySchemes'; tool execution
+requires the origin-bound Entra scope
+'api://<approved-hostname>/<client-id>/access_as_user'. An unauthenticated or
+incorrectly scoped tool call returns '_meta["mcp/www_authenticate"]' with the
+RFC protected-resource challenge. Typed app tools declare 'outputSchema' and
+return matching 'structuredContent'.
 
 ## Connect Azure and GitHub OIDC
 
 1. Select the Azure tenant, subscription, resource group, and Foundry project.
-2. Run 'scripts/Connect-HeliosAzureInteractive.ps1'.
-3. Create the protected GitHub 'azure-dev' environment.
-4. Grant workflow permission 'id-token: write' and 'contents: read'.
-5. Configure issuer 'https://token.actions.githubusercontent.com', audience
+2. Register the exact Entra application ID URI
+   'api://<approved-hostname>/<client-id>' and delegated scope 'access_as_user'.
+3. Verify the protected-resource metadata at
+   '<approved-origin>/.well-known/oauth-protected-resource/mcp'.
+4. Run 'scripts/Connect-HeliosAzureInteractive.ps1'.
+5. Create the protected GitHub 'azure-dev' environment.
+6. Grant workflow permission 'id-token: write' and 'contents: read'.
+7. Configure issuer 'https://token.actions.githubusercontent.com', audience
    'api://AzureADTokenExchange', and exact subject
    'repo:M0nado/helios-platform:environment:azure-dev'.
-6. Assign least-privilege RBAC at the reviewed scope.
-7. Publish a digest-pinned immutable image.
-8. Review the exact Bicep, parameter, image, and what-if hashes.
-9. Approve deployment separately.
+8. Assign least-privilege RBAC at the reviewed scope.
+9. Publish a digest-pinned immutable image.
+10. Review the exact Bicep, parameter, image, and what-if hashes.
+11. Approve deployment separately.
 
 No client secret is required for the GitHub-to-Azure path.
 
@@ -95,8 +110,11 @@ After '/health/ready' succeeds:
 1. Set 'HELIOS_AZURE_CONNECTOR_URL' to the approved HTTPS origin.
 2. Install or refresh the repository plugin.
 3. Add the same '<origin>/mcp' endpoint as an internal ChatGPT app.
-4. Complete Entra authorization.
-5. Verify 'search', 'fetch', resource read, and Monado rendering.
+4. Complete Entra authorization for the exact origin-bound 'access_as_user'
+   scope.
+5. Verify public initialize/discovery, authenticated 'search' and 'fetch',
+   resource read, Monado rendering, and the auth challenge on an unlinked tool
+   call.
 
 ## Connect Microsoft 365 Copilot and Teams
 
