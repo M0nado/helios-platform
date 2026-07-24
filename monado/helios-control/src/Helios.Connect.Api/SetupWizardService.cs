@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Helios.Connect.Api;
 
 public sealed record SetupBootstrapRequest(string TenantId, string SubscriptionId, string ResourceGroup, string Environment);
-public sealed record SetupBootstrapResult(string Script, string ScriptSha256, string Mode, string SubscriptionSelection, IReadOnlyDictionary<string, string> ShellPackets, bool ContainsSecrets, bool AppliesChanges);
+public sealed record SetupBootstrapResult(string Script, string ScriptSha256, string Mode, string SubscriptionSelection, IReadOnlyDictionary<string, string> OperatorStages, bool ContainsSecrets, bool AppliesChanges);
 public sealed record UpgradeProposalRequest(string Capability, string Reason, string Target = "helios-control");
 public sealed record UpgradeProposal(string ProposalId, string Capability, string Reason, string Target, string Promotion, bool AutomaticApply, bool AutomaticMerge, IReadOnlyList<string> RequiredChecks);
 
@@ -71,14 +71,14 @@ public sealed partial class SetupWizardService : ISetupWizardService
             "Write-Host 'STOP: review the what-if file and SHA-256. This bootstrap never applies.'"
         });
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(script))).ToLowerInvariant();
-        var packets = new Dictionary<string, string>(StringComparer.Ordinal)
+        var stages = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["inventory"] = "Read resource metadata and HELIOS ownership tags only.",
             ["identity-readiness"] = "Inspect Entra, managed-identity, OIDC, and RBAC readiness without granting access.",
             ["deployment-preview"] = "Validate Bicep and persist canonical ARM what-if evidence to Cloud Shell storage.",
             ["health-verification"] = "Verify HTTPS, Entra boundary, MCP inventory, telemetry, and delivery receipts."
         };
-        return new(script, digest, "diagnose-then-plan", subscription is null ? "unique-resource-group-match-then-interactive-fallback" : "explicit", packets, ContainsSecrets: false, AppliesChanges: false);
+        return new(script, digest, "diagnose-then-plan", subscription is null ? "unique-resource-group-match-then-interactive-fallback" : "explicit", stages, ContainsSecrets: false, AppliesChanges: false);
     }
 
     public UpgradeProposal CreateUpgradeProposal(UpgradeProposalRequest request)
