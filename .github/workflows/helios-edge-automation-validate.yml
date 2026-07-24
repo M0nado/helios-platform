@@ -57,6 +57,7 @@ jobs:
             .schemaVersion == 1 and
             .autoFix.createTaskBranch == false and
             .autoFix.openDraftPullRequest == false and
+            .autoFix.runTests == false and
             .autoFix.directMainWrite == false and
             .autoFix.automaticMerge == false and
             .autoFix.automaticTenantAdminConsent == false and
