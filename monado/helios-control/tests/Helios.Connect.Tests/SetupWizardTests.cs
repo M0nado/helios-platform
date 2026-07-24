@@ -48,7 +48,7 @@ public sealed class SetupWizardTests
         Assert.Contains("az account list --all", result.Script);
         Assert.Contains("az group exists", result.Script);
         Assert.Contains("clouddrive/helios-evidence", result.Script);
-        Assert.Equal(4, result.ShellPackets.Count);
+        Assert.Equal(4, result.OperatorStages.Count);
         Assert.False(result.AppliesChanges);
     }
 
