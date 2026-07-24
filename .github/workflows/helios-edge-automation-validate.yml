@@ -91,9 +91,16 @@ jobs:
           [void][System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors)
           if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
           $content = Get-Content $path -Raw
-          foreach ($required in @('ApprovedPlanSha256', 'APPLY HELIOS EDGE', 'Incremental', 'Read-Host', 'AsSecureString', 'FullResourcePayloads', 'ContainerImage', 'sourceCommitSha')) {
+          foreach ($required in @('ApprovedPlanSha256', 'ApprovedRequestSha256', 'APPLY HELIOS EDGE', 'Incremental', 'Read-Host', 'AsSecureString', 'FullResourcePayloads', 'ContainerImage', 'sourceCommitSha', 'helios-environment', 'Write-RestrictedSecretFile', 'CreateNew')) {
             if ($content -notmatch [regex]::Escape($required)) { throw "Missing guardrail: $required" }
           }
           foreach ($forbidden in @('keyvault secret show', 'keyvault secret download', '--mode Complete', 'ResourceIdOnly')) {
             if ($content -match [regex]::Escape($forbidden)) { throw "Forbidden operation: $forbidden" }
           }
+          $createIndex = $content.IndexOf('[IO.FileMode]::CreateNew', [StringComparison]::Ordinal)
+          $writeIndex = $content.IndexOf('Write-Utf8NoBom -Path $path -Value $Value', [StringComparison]::Ordinal)
+          if ($createIndex -lt 0 -or $writeIndex -lt 0 -or $createIndex -gt $writeIndex) {
+            throw 'Secret file permissions must be established before plaintext write.'
+          }
+          $serviceWorker = Get-Content 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/sw.js' -Raw
+          if ($serviceWorker -notmatch 'startsWith\(cachePrefix\)') { throw 'Wizard cache cleanup is not scoped to its own prefix.' }
