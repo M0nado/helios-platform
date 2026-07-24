@@ -35,7 +35,7 @@ app.UseStaticFiles(new StaticFileOptions
     ContentTypeProvider = staticContentTypes,
     OnPrepareResponse = static context =>
     {
-        context.Context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'self' https://*.microsoft.com https://*.office.com";
+        context.Context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://res.cdn.office.net; connect-src 'self'; frame-ancestors 'self' https://*.microsoft.com https://*.office.com https://*.cloud.microsoft";
         context.Context.Response.Headers["X-Content-Type-Options"] = "nosniff";
         context.Context.Response.Headers["Referrer-Policy"] = "no-referrer";
     }
