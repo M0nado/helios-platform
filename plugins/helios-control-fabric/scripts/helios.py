@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Plan-first HELIOS setup helper.
 
-The command intentionally performs no cloud or collaboration writes.
+Every command is read-only and deterministic. Cloud, repository, and
+collaboration writes remain in reviewed protected-environment workflows.
 """
 
 from __future__ import annotations
@@ -17,18 +18,19 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGETS_FILE = ROOT / "assets" / "connections.json"
+ASSETS = ROOT / "assets"
+TARGETS_FILE = ASSETS / "connections.json"
 
 TOOLS: tuple[tuple[str, tuple[str, ...], bool], ...] = (
     ("az", ("version",), True),
-    ("azd", ("version",), True),
     ("gh", ("--version",), True),
     ("dotnet", ("--version",), True),
     ("pwsh", ("--version",), True),
-    ("docker", ("--version",), True),
     ("node", ("--version",), True),
     ("npm", ("--version",), True),
-    ("jq", ("--version",), True),
+    ("azd", ("version",), False),
+    ("docker", ("--version",), False),
+    ("jq", ("--version",), False),
     ("pac", ("--version",), False),
     ("atk", ("--version",), False),
 )
@@ -39,11 +41,16 @@ ENVIRONMENT_KEYS = (
     "AZURE_TENANT_ID",
     "AZURE_SUBSCRIPTION_ID",
     "AZURE_RESOURCE_GROUP",
+    "AZURE_CLIENT_ID",
 )
 
 
+def read_asset(name: str) -> dict[str, Any]:
+    return json.loads((ASSETS / name).read_text(encoding="utf-8"))
+
+
 def read_targets() -> dict[str, Any]:
-    return json.loads(TARGETS_FILE.read_text(encoding="utf-8"))
+    return read_asset("connections.json")
 
 
 def first_line(value: str) -> str:
@@ -125,13 +132,61 @@ def release_plan(environment: str) -> dict[str, Any]:
         "commands": [
             "pwsh ./monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1",
             "python plugins/helios-control-fabric/scripts/helios.py doctor --json",
+            "python plugins/helios-control-fabric/scripts/helios.py oidc --environment "
+            + environment
+            + " --json",
+            "python plugins/helios-control-fabric/scripts/helios.py edge --environment "
+            + environment
+            + " --json",
             "GitHub Actions: HELIOS Azure → what-if",
-            "GitHub protected environment: azure-dev → deployment approval",
+            "GitHub protected environment: " + environment + " → deployment approval",
         ],
         "federationSubject": (
-            "repo:M0nado/helios-platform:environment:"
-            + environment
+            "repo:M0nado/helios-platform:environment:" + environment
         ),
+    }
+
+
+def oidc_contract(environment: str) -> dict[str, Any]:
+    contract = read_asset("oidc.json")
+    subjects = contract["subjects"]
+    if environment not in subjects:
+        raise ValueError("environment must be azure-dev, azure-test, or azure-prod")
+    return {
+        **contract,
+        "environment": environment,
+        "selectedSubject": subjects[environment],
+        "configuredVariables": {
+            key: bool(os.environ.get(key))
+            for key in contract["requiredVariables"]
+        },
+        "executionMode": "plan-only",
+    }
+
+
+def devops_sync_plan() -> dict[str, Any]:
+    plan = read_asset("devops-sync.json")
+    return {
+        **plan,
+        "organizationConfigured": bool(os.environ.get("AZURE_DEVOPS_ORGANIZATION")),
+        "executionMode": "plan-only",
+    }
+
+
+def runner_plan() -> dict[str, Any]:
+    return {
+        **read_asset("runner-topology.json"),
+        "executionMode": "plan-only",
+    }
+
+
+def edge_plan(environment: str) -> dict[str, Any]:
+    if environment not in {"azure-dev", "azure-test", "azure-prod"}:
+        raise ValueError("environment must be azure-dev, azure-test, or azure-prod")
+    return {
+        **read_asset("edge-runtime.json"),
+        "environment": environment,
+        "executionMode": "plan-only",
     }
 
 
@@ -145,16 +200,45 @@ def print_human(payload: dict[str, Any]) -> None:
             print(f"  [{mark:8}] {tool['command']}")
         print("  Cloud authentication: not checked")
         print("  Azure runtime: not live")
-        return
-    if "authorities" in payload:
+    elif "authorities" in payload:
         print("HELIOS authorities")
         for name, value in payload["authorities"].items():
             print(f"  {name}: {value}")
-        return
-    print(f"HELIOS {payload['environment']} release plan")
-    for index, gate in enumerate(payload["administratorGates"], start=1):
-        print(f"  GATE {index}: {gate}")
-    print("  No cloud mutation was performed.")
+    elif "selectedSubject" in payload:
+        print(f"HELIOS OIDC contract ({payload['environment']})")
+        print(f"  issuer: {payload['issuer']}")
+        print(f"  audience: {payload['audience']}")
+        print(f"  subject: {payload['selectedSubject']}")
+        print("  No identity or RBAC mutation was performed.")
+    elif "sourceOfTruth" in payload:
+        print("HELIOS Azure DevOps sync plan")
+        print(f"  source: {payload['sourceOfTruth']}")
+        print(f"  direction: {payload['synchronization']['direction']}")
+        print("  writes: disabled")
+    elif "selfHosted" in payload:
+        print("HELIOS runner topology")
+        print(f"  validation: {payload['validation']['provider']}")
+        print(f"  release environment: {payload['release']['environment']}")
+        print("  self-hosted runners: disabled")
+    elif "targetEdge" in payload:
+        print(f"HELIOS Azure Edge plan ({payload['environment']})")
+        print(f"  service: {payload['targetEdge']['service']}")
+        print(f"  connectivity: {payload['targetEdge']['connectivity']}")
+        print("  automatic apply: false")
+    else:
+        print(f"HELIOS {payload['environment']} release plan")
+        for index, gate in enumerate(payload["administratorGates"], start=1):
+            print(f"  GATE {index}: {gate}")
+        print("  No cloud mutation was performed.")
+
+
+def add_environment_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--environment",
+        default="azure-dev",
+        choices=("azure-dev", "azure-test", "azure-prod"),
+    )
+    parser.add_argument("--json", action="store_true")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -165,12 +249,15 @@ def build_parser() -> argparse.ArgumentParser:
     targets_parser = subparsers.add_parser("targets", help="Show canonical authorities")
     targets_parser.add_argument("--json", action="store_true")
     plan_parser = subparsers.add_parser("plan", help="Create a non-executing release plan")
-    plan_parser.add_argument(
-        "--environment",
-        default="azure-dev",
-        choices=("azure-dev", "azure-test", "azure-prod"),
-    )
-    plan_parser.add_argument("--json", action="store_true")
+    add_environment_argument(plan_parser)
+    oidc_parser = subparsers.add_parser("oidc", help="Show the exact GitHub-to-Azure OIDC contract")
+    add_environment_argument(oidc_parser)
+    sync_parser = subparsers.add_parser("devops-sync", help="Show the read-only Azure DevOps sync plan")
+    sync_parser.add_argument("--json", action="store_true")
+    runner_parser = subparsers.add_parser("runners", help="Show the governed GitHub runner topology")
+    runner_parser.add_argument("--json", action="store_true")
+    edge_parser = subparsers.add_parser("edge", help="Show the Azure Front Door private-edge activation plan")
+    add_environment_argument(edge_parser)
     return parser
 
 
@@ -180,8 +267,16 @@ def main(argv: list[str] | None = None) -> int:
         payload = doctor()
     elif args.command == "targets":
         payload = read_targets()
-    else:
+    elif args.command == "plan":
         payload = release_plan(args.environment)
+    elif args.command == "oidc":
+        payload = oidc_contract(args.environment)
+    elif args.command == "devops-sync":
+        payload = devops_sync_plan()
+    elif args.command == "runners":
+        payload = runner_plan()
+    else:
+        payload = edge_plan(args.environment)
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
