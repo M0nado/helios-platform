@@ -13,7 +13,7 @@ public sealed class ControlRunTests
     {
         var store = new InMemoryControlRunStore();
         var dispatcher = new FakeDispatcher();
-        var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher, NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), dispatcher, NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
@@ -34,25 +34,23 @@ public sealed class ControlRunTests
         finally
         {
             await coordinator.StopAsync(CancellationToken.None);
-            coordinator.Dispose();
         }
     }
 
     [Fact]
     public async Task One_button_run_rejects_unknown_connectors_and_unsafe_idempotency_keys()
     {
-        var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         var unknown = new ControlRunRequest("provision-resources", "dev", null, ["unknown"]);
         await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(unknown, "edge-one-button-0002", "principal-1", CancellationToken.None));
         var valid = new ControlRunRequest("provision-resources", "dev");
         await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(valid, "bad key; delete", "principal-1", CancellationToken.None));
-        coordinator.Dispose();
     }
 
     [Fact]
     public async Task Reusing_an_idempotency_key_for_a_different_request_is_rejected()
     {
-        var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(new ControlRunRequest("provision-resources", "dev", null, ["github"]), "edge-conflict-0001", "principal-1", CancellationToken.None);
 
         await Assert.ThrowsAsync<ControlRunIdempotencyConflictException>(() => coordinator.StartAsync(
@@ -60,7 +58,6 @@ public sealed class ControlRunTests
             "edge-conflict-0001",
             "principal-1",
             CancellationToken.None));
-        coordinator.Dispose();
     }
 
     [Fact]
@@ -82,7 +79,7 @@ public sealed class ControlRunTests
             "provision-resources", "dev", "helios-dev-rg", [], "queued", "diagnose-plan-sync", now, now, steps, []);
         await store.CreateOrGetAsync(persisted, CancellationToken.None);
 
-        var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
@@ -94,14 +91,13 @@ public sealed class ControlRunTests
         finally
         {
             await coordinator.StopAsync(CancellationToken.None);
-            coordinator.Dispose();
         }
     }
 
     [Fact]
     public async Task Empty_connector_selection_is_respected_and_runs_are_owner_scoped()
     {
-        var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
@@ -118,14 +114,13 @@ public sealed class ControlRunTests
         finally
         {
             await coordinator.StopAsync(CancellationToken.None);
-            coordinator.Dispose();
         }
     }
 
     [Fact]
     public async Task Cleanup_run_remains_plan_only_and_protects_shared_resources()
     {
-        var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
@@ -137,7 +132,6 @@ public sealed class ControlRunTests
         finally
         {
             await coordinator.StopAsync(CancellationToken.None);
-            coordinator.Dispose();
         }
     }
 
@@ -145,6 +139,7 @@ public sealed class ControlRunTests
     public async Task Live_connector_relay_is_signed_and_idempotent_without_exposing_secret()
     {
         var handler = new CaptureHandler();
+        using var httpClient = new HttpClient(handler);
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["HELIOS_CONNECTOR_DELIVERY_MODE"] = "live",
@@ -153,7 +148,7 @@ public sealed class ControlRunTests
             ["HELIOS_CONNECTOR_GITHUB_ALLOWED_HOSTS"] = "relay.example.test",
             ["HELIOS_CONNECTOR_GITHUB_HMAC_KEY_ID"] = "test-key-1"
         }).Build();
-        var dispatcher = new ConnectorDispatcher(new StaticHttpClientFactory(new HttpClient(handler)), configuration);
+        var dispatcher = new ConnectorDispatcher(new StaticHttpClientFactory(httpClient), configuration);
         var now = DateTimeOffset.UtcNow;
         var run = new ControlRunSnapshot("0123456789abcdef0123456789abcdef", "control-runs", "edge-relay-0001", "correlation-1", "principal-1",
             "provision-resources", "dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
