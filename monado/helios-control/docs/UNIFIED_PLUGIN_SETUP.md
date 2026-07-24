@@ -8,7 +8,7 @@ same governed tools and Monado MCP Apps UI to approved hosts.
 ## Current truth
 
 - Control-center website:
-  https://helios-control-center.thepatman64.chatgpt.site
+  https://helios-cloud-control.thepatman64.chatgpt.site
 - Canonical repository: 'M0nado/helios-platform'
 - Current review line: PR #189
 - Azure runtime: not live
@@ -55,7 +55,18 @@ After deployment, '<approved-origin>/mcp' provides:
 
 The UI resource uses MIME type 'text/html;profile=mcp-app'. It communicates
 through the MCP Apps bridge and uses 'window.openai' only as an additive ChatGPT
-enhancement. CI rejects unsafe 'innerHTML'.
+enhancement. Its dedicated HTTPS origin, connect/resource CSP, and external
+navigation allowlist are declared in both standard MCP Apps metadata and the
+ChatGPT compatibility aliases. CI rejects unsafe 'innerHTML' and unapproved
+direct navigation.
+
+All eleven tools declare the exact Entra delegated OAuth scope in top-level
+'securitySchemes' and the '_meta' compatibility mirror. Every successful tool
+result returns object-shaped 'structuredContent' that matches its declared
+'outputSchema'. Authentication failures return both the HTTP
+'WWW-Authenticate' challenge and '_meta["mcp/www_authenticate"]' with
+'error' and 'error_description', allowing ChatGPT to start or repair account
+linking without weakening server-side audience or scope checks.
 
 ## Connect Azure and GitHub OIDC
 
@@ -94,9 +105,21 @@ After '/health/ready' succeeds:
 
 1. Set 'HELIOS_AZURE_CONNECTOR_URL' to the approved HTTPS origin.
 2. Install or refresh the repository plugin.
-3. Add the same '<origin>/mcp' endpoint as an internal ChatGPT app.
-4. Complete Entra authorization.
-5. Verify 'search', 'fetch', resource read, and Monado rendering.
+3. Register ChatGPT's issued callback URL
+   (`https://chatgpt.com/connector/oauth/<callback-id>`) on the Entra client.
+4. Configure an authorization-code + PKCE client registration method supported
+   by the tenant, then prove the authorization server accepts ChatGPT's exact
+   RFC 8707 `resource=<origin>/mcp` request and binds the returned token to this
+   protected resource.
+5. Add the same '<origin>/mcp' endpoint as an internal ChatGPT app and complete
+   Entra authorization.
+6. Verify 'search', 'fetch', resource read, and Monado rendering with a real
+   ChatGPT authorization flow.
+
+The repository verifier exercises metadata, challenges, Azure CLI delegated
+tokens, MCP lifecycle, and tool contracts. It does not substitute for the
+tenant-admin callback/client registration or ChatGPT's authorization-code +
+PKCE and `resource` propagation test.
 
 ## Connect Microsoft 365 Copilot and Teams
 

@@ -29,8 +29,9 @@ flowchart TD
 - Slack and Teams are notification and interaction surfaces, never source-of-truth stores.
 - Azure currently provides managed identity, an empty Key Vault, Container Apps,
   serverless Cosmos run state, and monitoring. Service Bus and Storage are targets.
-- Local MCP exposes two development-only status tools. Remote MCP exposes seven
-  read-only inventory, planning, proposal, run-status, and connector-status tools;
+- Local MCP exposes two development-only status tools. Remote MCP exposes eleven
+  authenticated search, fetch, status, UI, inventory, planning, proposal,
+  run-status, and connector-status tools;
   the two surfaces are intentionally not interchangeable.
 
 ## Enterprise and multi-repository plane

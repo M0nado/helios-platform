@@ -1,6 +1,6 @@
 {
   "name": "helios-azure-connector",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "transport": {
     "type": "streamable-http",
     "url": "https://${HELIOS_CONNECTOR_HOST}/mcp"
@@ -12,6 +12,10 @@
     "scope": "api://${HELIOS_CONNECTOR_HOST}/${ENTRA_CLIENT_ID}/access_as_user"
   },
   "tools": [
+    "search",
+    "fetch",
+    "helios_get_control_plane_status",
+    "helios_render_control_center",
     "azure_get_context",
     "azure_list_resources",
     "azure_list_foundry_resources",

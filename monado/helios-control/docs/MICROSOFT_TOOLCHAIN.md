@@ -37,8 +37,10 @@ source control or agent memory.
 
 The Microsoft 365/Teams tab uses TeamsJS SSO with a domain-bound Entra
 Application ID URI (`api://<PUBLIC_HOSTNAME>/<client-id>`) and delegated
-`access_as_user`. The Container Apps auth policy accepts that audience, while
-the tab sends the short-lived token only in the request Authorization header.
+`access_as_user`. Entra v2 emits the API client-ID GUID as the access-token
+audience, which the Container Apps auth policy and application both require;
+the domain-bound URI remains the delegated scope. The tab sends the short-lived
+token only in the request Authorization header.
 A user-initiated same-origin popup is the fallback for interactive consent; no
 token is returned through the popup result.
 

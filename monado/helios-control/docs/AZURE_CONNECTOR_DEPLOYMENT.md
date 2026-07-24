@@ -14,8 +14,9 @@ clients, and governed agent workflows.
   remote MCP routes require Entra; provider webhook ingress remains a separate
   signature/validation boundary and fails closed in every execution mode.
 - An application-level check requires the sanitized Easy Auth principal ID,
-  exact origin-bound audience, and delegated `access_as_user` claim. Legacy
-  client-ID audiences are not accepted.
+  the exact Entra v2 API client-ID audience, and delegated `access_as_user`
+  claim. The delegated scope remains bound to the approved HTTPS host through
+  the Application ID URI.
 - The user-assigned managed identity receives operator-bootstrapped Reader on
   the deployment resource group and template-owned Cosmos Data Contributor only
   on the `control-runs` container.
@@ -147,9 +148,9 @@ passes an access token through `notifySuccess`.
 For Power Platform/Copilot Studio, replace the placeholders in
 `connector/helios-azure-connector.openapi.yaml`, then import it as a custom
 connector and configure the Entra OAuth connection. For an MCP client, start from
-`connector/mcp-manifest.example.json` and use an access token whose audience is
-the origin-bound connector Application ID URI and whose delegated scope is
-`access_as_user`.
+`connector/mcp-manifest.example.json` and use an Entra v2 access token whose
+audience is the connector app client-ID GUID and whose delegated scope is the
+origin-bound Application ID URI plus `/access_as_user`.
 
 ## Verification
 
@@ -159,8 +160,9 @@ the origin-bound connector Application ID URI and whose delegated scope is
    `read-only-resource-group`.
 4. Confirm resource inventory contains no properties, keys, connection strings,
    tags, or secret values.
-5. Confirm MCP `tools/list` exposes exactly the seven approved read-only and
-   plan-only tools.
+5. Confirm MCP `tools/list` exposes exactly the eleven approved read-only and
+   plan-only tools, each with mirrored OAuth declarations, an object
+   `outputSchema`, and a matching object-shaped successful result.
 
 Run the checks with `scripts/Test-HeliosCloudConnection.ps1`; add
 `-InteractiveAuth` for the authenticated context and MCP checks. The access

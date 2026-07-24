@@ -291,7 +291,7 @@ try {
         }
         $forgedPrincipalJson = @{
             claims = @(
-                @{ typ = 'aud'; val = $script:applicationIdUri },
+                @{ typ = 'aud'; val = $EntraClientId.ToString() },
                 @{ typ = 'scp'; val = 'access_as_user' }
             )
         } | ConvertTo-Json -Compress -Depth 10
@@ -302,7 +302,7 @@ try {
         }
         $response = Invoke-ConnectorRequest -Method ([System.Net.Http.HttpMethod]::Get) -Path '/connector/context' -Body $null -BearerToken $null -Headers $forgedHeaders
         $passed = $response.StatusCode -eq 401
-        Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'The Azure ingress stripped a forged Easy Auth identity containing the otherwise valid audience and scope.' } else { 'Expected HTTP 401; client-supplied Easy Auth identity and claim headers must never cross the platform trust boundary.' })
+        Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'The Azure ingress stripped a forged Easy Auth identity containing the valid v2 client-ID audience and delegated scope.' } else { 'Expected HTTP 401; client-supplied Easy Auth identity and claim headers must never cross the platform trust boundary.' })
     }
     catch {
         Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
@@ -449,6 +449,10 @@ try {
                     $tools = if ($null -ne $message -and $message.ContainsKey('result') -and $message.result.ContainsKey('tools')) { @($message.result.tools) } else { @() }
                     $toolNames = @($tools | ForEach-Object { [string]$_.name })
                     $expectedToolNames = @(
+                        'search',
+                        'fetch',
+                        'helios_get_control_plane_status',
+                        'helios_render_control_center',
                         'azure_get_context',
                         'azure_list_resources',
                         'azure_list_foundry_resources',
@@ -458,8 +462,26 @@ try {
                         'helios_list_connectors'
                     )
                     $toolDifference = @(Compare-Object -ReferenceObject $expectedToolNames -DifferenceObject $toolNames)
-                    $passed = $response.StatusCode -eq 200 -and $null -ne $message -and $message.jsonrpc -eq '2.0' -and -not $message.ContainsKey('error') -and $toolDifference.Count -eq 0
-                    Add-TestResult -Name 'authenticated.mcp-tools-list' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP exposes exactly the seven approved read-only and plan-only tools.' } else { 'MCP tool inventory differs from the approved read-only and plan-only set.' })
+                    $openWorldTools = @('azure_list_resources', 'azure_list_foundry_resources', 'helios_get_run')
+                    $invalidContracts = @($tools | Where-Object {
+                        -not $_.ContainsKey('securitySchemes') -or @($_.securitySchemes).Count -ne 1 -or
+                        $_.securitySchemes[0].type -ne 'oauth2' -or
+                        @($_.securitySchemes[0].scopes).Count -ne 1 -or
+                        [string]$_.securitySchemes[0].scopes[0] -ne $script:delegatedScope -or
+                        -not $_.ContainsKey('_meta') -or -not $_._meta.ContainsKey('securitySchemes') -or
+                        (@($_._meta.securitySchemes) | ConvertTo-Json -Compress -Depth 10) -ne
+                            (@($_.securitySchemes) | ConvertTo-Json -Compress -Depth 10) -or
+                        -not $_.ContainsKey('outputSchema') -or $_.outputSchema.type -ne 'object' -or
+                        -not $_.ContainsKey('annotations') -or $_.annotations.readOnlyHint -ne $true -or
+                        ([bool]$_.annotations.openWorldHint) -ne ($openWorldTools -contains ([string]$_.name))
+                    })
+                    $renderTool = @($tools | Where-Object { $_.name -eq 'helios_render_control_center' })
+                    $renderContractValid = $renderTool.Count -eq 1 -and
+                        $renderTool[0]._meta.ui.resourceUri -eq 'ui://helios/control-center-v2.html'
+                    $passed = $response.StatusCode -eq 200 -and $null -ne $message -and $message.jsonrpc -eq '2.0' -and
+                        -not $message.ContainsKey('error') -and $toolDifference.Count -eq 0 -and
+                        $invalidContracts.Count -eq 0 -and $renderContractValid
+                    Add-TestResult -Name 'authenticated.mcp-tools-list' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP exposes exactly the eleven approved tools with mirrored OAuth declarations, object output schemas, safe annotations, and the versioned control UI.' } else { 'MCP tool inventory or its OAuth, schema, annotation, or UI metadata differs from the approved contract.' })
                 }
                 catch {
                     Add-TestResult -Name 'authenticated.mcp-tools-list' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
@@ -493,8 +515,11 @@ try {
                         $message.ContainsKey('result') -and
                         $message.result.ContainsKey('isError') -and
                         -not [bool]$message.result.isError -and
+                        $message.result.ContainsKey('structuredContent') -and
+                        $message.result.structuredContent.ContainsKey('resources') -and
+                        $message.result.structuredContent.resources -is [array] -and
                         @($message.result.content).Count -ge 1
-                    Add-TestResult -Name 'authenticated.mcp-tools-call-resources' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP azure_list_resources completed through the managed identity and Reader RBAC path.' } else { 'Expected a successful read-only MCP tool result; check managed identity and Reader RBAC.' })
+                    Add-TestResult -Name 'authenticated.mcp-tools-call-resources' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP azure_list_resources completed through the managed identity and returned the declared resources object wrapper.' } else { 'Expected a successful read-only MCP result with structuredContent.resources; check the output contract, managed identity, and Reader RBAC.' })
                 }
                 catch {
                     Add-TestResult -Name 'authenticated.mcp-tools-call-resources' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)

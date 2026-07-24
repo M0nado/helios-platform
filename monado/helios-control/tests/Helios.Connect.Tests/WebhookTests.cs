@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
 namespace Helios.Connect.Tests;
@@ -429,7 +431,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         {
             wrongAudienceRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
             wrongAudienceRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL",
-                CreateEasyAuthPrincipal("access_as_user", "api://wrong.example.test/11111111-1111-1111-1111-111111111111"));
+                CreateEasyAuthPrincipal("access_as_user", "api://helios.example.test/11111111-1111-1111-1111-111111111111"));
             using var wrongAudienceResponse = await client.SendAsync(wrongAudienceRequest);
             Assert.Equal(HttpStatusCode.Unauthorized, wrongAudienceResponse.StatusCode);
         }
@@ -444,8 +446,10 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = JsonDocument.Parse(body);
-        var names = document.RootElement.GetProperty("result").GetProperty("tools")
+        var toolElements = document.RootElement.GetProperty("result").GetProperty("tools")
             .EnumerateArray()
+            .ToArray();
+        var names = toolElements
             .Select(tool => tool.GetProperty("name").GetString()!)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
@@ -454,11 +458,61 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
             "azure_get_context",
             "azure_list_foundry_resources",
             "azure_list_resources",
+            "fetch",
+            "helios_get_control_plane_status",
             "helios_get_run",
             "helios_list_connectors",
             "helios_plan_automation",
-            "helios_propose_upgrade"
+            "helios_propose_upgrade",
+            "helios_render_control_center",
+            "search"
         }, names);
+
+        var requiredOutputFields = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["search"] = "results",
+            ["fetch"] = "id",
+            ["helios_get_control_plane_status"] = "systems",
+            ["helios_render_control_center"] = "systems",
+            ["azure_get_context"] = "context",
+            ["azure_list_resources"] = "resources",
+            ["azure_list_foundry_resources"] = "resources",
+            ["helios_plan_automation"] = "plan",
+            ["helios_propose_upgrade"] = "proposal",
+            ["helios_get_run"] = "run",
+            ["helios_list_connectors"] = "connectors"
+        };
+        var openWorldTools = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "azure_list_resources",
+            "azure_list_foundry_resources",
+            "helios_get_run"
+        };
+        foreach (var tool in toolElements)
+        {
+            var toolName = tool.GetProperty("name").GetString()!;
+            var securitySchemes = tool.GetProperty("securitySchemes");
+            var securityScheme = Assert.Single(securitySchemes.EnumerateArray());
+            Assert.Equal("oauth2", securityScheme.GetProperty("type").GetString());
+            Assert.Equal(
+                "api://helios.example.test/11111111-1111-1111-1111-111111111111/access_as_user",
+                Assert.Single(securityScheme.GetProperty("scopes").EnumerateArray()).GetString());
+            Assert.Equal(
+                securitySchemes.GetRawText(),
+                tool.GetProperty("_meta").GetProperty("securitySchemes").GetRawText());
+            var outputSchema = tool.GetProperty("outputSchema");
+            Assert.Equal("object", outputSchema.GetProperty("type").GetString());
+            Assert.False(outputSchema.GetProperty("additionalProperties").GetBoolean());
+            var required = outputSchema.GetProperty("required")
+                .EnumerateArray()
+                .Select(property => property.GetString())
+                .ToArray();
+            Assert.Contains(requiredOutputFields[toolName], required);
+            Assert.True(tool.GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean());
+            Assert.Equal(
+                openWorldTools.Contains(toolName),
+                tool.GetProperty("annotations").GetProperty("openWorldHint").GetBoolean());
+        }
     }
 
     [Fact]
@@ -494,6 +548,18 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("resource_metadata=\"https://helios.example.test/.well-known/oauth-protected-resource/mcp\"", challenge);
         Assert.Contains($"scope=\"{applicationIdUri}/access_as_user\"", challenge);
         Assert.Contains("error=\"invalid_token\"", challenge);
+        Assert.Contains("error_description=", challenge);
+
+        var body = await response.Content.ReadAsStringAsync();
+        using var unauthorized = JsonDocument.Parse(body);
+        var resultChallenge = Assert.Single(
+            unauthorized.RootElement
+                .GetProperty("result")
+                .GetProperty("_meta")
+                .GetProperty("mcp/www_authenticate")
+                .EnumerateArray());
+        Assert.Equal(challenge, resultChallenge.GetString());
+        Assert.True(unauthorized.RootElement.GetProperty("result").GetProperty("isError").GetBoolean());
     }
 
     [Fact]
@@ -539,6 +605,129 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("structuredContent", render);
         Assert.Contains("governed-configuration-snapshot", render);
         Assert.Contains("ui://helios/control-center-v2.html", render);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_success_results_match_declared_object_wrappers()
+    {
+        await using var inventoryFactory = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IAzureInventoryService>();
+                services.AddSingleton<IAzureInventoryService>(new StubAzureInventoryService());
+            }));
+        using var client = inventoryFactory.CreateClient();
+
+        async Task<JsonElement> CallAsync(int id, string name, string arguments)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+            {
+                Content = new StringContent(
+                    $"{{\"jsonrpc\":\"2.0\",\"id\":{id},\"method\":\"tools/call\",\"params\":{{\"name\":\"{name}\",\"arguments\":{arguments}}}}}",
+                    Encoding.UTF8,
+                    "application/json")
+            };
+            using var response = await client.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using var document = JsonDocument.Parse(body);
+            var result = document.RootElement.GetProperty("result");
+            Assert.False(result.GetProperty("isError").GetBoolean());
+            Assert.Equal(JsonValueKind.Object, result.GetProperty("structuredContent").ValueKind);
+            return result.GetProperty("structuredContent").Clone();
+        }
+
+        var context = await CallAsync(10, "azure_get_context", "{}");
+        Assert.Equal("read-only-resource-group", context.GetProperty("context").GetProperty("access").GetString());
+
+        var resources = await CallAsync(11, "azure_list_resources", "{}");
+        Assert.Single(resources.GetProperty("resources").EnumerateArray());
+
+        var foundry = await CallAsync(12, "azure_list_foundry_resources", "{}");
+        Assert.Single(foundry.GetProperty("resources").EnumerateArray());
+
+        var plan = await CallAsync(
+            13,
+            "helios_plan_automation",
+            "{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}");
+        Assert.False(plan.GetProperty("plan").GetProperty("canApplyFromMcp").GetBoolean());
+
+        var proposal = await CallAsync(
+            14,
+            "helios_propose_upgrade",
+            "{\"capability\":\"typed MCP outputs\",\"reason\":\"submission readiness\"}");
+        Assert.Equal(JsonValueKind.Object, proposal.GetProperty("proposal").ValueKind);
+
+        var connectors = await CallAsync(15, "helios_list_connectors", "{}");
+        Assert.Equal(JsonValueKind.Array, connectors.GetProperty("connectors").ValueKind);
+
+        var search = await CallAsync(16, "search", "{\"query\":\"private-edge\"}");
+        var searchResult = Assert.Single(search.GetProperty("results").EnumerateArray());
+        Assert.Equal(JsonValueKind.String, searchResult.GetProperty("url").ValueKind);
+
+        var fetch = await CallAsync(17, "fetch", "{\"id\":\"azure\"}");
+        Assert.Equal(JsonValueKind.String, fetch.GetProperty("url").ValueKind);
+
+        var status = await CallAsync(18, "helios_get_control_plane_status", "{}");
+        Assert.All(
+            status.GetProperty("systems").EnumerateArray(),
+            system => Assert.Equal(JsonValueKind.String, system.GetProperty("url").ValueKind));
+    }
+
+    [Fact]
+    public async Task Mcp_app_resource_declares_dedicated_domain_navigation_policy_and_standard_bridge()
+    {
+        await using var publicFactory = _factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test"));
+        using var client = publicFactory.CreateClient();
+
+        using var listRequest = new StringContent(
+            "{\"jsonrpc\":\"2.0\",\"id\":20,\"method\":\"resources/list\"}",
+            Encoding.UTF8,
+            "application/json");
+        using var listResponse = await client.PostAsync("/mcp", listRequest);
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        using var listDocument = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
+        var metadata = Assert.Single(
+                listDocument.RootElement.GetProperty("result").GetProperty("resources").EnumerateArray())
+            .GetProperty("_meta");
+        Assert.Equal("https://helios.example.test", metadata.GetProperty("ui").GetProperty("domain").GetString());
+        Assert.Equal("https://helios.example.test", metadata.GetProperty("openai/widgetDomain").GetString());
+        var redirectDomains = metadata.GetProperty("openai/widgetCSP").GetProperty("redirect_domains")
+            .EnumerateArray()
+            .Select(domain => domain.GetString())
+            .ToArray();
+        Assert.Equal(5, redirectDomains.Length);
+        Assert.Contains("https://github.com", redirectDomains);
+        Assert.Contains("https://helios-cloud-control.thepatman64.chatgpt.site", redirectDomains);
+        Assert.Contains("https://heli0s-my.sharepoint.com", redirectDomains);
+        Assert.Contains("https://helios-xk97943.slack.com", redirectDomains);
+        Assert.Contains("https://linear.app", redirectDomains);
+        Assert.DoesNotContain("https://helios.example.test", redirectDomains);
+
+        using var readRequest = new StringContent(
+            "{\"jsonrpc\":\"2.0\",\"id\":21,\"method\":\"resources/read\",\"params\":{\"uri\":\"ui://helios/control-center-v2.html\"}}",
+            Encoding.UTF8,
+            "application/json");
+        using var readResponse = await client.PostAsync("/mcp", readRequest);
+        Assert.Equal(HttpStatusCode.OK, readResponse.StatusCode);
+        using var readDocument = JsonDocument.Parse(await readResponse.Content.ReadAsStringAsync());
+        var html = Assert.Single(
+                readDocument.RootElement.GetProperty("result").GetProperty("contents").EnumerateArray())
+            .GetProperty("text")
+            .GetString() ?? throw new InvalidOperationException("MCP resource text was null.");
+        Assert.Contains("\"ui/initialize\"", html);
+        Assert.Contains("\"ui/notifications/initialized\"", html);
+        Assert.Contains("\"ui/open-link\"", html);
+        Assert.Contains("appInfo:{", html);
+        Assert.DoesNotContain("clientInfo:{", html);
+        Assert.Contains("approvedRedirectOrigins", html);
+        Assert.Contains("window.openai?.openExternal", html);
+        Assert.DoesNotContain("target=\"_blank\"", html, StringComparison.OrdinalIgnoreCase);
+        Assert.True(
+            html.IndexOf("await bridgeInitialization", StringComparison.Ordinal) <
+            html.IndexOf("window.openai?.callTool", StringComparison.Ordinal),
+            "The standard MCP Apps postMessage bridge must be attempted before the host-specific OpenAI extension.");
     }
 
     [Fact]
@@ -648,7 +837,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
 
     private static string CreateEasyAuthPrincipal(
         string scopes,
-        string audience = "api://helios.example.test/11111111-1111-1111-1111-111111111111")
+        string audience = "11111111-1111-1111-1111-111111111111")
     {
         var principal = JsonSerializer.Serialize(new
         {
@@ -674,6 +863,35 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         request.Headers.Add("X-Slack-Request-Timestamp", timestamp.ToString(System.Globalization.CultureInfo.InvariantCulture));
         request.Headers.Add("X-Slack-Signature", $"v0={signature}");
         return request;
+    }
+
+    private sealed class StubAzureInventoryService : IAzureInventoryService
+    {
+        private static readonly AzureInventoryResource Resource = new(
+            "/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.CognitiveServices/accounts/helios-foundry",
+            "helios-foundry",
+            "Microsoft.CognitiveServices/accounts",
+            "eastus2");
+
+        public AzureConnectorContext GetContext() => new(
+            "11111111-1111-1111-1111-111111111111",
+            "22222222-2222-2222-2222-222222222222",
+            "helios-dev-rg",
+            "read-only-resource-group",
+            true);
+
+        public Task<IReadOnlyList<AzureInventoryResource>> ListResourcesAsync(
+            string? typePrefix,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AzureInventoryResource>>(
+                string.IsNullOrWhiteSpace(typePrefix) ||
+                Resource.Type.StartsWith(typePrefix, StringComparison.OrdinalIgnoreCase)
+                    ? new[] { Resource }
+                    : Array.Empty<AzureInventoryResource>());
+
+        public Task<IReadOnlyList<AzureInventoryResource>> ListFoundryResourcesAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AzureInventoryResource>>(new[] { Resource });
     }
 
     private sealed class ChunkedJsonContent : HttpContent

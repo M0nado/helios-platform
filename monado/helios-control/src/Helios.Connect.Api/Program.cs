@@ -373,9 +373,12 @@ app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationTo
         return method switch
         {
             "ping" => McpResult(id, new { }),
-            "tools/list" when HasObjectParamsOrNoParams(root) => McpResult(id, new { tools = BuildAzureToolList() }),
+            "tools/list" when HasObjectParamsOrNoParams(root) => McpResult(id, new
+            {
+                tools = BuildAzureToolList(context.RequestServices.GetRequiredService<IConfiguration>())
+            }),
             "tools/list" => McpError(id, -32602, "tools/list params must be an object when provided."),
-            "resources/list" when HasObjectParamsOrNoParams(root) => McpResult(id, BuildMcpResourceList()),
+            "resources/list" when HasObjectParamsOrNoParams(root) => McpResult(id, BuildMcpResourceList(context)),
             "resources/list" => McpError(id, -32602, "resources/list params must be an object when provided."),
             "resources/read" when HasExpectedMcpResourceUri(root) => McpResult(id, await BuildMcpResourceReadAsync(context, cancellationToken)),
             "resources/read" => McpError(id, -32602, $"resources/read requires uri '{HeliosMcpDefaults.ControlResourceUri}'."),
@@ -492,13 +495,29 @@ static IResult BuildProtectedResourceMetadata(HttpContext context)
 
 static IResult McpUnauthorized(HttpContext context)
 {
+    var challenge = BuildMcpAuthenticationChallenge(context);
+    context.Response.Headers["WWW-Authenticate"] = challenge;
+    return Results.Json(new Dictionary<string, object?>
+    {
+        ["jsonrpc"] = "2.0",
+        ["id"] = null,
+        ["result"] = new Dictionary<string, object>
+        {
+            ["content"] = new[] { new { type = "text", text = "Authentication required: a valid Entra access token is required." } },
+            ["_meta"] = new Dictionary<string, object> { ["mcp/www_authenticate"] = new[] { challenge } },
+            ["isError"] = true
+        }
+    }, statusCode: StatusCodes.Status401Unauthorized);
+}
+
+static string BuildMcpAuthenticationChallenge(HttpContext context)
+{
     var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
     var scope = GetMcpDelegatedScope(configuration);
     var metadataUrl = $"{GetMcpPublicOrigin(context)}/.well-known/oauth-protected-resource/mcp";
-    var challenge = $"Bearer resource_metadata=\"{metadataUrl}\", error=\"invalid_token\", error_description=\"A valid Entra access token is required.\"";
+    var challenge = $"Bearer resource_metadata=\"{metadataUrl}\", error=\"invalid_token\", error_description=\"A valid Entra access token with the required audience and delegated scope is required.\"";
     if (!string.IsNullOrWhiteSpace(scope)) challenge += $", scope=\"{scope}\"";
-    context.Response.Headers["WWW-Authenticate"] = challenge;
-    return McpError(null, -32000, "Authentication required.", StatusCodes.Status401Unauthorized);
+    return challenge;
 }
 
 static string? GetMcpDelegatedScope(IConfiguration configuration)
@@ -532,6 +551,12 @@ static string? GetExpectedApplicationIdUri(IConfiguration configuration)
         !string.IsNullOrEmpty(publicUri.Fragment))
         return null;
     return $"api://{publicUri.DnsSafeHost.ToLowerInvariant()}/{clientId}";
+}
+
+static string? GetExpectedTokenAudience(IConfiguration configuration)
+{
+    var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"]?.Trim();
+    return Guid.TryParse(clientId, out var parsed) ? parsed.ToString() : null;
 }
 
 static string GetMcpPublicOrigin(HttpContext context)
@@ -759,7 +784,7 @@ static bool IsConnectorAuthorized(HttpContext context)
     if (string.IsNullOrWhiteSpace(encodedPrincipal) || encodedPrincipal.Length > 32_768) return false;
     try
     {
-        var expectedAudience = GetExpectedApplicationIdUri(context.RequestServices.GetRequiredService<IConfiguration>());
+        var expectedAudience = GetExpectedTokenAudience(context.RequestServices.GetRequiredService<IConfiguration>());
         if (expectedAudience is null) return false;
         var hasRequiredAudience = false;
         var hasRequiredScope = false;
@@ -866,20 +891,359 @@ static async Task<IResult> RunInventoryQuery(Func<Task<IReadOnlyList<AzureInvent
     }
 }
 
-static object[] BuildAzureToolList() => new object[]
+static object[] BuildAzureToolList(IConfiguration configuration)
 {
-    new { name = "search", title = "Search HELIOS systems", description = "Use this to find an authoritative HELIOS setup surface, integration, runtime, or next action across GitHub, Azure, SharePoint, Slack, Teams, Linear, Copilot, Hermes, and XCore.", inputSchema = new { type = "object", required = new[] { "query" }, properties = new { query = new { type = "string", minLength = 1, description = "Plain-language HELIOS search query." } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
-    new { name = "fetch", title = "Fetch a HELIOS system", description = "Use this with an ID returned by search to read that system's purpose, governed state, authoritative link, and next action.", inputSchema = new { type = "object", required = new[] { "id" }, properties = new { id = new { type = "string", minLength = 1 } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
-    new { name = "helios_get_control_plane_status", title = "Get HELIOS control-plane status", description = "Read the current governed setup state for the HELIOS integration fabric. This is a configuration snapshot, not live Azure telemetry.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
-    new { name = "helios_render_control_center", title = "Open Monado Control Center", description = "Render the interactive HELIOS Monado control center in an MCP Apps-compatible host.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false }, _meta = new Dictionary<string, object> { ["ui"] = new { resourceUri = HeliosMcpDefaults.ControlResourceUri } } },
-    new { name = "azure_get_context", title = "Get Azure context", description = "Use this when you need the configured Helios Azure tenant, subscription, resource group, and access mode.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
-    new { name = "azure_list_resources", title = "List Azure resources", description = "Use this when you need non-secret Azure resource metadata from the authorized resource group.", inputSchema = new { type = "object", properties = new { typePrefix = new { type = "string", description = "Optional Azure resource type prefix." } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = true } },
-    new { name = "azure_list_foundry_resources", title = "List Foundry resources", description = "Use this when you need Foundry-related Cognitive Services, Machine Learning, and AI Search resources from the authorized resource group.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = true } },
-    new { name = "helios_plan_automation", title = "Plan HELIOS automation", description = "Use this when you need a deterministic, non-executing plan for Azure provisioning, Key Vault rotation, issue repair, governed cleanup, or cross-system release synchronization.", inputSchema = new { type = "object", required = new[] { "intent", "environment" }, properties = new { intent = new { type = "string", @enum = new[] { "provision-resources", "rotate-secret", "repair-issue", "sync-release", "cleanup-owned-resources" } }, environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } }, target = new { type = "string", description = "Required for secret, issue, release, and cleanup plans." }, connector = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "copilot", "codex", "all" } } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
-    new { name = "helios_propose_upgrade", title = "Propose HELIOS upgrade", description = "Create a deterministic, test-gated upgrade proposal for promotion through a task branch and draft pull request.", inputSchema = new { type = "object", required = new[] { "capability", "reason" }, properties = new { capability = new { type = "string" }, reason = new { type = "string" }, target = new { type = "string", defaultValue = "helios-control" } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
-    new { name = "helios_get_run", title = "Get HELIOS control run", description = "Read the saved progress, evidence digest, approval boundary, and connector receipts for one Edge control run.", inputSchema = new { type = "object", required = new[] { "runId" }, properties = new { runId = new { type = "string", pattern = "^[0-9a-f]{32}$" } }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } },
-    new { name = "helios_list_connectors", title = "List HELIOS connector bindings", description = "Read whether governed GitHub, Linear, Slack, SharePoint, Teams, and Copilot relay bindings are configured without returning endpoints or secrets.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false }, annotations = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint = false } }
+    var emptyInput = new { type = "object", properties = new { }, additionalProperties = false };
+    var systemSchema = new
+    {
+        type = "object",
+        required = new[] { "id", "title", "url" },
+        properties = new
+        {
+            id = new { type = "string" },
+            title = new { type = "string" },
+            url = new { type = "string", format = "uri" }
+        },
+        additionalProperties = false
+    };
+    var statusSystemSchema = new
+    {
+        type = "object",
+        required = new[] { "id", "name", "purpose", "url", "state", "nextAction" },
+        properties = new
+        {
+            id = new { type = "string" },
+            name = new { type = "string" },
+            purpose = new { type = "string" },
+            url = new { type = "string", format = "uri" },
+            state = new { type = "string", @enum = new[] { "connected", "configured", "needs_configuration", "blocked" } },
+            nextAction = new { type = "string" }
+        },
+        additionalProperties = false
+    };
+    var statusOutput = new
+    {
+        type = "object",
+        required = new[] { "version", "generatedAt", "source", "systems" },
+        properties = new
+        {
+            version = new { type = "string" },
+            generatedAt = new { type = "string", format = "date-time" },
+            source = new { type = "string", @const = "governed-configuration-snapshot" },
+            systems = new { type = "array", items = statusSystemSchema }
+        },
+        additionalProperties = false
+    };
+
+    return
+    [
+        BuildMcpToolDescriptor(
+            configuration,
+            "search",
+            "Search HELIOS systems",
+            "Find an authoritative HELIOS setup surface, integration, runtime, or next action across the governed control plane.",
+            new { type = "object", required = new[] { "query" }, properties = new { query = new { type = "string", minLength = 1, description = "Plain-language HELIOS search query." } }, additionalProperties = false },
+            new { type = "object", required = new[] { "results" }, properties = new { results = new { type = "array", items = systemSchema } }, additionalProperties = false }),
+        BuildMcpToolDescriptor(
+            configuration,
+            "fetch",
+            "Fetch a HELIOS system",
+            "Read one HELIOS system returned by search, including its governed state, authoritative link, and next action.",
+            new { type = "object", required = new[] { "id" }, properties = new { id = new { type = "string", minLength = 1 } }, additionalProperties = false },
+            new
+            {
+                type = "object",
+                required = new[] { "id", "title", "text", "url", "metadata" },
+                properties = new
+                {
+                    id = new { type = "string" },
+                    title = new { type = "string" },
+                    text = new { type = "string" },
+                    url = new { type = "string", format = "uri" },
+                    metadata = new { type = "object", required = new[] { "state" }, properties = new { state = new { type = "string" } }, additionalProperties = false }
+                },
+                additionalProperties = false
+            }),
+        BuildMcpToolDescriptor(
+            configuration,
+            "helios_get_control_plane_status",
+            "Get HELIOS control-plane status",
+            "Read the governed HELIOS configuration snapshot. This is not live Azure telemetry.",
+            emptyInput,
+            statusOutput),
+        BuildMcpToolDescriptor(
+            configuration,
+            "helios_render_control_center",
+            "Open Monado Control Center",
+            "Render the latest governed status returned by helios_get_control_plane_status in an MCP Apps-compatible host.",
+            emptyInput,
+            statusOutput,
+            HeliosMcpDefaults.ControlResourceUri),
+        BuildMcpToolDescriptor(
+            configuration,
+            "azure_get_context",
+            "Get Azure context",
+            "Read the configured HELIOS Azure tenant, subscription, resource group, and access mode.",
+            emptyInput,
+            BuildAzureContextOutputSchema()),
+        BuildMcpToolDescriptor(
+            configuration,
+            "azure_list_resources",
+            "List Azure resources",
+            "Read non-secret Azure resource metadata from the authorized resource group.",
+            new { type = "object", properties = new { typePrefix = new { type = "string", description = "Optional Azure resource type prefix." } }, additionalProperties = false },
+            BuildAzureResourcesOutputSchema(),
+            openWorldHint: true),
+        BuildMcpToolDescriptor(
+            configuration,
+            "azure_list_foundry_resources",
+            "List Foundry resources",
+            "Read Foundry-related Cognitive Services, Machine Learning, and AI Search metadata from the authorized resource group.",
+            emptyInput,
+            BuildAzureResourcesOutputSchema(),
+            openWorldHint: true),
+        BuildMcpToolDescriptor(
+            configuration,
+            "helios_plan_automation",
+            "Plan HELIOS automation",
+            "Generate a deterministic, non-executing plan for approved HELIOS automation intents.",
+            new { type = "object", required = new[] { "intent", "environment" }, properties = new { intent = new { type = "string", @enum = new[] { "provision-resources", "rotate-secret", "repair-issue", "sync-release", "cleanup-owned-resources" } }, environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } }, target = new { type = "string", description = "Required for secret, issue, release, and cleanup plans." }, connector = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "copilot", "codex", "all" } } }, additionalProperties = false },
+            BuildAutomationPlanOutputSchema()),
+        BuildMcpToolDescriptor(
+            configuration,
+            "helios_propose_upgrade",
+            "Propose HELIOS upgrade",
+            "Generate a deterministic, test-gated upgrade proposal without creating a branch, pull request, deployment, or external write.",
+            new { type = "object", required = new[] { "capability", "reason" }, properties = new { capability = new { type = "string" }, reason = new { type = "string" }, target = new { type = "string", @default = "helios-control" } }, additionalProperties = false },
+            BuildUpgradeProposalOutputSchema()),
+        BuildMcpToolDescriptor(
+            configuration,
+            "helios_get_run",
+            "Get HELIOS control run",
+            "Read the saved progress, evidence digest, approval boundary, and connector receipts for one Edge control run.",
+            new { type = "object", required = new[] { "runId" }, properties = new { runId = new { type = "string", pattern = "^[0-9a-f]{32}$" } }, additionalProperties = false },
+            BuildControlRunOutputSchema(),
+            openWorldHint: true),
+        BuildMcpToolDescriptor(
+            configuration,
+            "helios_list_connectors",
+            "List HELIOS connector bindings",
+            "Read whether governed connector bindings are configured without returning endpoints or secrets.",
+            emptyInput,
+            BuildConnectorBindingsOutputSchema())
+    ];
+}
+
+static Dictionary<string, object> BuildMcpToolDescriptor(
+    IConfiguration configuration,
+    string name,
+    string title,
+    string description,
+    object inputSchema,
+    object outputSchema,
+    string? resourceUri = null,
+    bool openWorldHint = false)
+{
+    var scope = GetMcpDelegatedScope(configuration) ?? "access_as_user";
+    object[] securitySchemes = [new { type = "oauth2", scopes = new[] { scope } }];
+    var metadata = new Dictionary<string, object>
+    {
+        ["securitySchemes"] = securitySchemes
+    };
+    if (resourceUri is not null)
+    {
+        metadata["ui"] = new { resourceUri };
+        metadata["openai/outputTemplate"] = resourceUri;
+        metadata["openai/toolInvocation/invoking"] = "Loading HELIOS control-plane status…";
+        metadata["openai/toolInvocation/invoked"] = "HELIOS control-plane status ready";
+    }
+
+    return new Dictionary<string, object>
+    {
+        ["name"] = name,
+        ["title"] = title,
+        ["description"] = description,
+        ["inputSchema"] = inputSchema,
+        ["outputSchema"] = outputSchema,
+        ["securitySchemes"] = securitySchemes,
+        ["annotations"] = new { readOnlyHint = true, destructiveHint = false, idempotentHint = true, openWorldHint },
+        ["_meta"] = metadata
+    };
+}
+
+static object BuildAzureContextOutputSchema() => BuildOutputWrapper(
+    "context",
+    BuildStrictObjectSchema(
+        ["tenantId", "subscriptionId", "resourceGroup", "access", "configured"],
+        new Dictionary<string, object>
+        {
+            ["tenantId"] = BuildStringSchema(nullable: true),
+            ["subscriptionId"] = BuildStringSchema(nullable: true),
+            ["resourceGroup"] = BuildStringSchema(nullable: true),
+            ["access"] = BuildStringSchema(),
+            ["configured"] = BuildBooleanSchema()
+        }));
+
+static object BuildAzureResourcesOutputSchema() => BuildOutputWrapper(
+    "resources",
+    BuildArraySchema(
+        BuildStrictObjectSchema(
+            ["id", "name", "type", "location"],
+            new Dictionary<string, object>
+            {
+                ["id"] = BuildStringSchema(),
+                ["name"] = BuildStringSchema(),
+                ["type"] = BuildStringSchema(),
+                ["location"] = BuildStringSchema(nullable: true)
+            })));
+
+static object BuildAutomationPlanOutputSchema() => BuildOutputWrapper("plan", BuildEdgeAutomationPlanSchema());
+
+static object BuildUpgradeProposalOutputSchema() => BuildOutputWrapper(
+    "proposal",
+    BuildStrictObjectSchema(
+        ["proposalId", "capability", "reason", "target", "promotion", "automaticApply", "automaticMerge", "requiredChecks"],
+        new Dictionary<string, object>
+        {
+            ["proposalId"] = BuildStringSchema(),
+            ["capability"] = BuildStringSchema(),
+            ["reason"] = BuildStringSchema(),
+            ["target"] = BuildStringSchema(),
+            ["promotion"] = BuildStringSchema(),
+            ["automaticApply"] = BuildBooleanSchema(),
+            ["automaticMerge"] = BuildBooleanSchema(),
+            ["requiredChecks"] = BuildArraySchema(BuildStringSchema())
+        }));
+
+static object BuildControlRunOutputSchema() => BuildOutputWrapper(
+    "run",
+    BuildStrictObjectSchema(
+        [
+            "id", "partitionKey", "correlationId", "intent", "environment", "target", "connectors",
+            "status", "mode", "createdAt", "updatedAt", "steps", "receipts", "plan",
+            "evidenceSha256", "resourceCount", "error"
+        ],
+        new Dictionary<string, object>
+        {
+            ["id"] = BuildStringSchema(),
+            ["partitionKey"] = BuildStringSchema(),
+            ["correlationId"] = BuildStringSchema(),
+            ["intent"] = BuildStringSchema(),
+            ["environment"] = BuildStringSchema(),
+            ["target"] = BuildStringSchema(),
+            ["connectors"] = BuildArraySchema(BuildStringSchema()),
+            ["status"] = BuildStringSchema(),
+            ["mode"] = BuildStringSchema(),
+            ["createdAt"] = BuildStringSchema("date-time"),
+            ["updatedAt"] = BuildStringSchema("date-time"),
+            ["steps"] = BuildArraySchema(
+                BuildStrictObjectSchema(
+                    ["name", "status", "detail", "startedAt", "completedAt"],
+                    new Dictionary<string, object>
+                    {
+                        ["name"] = BuildStringSchema(),
+                        ["status"] = BuildStringSchema(),
+                        ["detail"] = BuildStringSchema(),
+                        ["startedAt"] = BuildStringSchema("date-time", nullable: true),
+                        ["completedAt"] = BuildStringSchema("date-time", nullable: true)
+                    })),
+            ["receipts"] = BuildArraySchema(
+                BuildStrictObjectSchema(
+                    ["connector", "status", "attempts", "detail", "deliveredAt"],
+                    new Dictionary<string, object>
+                    {
+                        ["connector"] = BuildStringSchema(),
+                        ["status"] = BuildStringSchema(),
+                        ["attempts"] = BuildIntegerSchema(),
+                        ["detail"] = BuildStringSchema(),
+                        ["deliveredAt"] = BuildStringSchema("date-time", nullable: true)
+                    })),
+            ["plan"] = BuildEdgeAutomationPlanSchema(nullable: true),
+            ["evidenceSha256"] = BuildStringSchema(nullable: true),
+            ["resourceCount"] = BuildIntegerSchema(),
+            ["error"] = BuildStringSchema(nullable: true)
+        }));
+
+static object BuildConnectorBindingsOutputSchema() => BuildOutputWrapper(
+    "connectors",
+    BuildArraySchema(
+        BuildStrictObjectSchema(
+            ["connector", "configured", "mode"],
+            new Dictionary<string, object>
+            {
+                ["connector"] = BuildStringSchema(),
+                ["configured"] = BuildBooleanSchema(),
+                ["mode"] = BuildStringSchema()
+            })));
+
+static Dictionary<string, object> BuildEdgeAutomationPlanSchema(bool nullable = false) =>
+    BuildStrictObjectSchema(
+        [
+            "planId", "intent", "environment", "target", "connector", "mode", "canApplyFromMcp",
+            "directMainWrite", "automaticMerge", "requiredApprovals", "steps"
+        ],
+        new Dictionary<string, object>
+        {
+            ["planId"] = BuildStringSchema(),
+            ["intent"] = BuildStringSchema(),
+            ["environment"] = BuildStringSchema(),
+            ["target"] = BuildStringSchema(nullable: true),
+            ["connector"] = BuildStringSchema(nullable: true),
+            ["mode"] = BuildStringSchema(),
+            ["canApplyFromMcp"] = BuildBooleanSchema(),
+            ["directMainWrite"] = BuildBooleanSchema(),
+            ["automaticMerge"] = BuildBooleanSchema(),
+            ["requiredApprovals"] = BuildArraySchema(BuildStringSchema()),
+            ["steps"] = BuildArraySchema(
+                BuildStrictObjectSchema(
+                    ["order", "action", "executor", "mutating", "gate"],
+                    new Dictionary<string, object>
+                    {
+                        ["order"] = BuildIntegerSchema(),
+                        ["action"] = BuildStringSchema(),
+                        ["executor"] = BuildStringSchema(),
+                        ["mutating"] = BuildBooleanSchema(),
+                        ["gate"] = BuildStringSchema()
+                    }))
+        },
+        nullable);
+
+static Dictionary<string, object> BuildOutputWrapper(string property, object valueSchema) =>
+    BuildStrictObjectSchema(
+        [property],
+        new Dictionary<string, object> { [property] = valueSchema });
+
+static Dictionary<string, object> BuildStrictObjectSchema(
+    string[] required,
+    Dictionary<string, object> properties,
+    bool nullable = false) =>
+    new()
+    {
+        ["type"] = nullable ? (object)new[] { "object", "null" } : "object",
+        ["required"] = required,
+        ["properties"] = properties,
+        ["additionalProperties"] = false
+    };
+
+static Dictionary<string, object> BuildArraySchema(object items) => new()
+{
+    ["type"] = "array",
+    ["items"] = items
 };
+
+static Dictionary<string, object> BuildStringSchema(string? format = null, bool nullable = false)
+{
+    var schema = new Dictionary<string, object>
+    {
+        ["type"] = nullable ? (object)new[] { "string", "null" } : "string"
+    };
+    if (format is not null) schema["format"] = format;
+    return schema;
+}
+
+static Dictionary<string, object> BuildBooleanSchema() => new() { ["type"] = "boolean" };
+
+static Dictionary<string, object> BuildIntegerSchema() => new() { ["type"] = "integer" };
 
 static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, ISetupWizardService wizard, ControlRunCoordinator coordinator, IConnectorDispatcher dispatcher, IConfiguration configuration, string requestedBy, CancellationToken cancellationToken)
 {
@@ -905,18 +1269,58 @@ static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInve
             _ => new { error = "unknown tool" }
         };
         var isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors") || payload is null;
-        payload ??= new { error = "Control run was not found." };
-        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } }, isError };
+        if (isError)
+            return BuildMcpToolError(payload is null ? "Control run was not found." : "Unknown tool.");
+
+        object structuredContent = name switch
+        {
+            "azure_get_context" => new { context = payload },
+            "azure_list_resources" => new { resources = payload },
+            "azure_list_foundry_resources" => new { resources = payload },
+            "helios_plan_automation" => new { plan = payload },
+            "helios_propose_upgrade" => new { proposal = payload },
+            "helios_get_run" => new { run = payload },
+            "helios_list_connectors" => new { connectors = payload },
+            _ => new { result = payload }
+        };
+        return BuildMcpToolSuccess(structuredContent);
     }
     catch (ArgumentException exception)
     {
-        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = exception.Message }) } }, isError = true };
+        return BuildMcpToolError(exception.Message);
     }
     catch (Exception exception) when (exception is InvalidOperationException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
     {
-        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = "Managed identity authentication or Reader access did not succeed." }) } }, isError = true };
+        return BuildMcpToolError("Managed identity authentication or Reader access did not succeed.");
     }
 }
+
+static object BuildMcpToolSuccess(object structuredContent) => new
+{
+    content = new[]
+    {
+        new
+        {
+            type = "text",
+            text = JsonSerializer.Serialize(structuredContent, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+        }
+    },
+    structuredContent,
+    isError = false
+};
+
+static object BuildMcpToolError(string message) => new
+{
+    content = new[]
+    {
+        new
+        {
+            type = "text",
+            text = JsonSerializer.Serialize(new { error = message }, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+        }
+    },
+    isError = true
+};
 
 
 static bool HasExpectedMcpResourceUri(JsonElement root) =>
@@ -926,7 +1330,7 @@ static bool HasExpectedMcpResourceUri(JsonElement root) =>
     uri.ValueKind == JsonValueKind.String &&
     string.Equals(uri.GetString(), HeliosMcpDefaults.ControlResourceUri, StringComparison.Ordinal);
 
-static object BuildMcpResourceList() => new
+static object BuildMcpResourceList(HttpContext context) => new
 {
     resources = new[]
     {
@@ -937,7 +1341,7 @@ static object BuildMcpResourceList() => new
             title = "Monado Control Center",
             description = "Interactive HELIOS integration and release-gate dashboard.",
             mimeType = HeliosMcpDefaults.ResourceMimeType,
-            _meta = BuildMcpWidgetMetadata()
+            _meta = BuildMcpWidgetMetadata(context)
         }
     }
 };
@@ -957,25 +1361,49 @@ static async Task<object> BuildMcpResourceReadAsync(HttpContext context, Cancell
                 uri = HeliosMcpDefaults.ControlResourceUri,
                 mimeType = HeliosMcpDefaults.ResourceMimeType,
                 text = html,
-                _meta = BuildMcpWidgetMetadata()
+                _meta = BuildMcpWidgetMetadata(context)
             }
         }
     };
 }
 
-static Dictionary<string, object> BuildMcpWidgetMetadata() => new()
+static Dictionary<string, object> BuildMcpWidgetMetadata(HttpContext context)
 {
-    ["ui"] = new
+    var publicOrigin = GetMcpPublicOrigin(context);
+    var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+    var redirectDomains = BuildHeliosSystemRecords(configuration)
+        .Select(record => record.Url)
+        .Where(url => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps)
+        .Select(url => new Uri(url!).GetLeftPart(UriPartial.Authority))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(origin => origin, StringComparer.Ordinal)
+        .ToArray();
+    var connectDomains = Array.Empty<string>();
+    var resourceDomains = Array.Empty<string>();
+
+    return new Dictionary<string, object>
     {
-        prefersBorder = false,
-        csp = new
+        ["ui"] = new
         {
-            connectDomains = Array.Empty<string>(),
-            resourceDomains = Array.Empty<string>()
+            prefersBorder = false,
+            domain = publicOrigin,
+            csp = new
+            {
+                connectDomains,
+                resourceDomains
+            }
+        },
+        ["openai/widgetDescription"] = "Monado Control Center shows the governed HELIOS GitHub, Azure, SharePoint, Slack, Teams, Linear, Copilot, Hermes, and XCore state.",
+        ["openai/widgetPrefersBorder"] = false,
+        ["openai/widgetDomain"] = publicOrigin,
+        ["openai/widgetCSP"] = new
+        {
+            connect_domains = connectDomains,
+            resource_domains = resourceDomains,
+            redirect_domains = redirectDomains
         }
-    },
-    ["openai/widgetDescription"] = "Monado Control Center shows the governed HELIOS GitHub, Azure, SharePoint, Slack, Teams, Linear, Copilot, Hermes, and XCore state."
-};
+    };
+}
 
 static HeliosSystemRecord[] BuildHeliosSystemRecords(IConfiguration configuration)
 {
@@ -995,10 +1423,10 @@ static HeliosSystemRecord[] BuildHeliosSystemRecords(IConfiguration configuratio
     [
         new("github", "GitHub", "Canonical source, pull requests, CI, OIDC workflow gates, and immutable release evidence.", "https://github.com/M0nado/helios-platform", "connected", "Land the current reviewable integration line; never write directly to main."),
         new("azure", "Microsoft Azure Edge", "Entra-protected Container Apps runtime with a governed Front Door private-edge migration path.", null, azureLive ? "configured" : azureConfigured ? "blocked" : "needs_configuration", azureLive ? "Verify health and evidence before activating connectors." : "Complete administrator OIDC/RBAC, publish a digest-pinned image, and approve the exact what-if."),
-        new("control-center", "Monado Control Center", "Human-readable HELIOS setup, architecture, and release-gate surface.", "https://helios-control-center.thepatman64.chatgpt.site", "connected", "Treat the site as an audited configuration snapshot, not live Azure telemetry."),
-        new("sharepoint", "SharePoint", "Governed setup guide, promotion checkpoints, and Microsoft 365 templates.", "https://heli0s-my.sharepoint.com/personal/jmore_heli0s_onmicrosoft_com/Documents/Helios/Governance/Architecture/Integration-Fabric/HELIOS_CHATGPT_COPILOT_MCP_SETUP_V1.md", "connected", "Promote the guide to a team-owned Helios site before it becomes organization-wide authority."),
+        new("control-center", "Monado Control Center", "Human-readable HELIOS setup, architecture, and release-gate surface.", HeliosMcpDefaults.ControlCenterUrl, "connected", "Treat the site as an audited configuration snapshot, not live Azure telemetry."),
+        new("sharepoint", "SharePoint", "Living authority, promotion checkpoints, and preserved integration evidence.", "https://heli0s-my.sharepoint.com/personal/jmore_heli0s_onmicrosoft_com/Documents/Helios/Governance/Architecture/Integration-Fabric/HELIOS_CONTROL_PLANE_CURRENT.md", "connected", "Keep the living authority synchronized with exact reviewed GitHub evidence."),
         new("slack", "Slack #helios-control-plane", "Authoritative engineering checkpoint and operational handoff thread.", "https://helios-xk97943.slack.com/archives/C0BHWDBHG1W", "connected", "Post verified heads and gates only; no broad mentions."),
-        new("teams", "Microsoft Teams — Helios Ops", "Microsoft operations coordination and Copilot-facing handoff.", null, "configured", "Publish the validated Microsoft package only after tenant administrator review."),
+        new("teams", "Microsoft Teams — Helios Ops", "Microsoft operations coordination and Copilot-facing handoff.", null, "needs_configuration", "Publish the validated Microsoft package only after tenant administrator review."),
         new("linear", "Linear — Helios Integration Fabric", "Milestones, blockers, acceptance evidence, and ownership.", "https://linear.app/641974/project/helios-integration-fabric-40e1dd9caa39", "connected", "Keep JOH-35 and JOH-36 synchronized with exact GitHub evidence."),
         new("copilot", "ChatGPT and Microsoft Copilot", "Shared Remote MCP tools and Monado UI across approved agent hosts.", null, azureLive ? "configured" : "needs_configuration", "Register the same approved HTTPS /mcp endpoint after Entra and runtime activation."),
         new("hermes-xcore", "Hermes XCore", "Candidate-only agent engine and standby execution boundary behind HELIOS governance.", null, "blocked", "Keep Hermes candidate-only and XCore standby until evaluation, signing, and promotion evidence pass.")
@@ -1019,12 +1447,13 @@ static object BuildSystemSearchResult(JsonElement parameters, IConfiguration con
         {
             id = record.Id,
             title = record.Name,
-            url = record.Url
+            url = ResolveSystemUrl(record)
         }).ToArray()
     };
     return new
     {
         content = new[] { new { type = "text", text = JsonSerializer.Serialize(result, serializerOptions) } },
+        structuredContent = result,
         isError = false
     };
 }
@@ -1047,12 +1476,13 @@ static object BuildSystemFetchResult(JsonElement parameters, IConfiguration conf
         id = record.Id,
         title = record.Name,
         text = $"{record.Purpose} State: {record.State}. Next action: {record.NextAction}",
-        url = record.Url,
+        url = ResolveSystemUrl(record),
         metadata = new { state = record.State }
     };
     return new
     {
         content = new[] { new { type = "text", text = JsonSerializer.Serialize(document, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } },
+        structuredContent = document,
         isError = false
     };
 }
@@ -1065,6 +1495,14 @@ static object BuildControlPlaneStatusResult(IConfiguration configuration, bool r
         generatedAt = DateTimeOffset.UtcNow,
         source = "governed-configuration-snapshot",
         systems = BuildHeliosSystemRecords(configuration)
+            .Select(record => new HeliosSystemOutputRecord(
+                record.Id,
+                record.Name,
+                record.Purpose,
+                ResolveSystemUrl(record),
+                record.State,
+                record.NextAction))
+            .ToArray()
     };
     var metadata = render
         ? new Dictionary<string, object> { ["ui"] = new { resourceUri = HeliosMcpDefaults.ControlResourceUri } }
@@ -1086,6 +1524,9 @@ static object BuildControlPlaneStatusResult(IConfiguration configuration, bool r
         _meta = metadata
     };
 }
+
+static string ResolveSystemUrl(HeliosSystemRecord record) =>
+    string.IsNullOrWhiteSpace(record.Url) ? HeliosMcpDefaults.ControlCenterUrl : record.Url!;
 
 static string ReadRequiredStringArgument(JsonElement parameters, string name, string tool)
 {
@@ -1145,6 +1586,7 @@ internal static class HeliosMcpDefaults
     internal const string Version = "0.6.0";
     internal const string ControlResourceUri = "ui://helios/control-center-v2.html";
     internal const string ResourceMimeType = "text/html;profile=mcp-app";
+    internal const string ControlCenterUrl = "https://helios-cloud-control.thepatman64.chatgpt.site";
 }
 
 internal sealed record HeliosSystemRecord(
@@ -1152,6 +1594,14 @@ internal sealed record HeliosSystemRecord(
     string Name,
     string Purpose,
     string? Url,
+    string State,
+    string NextAction);
+
+internal sealed record HeliosSystemOutputRecord(
+    string Id,
+    string Name,
+    string Purpose,
+    string Url,
     string State,
     string NextAction);
 

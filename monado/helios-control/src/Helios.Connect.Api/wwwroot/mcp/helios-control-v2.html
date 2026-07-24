@@ -26,7 +26,15 @@
   const grid=document.getElementById("grid");
   const stamp=document.getElementById("stamp");
   const pending=new Map();
+  const approvedRedirectOrigins=new Set([
+    "https://github.com",
+    "https://helios-cloud-control.thepatman64.chatgpt.site",
+    "https://heli0s-my.sharepoint.com",
+    "https://helios-xk97943.slack.com",
+    "https://linear.app"
+  ]);
   let requestId=0;
+  let bridgeReady=false;
 
   function node(tag,className,text){
     const value=document.createElement(tag);
@@ -36,35 +44,96 @@
   }
 
   function safeHttpsUrl(value){
-    try{const url=new URL(value);return url.protocol==="https:"?url.href:null}catch{return null}
+    try{
+      const url=new URL(value);
+      return url.protocol==="https:"&&approvedRedirectOrigins.has(url.origin)?url.href:null;
+    }catch{return null}
+  }
+
+  function sendNotification(method,params={}){
+    window.parent.postMessage({jsonrpc:"2.0",method,params},"*");
+  }
+
+  function sendRequest(method,params={},timeoutMs=30000){
+    const id=++requestId;
+    window.parent.postMessage({jsonrpc:"2.0",id,method,params},"*");
+    return new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>{
+        pending.delete(id);
+        reject(new Error("MCP Apps host did not respond."));
+      },timeoutMs);
+      pending.set(id,{resolve,reject,timer});
+    });
+  }
+
+  async function initializeBridge(){
+    await sendRequest("ui/initialize",{
+      protocolVersion:"2026-01-26",
+      appCapabilities:{availableDisplayModes:["inline","fullscreen"]},
+      appInfo:{name:"helios-monado-control-center",version:"0.6.0"}
+    },10000);
+    bridgeReady=true;
+    sendNotification("ui/notifications/initialized");
+    return true;
   }
 
   function render(data){
     const systems=Array.isArray(data?.systems)?data.systems:[];
-    stamp.textContent=\`Fabric \${data?.version||""} · \${data?.source||"snapshot"} · \${data?.generatedAt||"ready"}\`;
+    stamp.textContent=`Fabric ${data?.version||""} · ${data?.source||"snapshot"} · ${data?.generatedAt||"ready"}`;
     grid.replaceChildren();
     for(const system of systems){
       const state=["connected","configured","needs_configuration","blocked"].includes(system?.state)?system.state:"needs_configuration";
       const card=node("article","card");
       card.append(node("div","name",system?.name||"Unknown system"));
-      card.append(node("div",\`state \${state}\`,state.replaceAll("_"," ")));
+      card.append(node("div",`state ${state}`,state.replaceAll("_"," ")));
       card.append(node("div","muted",system?.purpose||""));
       card.append(node("p","muted",system?.nextAction||""));
       const href=safeHttpsUrl(system?.url);
       if(href){
         const link=node("a","","Open authority ↗");
-        link.href=href;link.target="_blank";link.rel="noreferrer";
+        link.href=href;link.rel="noreferrer";
+        link.addEventListener("click",event=>{
+          event.preventDefault();
+          void openAuthority(href);
+        });
         card.append(link);
       }
       grid.append(card);
     }
   }
 
-  function callTool(name,args={}){
+  async function callTool(name,args={}){
+    if(bridgeReady)return sendRequest("tools/call",{name,arguments:args});
+    await bridgeInitialization;
+    if(bridgeReady)return sendRequest("tools/call",{name,arguments:args});
     if(window.openai?.callTool)return window.openai.callTool(name,args);
-    const id=++requestId;
-    window.parent.postMessage({jsonrpc:"2.0",id,method:"tools/call",params:{name,arguments:args}},"*");
-    return new Promise((resolve,reject)=>pending.set(id,{resolve,reject}));
+    throw new Error("This host does not expose an MCP Apps tool bridge.");
+  }
+
+  async function openAuthority(href){
+    const approved=safeHttpsUrl(href);
+    if(!approved){
+      stamp.textContent="This authority URL is not approved by the widget navigation policy.";
+      return;
+    }
+    try{
+      if(bridgeReady){
+        await sendRequest("ui/open-link",{url:approved});
+        return;
+      }
+      await bridgeInitialization;
+      if(bridgeReady){
+        await sendRequest("ui/open-link",{url:approved});
+        return;
+      }
+      if(window.openai?.openExternal){
+        await window.openai.openExternal({href:approved});
+        return;
+      }
+      throw new Error("This host does not expose approved link navigation.");
+    }catch(error){
+      stamp.textContent=error instanceof Error?error.message:"The host declined this link.";
+    }
   }
 
   window.addEventListener("message",event=>{
@@ -75,13 +144,19 @@
       render(message.params?.structuredContent);
       return;
     }
+    if(message.method==="ui/resource-teardown"&&message.id!==undefined){
+      window.parent.postMessage({jsonrpc:"2.0",id:message.id,result:{}},"*");
+      return;
+    }
     if(!pending.has(message.id))return;
     const waiter=pending.get(message.id);
     pending.delete(message.id);
+    clearTimeout(waiter.timer);
     if(message.error)waiter.reject(new Error(message.error.message||"MCP tool call failed"));
     else waiter.resolve(message.result);
   });
 
+  const bridgeInitialization=initializeBridge().catch(()=>false);
   if(window.openai?.toolOutput)render(window.openai.toolOutput);
   document.getElementById("refresh").addEventListener("click",async()=>{
     try{
@@ -91,6 +166,14 @@
       stamp.textContent=error instanceof Error?error.message:"Refresh failed";
     }
   });
+  new ResizeObserver(entries=>{
+    if(!bridgeReady||entries.length===0)return;
+    const rect=entries[0].contentRect;
+    sendNotification("ui/notifications/size-changed",{
+      width:Math.ceil(rect.width),
+      height:Math.ceil(rect.height)
+    });
+  }).observe(document.documentElement);
 </script>
 </body>
 </html>

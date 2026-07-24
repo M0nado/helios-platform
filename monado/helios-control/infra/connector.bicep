@@ -276,7 +276,9 @@ resource apiAuth 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
           openIdIssuer: 'https://login.microsoftonline.com/${entraTenantId}/v2.0'
         }
         validation: {
-          allowedAudiences: [ teamsSsoApplicationIdUri ]
+          // Entra v2 access tokens use the API client-ID GUID in `aud`.
+          // The origin-bound Application ID URI remains the delegated scope.
+          allowedAudiences: [ entraClientId ]
           defaultAuthorizationPolicy: {
             allowedPrincipals: { identities: [ allowedPrincipalObjectId ] }
           }

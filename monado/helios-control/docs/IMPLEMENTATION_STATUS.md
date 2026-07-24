@@ -51,9 +51,10 @@
 - Teams, SharePoint, Foundry, and Copilot inbound webhooks fail closed until Entra JWT and validation-challenge middleware is configured.
 - No remote MCP or Azure runtime is live until an administrator completes the
   Configure and Publish phases and a reviewer approves both cloud workflow gates.
-- Remote MCP exposes only the seven documented read-only inventory, planning,
-  proposal, run-status, and connector-status tools; SSE server push and stateful
-  MCP sessions are intentionally unsupported.
+- Remote MCP exposes only the eleven documented authenticated search, fetch,
+  status, UI, read-only inventory, planning, proposal, run-status, and
+  connector-status tools; SSE server push and stateful MCP sessions are
+  intentionally unsupported.
 - `hermes.run_sandbox`, task generation, evaluation writes, and promotion tools are not exposed.
 - Tenant-wide Graph consent, Copilot publication, Conditional Access changes, production RBAC, and Azure deployment require explicit administrator approval.
 - No CLI, VS Code extension, Claude package, or tenant application is installed

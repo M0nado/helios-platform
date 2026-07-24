@@ -86,4 +86,4 @@ unsafe 'innerHTML' is prohibited by CI.
 10. Promote the SharePoint setup guide into a team-owned Helios site.
 
 See the audited control-center snapshot at
-https://helios-control-center.thepatman64.chatgpt.site.
+https://helios-cloud-control.thepatman64.chatgpt.site.
