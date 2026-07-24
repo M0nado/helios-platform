@@ -7,6 +7,7 @@ on:
       - '.github/workflows/helios-cloud-deploy.yml'
       - 'monado/helios-control/config/edge-automation.json'
       - 'monado/helios-control/config/identity-bindings.json'
+      - 'monado/helios-control/config/integrations.json'
       - 'monado/helios-control/infra/**'
       - 'monado/helios-control/docs/EDGE_AUTOMATION.md'
       - 'monado/helios-control/appPackage/manifest.json'
@@ -64,6 +65,11 @@ jobs:
             ([.bindings[] | select(.workload == "helios-api" and .scope == "selected-resource-group") | .roles[]] | index("Reader")) != null and
             ([.bindings[] | select(.workload == "helios-api" and .scope == "control-runs-container") | .roles[]] | index("Cosmos DB Built-in Data Contributor")) != null
           ' monado/helios-control/config/identity-bindings.json > /dev/null
+          jq --exit-status '
+            .schemaVersion == 2 and
+            .routing[0].event == "helios.control-run.status" and
+            .relayAuthentication.canonicalTuple == "unixTimestamp + newline + idempotencyKey + newline + exactJsonBody"
+          ' monado/helios-control/config/integrations.json > /dev/null
 
           cloud_workflow='.github/workflows/helios-cloud-deploy.yml'
           if [[ "$(grep -F -c 'commonTags="${HELIOS_COMMON_TAGS_JSON}"' "${cloud_workflow}")" -ne 3 ]]; then
