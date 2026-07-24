@@ -171,7 +171,7 @@ $('runNow').addEventListener('click', async () => {
     const request = {
       intent: $('runIntent').value,
       environment: $('runEnvironment').value,
-      target: $('runTarget').value || null,
+      target: null,
       connectors: selectedConnectors()
     };
     const requestBody = JSON.stringify(request);
