@@ -137,6 +137,6 @@ jobs:
           [void][System.Management.Automation.Language.Parser]::ParseFile($onboardingPath, [ref]$onboardingTokens, [ref]$onboardingErrors)
           if ($onboardingErrors.Count -gt 0) { $onboardingErrors | ForEach-Object { Write-Error $_.Message }; exit 1 }
           $onboarding = Get-Content $onboardingPath -Raw
-          foreach ($required in @('Ensure-GovernedResourceGroupEnvironmentTag', 'Assert-GovernedResourceGroupEnvironmentTag', "'tag', 'update'", "'--operation', 'Merge'", 'helios-environment')) {
+          foreach ($required in @('Ensure-GovernedResourceGroupEnvironmentTag', 'Assert-GovernedResourceGroupEnvironmentTag', "'tag', 'update'", "'--operation', 'Merge'", 'helios-environment', 'Resolve-DeployedApiHostname', 'access_as_user', 'api://$($ApiHostname.ToLowerInvariant())/$($application.appId)')) {
             if ($onboarding -notmatch [regex]::Escape($required)) { throw "Onboarding does not enforce resource-group governance: $required" }
           }
