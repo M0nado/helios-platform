@@ -19,7 +19,7 @@ The terminal state for any plan containing mutation is `awaiting-approval`. The 
 5. If subscription ID is omitted, the script selects the single enabled subscription containing the resource group, uses the only enabled subscription when unambiguous, or asks you to choose from a tenant-scoped table.
 6. The script verifies the selected Azure context, runs HELIOS `Diagnose`, then runs `Plan`.
 7. Cloud Shell keeps the canonical plan, request envelope, and SHA-256 beneath `$HOME/clouddrive/helios-evidence` so separate shell sessions can use the same reviewed evidence.
-8. The response also identifies four isolated work packets: inventory, identity readiness, deployment preview, and health verification. Each packet has a narrow read-only role; it does not distribute Azure credentials.
+8. The response identifies four informational operator stages: inventory, identity readiness, deployment preview, and health verification. They run in one authenticated Cloud Shell context; they are not separate identities or isolation boundaries.
 9. Review the resulting ARM what-if file and SHA-256 digest.
 10. Stop. Apply remains a separate protected workflow with fresh drift verification and typed confirmation.
 
