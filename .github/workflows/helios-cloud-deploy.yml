@@ -412,7 +412,7 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, commonTags: $commonTags, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha, commonTags: $commonTags}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -601,7 +601,7 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, commonTags: $commonTags and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha, commonTags: $commonTags} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${evidence_dir}/request.json" > /dev/null
 
       - name: Re-verify configured registry and published digest
