@@ -1,7 +1,9 @@
 using Helios.Connect.Api;
+using Helios.Connect.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
+using System.Text.Json;
 using Xunit;
 
 namespace Helios.Connect.Tests;
@@ -163,6 +165,15 @@ public sealed class ControlRunTests
         Assert.Equal("test-key-1", handler.KeyId);
         Assert.True(long.TryParse(handler.Timestamp, out _));
         Assert.DoesNotContain(new string('s', 32), handler.Body);
+        var envelope = JsonSerializer.Deserialize<HeliosEvent>(handler.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.NotNull(envelope);
+        Assert.Equal("helios.control-run.status", envelope!.Type);
+        Assert.Equal("helios-control", envelope.Source);
+        Assert.Equal("control-runs/0123456789abcdef0123456789abcdef", envelope.Subject);
+        Assert.Equal("correlation-1", envelope.CorrelationId);
+        Assert.Equal("internal", envelope.DataClassification);
+        Assert.Equal("github", ((JsonElement)envelope.Payload["connector"]!).GetString());
+        Assert.Equal("0123456789abcdef0123456789abcdef", ((JsonElement)envelope.Payload["runId"]!).GetString());
     }
 
     private static async Task<ControlRunSnapshot> WaitForTerminalAsync(ControlRunCoordinator coordinator, string id)
