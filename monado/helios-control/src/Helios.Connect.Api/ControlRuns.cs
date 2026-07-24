@@ -115,8 +115,9 @@ public sealed class InMemoryControlRunStore : IControlRunStore
     }
 }
 
-public sealed class CosmosControlRunStore : IControlRunStore
+public sealed class CosmosControlRunStore : IControlRunStore, IDisposable
 {
+    private readonly CosmosClient _client;
     private readonly Container _container;
 
     public CosmosControlRunStore(IConfiguration configuration)
@@ -129,12 +130,12 @@ public sealed class CosmosControlRunStore : IControlRunStore
         {
             ManagedIdentityClientId = string.IsNullOrWhiteSpace(clientId) ? null : clientId
         });
-        var client = new CosmosClient(endpointUri.ToString(), credential, new CosmosClientOptions
+        _client = new CosmosClient(endpointUri.ToString(), credential, new CosmosClientOptions
         {
             ApplicationName = "helios-connect/control-runs",
             SerializerOptions = new CosmosSerializationOptions { PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase }
         });
-        _container = client.GetContainer(
+        _container = _client.GetContainer(
             configuration["HELIOS_COSMOS_DATABASE"] ?? "helios",
             configuration["HELIOS_COSMOS_CONTAINER"] ?? "control-runs");
     }
@@ -203,6 +204,11 @@ public sealed class CosmosControlRunStore : IControlRunStore
     public async Task ProbeAsync(CancellationToken cancellationToken)
     {
         _ = await _container.ReadContainerAsync(cancellationToken: cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        _client.Dispose();
     }
 }
 
@@ -308,7 +314,7 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
                 {
                     receipt = new(connector, "failed", attempt, "Relay request timed out.");
                 }
-                if (attempt < 3) await Task.Delay(TimeSpan.FromMilliseconds(attempt * 250), cancellationToken);
+                if (attempt < 3) await Task.Delay(TimeSpan.FromMilliseconds(attempt * 250d), cancellationToken);
             }
             receipts.Add(receipt ?? new(connector, "failed", 3, "Relay delivery failed."));
         }
@@ -457,9 +463,9 @@ public sealed partial class ControlRunCoordinator(
             {
                 logger.LogInformation("Control run {RunId} lease or ETag ownership moved to another worker.", id);
             }
-            catch (Exception exception)
+            catch (Exception exception) when (exception is CosmosException or HttpRequestException or InvalidOperationException or ArgumentException or CryptographicException or JsonException or AuthenticationFailedException)
             {
-                logger.LogError(exception, "Control run {RunId} failed.", id);
+                logger.LogError(exception, "Control run {RunId} failed with an expected operational error.", id);
                 await FailAsync(id, stoppingToken);
             }
         }
@@ -485,7 +491,10 @@ public sealed partial class ControlRunCoordinator(
             }
             while (await timer.WaitForNextTickAsync(stoppingToken));
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            logger.LogDebug("Control run recovery loop stopped during application shutdown.");
+        }
     }
 
     private async Task ProcessAsync(string id, CancellationToken cancellationToken)
@@ -580,7 +589,10 @@ public sealed partial class ControlRunCoordinator(
                 UpdatedAt = DateTimeOffset.UtcNow
             }, cancellationToken);
         }
-        catch (ControlRunConcurrencyException) { }
+        catch (ControlRunConcurrencyException)
+        {
+            logger.LogDebug("Control run {RunId} failure state was superseded by another worker.", id);
+        }
     }
 
     private async Task<ControlRunSnapshot> SetStepAsync(ControlRunSnapshot run, string name, string status, string detail, CancellationToken cancellationToken)
