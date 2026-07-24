@@ -77,7 +77,7 @@
   },
   "routing": [
     {
-      "event": "control.run.updated",
+      "event": "helios.control-run.status",
       "enabled": false,
       "mode": "dry-run-until-bindings-approved",
       "targets": [
