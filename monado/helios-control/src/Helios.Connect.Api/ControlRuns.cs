@@ -394,8 +394,15 @@ public sealed partial class ControlRunCoordinator(
         var environment = Normalize(request.Environment, "environment", 16).ToLowerInvariant();
         if (!Environments.Contains(environment)) throw new ArgumentException("Environment must be dev, test, preview, or prod.", nameof(request.Environment));
         var context = inventory.GetContext();
-        var target = string.IsNullOrWhiteSpace(request.Target) ? context.ResourceGroup : Normalize(request.Target, "target", 90);
-        if (string.IsNullOrWhiteSpace(target)) throw new ArgumentException("A configured or requested resource group is required.", nameof(request.Target));
+        var target = context.ResourceGroup;
+        if (!context.Configured || string.IsNullOrWhiteSpace(target))
+            throw new InvalidOperationException("The server Azure resource-group boundary is not configured.");
+        if (!string.IsNullOrWhiteSpace(request.Target))
+        {
+            var requestedTarget = Normalize(request.Target, "target", 90);
+            if (!string.Equals(requestedTarget, target, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Control runs cannot override the configured Azure resource group.", nameof(request.Target));
+        }
         var requestedConnectors = request.Connectors ?? ["github", "linear", "slack", "sharepoint"];
         var normalizedConnectors = requestedConnectors.Select(value => Normalize(value, "connector", 32).ToLowerInvariant())
             .Distinct(StringComparer.Ordinal)
