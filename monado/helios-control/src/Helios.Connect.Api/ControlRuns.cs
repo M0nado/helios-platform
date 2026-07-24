@@ -616,7 +616,7 @@ public sealed partial class ControlRunCoordinator(
                 try
                 {
                     var current = await store.GetAsync(id, cancellationToken);
-                    if (current is not null && current.Status is "completed" or "awaiting-approval" or "failed") return;
+                    if (current is not null && current.Status is ("completed" or "awaiting-approval" or "failed")) return;
                     if (current is null || current.Status != "running" ||
                         !string.Equals(current.LeaseOwner, _workerId, StringComparison.Ordinal))
                         throw new ControlRunConcurrencyException();
