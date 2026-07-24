@@ -69,6 +69,10 @@ The Monado widget uses the MCP Apps bridge first and treats 'window.openai' as
 an optional host enhancement. Tool content is rendered with DOM 'textContent';
 unsafe 'innerHTML' is prohibited by CI.
 
+Live ChatGPT activation remains tenant-admin gated: register the issued
+callback URL, configure and consent authorization code with PKCE, and verify
+RFC 8707 'resource=<origin>/mcp' propagation before enabling the app.
+
 ## Release order
 
 1. Land the current reviewed GitHub integration line.
