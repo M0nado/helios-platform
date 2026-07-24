@@ -130,3 +130,13 @@ jobs:
           }
           $serviceWorker = Get-Content 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/sw.js' -Raw
           if ($serviceWorker -notmatch 'startsWith\(cachePrefix\)') { throw 'Wizard cache cleanup is not scoped to its own prefix.' }
+
+          $onboardingPath = 'monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1'
+          $onboardingTokens = $null
+          $onboardingErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile($onboardingPath, [ref]$onboardingTokens, [ref]$onboardingErrors)
+          if ($onboardingErrors.Count -gt 0) { $onboardingErrors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+          $onboarding = Get-Content $onboardingPath -Raw
+          foreach ($required in @('Ensure-GovernedResourceGroupEnvironmentTag', 'Assert-GovernedResourceGroupEnvironmentTag', "'tag', 'update'", "'--operation', 'Merge'", 'helios-environment')) {
+            if ($onboarding -notmatch [regex]::Escape($required)) { throw "Onboarding does not enforce resource-group governance: $required" }
+          }
