@@ -3,6 +3,7 @@ using Helios.Connect.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Xunit;
 
