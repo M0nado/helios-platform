@@ -59,6 +59,10 @@ Run the plugin doctor, then generate a plan:
 ```bash
 python plugins/helios-control-fabric/scripts/helios.py doctor
 python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
+python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
+python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
+python plugins/helios-control-fabric/scripts/helios.py devops-sync
+python plugins/helios-control-fabric/scripts/helios.py runners
 ```
 
 Continue with the repository wizard:
@@ -70,6 +74,12 @@ pwsh ./monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1
 The administrator must supply the tenant, subscription, resource group,
 Foundry project/deployment, Entra application, Azure DevOps organization, and
 publication targets. Do not guess those values.
+
+The shared runtime must expose standard `search` and `fetch`, the Monado MCP
+Apps resource, and accurate read-only annotations. Treat Azure Front Door
+Premium with Container Apps Private Link as a separate reviewed cutover; do not
+label the edge path live until the private endpoint is approved and health/MCP
+handshakes pass.
 
 ## Cross-system synchronization
 
