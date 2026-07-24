@@ -27,7 +27,7 @@
     "diagnoseAutomatically": true,
     "createTaskBranch": false,
     "openDraftPullRequest": false,
-    "runTests": true,
+    "runTests": false,
     "directMainWrite": false,
     "automaticMerge": false,
     "automaticTenantAdminConsent": false
