@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: helios-unified-\${{ github.workflow }}-\${{ github.ref }}
+  group: helios-unified-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
           python -m json.tool plugins/helios-control-fabric/.codex-plugin/plugin.json >/dev/null
           python -m json.tool plugins/helios-control-fabric/.mcp.json >/dev/null
           for contract in connections oidc devops-sync runner-topology edge-runtime; do
-            python -m json.tool "plugins/helios-control-fabric/assets/\${contract}.json" >/dev/null
+            python -m json.tool "plugins/helios-control-fabric/assets/${contract}.json" >/dev/null
           done
           python -m json.tool plugins/helios-control-fabric/assets/microsoft-mcp.template.json >/dev/null
           python -m json.tool monado/helios-control/appPackage/manifest.json >/dev/null
