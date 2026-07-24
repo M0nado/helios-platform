@@ -809,13 +809,13 @@ static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInve
     var name = root.TryGetProperty("params", out var parameters) && parameters.TryGetProperty("name", out var nameValue)
         ? nameValue.GetString()
         : null;
-    if (name == "search") return BuildSystemSearchResult(parameters, configuration);
-    if (name == "fetch") return BuildSystemFetchResult(parameters, configuration);
-    if (name == "helios_get_control_plane_status") return BuildControlPlaneStatusResult(configuration, false);
-    if (name == "helios_render_control_center") return BuildControlPlaneStatusResult(configuration, true);
-
     try
     {
+        if (name == "search") return BuildSystemSearchResult(parameters, configuration);
+        if (name == "fetch") return BuildSystemFetchResult(parameters, configuration);
+        if (name == "helios_get_control_plane_status") return BuildControlPlaneStatusResult(configuration, false);
+        if (name == "helios_render_control_center") return BuildControlPlaneStatusResult(configuration, true);
+
         object? payload = name switch
         {
             "azure_get_context" => inventory.GetContext(),
