@@ -31,6 +31,8 @@ param(
     [string] $EvidenceDirectory = (Join-Path (Get-Location) 'evidence/helios-edge'),
     [string] $ApprovedPlanFile,
     [string] $ApprovedPlanSha256,
+    [string] $ApprovedRequestFile,
+    [string] $ApprovedRequestSha256,
     [string] $KeyVaultName,
     [string] $SecretName,
     [string] $Confirmation,
@@ -102,6 +104,44 @@ function Write-Utf8NoBom {
     [IO.File]::WriteAllText($Path, $Value, [Text.UTF8Encoding]::new($false))
 }
 
+function Write-RestrictedSecretFile {
+    param([Parameter(Mandatory)] [string] $Value)
+    $directory = Join-Path ([IO.Path]::GetTempPath()) "helios-secret-$([guid]::NewGuid().ToString('n'))"
+    [void] [IO.Directory]::CreateDirectory($directory)
+    try {
+        if ($IsWindows) {
+            $identity = [Security.Principal.WindowsIdentity]::GetCurrent().User
+            $acl = [Security.AccessControl.DirectorySecurity]::new()
+            $acl.SetAccessRuleProtection($true, $false)
+            $rule = [Security.AccessControl.FileSystemAccessRule]::new(
+                $identity,
+                [Security.AccessControl.FileSystemRights]::FullControl,
+                [Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit',
+                [Security.AccessControl.PropagationFlags]::None,
+                [Security.AccessControl.AccessControlType]::Allow
+            )
+            [void] $acl.AddAccessRule($rule)
+            Set-Acl -LiteralPath $directory -AclObject $acl
+        }
+        else {
+            [void] (Invoke-Native -FilePath (Get-Command chmod).Source -Arguments @('700', $directory) -Operation 'Restricting temporary secret directory permissions')
+        }
+
+        $path = Join-Path $directory 'value.txt'
+        $stream = [IO.File]::Open($path, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $stream.Dispose()
+        if (-not $IsWindows) {
+            [void] (Invoke-Native -FilePath (Get-Command chmod).Source -Arguments @('600', $path) -Operation 'Restricting temporary secret file permissions')
+        }
+        Write-Utf8NoBom -Path $path -Value $Value
+        return [pscustomobject]@{ Path = $path; Directory = $directory }
+    }
+    catch {
+        if (Test-Path -LiteralPath $directory) { Remove-Item -LiteralPath $directory -Recurse -Force }
+        throw
+    }
+}
+
 function Get-FileSha256 {
     param([Parameter(Mandatory)] [string] $Path)
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -112,8 +152,15 @@ function Assert-ExactConfirmation {
     if ($Confirmation -cne $Expected) { throw "Operation blocked. Pass -Confirmation '$Expected'." }
 }
 
-function Assert-ProductionGate {
-    if ($EnvironmentName -eq 'prod' -and -not $AllowProduction) {
+function Assert-MutationEnvironmentBinding {
+    param([Parameter(Mandatory)] [string] $ApprovedEnvironment)
+    if ([string]::IsNullOrWhiteSpace($context.environment)) {
+        throw "Mutation requires resource group tag 'helios-environment' with the reviewed environment."
+    }
+    if ($context.environment -cne $EnvironmentName -or $ApprovedEnvironment -cne $EnvironmentName) {
+        throw 'EnvironmentName must match both the resource-group governance tag and approved evidence.'
+    }
+    if ($ApprovedEnvironment -eq 'prod' -and -not $AllowProduction) {
         throw 'Production mutation requires -AllowProduction in addition to plan approval and typed confirmation.'
     }
 }
@@ -128,6 +175,7 @@ function Assert-AzureContext {
         subscriptionId = [string] $account.id
         resourceGroup = [string] $group.name
         location = [string] $group.location
+        environment = if ($group.tags) { [string] $group.tags.'helios-environment' } else { '' }
     }
 }
 
@@ -162,6 +210,34 @@ function Assert-DeploymentInputs {
     )
 }
 
+function Read-ApprovedRequest {
+    if (-not (Test-Path -LiteralPath $ApprovedRequestFile -PathType Leaf)) { throw 'Apply requires -ApprovedRequestFile.' }
+    if ($ApprovedRequestSha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Apply requires a valid -ApprovedRequestSha256.' }
+    $requestPath = (Resolve-Path -LiteralPath $ApprovedRequestFile).Path
+    if ((Get-FileSha256 $requestPath) -ne $ApprovedRequestSha256.ToLowerInvariant()) {
+        throw 'Approved request file hash does not match -ApprovedRequestSha256.'
+    }
+    try { $request = Get-Content -LiteralPath $requestPath -Raw | ConvertFrom-Json -Depth 100 }
+    catch { throw 'Approved request file is invalid JSON.' }
+    if (
+        [string] $request.schema -cne 'helios.edgePlan.v1' -or
+        [string] $request.environment -cne $EnvironmentName -or
+        [string] $request.tenantId -cne $TenantId -or
+        [string] $request.subscriptionId -cne $SubscriptionId -or
+        [string] $request.resourceGroup -cne $ResourceGroup -or
+        [string] $request.whatIfSha256 -cne $ApprovedPlanSha256.ToLowerInvariant() -or
+        [string] $request.resolvedParameters.containerImage -cne $ContainerImage -or
+        [string] $request.resolvedParameters.containerRegistryName -cne $ContainerRegistryName -or
+        [string] $request.resolvedParameters.entraClientId -cne $EntraClientId -or
+        [string] $request.resolvedParameters.entraTenantId -cne $TenantId -or
+        [string] $request.resolvedParameters.allowedPrincipalObjectId -cne $AllowedPrincipalObjectId -or
+        [string] $request.resolvedParameters.sourceCommitSha -cne $SourceCommitSha.ToLowerInvariant()
+    ) {
+        throw 'Approved request evidence does not match the requested Azure deployment inputs.'
+    }
+    return $request
+}
+
 function Invoke-WhatIf {
     $arguments = @(
         'deployment', 'group', 'what-if',
@@ -193,19 +269,20 @@ if ($Mode -eq 'Diagnose') {
 }
 
 if ($Mode -eq 'VaultSet') {
-    Assert-ProductionGate
+    Assert-MutationEnvironmentBinding -ApprovedEnvironment $EnvironmentName
     if ($KeyVaultName -notmatch '^[a-zA-Z0-9-]{3,24}$') { throw 'VaultSet requires a valid -KeyVaultName.' }
     if ($SecretName -notmatch '^[0-9a-zA-Z-]{1,127}$') { throw 'VaultSet requires a valid -SecretName.' }
     Assert-ExactConfirmation -Expected "SET HELIOS VAULT SECRET $SecretName"
 
     $secureValue = Read-Host "Enter the new value for '$SecretName'" -AsSecureString
     $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
-    $temporaryPath = Join-Path ([IO.Path]::GetTempPath()) "helios-secret-$([guid]::NewGuid().ToString('n')).txt"
+    $temporaryDirectory = $null
     try {
         $plainValue = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
-        Write-Utf8NoBom -Path $temporaryPath -Value $plainValue
+        $temporary = Write-RestrictedSecretFile -Value $plainValue
         $plainValue = $null
-        if (-not $IsWindows) { [void] (Invoke-Native -FilePath (Get-Command chmod).Source -Arguments @('600', $temporaryPath) -Operation 'Restricting temporary secret permissions') }
+        $temporaryPath = $temporary.Path
+        $temporaryDirectory = $temporary.Directory
         $metadata = Invoke-AzJson -Arguments @(
             'keyvault', 'secret', 'set', '--vault-name', $KeyVaultName,
             '--name', $SecretName, '--file', $temporaryPath,
@@ -215,7 +292,9 @@ if ($Mode -eq 'VaultSet') {
     }
     finally {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
-        if (Test-Path -LiteralPath $temporaryPath) { Remove-Item -LiteralPath $temporaryPath -Force }
+        if ($temporaryDirectory -and (Test-Path -LiteralPath $temporaryDirectory)) {
+            Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force
+        }
     }
     return
 }
@@ -241,6 +320,7 @@ if ($Mode -eq 'Plan') {
         tenantId = $TenantId
         subscriptionId = $SubscriptionId
         resourceGroup = $ResourceGroup
+        resourceGroupEnvironment = $context.environment
         templateFile = $script:ResolvedTemplate
         parametersFile = $script:ResolvedParameters
         resolvedParameters = [ordered]@{
@@ -256,16 +336,19 @@ if ($Mode -eq 'Plan') {
         whatIfSha256 = $sha256
         applyRequires = @('approved-plan-sha256', 'fresh-matching-what-if', 'protected-environment-reviewer', 'typed-confirmation')
     }
-    Write-Utf8NoBom -Path (Join-Path $directory 'request.json') -Value (Get-CanonicalJson $request)
-    [pscustomobject]@{ mode = 'plan'; evidenceDirectory = $directory; whatIfFile = $whatIfPath; whatIfSha256 = $sha256; mutations = 0 } | ConvertTo-Json -Depth 10
+    $requestPath = Join-Path $directory 'request.json'
+    Write-Utf8NoBom -Path $requestPath -Value (Get-CanonicalJson $request)
+    $requestSha256 = Get-FileSha256 $requestPath
+    [pscustomobject]@{ mode = 'plan'; evidenceDirectory = $directory; whatIfFile = $whatIfPath; whatIfSha256 = $sha256; requestFile = $requestPath; requestSha256 = $requestSha256; mutations = 0 } | ConvertTo-Json -Depth 10
     return
 }
 
-Assert-ProductionGate
 if (-not (Test-Path -LiteralPath $ApprovedPlanFile -PathType Leaf)) { throw 'Apply requires -ApprovedPlanFile.' }
 if ($ApprovedPlanSha256 -notmatch '^[0-9a-fA-F]{64}$') { throw 'Apply requires a valid -ApprovedPlanSha256.' }
 $approvedHash = Get-FileSha256 (Resolve-Path -LiteralPath $ApprovedPlanFile).Path
 if ($approvedHash -ne $ApprovedPlanSha256.ToLowerInvariant()) { throw 'Approved plan file hash does not match -ApprovedPlanSha256.' }
+$approvedRequest = Read-ApprovedRequest
+Assert-MutationEnvironmentBinding -ApprovedEnvironment ([string] $approvedRequest.environment)
 $freshWhatIfPath = Join-Path ([IO.Path]::GetTempPath()) "helios-what-if-$([guid]::NewGuid().ToString('n')).json"
 try {
     Write-Utf8NoBom -Path $freshWhatIfPath -Value (Invoke-WhatIf)
@@ -288,5 +371,6 @@ $deployment = Invoke-AzJson -Arguments $deploymentArguments -Operation 'Applying
     deploymentId = [string] $deployment.id
     provisioningState = [string] $deployment.properties.provisioningState
     approvedPlanSha256 = $approvedHash
+    approvedRequestSha256 = $ApprovedRequestSha256.ToLowerInvariant()
     secretValuesReturned = $false
 } | ConvertTo-Json -Depth 10
