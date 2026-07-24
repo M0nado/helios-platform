@@ -27,13 +27,13 @@ Vault updates use a secure prompt and a restricted temporary file. The secret is
 
 ## Edge and OpenAI app surface
 
-The Edge page starts the job through authenticated same-origin REST. The MCP endpoint exposes `helios_plan_automation`, `helios_get_run`, and `helios_list_connectors` as read-only tools for ChatGPT, Codex, and Copilot. They follow the Apps SDK tool model and explicitly declare non-destructive behavior. There is deliberately no MCP apply or run-start tool.
+The Edge page starts the job through authenticated same-origin REST. The MCP endpoint exposes `azure_get_context`, `azure_list_resources`, `azure_list_foundry_resources`, `helios_plan_automation`, `helios_propose_upgrade`, `helios_get_run`, and `helios_list_connectors` as read-only tools for ChatGPT, Codex, and Copilot. They follow the OpenAI Apps tool model and explicitly declare non-destructive behavior. There is deliberately no MCP apply or run-start tool.
 
 Reference documentation:
 
-- https://developers.openai.com/apps-sdk/build/mcp-server
-- https://developers.openai.com/apps-sdk/plan/tools
-- https://developers.openai.com/apps-sdk/build/auth
+- https://developers.openai.com/plugins/build/mcp-server
+- https://developers.openai.com/plugins/plan/tools
+- https://developers.openai.com/plugins/build/auth
 
 ## Operator flow
 
@@ -44,7 +44,7 @@ az login --tenant <tenant-id>
 ./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Diagnose -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
 ~~~
 
-Generate a Bicep what-if plan and evidence digest:
+Generate a Bicep what-if plan and evidence digest. Plan resolves every azd placeholder with explicit non-secret values and requests `FullResourcePayloads`, so property-level changes are part of the approved hash:
 
 ~~~powershell
 ./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -EnvironmentName dev
@@ -75,7 +75,7 @@ Authenticated callers can request a deterministic plan:
 }
 ~~~
 
-Supported intents are `provision-resources`, `rotate-secret`, `repair-issue`, and `sync-release`. Supported connectors are `github`, `linear`, `slack`, `sharepoint`, `copilot`, `codex`, and `all`.
+Supported intents are `provision-resources`, `rotate-secret`, `repair-issue`, `sync-release`, and `cleanup-owned-resources`. Supported connectors are `github`, `linear`, `slack`, `sharepoint`, `copilot`, `codex`, and `all`.
 
 ## Validation and rollout
 
