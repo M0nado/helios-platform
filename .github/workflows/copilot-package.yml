@@ -8,6 +8,14 @@ on:
       - monado/helios-control/config/microsoft-agents.json
       - appPackage/**
       - config/microsoft-agents.json
+      - plugins/helios-control-fabric/**
+      - .agents/plugins/marketplace.json
+      - .github/agents/helios-control.agent.md
+      - .github/instructions/helios-control.instructions.md
+      - monado/helios-control/docs/UNIFIED_PLUGIN_SETUP.md
+      - monado/helios-control/src/Helios.Connect.Api/Program.cs
+      - monado/helios-control/src/Helios.Connect.Api/wwwroot/mcp/**
+      - monado/helios-control/tests/Helios.Connect.Tests/WebhookTests.cs
 
 permissions:
   contents: read
@@ -44,6 +52,18 @@ jobs:
 
       - name: Verify pinned Microsoft 365 Agents Toolkit CLI
         run: npx --yes @microsoft/m365agentstoolkit-cli@1.1.12 --version
+
+      - name: Validate unified plugin guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m json.tool .agents/plugins/marketplace.json >/dev/null
+          python -m json.tool plugins/helios-control-fabric/.codex-plugin/plugin.json >/dev/null
+          python -m json.tool plugins/helios-control-fabric/.mcp.json >/dev/null
+          for contract in connections oidc devops-sync runner-topology edge-runtime microsoft-mcp.template; do
+            python -m json.tool "plugins/helios-control-fabric/assets/${contract}.json" >/dev/null
+          done
+          python -m unittest discover -s plugins/helios-control-fabric/scripts -p "test_*.py" -v
 
       - name: Materialize Teams package icons
         shell: pwsh
