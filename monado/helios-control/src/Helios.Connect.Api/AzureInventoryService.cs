@@ -12,7 +12,12 @@ public sealed record AzureConnectorContext(
     string Access,
     bool Configured);
 
-public sealed record AzureInventoryResource(string Id, string Name, string Type, string? Location);
+public sealed record AzureInventoryResource(
+    string Id,
+    string Name,
+    string Type,
+    string? Location,
+    [property: System.Text.Json.Serialization.JsonIgnore] IReadOnlyDictionary<string, string>? Tags = null);
 
 public interface IAzureInventoryService
 {
@@ -100,7 +105,8 @@ public sealed class AzureInventoryService : IAzureInventoryService
                         ReadString(item, "id") ?? string.Empty,
                         ReadString(item, "name") ?? string.Empty,
                         type,
-                        ReadString(item, "location")));
+                        ReadString(item, "location"),
+                        ReadTags(item)));
                 }
             }
 
@@ -124,6 +130,15 @@ public sealed class AzureInventoryService : IAzureInventoryService
         element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    private static IReadOnlyDictionary<string, string> ReadTags(JsonElement element)
+    {
+        if (!element.TryGetProperty("tags", out var tags) || tags.ValueKind != JsonValueKind.Object)
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        return tags.EnumerateObject()
+            .Where(tag => tag.Value.ValueKind == JsonValueKind.String)
+            .ToDictionary(tag => tag.Name, tag => tag.Value.GetString() ?? string.Empty, StringComparer.OrdinalIgnoreCase);
+    }
 
     private static Uri? ReadValidatedNextLink(JsonElement root)
     {

@@ -165,7 +165,7 @@ function ConvertFrom-McpResponse {
 
 function Get-AzureCliAccessToken {
     param(
-        [Parameter(Mandatory)][guid]$ClientId,
+        [Parameter(Mandatory)][string]$DelegatedScope,
         [AllowEmptyString()][string]$RequestedTenant
     )
 
@@ -191,31 +191,17 @@ function Get-AzureCliAccessToken {
         $tenantArguments = @('--tenant', $RequestedTenant)
     }
 
-    $scope = "api://$ClientId/user_impersonation"
     $tokenArguments = @(
         'account', 'get-access-token',
-        '--scope', $scope,
+        '--scope', $DelegatedScope,
         '--query', 'accessToken',
         '--output', 'tsv',
         '--only-show-errors'
     ) + $tenantArguments
     $tokenOutput = & $az.Source @tokenArguments 2>$null
 
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($tokenOutput -join ''))) {
-        # Older Azure CLI/MSAL combinations use the application ID URI as a resource.
-        $resource = "api://$ClientId"
-        $tokenArguments = @(
-            'account', 'get-access-token',
-            '--resource', $resource,
-            '--query', 'accessToken',
-            '--output', 'tsv',
-            '--only-show-errors'
-        ) + $tenantArguments
-        $tokenOutput = & $az.Source @tokenArguments 2>$null
-    }
-
     if ($LASTEXITCODE -ne 0) {
-        throw 'Azure CLI could not acquire a token for the connector application.'
+        throw 'Azure CLI could not acquire the required delegated access_as_user token for the connector application.'
     }
 
     $token = ($tokenOutput -join '').Trim()
@@ -234,6 +220,8 @@ try {
     }
 
     $script:baseUri = [uri]($ConnectorUrl.AbsoluteUri.TrimEnd('/') + '/')
+    $script:applicationIdUri = $null
+    $script:delegatedScope = $null
     Add-TestResult -Name 'transport.https' -Status passed -StatusCode $null -Detail 'Connector base URL uses HTTPS.'
 
     $handler = [System.Net.Http.HttpClientHandler]::new()
@@ -258,19 +246,31 @@ try {
         if ($response.StatusCode -eq 200) {
             try {
                 $metadata = $response.Body | ConvertFrom-Json -AsHashtable -Depth 20
-                $expectedResource = $script:baseUri.AbsoluteUri.TrimEnd('/') + '/mcp'
-                $expectedScope = "api://$EntraClientId/user_impersonation"
+                [uri]$resourceUri = $null
+                [uri]$scopeUri = $null
+                $resourceValid = [uri]::TryCreate([string]$metadata.resource, [UriKind]::Absolute, [ref]$resourceUri) -and
+                    $resourceUri.Scheme -eq 'https' -and $resourceUri.AbsolutePath -eq '/mcp' -and
+                    [string]::IsNullOrWhiteSpace($resourceUri.Query) -and [string]::IsNullOrWhiteSpace($resourceUri.Fragment)
+                $advertisedScopes = @($metadata.scopes_supported)
+                $scopeValid = $resourceValid -and $advertisedScopes.Count -eq 1 -and
+                    [uri]::TryCreate([string]$advertisedScopes[0], [UriKind]::Absolute, [ref]$scopeUri) -and
+                    $scopeUri.Scheme -eq 'api' -and
+                    [string]::Equals($scopeUri.DnsSafeHost, $resourceUri.DnsSafeHost, [StringComparison]::OrdinalIgnoreCase) -and
+                    $scopeUri.AbsolutePath.EndsWith("/$EntraClientId/access_as_user", [StringComparison]::OrdinalIgnoreCase)
                 $authorizationServers = @($metadata.authorization_servers)
                 $validMetadata =
-                    $metadata.resource -eq $expectedResource -and
-                    @($metadata.scopes_supported) -contains $expectedScope -and
+                    $resourceValid -and $scopeValid -and
                     $authorizationServers.Count -ge 1 -and
                     @($authorizationServers | Where-Object { $_ -match '^https://login\.microsoftonline\.com/[^/]+/v2\.0$' }).Count -ge 1
+                if ($validMetadata) {
+                    $script:delegatedScope = [string]$advertisedScopes[0]
+                    $script:applicationIdUri = $script:delegatedScope.Substring(0, $script:delegatedScope.Length - '/access_as_user'.Length)
+                }
             }
             catch { $validMetadata = $false }
         }
         $passed = $response.StatusCode -eq 200 -and $validMetadata
-        Add-TestResult -Name 'oauth.protected-resource-metadata' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'RFC 9728 metadata advertises the exact MCP resource, Entra issuer, and delegated scope.' } else { 'Expected public RFC 9728 metadata for the exact connector MCP URL and user_impersonation scope.' })
+        Add-TestResult -Name 'oauth.protected-resource-metadata' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'RFC 9728 metadata advertises the exact MCP resource, Entra issuer, and access_as_user scope.' } else { 'Expected public RFC 9728 metadata for the exact connector MCP URL and origin-bound access_as_user scope.' })
     }
     catch {
         Add-TestResult -Name 'oauth.protected-resource-metadata' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
@@ -286,10 +286,23 @@ try {
     }
 
     try {
-        $forgedHeaders = @{ 'X-MS-CLIENT-PRINCIPAL-ID' = 'forged-untrusted-principal' }
+        if ([string]::IsNullOrWhiteSpace($script:applicationIdUri)) {
+            throw 'The protected-resource metadata did not provide a validated Application ID URI.'
+        }
+        $forgedPrincipalJson = @{
+            claims = @(
+                @{ typ = 'aud'; val = $script:applicationIdUri },
+                @{ typ = 'scp'; val = 'access_as_user' }
+            )
+        } | ConvertTo-Json -Compress -Depth 10
+        $forgedPrincipal = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($forgedPrincipalJson))
+        $forgedHeaders = @{
+            'X-MS-CLIENT-PRINCIPAL-ID' = 'forged-untrusted-principal'
+            'X-MS-CLIENT-PRINCIPAL' = $forgedPrincipal
+        }
         $response = Invoke-ConnectorRequest -Method ([System.Net.Http.HttpMethod]::Get) -Path '/connector/context' -Body $null -BearerToken $null -Headers $forgedHeaders
         $passed = $response.StatusCode -eq 401
-        Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'The Azure ingress rejected a forged Easy Auth principal header without a bearer token.' } else { 'Expected HTTP 401; a client-supplied X-MS-CLIENT-PRINCIPAL-ID must never cross the Easy Auth trust boundary.' })
+        Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'The Azure ingress stripped a forged Easy Auth identity containing the otherwise valid audience and scope.' } else { 'Expected HTTP 401; client-supplied Easy Auth identity and claim headers must never cross the platform trust boundary.' })
     }
     catch {
         Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
@@ -299,8 +312,11 @@ try {
         $anonymousMcpBody = @{ jsonrpc = '2.0'; id = 900; method = 'tools/list'; params = @{} } | ConvertTo-Json -Compress -Depth 10
         $response = Invoke-ConnectorRequest -Method ([System.Net.Http.HttpMethod]::Post) -Path '/mcp' -Body $anonymousMcpBody -BearerToken $null -Accept @('application/json', 'text/event-stream')
         $challenge = if ($response.Headers.ContainsKey('WWW-Authenticate')) { [string]$response.Headers['WWW-Authenticate'] } else { '' }
-        $passed = $response.StatusCode -eq 401 -and $challenge -match 'resource_metadata='
-        Add-TestResult -Name 'anonymous.mcp-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'Protected MCP endpoint rejects anonymous requests and advertises OAuth resource metadata.' } else { 'Expected HTTP 401 with an RFC 9728 resource_metadata challenge and redirects disabled.' })
+        $passed = $response.StatusCode -eq 401 -and
+            $challenge -match 'resource_metadata=' -and
+            $challenge -match 'error="invalid_token"' -and
+            $challenge.Contains("scope=`"$script:delegatedScope`"", [StringComparison]::Ordinal)
+        Add-TestResult -Name 'anonymous.mcp-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'Protected MCP rejects anonymous requests with exact OAuth metadata, invalid_token, and delegated-scope guidance.' } else { 'Expected HTTP 401 with exact RFC 9728 resource_metadata, invalid_token, and access_as_user challenge parameters.' })
     }
     catch {
         Add-TestResult -Name 'anonymous.mcp-denied' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
@@ -308,7 +324,7 @@ try {
 
     if ($InteractiveAuth) {
         try {
-            $accessToken = Get-AzureCliAccessToken -ClientId $EntraClientId -RequestedTenant $TenantId
+            $accessToken = Get-AzureCliAccessToken -DelegatedScope $script:delegatedScope -RequestedTenant $TenantId
             Add-TestResult -Name 'azure-cli.access-token' -Status passed -StatusCode $null -Detail 'Azure CLI acquired a connector token in memory.'
         }
         catch {
@@ -432,10 +448,18 @@ try {
                     $message = if ($response.StatusCode -eq 200) { ConvertFrom-McpResponse -Body $response.Body -ExpectedId 1002 } else { $null }
                     $tools = if ($null -ne $message -and $message.ContainsKey('result') -and $message.result.ContainsKey('tools')) { @($message.result.tools) } else { @() }
                     $toolNames = @($tools | ForEach-Object { [string]$_.name })
-                    $expectedToolNames = @('azure_get_context', 'azure_list_resources', 'azure_list_foundry_resources')
+                    $expectedToolNames = @(
+                        'azure_get_context',
+                        'azure_list_resources',
+                        'azure_list_foundry_resources',
+                        'helios_plan_automation',
+                        'helios_propose_upgrade',
+                        'helios_get_run',
+                        'helios_list_connectors'
+                    )
                     $toolDifference = @(Compare-Object -ReferenceObject $expectedToolNames -DifferenceObject $toolNames)
                     $passed = $response.StatusCode -eq 200 -and $null -ne $message -and $message.jsonrpc -eq '2.0' -and -not $message.ContainsKey('error') -and $toolDifference.Count -eq 0
-                    Add-TestResult -Name 'authenticated.mcp-tools-list' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP exposes exactly the three approved read-only Azure inventory tools.' } else { 'MCP tool inventory differs from the approved read-only set.' })
+                    Add-TestResult -Name 'authenticated.mcp-tools-list' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP exposes exactly the seven approved read-only and plan-only tools.' } else { 'MCP tool inventory differs from the approved read-only and plan-only set.' })
                 }
                 catch {
                     Add-TestResult -Name 'authenticated.mcp-tools-list' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)

@@ -13,8 +13,12 @@ clients, and governed agent workflows.
   protected-resource metadata are public discovery routes. Connector REST and
   remote MCP routes require Entra; provider webhook ingress remains a separate
   signature/validation boundary and fails closed in every execution mode.
-- An application-level check requires the Easy Auth principal header.
-- The user-assigned managed identity receives Reader only on the deployment resource group.
+- An application-level check requires the sanitized Easy Auth principal ID,
+  exact origin-bound audience, and delegated `access_as_user` claim. Legacy
+  client-ID audiences are not accepted.
+- The user-assigned managed identity receives operator-bootstrapped Reader on
+  the deployment resource group and template-owned Cosmos Data Contributor only
+  on the `control-runs` container.
 - Returned inventory is limited to resource ID, name, type, and location.
 - No deploy, delete, role-assignment, consent, secret-read, or publication tool exists.
 - Production remains `dry-run`; deploying the connector does not unlock Helios mutations.
@@ -23,7 +27,9 @@ clients, and governed agent workflows.
 
 1. An existing Azure subscription and resource group.
 2. An Entra single-tenant app registration exposing a delegated
-   `user_impersonation` scope.
+   `access_as_user` scope. Its Application ID URI must be
+   `api://<PUBLIC_HOSTNAME>/<app-client-id>`, matching the tab origin and the
+   generated Teams `webApplicationInfo.resource`.
 3. The app registration client ID and tenant ID.
 4. At least one allowed user or service-principal object ID.
 5. An interactive administrator allowed to register the required providers and
@@ -36,10 +42,16 @@ authentication and environment-inspection client only. Use
 or the protected GitHub workflow for reviewed preview and deployment. The
 deployment identity's `AZURE_CLIENT_ID` remains separate from the connector app
 registration. `infra/main.bicep` is only a wrapper around the hardened
-`connector.bicep`; it cannot create a registry or grant roles.
+`connector.bicep`; it cannot create a registry or grant Azure management roles.
+The connector module owns only its container-scoped Cosmos SQL data role.
 
 These identifiers are not secrets. Do not place app secrets, tokens, or passwords
 in the parameter file.
+
+For a reviewed Edge/custom-DNS front door, set `publicBaseUrl` to the canonical
+HTTPS origin and preserve that host through the proxy. The default remains the
+Container Apps FQDN. Custom DNS, TLS certificates, Entra redirect URIs, and
+private-origin networking are separate what-if and administrator gates.
 
 ## Preview and deploy
 
@@ -111,6 +123,20 @@ The default execution runs ARM `what-if` only. Its direct `-Apply` path is
 retired; deploy through the reviewer-gated `helios-cloud-deploy` workflow, which
 binds deployment to a hashed plan and immutable image.
 
+## Microsoft 365 and Teams SSO
+
+Use the deployment output `connectorEntraApplicationIdUri` as the Entra
+**Expose an API** Application ID URI, create the delegated `access_as_user`
+scope, and authorize the Microsoft host client applications required by the
+tenant. The value is origin-bound; a custom Front Door or DNS origin therefore
+requires a new reviewed what-if and a matching Teams package.
+
+The personal tab initializes pinned TeamsJS, requests `getAuthToken()` only
+when an API call needs a token, and sends that token in the Authorization
+header. If tenant consent requires interaction, the tab exposes a user-clicked,
+same-origin popup flow. It never navigates the host iframe into Entra and never
+passes an access token through `notifySuccess`.
+
 ## Connect clients
 
 - MCP endpoint: `https://<container-app-host>/mcp`
@@ -122,7 +148,8 @@ For Power Platform/Copilot Studio, replace the placeholders in
 `connector/helios-azure-connector.openapi.yaml`, then import it as a custom
 connector and configure the Entra OAuth connection. For an MCP client, start from
 `connector/mcp-manifest.example.json` and use an access token whose audience is
-the connector app registration.
+the origin-bound connector Application ID URI and whose delegated scope is
+`access_as_user`.
 
 ## Verification
 
@@ -132,7 +159,8 @@ the connector app registration.
    `read-only-resource-group`.
 4. Confirm resource inventory contains no properties, keys, connection strings,
    tags, or secret values.
-5. Confirm MCP `tools/list` exposes only the three inventory tools.
+5. Confirm MCP `tools/list` exposes exactly the seven approved read-only and
+   plan-only tools.
 
 Run the checks with `scripts/Test-HeliosCloudConnection.ps1`; add
 `-InteractiveAuth` for the authenticated context and MCP checks. The access

@@ -36,9 +36,11 @@ reusable `workflow_call`, so it intentionally does not require GitHub's
 reusable-workflow-only `job_workflow_ref` claim. The environment's required
 reviewer and exact deployment-branch policy remain mandatory gates.
 
-The interactive administrator grants CI only Contributor at the selected
-resource-group scope. It separately grants the runtime identity Reader and
-registers only the six resource providers listed by the wizard; provider
+The interactive administrator applies `helios-environment=<environment>` to
+the selected resource group without replacing other tags and refuses to
+reclassify a group already bound to another environment. It grants CI only
+Contributor at the selected resource-group scope. It separately grants the runtime identity Reader and
+registers only the seven resource providers listed by the wizard; provider
 registration has its own `REGISTER HELIOS PROVIDERS` confirmation. CI never
 receives Owner or role-assignment authority. Configuration requires the exact
 phrase `CONFIGURE HELIOS AZURE`; resource-group creation has a separate exact
@@ -56,9 +58,13 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
 
 This phase runs what-if with an all-zero preview placeholder when no image
 exists. It does not deploy an application. The connector API is single-tenant,
-uses v2 access tokens, exposes exactly `user_impersonation`, and preauthorizes
+uses v2 access tokens, exposes exactly `access_as_user`, and preauthorizes
 the Microsoft Azure CLI public client for that scope so the verifier can obtain
-a token without storing a secret.
+a token without storing a secret. Before the first deployment its identifier is
+the provisional `api://<client-id>`. After deployment, re-run Configure once:
+the wizard discovers the Container App FQDN and adds the Teams-required
+`api://<public-hostname>/<client-id>` Application ID URI. Install the Teams
+package only after that origin-bound URI is verified.
 
 ## 3. Prepare and dispatch the protected cloud build
 
@@ -109,6 +115,11 @@ waits at the preview environment, builds the exact selected commit and records
 its registry digest, produces and hashes canonical ARM what-if evidence, then
 waits at the separate deploy approval before rechecking drift and applying that
 same revision.
+
+After the deployment returns the connector hostname, re-run `-Mode Configure`
+with the same reviewed inputs and confirmation. This idempotent pass discovers
+the deployed FQDN and finalizes the domain-qualified Teams SSO Application ID
+URI; it does not deploy the application.
 
 Use GitHub Actions → `helios-cloud-deploy` → **Run workflow**. Direct local
 `az deployment group create`, `azd provision`, and `azd deploy` are not Helios

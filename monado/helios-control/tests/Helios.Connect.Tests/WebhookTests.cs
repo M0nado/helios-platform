@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Hosting;
 using Xunit;
@@ -232,6 +233,72 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Edge_control_routes_expose_safe_connector_state_and_require_idempotency()
+    {
+        using var connectors = await _client.GetAsync("/control/connectors");
+        var connectorBody = await connectors.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, connectors.StatusCode);
+        Assert.Contains("no-store", connectors.Headers.CacheControl?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("github", connectorBody);
+        Assert.DoesNotContain("HMAC_SECRET", connectorBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("https://", connectorBody, StringComparison.OrdinalIgnoreCase);
+
+        using var content = new StringContent("{\"intent\":\"provision-resources\",\"environment\":\"dev\"}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/control/runs", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edge_control_route_rejects_oversized_chunked_bodies()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/control/runs")
+        {
+            Content = new ChunkedJsonContent(Encoding.UTF8.GetBytes($"{{\"intent\":\"provision-resources\",\"environment\":\"dev\",\"padding\":\"{new string('a', 20_000)}\"}}"))
+        };
+        request.Headers.Add("Idempotency-Key", "chunked-control-0001");
+
+        using var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edge_manifest_is_served_with_installable_content_type()
+    {
+        using var response = await _client.GetAsync("/wizard/manifest.webmanifest");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/manifest+json", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task Microsoft_tab_uses_Teams_SSO_popup_fallback_and_current_cloud_hosts()
+    {
+        using var page = await _client.GetAsync("/wizard/index.html");
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("https://res.cdn.office.net/teams-js/2.53.1/", html);
+        Assert.Contains("sha384-PIuQ2V7hlz4b1x3G1mPCYYZiWTjxzRTL6bf547xR9ARsAeNv2DAzti86LQnFCwlo", html);
+
+        Assert.True(page.Headers.TryGetValues("Content-Security-Policy", out var policies));
+        var policy = Assert.Single(policies!);
+        Assert.Contains("https://res.cdn.office.net", policy);
+        Assert.Contains("https://*.cloud.microsoft", policy);
+
+        var script = await _client.GetStringAsync("/wizard/wizard.js");
+        Assert.Contains("authentication.getAuthToken", script);
+        Assert.Contains("authentication.authenticate", script);
+        Assert.True(
+            script.IndexOf("if (embeddedHost)", StringComparison.Ordinal) <
+            script.IndexOf("window.location.assign", StringComparison.Ordinal),
+            "Embedded Microsoft hosts must never navigate their iframe into Entra login.");
+
+        var authStart = await _client.GetStringAsync("/wizard/auth-start.html");
+        var authEnd = await _client.GetStringAsync("/wizard/auth-end.js");
+        Assert.Contains("/.auth/login/aad", authStart);
+        Assert.Contains("authentication.notifySuccess('session-established')", authEnd);
+        Assert.DoesNotContain("notifySuccess(accessToken", authEnd, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Readiness_fails_closed_when_cloud_identity_configuration_is_missing()
     {
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
@@ -332,23 +399,192 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Azure_mcp_exposes_only_inventory_tools()
+    public async Task Azure_mcp_requires_scope_and_exposes_only_the_approved_tools()
     {
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
-            builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true"));
+        {
+            builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
+            builder.UseSetting("HELIOS_ENTRA_CLIENT_ID", "11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", "api://helios.example.test/11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test");
+        });
         using var client = securedFactory.CreateClient();
+
+        using (var missingScopeRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        })
+        {
+            missingScopeRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
+            missingScopeRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal("wrong_scope"));
+            using var missingScopeResponse = await client.SendAsync(missingScopeRequest);
+            Assert.Equal(HttpStatusCode.Unauthorized, missingScopeResponse.StatusCode);
+            Assert.Contains("access_as_user", Assert.Single(missingScopeResponse.Headers.WwwAuthenticate).ToString());
+        }
+
+        using (var wrongAudienceRequest = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        })
+        {
+            wrongAudienceRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
+            wrongAudienceRequest.Headers.Add("X-MS-CLIENT-PRINCIPAL",
+                CreateEasyAuthPrincipal("access_as_user", "api://wrong.example.test/11111111-1111-1111-1111-111111111111"));
+            using var wrongAudienceResponse = await client.SendAsync(wrongAudienceRequest);
+            Assert.Equal(HttpStatusCode.Unauthorized, wrongAudienceResponse.StatusCode);
+        }
+
         using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
             Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
         };
         request.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
+        request.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal("openid access_as_user"));
         using var response = await client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("azure_list_resources", body);
-        Assert.Contains("azure_list_foundry_resources", body);
-        Assert.DoesNotContain("deploy", body, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("role_assignment", body, StringComparison.OrdinalIgnoreCase);
+        using var document = JsonDocument.Parse(body);
+        var names = document.RootElement.GetProperty("result").GetProperty("tools")
+            .EnumerateArray()
+            .Select(tool => tool.GetProperty("name").GetString()!)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(new[]
+        {
+            "azure_get_context",
+            "azure_list_foundry_resources",
+            "azure_list_resources",
+            "helios_get_run",
+            "helios_list_connectors",
+            "helios_plan_automation",
+            "helios_propose_upgrade"
+        }, names);
+    }
+
+    [Fact]
+    public async Task OAuth_metadata_and_challenge_use_the_origin_bound_access_scope()
+    {
+        const string applicationIdUri = "api://helios.example.test/11111111-1111-1111-1111-111111111111";
+        await using var securedFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
+            builder.UseSetting("HELIOS_ENTRA_CLIENT_ID", "11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", applicationIdUri);
+            builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test");
+        });
+        using var client = securedFactory.CreateClient();
+
+        using (var metadataResponse = await client.GetAsync("/.well-known/oauth-protected-resource/mcp"))
+        {
+            var body = await metadataResponse.Content.ReadAsStringAsync();
+            Assert.Equal(HttpStatusCode.OK, metadataResponse.StatusCode);
+            using var metadata = JsonDocument.Parse(body);
+            Assert.Equal("https://helios.example.test/mcp", metadata.RootElement.GetProperty("resource").GetString());
+            Assert.Equal($"{applicationIdUri}/access_as_user",
+                Assert.Single(metadata.RootElement.GetProperty("scopes_supported").EnumerateArray()).GetString());
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        };
+        using var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var challenge = Assert.Single(response.Headers.WwwAuthenticate).ToString();
+        Assert.Contains("resource_metadata=\"https://helios.example.test/.well-known/oauth-protected-resource/mcp\"", challenge);
+        Assert.Contains($"scope=\"{applicationIdUri}/access_as_user\"", challenge);
+        Assert.Contains("error=\"invalid_token\"", challenge);
+    }
+
+    [Fact]
+    public async Task Automation_plan_is_deterministic_and_never_applies_from_rest()
+    {
+        const string payload = "{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}";
+        using var firstContent = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var secondContent = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var first = await _client.PostAsync("/automation/plan", firstContent);
+        using var second = await _client.PostAsync("/automation/plan", secondContent);
+        var firstBody = await first.Content.ReadAsStringAsync();
+        var secondBody = await second.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(firstBody, secondBody);
+        Assert.Contains("\"mode\":\"plan-only\"", firstBody);
+        Assert.Contains("\"canApplyFromMcp\":false", firstBody);
+        Assert.Contains("\"directMainWrite\":false", firstBody);
+        Assert.Contains("open-draft-pull-request", firstBody);
+    }
+
+    [Fact]
+    public async Task Automation_plan_rejects_secret_rotation_without_target()
+    {
+        using var content = new StringContent("{\"intent\":\"rotate-secret\",\"environment\":\"dev\"}", Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/automation/plan", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_exposes_plan_only_automation_tool()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("helios_plan_automation", body);
+        Assert.Contains("readOnlyHint", body);
+        Assert.DoesNotContain("helios_apply", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_returns_issue_repair_plan_without_apply_capability()
+    {
+        const string payload = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_plan_automation\",\"arguments\":{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}}}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("canApplyFromMcp", body);
+        Assert.Contains("open-draft-pull-request", body);
+        Assert.DoesNotContain("automaticMerge\\\":true", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Setup_wizard_is_served_and_bootstrap_remains_plan_only()
+    {
+        using var page = await _client.GetAsync("/setup");
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("Azure Setup Wizard", html);
+
+        const string payload = "{\"tenantId\":\"11111111-1111-1111-1111-111111111111\",\"subscriptionId\":\"22222222-2222-2222-2222-222222222222\",\"resourceGroup\":\"helios-dev-rg\",\"environment\":\"dev\"}";
+        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var response = await _client.PostAsync("/setup/bootstrap", content);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("-Mode Diagnose", body);
+        Assert.Contains("-Mode Plan", body);
+        Assert.DoesNotContain("-Mode Apply", body);
+        Assert.Contains("\"appliesChanges\":false", body);
+    }
+
+    [Fact]
+    public async Task Mcp_exposes_upgrade_proposals_but_no_upgrade_apply_tool()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}", Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("helios_propose_upgrade", body);
+        Assert.DoesNotContain("helios_apply_upgrade", body, StringComparison.OrdinalIgnoreCase);
     }
 
     private static HttpRequestMessage CreateSignedGitHubWebhook(string deliveryId, string body)
@@ -363,6 +599,21 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         request.Headers.Add("X-Hub-Signature-256", $"sha256={signature}");
         request.Headers.Add("X-GitHub-Delivery", deliveryId);
         return request;
+    }
+
+    private static string CreateEasyAuthPrincipal(
+        string scopes,
+        string audience = "api://helios.example.test/11111111-1111-1111-1111-111111111111")
+    {
+        var principal = JsonSerializer.Serialize(new
+        {
+            claims = new[]
+            {
+                new { typ = "aud", val = audience },
+                new { typ = "scp", val = scopes }
+            }
+        });
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(principal));
     }
 
     private static HttpRequestMessage CreateSignedSlackWebhook(long timestamp, string body)

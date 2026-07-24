@@ -18,10 +18,10 @@ securityDefinitions:
     authorizationUrl: https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/authorize
     tokenUrl: https://login.microsoftonline.com/${ENTRA_TENANT_ID}/oauth2/v2.0/token
     scopes:
-      api://${ENTRA_CLIENT_ID}/user_impersonation: Read Helios Azure inventory
+      api://${HELIOS_CONNECTOR_HOST}/${ENTRA_CLIENT_ID}/access_as_user: Read governed Helios Azure inventory
 security:
   - azure_ad:
-      - api://${ENTRA_CLIENT_ID}/user_impersonation
+      - api://${HELIOS_CONNECTOR_HOST}/${ENTRA_CLIENT_ID}/access_as_user
 paths:
   /connector/context:
     get:

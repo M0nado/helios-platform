@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "helios-cloud-runtime",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "runtime": {
     "hosting": "azure",
     "localRuntimeAllowed": false,
@@ -63,10 +63,10 @@
       "gate": "administrator-selected Foundry project, deployment, identity, and RBAC"
     },
     "cosmosDb": {
-      "purpose": "Candidate state, run metadata, approvals, and idempotency",
+      "purpose": "Control-run snapshots, leases, request hashes, plan digests, and connector receipts",
       "localAuthenticationAllowed": false,
-      "implemented": false,
-      "requiredForCurrentConnector": false,
+      "implemented": true,
+      "requiredForCurrentConnector": true,
       "requiredForTargetArchitecture": true
     },
     "dataLake": {
@@ -91,11 +91,11 @@
     }
   },
   "integrations": {
-    "github": "planned:signed-webhook-to-service-bus",
-    "linear": "planned:signed-webhook-to-service-bus-and-governed-status-writes",
-    "slack": "planned:signed-webhook-to-service-bus-and-governed-thread-writes",
+    "github": "implemented:signed-relay-dry-run-until-key-vault-binding-and-host-allowlist",
+    "linear": "implemented:signed-relay-dry-run-until-key-vault-binding-and-host-allowlist",
+    "slack": "implemented:signed-relay-dry-run-until-key-vault-binding-and-host-allowlist",
     "teams": "disabled-until-entra-jwt-and-validation-challenge",
-    "sharePoint": "disabled-until-graph-consent-and-selected-site-permission"
+    "sharePoint": "implemented:signed-relay-dry-run-until-selected-site-relay-binding-and-host-allowlist"
   },
   "providerIsolation": {
     "enabled": true,
