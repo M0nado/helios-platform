@@ -151,8 +151,15 @@ class HeliosCliTests(unittest.TestCase):
 
     def test_runner_topology_keeps_self_hosted_disabled(self) -> None:
         topology = HELIOS.runner_plan()
+        self.assertEqual(topology["schemaVersion"], 2)
         self.assertEqual(topology["validation"]["provider"], "github-hosted")
         self.assertFalse(topology["selfHosted"]["enabled"])
+        self.assertFalse(topology["deviceLab"]["enabled"])
+        self.assertEqual(
+            topology["windowsDesktop"]["artifactEvidence"]["sha256Manifest"],
+            "SHA256SUMS.txt",
+        )
+        self.assertFalse(topology["azureDevOps"]["pipelineMutation"])
         self.assertTrue(topology["release"]["immutableImageRequired"])
 
     def test_edge_plan_requires_private_link_and_separate_approval(self) -> None:

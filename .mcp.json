@@ -2,17 +2,11 @@
   "mcpServers": {
     "helios-local-dev": {
       "type": "http",
-      "url": "${HELIOS_LOCAL_MCP_URL}"
-    },
-    "helios-azure": {
-      "type": "http",
-      "url": "${HELIOS_AZURE_CONNECTOR_URL}/mcp"
+      "url": "http://127.0.0.1:5080/mcp"
     },
     "azure-mcp-readonly": {
-      "command": "npx",
+      "command": "azmcp",
       "args": [
-        "-y",
-        "@azure/mcp@3.0.0-beta.29",
         "server",
         "start",
         "--read-only",
@@ -35,6 +29,18 @@
         "--namespace",
         "pricing"
       ]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp"
+    },
+    "linear": {
+      "type": "http",
+      "url": "https://mcp.linear.app/mcp"
+    },
+    "slack": {
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp"
     }
   }
 }

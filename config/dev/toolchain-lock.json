@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "name": "helios-developer-cockpit",
+  "sourceIssue": "https://github.com/M0nado/helios-platform/issues/194",
+  "policy": "pinned-read-plan-pr-first",
+  "versions": {
+    "dotnet": "8.0.423",
+    "python": "3.12",
+    "node": "24.18.0",
+    "npm": "11.16.0",
+    "powershell": "7.4.18",
+    "githubCli": "2.96.0",
+    "azureCli": "2.88.0",
+    "bicep": "0.45.15",
+    "devcontainerCli": "0.88.0",
+    "claudeCode": "2.1.220",
+    "azureMcp": "3.0.0-beta.29",
+    "m365AgentsToolkit": "1.1.12"
+  },
+  "minimumVersions": {
+    "git": "2.43.0",
+    "cmake": "3.28.0",
+    "ninja": "1.11.0",
+    "jq": "1.7",
+    "shellcheck": "0.10.0"
+  },
+  "requiredProfiles": {
+    "contract": [],
+    "devcontainer": [
+      "python",
+      "dotnet",
+      "node",
+      "npm",
+      "powershell",
+      "githubCli",
+      "azureCli",
+      "bicep",
+      "git",
+      "cmake",
+      "ninja",
+      "jq",
+      "shellcheck",
+      "claudeCode"
+    ]
+  },
+  "nodePackages": {
+    "@anthropic-ai/claude-code": "2.1.220",
+    "@azure/mcp": "3.0.0-beta.29",
+    "@devcontainers/cli": "0.88.0"
+  },
+  "quarantinedTools": {
+    "@microsoft/m365agentstoolkit-cli": {
+      "version": "1.1.12",
+      "automaticInstall": false,
+      "reason": "Current dependency graph has unresolved high-severity npm advisories.",
+      "advisories": [
+        "GHSA-xcpc-8h2w-3j85",
+        "GHSA-frvp-7c67-39w9",
+        "GHSA-w5hq-g745-h8pq"
+      ]
+    }
+  },
+  "vscodeExtensions": [
+    "openai.chatgpt",
+    "anthropic.claude-code",
+    "ms-edgedevtools.vscode-edge-devtools",
+    "github.copilot",
+    "github.copilot-chat",
+    "github.vscode-github-actions",
+    "github.codespaces",
+    "ms-vscode-remote.remote-containers",
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.csdevkit",
+    "ms-vscode.powershell",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "ms-azuretools.azure-dev",
+    "ms-azuretools.vscode-docker",
+    "ms-azuretools.vscode-azurefunctions",
+    "ms-azuretools.vscode-azureappservice",
+    "ms-azuretools.vscode-bicep",
+    "ms-azuretools.vscode-azure-github-copilot",
+    "ms-azuretools.vscode-azure-mcp-server",
+    "teamsdevapp.ms-teams-vscode-extension",
+    "github.vscode-pull-request-github",
+    "eamodio.gitlens",
+    "redhat.vscode-yaml",
+    "davidanson.vscode-markdownlint"
+  ],
+  "boundaries": {
+    "azureApply": false,
+    "tenantConsent": false,
+    "rbacMutation": false,
+    "connectorDelivery": false,
+    "selfHostedRunners": false,
+    "deviceWrites": false,
+    "windowsBootMutation": false,
+    "automaticMerge": false
+  }
+}

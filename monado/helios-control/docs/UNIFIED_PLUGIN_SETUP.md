@@ -1,6 +1,6 @@
 # HELIOS unified plugin setup
 
-HELIOS Control Fabric 0.6.0 is the operator entry point for Codex, ChatGPT,
+HELIOS Control Fabric 0.7.0 is the operator and developer-cockpit entry point for Codex, ChatGPT,
 Azure, Azure DevOps, GitHub, Linear, Slack, SharePoint, Teams, Foundry, and
 Microsoft Copilot. One Entra-protected Streamable HTTP MCP endpoint exposes the
 same governed tools and Monado MCP Apps UI to approved hosts.

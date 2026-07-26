@@ -8,6 +8,9 @@ They exchange only reviewed files, MCP results, and evidence artifacts.
 ## Workbench surfaces
 
 - `HeliosControl.code-workspace` is the VS Code Insiders workbench.
+- The repository root `.devcontainer` is the pinned Codespaces/local-container
+  environment; root `.vscode` adds Microsoft Edge, Claude Code, Codex, Copilot,
+  and project MCP integration.
 - `.vscode/mcp.json` configures VS Code/Copilot.
 - `.mcp.json` configures Claude Code at project scope.
 - `.github/agents` defines four scoped agents that VS Code discovers.
@@ -41,10 +44,17 @@ Claude Code's own account flow, open this repository, and review the project MCP
 trust prompt. The repository does not request or store an Anthropic key.
 
 ```bash
-npm install --global @anthropic-ai/claude-code@2.1.212
+npm install --global @anthropic-ai/claude-code@2.1.220
 claude mcp list
 claude
 ```
+
+When the repository is opened at its root, Claude reads root `CLAUDE.md` and
+root `.mcp.json`, including GitHub, Linear, Slack, and read-only Azure/Foundry
+discovery. Azure DevOps stays in the enforced read-only VS Code profile because
+Microsoft's remote server does not currently authenticate Claude Code and the
+local package has no hard read-only switch. The nested `.mcp.json` remains the
+smaller Helios-Control-only profile.
 
 Use Claude for repository analysis, bounded implementation, and peer review.
 It must not deploy, merge, modify RBAC, grant consent, publish agents, or consume

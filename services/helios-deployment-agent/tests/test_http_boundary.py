@@ -59,7 +59,7 @@ class HttpBoundaryTests(unittest.IsolatedAsyncioTestCase):
         sensitive = await self.client.post(
             "/api/v1/plans",
             headers=headers,
-            json={"objective": "use api_key=abcdefghijklmnop", "manifest": {}},
+            json={"objective": "use api_key=placeholder-abcdefghijklmnop", "manifest": {}},
         )
         self.assertEqual(400, sensitive.status_code)
 

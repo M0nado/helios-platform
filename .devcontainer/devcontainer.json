@@ -1,109 +1,125 @@
 {
-  "name": "HELIOS Platform Codespace",
-  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm",
+  "name": "HELIOS Developer Cockpit",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
   "features": {
-    "ghcr.io/devcontainers/features/github-cli:1": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/azure-cli:1": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/powershell:1": {
-      "version": "latest"
-    },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest",
-      "moby": true
-    },
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "lts"
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "24.18.0",
+      "npmVersion": "11.16.0",
+      "nodeGypDependencies": true
     },
     "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.11"
+      "version": "3.12"
+    },
+    "ghcr.io/devcontainers/features/powershell:2": {
+      "version": "7.4.18"
+    },
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "version": "2.88.0",
+      "installBicep": true,
+      "bicepVersion": "v0.45.15"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "2.96.0"
     }
+  },
+  "containerEnv": {
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "DOTNET_NOLOGO": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1"
+  },
+  "remoteEnv": {
+    "PATH": "${containerWorkspaceFolder}/.devcontainer/node_modules/.bin:${containerEnv:PATH}"
   },
   "customizations": {
     "vscode": {
       "extensions": [
+        "openai.chatgpt",
+        "anthropic.claude-code",
+        "ms-edgedevtools.vscode-edge-devtools",
+        "github.copilot",
+        "github.copilot-chat",
+        "github.vscode-github-actions",
+        "github.codespaces",
+        "ms-vscode-remote.remote-containers",
         "ms-dotnettools.csharp",
         "ms-dotnettools.csdevkit",
         "ms-vscode.powershell",
-        "ms-azuretools.vscode-docker",
-        "ms-azuretools.vscode-azurefunctions",
-        "ms-azuretools.vscode-azureappservice",
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-python.black-formatter",
-        "GitHub.copilot",
-        "GitHub.vscode-pull-request-github",
+        "ms-azuretools.azure-dev",
+        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-azurefunctions",
+        "ms-azuretools.vscode-azureappservice",
+        "ms-azuretools.vscode-bicep",
+        "ms-azuretools.vscode-azure-github-copilot",
+        "ms-azuretools.vscode-azure-mcp-server",
+        "teamsdevapp.ms-teams-vscode-extension",
+        "github.vscode-pull-request-github",
         "eamodio.gitlens",
         "redhat.vscode-yaml",
-        "DavidAnson.vscode-markdownlint"
+        "davidanson.vscode-markdownlint"
       ],
       "settings": {
+        "chat.mcp.enabled": true,
+        "dotnet.defaultSolution": "monado/helios-control/Helios.Connect.sln",
+        "azureMcp.readOnly": true,
         "terminal.integrated.defaultProfile.linux": "pwsh",
-        "terminal.integrated.profiles.linux": {
-          "pwsh": {
-            "path": "/usr/bin/pwsh"
-          },
-          "bash": {
-            "path": "/bin/bash"
-          }
-        },
-        "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
         "editor.formatOnSave": true,
-        "files.autoSave": "onFocusChange",
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "[powershell]": {
-          "editor.defaultFormatter": "ms-vscode.powershell"
-        },
-        "[csharp]": {
-          "editor.defaultFormatter": "ms-dotnettools.csharp"
-        },
-        "[json]": {
-          "editor.defaultFormatter": "vscode.json-language-features"
-        },
-        "[yaml]": {
-          "editor.insertSpaces": true,
-          "editor.tabSize": 2
-        }
+        "files.autoSave": "onFocusChange"
       }
     }
-  },
-  "remoteEnv": {
-    "HELIOS_ENV": "development",
-    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
-    "DOTNET_NOLOGO": "1"
   },
   "forwardPorts": [
     3000,
     5000,
     5173,
     8080,
-    8443
+    8443,
+    5080
   ],
   "portsAttributes": {
     "3000": {
       "label": "Web UI",
-      "onAutoForward": "notify"
+      "onAutoForward": "silent",
+      "visibility": "private"
     },
     "5000": {
-      "label": "API Server",
-      "onAutoForward": "notify"
+      "label": "API server",
+      "onAutoForward": "silent",
+      "visibility": "private"
     },
     "5173": {
-      "label": "Vite Dev Server",
-      "onAutoForward": "notify"
+      "label": "Vite dev server",
+      "onAutoForward": "silent",
+      "visibility": "private"
     },
     "8080": {
-      "label": "HELIOS Dashboard",
-      "onAutoForward": "notify"
+      "label": "HELIOS dashboard",
+      "onAutoForward": "silent",
+      "visibility": "private"
     },
     "8443": {
       "label": "Secure API",
-      "onAutoForward": "notify"
+      "onAutoForward": "silent",
+      "visibility": "private"
+    },
+    "5080": {
+      "label": "HELIOS local MCP and setup wizard",
+      "protocol": "http",
+      "onAutoForward": "silent",
+      "visibility": "private"
     }
   },
-  "postCreateCommand": "pwsh -NoLogo -NoProfile -Command \"Write-Host 'HELIOS Codespace ready: restoring primary .NET projects...' -ForegroundColor Cyan; if (Test-Path 'src/core/HELIOS.Platform/HELIOS.Platform.csproj') { dotnet restore 'src/core/HELIOS.Platform/HELIOS.Platform.csproj' }; if (Test-Path 'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj') { dotnet restore 'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj' }; Write-Host 'Next: run ./scripts/build/build.ps1 or dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj' -ForegroundColor Green\"",
-  "postStartCommand": "pwsh -NoLogo -NoProfile -Command \"Write-Host 'Welcome back to HELIOS Platform Codespace' -ForegroundColor Green; gh --version | Select-Object -First 1; dotnet --version\""
+  "postCreateCommand": "bash scripts/dev/bootstrap-cockpit.sh",
+  "remoteUser": "vscode",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  }
 }

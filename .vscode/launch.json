@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "HELIOS Setup Wizard in Microsoft Edge",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://127.0.0.1:5080/wizard/",
+      "webRoot": "${workspaceFolder}/monado/helios-control/src/Helios.Connect.Api/wwwroot",
+      "preLaunchTask": "HELIOS: start local connector"
+    },
+    {
+      "name": "HELIOS MCP App in Microsoft Edge",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://127.0.0.1:5080/mcp/helios-control-v2.html",
+      "webRoot": "${workspaceFolder}/monado/helios-control/src/Helios.Connect.Api/wwwroot",
+      "preLaunchTask": "HELIOS: start local connector"
+    }
+  ]
+}

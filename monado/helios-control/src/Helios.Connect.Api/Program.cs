@@ -1397,7 +1397,7 @@ static int GetBoundedInt(string? value, int defaultValue, int minimum, int maxim
 
 internal static class HeliosMcpDefaults
 {
-    internal const string Version = "0.6.0";
+    internal const string Version = "0.7.0";
     internal const string ControlResourceUri = "ui://helios/control-center-v2.html";
     internal const string ResourceMimeType = "text/html;profile=mcp-app";
 }

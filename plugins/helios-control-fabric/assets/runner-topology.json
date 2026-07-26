@@ -1,18 +1,64 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "portableDevelopment": {
+    "provider": "github-codespaces-or-local-devcontainer",
+    "configuration": ".devcontainer/devcontainer.json",
+    "labels": [
+      "linux",
+      "x64-or-arm64",
+      "helios-portable"
+    ],
+    "capabilities": [
+      "dotnet-8",
+      "python-3.12",
+      "node-24",
+      "cpp20",
+      "local-dry-run-mcp",
+      "edge-port-forwarding",
+      "claude-code",
+      "codex",
+      "copilot"
+    ],
+    "forbiddenCapabilities": [
+      "wpf-render-validation",
+      "windows-boot-mutation",
+      "physical-usb-write",
+      "tenant-admin-consent",
+      "azure-deploy"
+    ]
+  },
   "validation": {
     "provider": "github-hosted",
     "labels": [
-      "ubuntu-latest",
-      "windows-latest"
+      "ubuntu-24.04",
+      "windows-2025"
     ],
     "permissions": "read-only",
     "publishArtifacts": true
   },
+  "windowsDesktop": {
+    "provider": "github-hosted",
+    "labels": [
+      "windows-2025",
+      "helios-wpf"
+    ],
+    "workflow": ".github/workflows/helios-polyglot-required.yml",
+    "interactiveSession": false,
+    "capabilities": [
+      "wpf-compile",
+      "windows-targeted-tests",
+      "artifact-hashing"
+    ],
+    "artifactEvidence": {
+      "algorithm": "SHA-256",
+      "sha256Manifest": "SHA256SUMS.txt",
+      "retentionDays": 14
+    }
+  },
   "release": {
     "provider": "github-hosted",
     "labels": [
-      "ubuntu-latest"
+      "ubuntu-24.04"
     ],
     "environment": "azure-dev",
     "permissions": [
@@ -20,6 +66,30 @@
       "id-token:write"
     ],
     "immutableImageRequired": true
+  },
+  "azureDevOps": {
+    "organization": "Heli0sDev",
+    "mode": "read-only-discovery",
+    "pipelineMutation": false,
+    "workItemMutation": false,
+    "bidirectionalMirror": false
+  },
+  "deviceLab": {
+    "enabled": false,
+    "owningIssue": "https://github.com/M0nado/helios-platform/issues/171",
+    "labels": [
+      "isolated-device-lab",
+      "windows",
+      "physical-usb"
+    ],
+    "enablementRequirements": [
+      "dedicated non-developer identity",
+      "operator confirmation of the exact target device",
+      "signed image and SHA-256 manifest",
+      "disposable test hardware",
+      "recovery procedure",
+      "protected-environment approval"
+    ]
   },
   "selfHosted": {
     "enabled": false,

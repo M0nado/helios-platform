@@ -1,0 +1,28 @@
+{
+  "chat.mcp.enabled": true,
+  "chat.useCustomizationsInParentRepositories": true,
+  "github.copilot.chat.organizationCustomAgents.enabled": true,
+  "dotnet.defaultSolution": "monado/helios-control/Helios.Connect.sln",
+  "azureMcp.serverMode": "namespace",
+  "azureMcp.readOnly": true,
+  "terminal.integrated.defaultProfile.linux": "pwsh",
+  "terminal.integrated.profiles.linux": {
+    "pwsh": {
+      "path": "/usr/bin/pwsh"
+    },
+    "bash": {
+      "path": "/bin/bash"
+    }
+  },
+  "editor.formatOnSave": true,
+  "files.autoSave": "onFocusChange",
+  "terminal.integrated.env.linux": {
+    "PATH": "${workspaceFolder}/.devcontainer/node_modules/.bin:${env:PATH}"
+  },
+  "terminal.integrated.env.osx": {
+    "PATH": "${workspaceFolder}/.devcontainer/node_modules/.bin:${env:PATH}"
+  },
+  "files.exclude": {
+    ".devcontainer/node_modules": true
+  }
+}

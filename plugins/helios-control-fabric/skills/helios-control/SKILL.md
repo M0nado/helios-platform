@@ -63,6 +63,7 @@ python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-
 python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py devops-sync
 python plugins/helios-control-fabric/scripts/helios.py runners
+python scripts/dev/helios_dev_doctor.py --profile contract
 ```
 
 The `oidc` command is a read-only live resolution and therefore requires an

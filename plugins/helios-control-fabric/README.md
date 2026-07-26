@@ -13,6 +13,8 @@ It connects the approved operator experience to:
 - Microsoft Foundry;
 - Microsoft 365 Copilot, Copilot Studio, Teams, and SharePoint templates;
 - deterministic GitHub OIDC, Azure Edge, DevOps sync, and runner contracts.
+- a pinned Codespaces/VS Code developer cockpit for Edge DevTools, Claude Code,
+  Codex, Copilot, and project-scoped MCP.
 
 ## Safe default
 
@@ -30,6 +32,7 @@ DevOps mirror, or activate external connector delivery.
     python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py devops-sync
     python plugins/helios-control-fabric/scripts/helios.py runners
+    python scripts/dev/helios_dev_doctor.py --profile contract
 
 PowerShell:
 
@@ -42,6 +45,17 @@ reads the repository metadata and effective OIDC subject policy. It mirrors the
 Azure onboarding wizard: immutable owner/repository IDs are used when GitHub
 enables them, custom subject templates are rejected, and missing policy fields
 fail closed rather than falling back to a guessed subject.
+
+For a complete portable workbench, reopen the repository in the checked-in
+devcontainer and run:
+
+    python scripts/dev/helios_dev_doctor.py --profile devcontainer
+    bash scripts/dev/portable-validate.sh
+
+The root `.mcp.json` configures Claude Code; `.vscode/mcp.json` configures VS
+Code and Copilot. Both keep Azure and Azure DevOps read-only. Teams and
+SharePoint remain behind the governed Entra runtime and are not assigned
+invented direct MCP endpoints.
 
 ## Environment
 
