@@ -42,7 +42,11 @@ PROBES: dict[str, Probe] = {
     "dotnet": Probe(("dotnet", "--version"), "dotnet"),
     "node": Probe(("node", "--version"), "node"),
     "npm": Probe(("npm", "--version"), "npm"),
-    "powershell": Probe(("pwsh", "--version"), "powershell"),
+    "powershell": Probe(
+        ("pwsh", "--version"),
+        "powershell",
+        match="major-minor",
+    ),
     "githubCli": Probe(("gh", "--version"), "githubCli"),
     "azureCli": Probe(("az", "version", "--output", "json"), "azureCli"),
     "bicep": Probe(("az", "bicep", "version"), "bicep"),
@@ -324,6 +328,9 @@ def check_contract(root: Path = ROOT) -> list[Check]:
         devcontainer = read_json(devcontainer_path)
         features = devcontainer.get("features", {})
         expected_features = {
+            "ghcr.io/devcontainers/features/dotnet:2": {
+                "version": versions.get("dotnet"),
+            },
             "ghcr.io/devcontainers/features/node:2": {
                 "version": versions.get("node"),
                 "npmVersion": versions.get("npm"),
