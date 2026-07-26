@@ -37,6 +37,11 @@ PowerShell:
     ./plugins/helios-control-fabric/scripts/helios.ps1 oidc --environment azure-dev
 
 Every command above is read-only. Add '--json' for machine-readable output.
+The `oidc` command requires an authenticated GitHub CLI session because it
+reads the repository metadata and effective OIDC subject policy. It mirrors the
+Azure onboarding wizard: immutable owner/repository IDs are used when GitHub
+enables them, custom subject templates are rejected, and missing policy fields
+fail closed rather than falling back to a guessed subject.
 
 ## Environment
 

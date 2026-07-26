@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/azure-dev-live-connect.yml'
       - 'integration/azure-dev-live-connect/**'
+      - 'plugins/helios-control-fabric/assets/oidc.json'
+      - 'plugins/helios-control-fabric/scripts/helios.py'
   workflow_dispatch:
     inputs:
       run_what_if:
@@ -67,12 +69,32 @@ jobs:
               exit 1
             }
           }
+          $connector = Get-Content $scripts[0] -Raw
+          foreach ($required in @(
+            'Resolve-GitHubOidcTrust',
+            'use_immutable_subject',
+            'actions/oidc/customization/sub',
+            'X-GitHub-Api-Version:'
+          )) {
+            if ($connector -notmatch [regex]::Escape($required)) {
+              throw "OIDC resolver guardrail is missing: $required"
+            }
+          }
+          if ($connector -match [regex]::Escape('repo:M0nado/helios-platform:environment:azure-dev')) {
+            throw 'The connector must not carry a static legacy OIDC subject.'
+          }
 
       - name: Parse connection registry
         shell: pwsh
         run: |
-          Get-Content 'integration/azure-dev-live-connect/config/connections.json' -Raw |
-            ConvertFrom-Json -Depth 100 | Out-Null
+          $registry = Get-Content 'integration/azure-dev-live-connect/config/connections.json' -Raw |
+            ConvertFrom-Json -Depth 100
+          if (-not $registry.github.federationSubjectResolution) {
+            throw 'Connection registry must name the live GitHub OIDC policy resolver.'
+          }
+          if ($registry.github.PSObject.Properties['federationSubject']) {
+            throw 'Connection registry must not pin a static OIDC subject.'
+          }
 
   what_if:
     name: Authenticate and run azure-dev what-if
@@ -87,6 +109,7 @@ jobs:
     timeout-minutes: 20
     environment: azure-dev
     permissions:
+      actions: read
       contents: read
       id-token: write
     env:
@@ -111,6 +134,26 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.sha }}
+
+      - name: Resolve effective GitHub OIDC subject
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          oidc_path="$RUNNER_TEMP/helios-oidc.json"
+          python plugins/helios-control-fabric/scripts/helios.py \
+            oidc --environment azure-dev --json > "$oidc_path"
+          subject="$(jq -er '.selectedSubject' "$oidc_path")"
+          immutable="$(jq -er '.useImmutableSubject' "$oidc_path")"
+          case "$immutable" in
+            true|false) ;;
+            *) echo "GitHub returned an invalid immutable-subject policy signal." >&2; exit 1 ;;
+          esac
+          {
+            echo "HELIOS_FEDERATION_SUBJECT=$subject"
+            echo "HELIOS_FEDERATION_SUBJECT_IMMUTABLE=$immutable"
+          } >> "$GITHUB_ENV"
 
       - name: Sign in with GitHub OIDC
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43
@@ -201,7 +244,10 @@ jobs:
               'subscriptionId': os.environ['AZURE_SUBSCRIPTION_ID'],
               'tenantId': os.environ['AZURE_TENANT_ID'],
               'resourceGroup': os.environ['AZURE_RESOURCE_GROUP'],
-              'federationSubject': 'repo:M0nado/helios-platform:environment:azure-dev',
+              'federationSubject': os.environ['HELIOS_FEDERATION_SUBJECT'],
+              'useImmutableSubject': (
+                  os.environ['HELIOS_FEDERATION_SUBJECT_IMMUTABLE'] == 'true'
+              ),
               'deploymentPerformed': False,
           }
           path = Path(os.environ['EVIDENCE_DIR']) / 'binding-summary.json'

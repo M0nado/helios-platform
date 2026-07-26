@@ -65,6 +65,12 @@ python plugins/helios-control-fabric/scripts/helios.py devops-sync
 python plugins/helios-control-fabric/scripts/helios.py runners
 ```
 
+The `oidc` command is a read-only live resolution and therefore requires an
+authenticated GitHub CLI. It must use GitHub's effective default/immutable
+subject policy and fail closed for custom templates, missing policy signals, or
+missing canonical repository IDs. Never copy a static name-based subject from a
+guide into Entra.
+
 Continue with the repository wizard:
 
 ```powershell

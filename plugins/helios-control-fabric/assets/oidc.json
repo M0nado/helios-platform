@@ -1,12 +1,21 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "issuer": "https://token.actions.githubusercontent.com",
   "audience": "api://AzureADTokenExchange",
   "repository": "M0nado/helios-platform",
-  "subjects": {
-    "azure-dev": "repo:M0nado/helios-platform:environment:azure-dev",
-    "azure-test": "repo:M0nado/helios-platform:environment:azure-test",
-    "azure-prod": "repo:M0nado/helios-platform:environment:azure-prod"
+  "environments": [
+    "azure-dev",
+    "azure-test",
+    "azure-prod"
+  ],
+  "subjectResolution": {
+    "mode": "authenticated-github-api",
+    "apiVersion": "2026-03-10",
+    "repositoryEndpoint": "repos/{repository}",
+    "policyEndpoint": "repos/{repository}/actions/oidc/customization/sub",
+    "requireDefaultTemplate": true,
+    "requireImmutablePolicySignal": true,
+    "failClosed": true
   },
   "workflowPermissions": {
     "contents": "read",
@@ -22,7 +31,7 @@
   "automaticRoleAssignment": false,
   "administratorGates": [
     "create or select the Entra application and service principal",
-    "create one federated identity credential for the exact protected environment subject",
+    "resolve GitHub's effective OIDC policy and create one federated identity credential for the exact protected environment subject",
     "assign least-privilege scope after reviewing the Bicep resource graph",
     "protect the GitHub environment with required reviewers"
   ]

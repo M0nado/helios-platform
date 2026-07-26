@@ -1,9 +1,11 @@
 import importlib.util
+import io
 import json
 import os
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 SCRIPT = Path(__file__).with_name("helios.py")
@@ -11,6 +13,34 @@ SPEC = importlib.util.spec_from_file_location("helios_cli", SCRIPT)
 assert SPEC and SPEC.loader
 HELIOS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(HELIOS)
+
+REPOSITORY_INFO = {
+    "id": 1207349837,
+    "name": "helios-platform",
+    "owner": {
+        "id": 274244942,
+        "login": "M0nado",
+    },
+}
+
+
+def github_reader(*, immutable: bool = True, use_default: bool = True) -> Mock:
+    reader = Mock()
+
+    def read(endpoint: str) -> dict:
+        if endpoint == "repos/M0nado/helios-platform":
+            return REPOSITORY_INFO
+        if endpoint == (
+            "repos/M0nado/helios-platform/actions/oidc/customization/sub"
+        ):
+            return {
+                "use_default": use_default,
+                "use_immutable_subject": immutable,
+            }
+        raise AssertionError(f"unexpected GitHub endpoint: {endpoint}")
+
+    reader.side_effect = read
+    return reader
 
 
 class HeliosCliTests(unittest.TestCase):
@@ -26,22 +56,91 @@ class HeliosCliTests(unittest.TestCase):
         plan = HELIOS.release_plan("azure-dev")
         self.assertEqual(plan["executionMode"], "plan-only")
         self.assertIn("Azure deployment approval", plan["administratorGates"])
-        self.assertEqual(
-            plan["federationSubject"],
-            "repo:M0nado/helios-platform:environment:azure-dev",
+        self.assertIn(
+            "effective default/immutable subject policy",
+            plan["federationSubjectResolution"],
         )
+        self.assertNotIn("federationSubject", plan)
 
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
-            contract = HELIOS.oidc_contract("azure-dev")
+            contract = HELIOS.oidc_contract(
+                "azure-dev",
+                api_reader=github_reader(),
+            )
         self.assertEqual(
             contract["selectedSubject"],
-            "repo:M0nado/helios-platform:environment:azure-dev",
+            (
+                "repo:M0nado@274244942/"
+                "helios-platform@1207349837:environment:azure-dev"
+            ),
         )
+        self.assertTrue(contract["useImmutableSubject"])
+        self.assertEqual(contract["ownerId"], "274244942")
+        self.assertEqual(contract["repositoryId"], "1207349837")
         self.assertEqual(contract["audience"], "api://AzureADTokenExchange")
         self.assertFalse(contract["secretsStoredInGitHub"])
         self.assertFalse(contract["automaticRoleAssignment"])
         self.assertTrue(all(not value for value in contract["configuredVariables"].values()))
+
+    def test_oidc_contract_honors_github_legacy_default_when_effective(self) -> None:
+        contract = HELIOS.oidc_contract(
+            "azure-test",
+            api_reader=github_reader(immutable=False),
+        )
+        self.assertEqual(
+            contract["selectedSubject"],
+            "repo:M0nado/helios-platform:environment:azure-test",
+        )
+        self.assertFalse(contract["useImmutableSubject"])
+
+    def test_oidc_contract_rejects_custom_subject_templates(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "customized OIDC"):
+            HELIOS.oidc_contract(
+                "azure-dev",
+                api_reader=github_reader(use_default=False),
+            )
+
+    def test_oidc_contract_rejects_missing_policy_signal(self) -> None:
+        def reader(endpoint: str) -> dict:
+            if endpoint == "repos/M0nado/helios-platform":
+                return REPOSITORY_INFO
+            return {"use_default": True}
+
+        with self.assertRaisesRegex(RuntimeError, "use_immutable_subject"):
+            HELIOS.oidc_contract("azure-dev", api_reader=reader)
+
+    def test_oidc_contract_rejects_missing_repository_ids(self) -> None:
+        repository_info = {
+            "name": "helios-platform",
+            "owner": {"login": "M0nado"},
+        }
+
+        def reader(endpoint: str) -> dict:
+            if endpoint == "repos/M0nado/helios-platform":
+                return repository_info
+            return {"use_default": True, "use_immutable_subject": True}
+
+        with self.assertRaisesRegex(RuntimeError, "immutable owner ID"):
+            HELIOS.oidc_contract("azure-dev", api_reader=reader)
+
+    def test_static_oidc_asset_contains_no_subject_values(self) -> None:
+        asset = HELIOS.read_asset("oidc.json")
+        self.assertNotIn("subjects", asset)
+        self.assertTrue(asset["subjectResolution"]["failClosed"])
+        self.assertTrue(
+            asset["subjectResolution"]["requireImmutablePolicySignal"]
+        )
+
+    def test_oidc_cli_fails_cleanly_without_github_cli(self) -> None:
+        stderr = io.StringIO()
+        with patch.object(HELIOS.shutil, "which", return_value=None):
+            with redirect_stderr(stderr):
+                result = HELIOS.main(
+                    ["oidc", "--environment", "azure-dev", "--json"]
+                )
+        self.assertEqual(result, 2)
+        self.assertIn("GitHub CLI is required", stderr.getvalue())
 
     def test_devops_sync_remains_read_only(self) -> None:
         plan = HELIOS.devops_sync_plan()

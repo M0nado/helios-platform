@@ -54,9 +54,9 @@ $ExpectedOidcConfirmation = 'CONFIGURE HELIOS AZURE DEV OIDC'
 $ExpectedGitHubEnvironmentConfirmation = 'CONFIGURE HELIOS AZURE DEV ENVIRONMENT'
 $CanonicalRepository = 'M0nado/helios-platform'
 $CanonicalGitHubEnvironment = 'azure-dev'
-$CanonicalFederationSubject = 'repo:M0nado/helios-platform:environment:azure-dev'
 $CanonicalIssuer = 'https://token.actions.githubusercontent.com'
-$FederationSubject = $CanonicalFederationSubject
+$GitHubApiVersion = '2026-03-10'
+$FederationSubject = $null
 $FederationAudience = 'api://AzureADTokenExchange'
 
 if ($Repository -cne $CanonicalRepository) {
@@ -87,6 +87,56 @@ function Invoke-JsonCommand {
     $text = $output -join [Environment]::NewLine
     if ([string]::IsNullOrWhiteSpace($text)) { return $null }
     $text | ConvertFrom-Json -Depth 100
+}
+
+function Resolve-GitHubOidcTrust {
+    param(
+        [Parameter(Mandatory)][string]$GhPath,
+        [Parameter(Mandatory)][string]$RepositoryName,
+        [Parameter(Mandatory)][string]$EnvironmentName
+    )
+
+    $apiVersionHeader = "X-GitHub-Api-Version: $GitHubApiVersion"
+    $repositoryInfo = Invoke-JsonCommand -FilePath $GhPath -ArgumentList @(
+        'api', '--method', 'GET', '--header', $apiVersionHeader,
+        "repos/$RepositoryName"
+    )
+    $oidcConfiguration = Invoke-JsonCommand -FilePath $GhPath -ArgumentList @(
+        'api', '--method', 'GET', '--header', $apiVersionHeader,
+        "repos/$RepositoryName/actions/oidc/customization/sub"
+    )
+
+    if (-not [bool]$oidcConfiguration.use_default) {
+        throw "Repository '$RepositoryName' uses a customized OIDC subject template. HELIOS will not infer or overwrite it."
+    }
+    if (-not $oidcConfiguration.PSObject.Properties['use_immutable_subject']) {
+        throw 'GitHub did not return use_immutable_subject. Refusing to guess the OIDC subject format.'
+    }
+
+    $canonicalOwner = [string]$repositoryInfo.owner.login
+    $canonicalRepository = [string]$repositoryInfo.name
+    $ownerId = [string]$repositoryInfo.owner.id
+    $repositoryId = [string]$repositoryInfo.id
+    if (
+        [string]::IsNullOrWhiteSpace($canonicalOwner) -or
+        [string]::IsNullOrWhiteSpace($canonicalRepository) -or
+        [string]::IsNullOrWhiteSpace($ownerId) -or
+        [string]::IsNullOrWhiteSpace($repositoryId)
+    ) {
+        throw 'GitHub did not return the canonical owner/repository IDs required to construct the OIDC subject.'
+    }
+
+    $repositorySegment = if ([bool]$oidcConfiguration.use_immutable_subject) {
+        "$canonicalOwner@$ownerId/$canonicalRepository@$repositoryId"
+    } else {
+        "$canonicalOwner/$canonicalRepository"
+    }
+    [pscustomobject]@{
+        Subject = "repo:$repositorySegment`:environment:$EnvironmentName"
+        UseImmutableSubject = [bool]$oidcConfiguration.use_immutable_subject
+        OwnerId = $ownerId
+        RepositoryId = $repositoryId
+    }
 }
 
 function Require-Confirmation {
@@ -147,8 +197,17 @@ function Select-AzureSubscription {
 
 $az = Require-Command -Name 'az'
 $gh = $null
-if ($ConfigureGitHubEnvironment -or $RunCloudPreflight) {
+if ($ConfigureOidc -or $ConfigureGitHubEnvironment -or $RunCloudPreflight) {
     $gh = Require-Command -Name 'gh'
+    & $gh auth status --hostname github.com
+    if ($LASTEXITCODE -ne 0) { throw 'GitHub CLI is not authenticated.' }
+}
+if ($ConfigureOidc) {
+    $resolvedTrust = Resolve-GitHubOidcTrust `
+        -GhPath $gh `
+        -RepositoryName $CanonicalRepository `
+        -EnvironmentName $CanonicalGitHubEnvironment
+    $FederationSubject = [string]$resolvedTrust.Subject
 }
 
 $resolvedTemplate = (Resolve-Path -LiteralPath $TemplateFile).Path
@@ -249,7 +308,7 @@ if ($ConfigureOidc) {
         $existingAudiences = @($existingCredential.audiences)
         if (
             [string]$existingCredential.issuer -cne $CanonicalIssuer -or
-            [string]$existingCredential.subject -cne $CanonicalFederationSubject -or
+            [string]$existingCredential.subject -cne $FederationSubject -or
             $existingAudiences.Count -ne 1 -or
             [string]$existingAudiences[0] -cne $FederationAudience
         ) {
@@ -294,9 +353,6 @@ if ($ConfigureGitHubEnvironment) {
         if (-not $app) { throw 'Configure OIDC first or provide an existing HELIOS Entra application.' }
         $clientId = [string]$app.appId
     }
-
-    & $gh auth status --hostname github.com
-    if ($LASTEXITCODE -ne 0) { throw 'GitHub CLI is not authenticated.' }
 
     $environmentPayload = [ordered]@{
         wait_timer = 0

@@ -16,6 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -46,6 +47,10 @@ jobs:
       - name: Test setup helper
         run: python -m unittest discover -s plugins/helios-control-fabric/scripts -p "test_*.py" -v
       - name: Enforce plan-first contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY_ID: ${{ github.repository_id }}
+          EXPECTED_REPOSITORY_OWNER_ID: ${{ github.repository_owner_id }}
         run: |
           python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev --json > /tmp/helios-plan.json
           python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev --json > /tmp/helios-oidc.json
@@ -54,6 +59,7 @@ jobs:
           python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev --json > /tmp/helios-edge.json
           python - <<'PY'
           import json
+          import os
           plan=json.load(open("/tmp/helios-plan.json"))
           oidc=json.load(open("/tmp/helios-oidc.json"))
           devops=json.load(open("/tmp/helios-devops.json"))
@@ -61,7 +67,20 @@ jobs:
           edge=json.load(open("/tmp/helios-edge.json"))
           assert plan["executionMode"] == "plan-only"
           assert "Azure deployment approval" in plan["administratorGates"]
-          assert oidc["selectedSubject"] == "repo:M0nado/helios-platform:environment:azure-dev"
+          assert "federationSubject" not in plan
+          assert isinstance(oidc["useImmutableSubject"], bool)
+          assert oidc["repositoryId"] == os.environ["EXPECTED_REPOSITORY_ID"]
+          assert oidc["ownerId"] == os.environ["EXPECTED_REPOSITORY_OWNER_ID"]
+          owner, repository = os.environ["GITHUB_REPOSITORY"].split("/", 1)
+          if oidc["useImmutableSubject"]:
+              repository_segment = (
+                  f"{owner}@{oidc['ownerId']}/"
+                  f"{repository}@{oidc['repositoryId']}"
+              )
+          else:
+              repository_segment = f"{owner}/{repository}"
+          expected_subject = f"repo:{repository_segment}:environment:azure-dev"
+          assert oidc["selectedSubject"] == expected_subject
           assert oidc["secretsStoredInGitHub"] is False
           assert devops["azureDevOps"]["readOnly"] is True
           assert devops["synchronization"]["automaticWrites"] is False
