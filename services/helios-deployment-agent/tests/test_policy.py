@@ -56,7 +56,7 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(contains_sensitive_key({"connectionString": "not-returned"}))
         self.assertTrue(contains_sensitive_key({"authorization": "not-returned"}))
         self.assertTrue(contains_sensitive_text("Authorization: " + "Bearer " + ("a" * 24)))
-        self.assertTrue(contains_sensitive_text("api_key=abcdefghijklmnop"))
+        self.assertTrue(contains_sensitive_text("api_key=placeholder-abcdefghijklmnop"))
 
     def test_manifest_summary_never_reproduces_repository_or_branch_names(self) -> None:
         summary = summarize_manifest(

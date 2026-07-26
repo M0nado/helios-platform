@@ -39,6 +39,13 @@ __pycache__/
 
 ## Editor and IDE
 .vscode/
+!.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/mcp.json
+!.vscode/settings.json
+!.vscode/tasks.json
 .idea/
 *.swp
 *.swo
@@ -68,6 +75,7 @@ coverage/
 node_modules/
 packages/
 package-lock.json
+!.devcontainer/package-lock.json
 yarn.lock
 poetry.lock
 pip-log.txt

@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "HELIOS: developer doctor",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "scripts/dev/helios_dev_doctor.py",
+        "--profile",
+        "devcontainer"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "HELIOS: portable validation",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/dev/portable-validate.sh"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "HELIOS: start local connector",
+      "type": "shell",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "monado/helios-control/src/Helios.Connect.Api/Helios.Connect.Api.csproj"
+      ],
+      "options": {
+        "env": {
+          "ASPNETCORE_URLS": "http://127.0.0.1:5080",
+          "HELIOS_EXECUTION_MODE": "dry-run",
+          "HELIOS_CLOUD_RUNTIME_ONLY": "false",
+          "HELIOS_LOCAL_RUNTIME_ALLOWED": "true"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "helios",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Building|Determining projects to restore",
+          "endsPattern": "Now listening on: http://127\\.0\\.0\\.1:5080"
+        }
+      }
+    }
+  ]
+}

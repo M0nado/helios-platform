@@ -1,14 +1,12 @@
 {
-  "mcpServers": {
-    "helios-azure": {
+  "servers": {
+    "helios-local-dev": {
       "type": "http",
-      "url": "${HELIOS_AZURE_CONNECTOR_URL}/mcp"
+      "url": "http://127.0.0.1:5080/mcp"
     },
     "azure-mcp-readonly": {
-      "command": "npx",
+      "command": "azmcp",
       "args": [
-        "-y",
-        "@azure/mcp@3.0.0-beta.29",
         "server",
         "start",
         "--read-only",
@@ -34,7 +32,7 @@
     },
     "azure-devops-readonly": {
       "type": "http",
-      "url": "https://mcp.dev.azure.com/${AZURE_DEVOPS_ORGANIZATION}",
+      "url": "https://mcp.dev.azure.com/${input:azureDevOpsOrganization}",
       "headers": {
         "X-MCP-Toolsets": "repos,wit,pipelines,wiki",
         "X-MCP-Readonly": "true"
@@ -51,10 +49,14 @@
     "slack": {
       "type": "http",
       "url": "https://mcp.slack.com/mcp"
-    },
-    "foundry": {
-      "type": "http",
-      "url": "https://mcp.ai.azure.com"
     }
-  }
+  },
+  "inputs": [
+    {
+      "id": "azureDevOpsOrganization",
+      "type": "promptString",
+      "description": "Azure DevOps organization name",
+      "default": "Heli0sDev"
+    }
+  ]
 }

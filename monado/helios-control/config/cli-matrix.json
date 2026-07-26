@@ -16,7 +16,7 @@
     { "id": "m365-agents", "command": "atk", "arguments": ["--version"], "required": false, "networkRequired": false },
     { "id": "vscode-insiders", "command": "code-insiders", "arguments": ["--version"], "required": false, "networkRequired": false },
     { "id": "claude-code", "command": "claude", "arguments": ["--version"], "required": false, "networkRequired": false },
-    { "id": "azure-mcp", "command": "npx", "arguments": ["-y", "@azure/mcp@3.0.0-beta.27", "--version"], "required": false, "networkRequired": true }
+    { "id": "azure-mcp", "command": "npx", "arguments": ["-y", "@azure/mcp@3.0.0-beta.29", "--version"], "required": false, "networkRequired": true }
   ],
   "authenticationChecks": [
     { "id": "azure-cli", "command": "az", "arguments": ["account", "show", "--output", "none"] },

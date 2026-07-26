@@ -1,0 +1,11 @@
+{
+  "name": "helios-developer-cockpit-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned user-space CLIs for the HELIOS developer cockpit.",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.220",
+    "@azure/mcp": "3.0.0-beta.29",
+    "@devcontainers/cli": "0.88.0"
+  }
+}

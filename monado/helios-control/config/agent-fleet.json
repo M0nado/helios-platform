@@ -26,7 +26,7 @@
     {
       "id": "claude-code",
       "host": "claude",
-      "version": "2.1.212",
+      "version": "2.1.220",
       "authentication": "anthropic-managed-user-session",
       "mcpConfig": ".mcp.json",
       "role": "peer-review-and-bounded-implementation"
