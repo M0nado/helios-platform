@@ -385,6 +385,16 @@ def check_contract(root: Path = ROOT) -> list[Check]:
             and "Install-Module" not in dockerfile,
             "Dockerfile performs no pipe-to-shell or unpinned global package install",
         )
+        add_check(
+            checks,
+            "Dockerfile apt source hygiene",
+            (
+                "rm -f /etc/apt/sources.list.d/yarn.list \\\n"
+                "    && apt-get update"
+            )
+            in dockerfile,
+            "unused inherited Yarn source is removed before apt metadata refresh",
+        )
 
     compose_path = root / ".devcontainer/docker-compose.yml"
     if compose_path.is_file():
@@ -598,6 +608,21 @@ def check_contract(root: Path = ROOT) -> list[Check]:
             and str(versions.get("devcontainerCli"))
             == str(lock.get("nodePackages", {}).get("@devcontainers/cli")),
             "clean bootstrap and exec use the integrity-locked devcontainer CLI",
+        )
+
+    build_all_path = root / ".github/workflows/build-all-modules.yml"
+    if build_all_path.is_file():
+        build_all = build_all_path.read_text(encoding="utf-8")
+        add_check(
+            checks,
+            "module build Node.js pin",
+            f'echo "node-version={versions.get("node")}"' in build_all
+            and (
+                "actions/setup-node@"
+                "2028fbc5c25fe9cf00d9f06a71cc4710d4507903"
+            )
+            in build_all,
+            "module matrix uses the locked Node.js version and immutable setup action",
         )
 
     plugin_manifest_path = (
