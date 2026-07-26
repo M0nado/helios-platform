@@ -60,7 +60,7 @@ jobs:
           fi
 
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
-          echo "node-version=18" >> $GITHUB_OUTPUT
+          echo "node-version=24.18.0" >> $GITHUB_OUTPUT
           echo "has-modules=$HAS_MODULES" >> $GITHUB_OUTPUT
           echo "Build matrix configured"
 
@@ -81,7 +81,7 @@ jobs:
           submodules: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: ${{ needs.setup.outputs.node-version }}
 
