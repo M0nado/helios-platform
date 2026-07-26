@@ -5,6 +5,9 @@
     "context": ".."
   },
   "features": {
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "8.0.423"
+    },
     "ghcr.io/devcontainers/features/node:2": {
       "version": "24.18.0",
       "npmVersion": "11.16.0",
@@ -14,7 +17,7 @@
       "version": "3.12"
     },
     "ghcr.io/devcontainers/features/powershell:2": {
-      "version": "7.4.18"
+      "version": "7.4"
     },
     "ghcr.io/devcontainers/features/azure-cli:1": {
       "version": "2.88.0",
