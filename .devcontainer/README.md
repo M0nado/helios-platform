@@ -7,7 +7,8 @@ This directory defines the governed portable development lane for
 
 Open the repository in GitHub Codespaces or run **Dev Containers: Reopen in
 Container** from VS Code. The active configuration is `devcontainer.json`; it
-builds `Dockerfile`, installs exact feature versions, installs the locked npm
+builds `Dockerfile`, installs declared feature channels and exact SDK/CLI
+versions, installs the locked npm
 tools from `package-lock.json`, and runs the developer doctor.
 
 ```bash
