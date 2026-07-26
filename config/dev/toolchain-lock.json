@@ -8,7 +8,7 @@
     "python": "3.12",
     "node": "24.18.0",
     "npm": "11.16.0",
-    "powershell": "7.4.18",
+    "powershell": "7.4",
     "githubCli": "2.96.0",
     "azureCli": "2.88.0",
     "bicep": "0.45.15",
@@ -22,7 +22,7 @@
     "cmake": "3.28.0",
     "ninja": "1.11.0",
     "jq": "1.7",
-    "shellcheck": "0.10.0"
+    "shellcheck": "0.9.0"
   },
   "requiredProfiles": {
     "contract": [],
