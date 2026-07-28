@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:helios:contracts:hermes-xcore:event:1.0.0",
+  "title": "HELIOS Hermes/XCore Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "source",
+    "actor",
+    "correlationId",
+    "causationId",
+    "idempotencyKey",
+    "environment",
+    "dryRun",
+    "attempt",
+    "hopCount",
+    "payload"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "build.requested",
+        "build.completed",
+        "build.failed",
+        "deployment.requested",
+        "deployment.authorized",
+        "deployment.completed",
+        "deployment.failed",
+        "approval.requested",
+        "approval.recorded",
+        "approval.denied",
+        "chaos.requested",
+        "chaos.started",
+        "chaos.completed",
+        "chaos.aborted",
+        "incident.detected",
+        "incident.classified",
+        "incident.resolved",
+        "notification.requested",
+        "notification.delivered",
+        "notification.failed",
+        "decision.recorded",
+        "evidence.recorded"
+      ]
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "subject"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "human",
+            "workload",
+            "agent",
+            "system"
+          ]
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "tenantId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "correlationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "causationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 256
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "x-tier-dev",
+        "x-tier-xcore",
+        "x-tier-prod"
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "revision",
+        "digest",
+        "provenanceRef"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "provenanceRef": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "authoritySurface",
+        "boundArtifactDigest"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "not-required",
+            "pending",
+            "approved",
+            "denied",
+            "expired"
+          ]
+        },
+        "authoritySurface": {
+          "type": "string",
+          "enum": [
+            "github-protected-environment",
+            "governed-approval-service"
+          ]
+        },
+        "boundArtifactDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "approvedBy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "dryRun": {
+      "type": "boolean"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20
+    },
+    "hopCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16
+    },
+    "payload": {
+      "type": "object",
+      "maxProperties": 64
+    }
+  }
+}
