@@ -1,0 +1,310 @@
+{
+  "schemaVersion": "1.0.0",
+  "contractId": "helios.hermes-xcore.system",
+  "authority": {
+    "policyEvaluator": "hermes",
+    "deploymentAuthority": "github-protected-environment",
+    "humanAuthorityRole": "helios-admin",
+    "rules": [
+      "Hermes evaluates policy and emits decision records; it does not approve its own requests.",
+      "Human authority cannot disable audit, provenance, identity boundaries, or protected-production controls.",
+      "A notification, acknowledgement, model score, or incident severity is never sufficient deployment authority."
+    ]
+  },
+  "environments": [
+    {
+      "id": "x-tier-dev",
+      "class": "dev",
+      "safetyLevel": "low",
+      "workloadIdentityRef": "identity://helios/x-tier-dev",
+      "codegenMode": "proposal",
+      "chaos": {
+        "enabled": false
+      },
+      "protection": {
+        "surface": "github-protected-environment",
+        "humanApprovalRequired": false,
+        "minimumHumanApprovals": 0,
+        "bindExactArtifactDigest": true
+      }
+    },
+    {
+      "id": "x-tier-xcore",
+      "class": "xcore",
+      "safetyLevel": "medium",
+      "workloadIdentityRef": "identity://helios/x-tier-xcore",
+      "codegenMode": "restricted-proposal",
+      "chaos": {
+        "enabled": true,
+        "isolatedResourcesRequired": true,
+        "explicitOptInRequired": true,
+        "ownerRequired": true,
+        "seedRequired": true,
+        "maximumDurationMinutes": 60,
+        "maximumCostUsd": 25,
+        "maximumAffectedResources": 3,
+        "abortConditionsRequired": true,
+        "cleanupRequired": true,
+        "secretsMutationForbidden": true,
+        "productionReachabilityForbidden": true
+      },
+      "protection": {
+        "surface": "github-protected-environment",
+        "humanApprovalRequired": true,
+        "minimumHumanApprovals": 1,
+        "bindExactArtifactDigest": true
+      }
+    },
+    {
+      "id": "x-tier-prod",
+      "class": "prod",
+      "safetyLevel": "critical",
+      "workloadIdentityRef": "identity://helios/x-tier-prod",
+      "codegenMode": "forbidden",
+      "chaos": {
+        "enabled": false
+      },
+      "protection": {
+        "surface": "github-protected-environment",
+        "humanApprovalRequired": true,
+        "minimumHumanApprovals": 2,
+        "separationOfDutiesRequired": true,
+        "bindExactArtifactDigest": true,
+        "bindDeploymentParameters": true,
+        "bindWhatIfEvidence": true,
+        "approvalExpiryMinutes": 60,
+        "timeoutBehavior": "deny"
+      }
+    }
+  ],
+  "hotfixWorkflow": {
+    "id": "hotfix",
+    "isEnvironment": false,
+    "targetEnvironment": "x-tier-prod",
+    "severityS0IsSufficientAuthority": false,
+    "requiresProtectedApproval": true,
+    "requiresExactArtifactDigest": true,
+    "requiresRollbackPlan": true,
+    "requiresAuditRecord": true,
+    "requiresPostIncidentReview": true,
+    "timeoutBehavior": "deny"
+  },
+  "agents": [
+    {
+      "id": "build-agent",
+      "environments": [
+        "x-tier-dev"
+      ],
+      "capabilities": [
+        "build",
+        "validate",
+        "forge-artifact",
+        "emit-evidence"
+      ]
+    },
+    {
+      "id": "deploy-agent",
+      "environments": [
+        "x-tier-dev",
+        "x-tier-xcore",
+        "x-tier-prod"
+      ],
+      "capabilities": [
+        "plan-deployment",
+        "request-deployment",
+        "execute-authorized-deployment",
+        "execute-authorized-rollback",
+        "emit-evidence"
+      ],
+      "requiresHermesEvaluation": true
+    },
+    {
+      "id": "ops-agent",
+      "environments": [
+        "x-tier-xcore",
+        "x-tier-prod"
+      ],
+      "capabilities": [
+        "monitor",
+        "classify-incident",
+        "escalate",
+        "propose-rollback",
+        "verify-recovery"
+      ],
+      "requiresHermesEvaluation": true
+    },
+    {
+      "id": "notification-agent",
+      "environments": [
+        "x-tier-dev",
+        "x-tier-xcore",
+        "x-tier-prod"
+      ],
+      "capabilities": [
+        "publish-notification",
+        "record-acknowledgement",
+        "link-evidence"
+      ],
+      "forbiddenCapabilities": [
+        "approve-deployment",
+        "execute-deployment",
+        "execute-rollback",
+        "modify-policy"
+      ]
+    },
+    {
+      "id": "dashboard-agent",
+      "environments": [
+        "x-tier-dev",
+        "x-tier-xcore",
+        "x-tier-prod"
+      ],
+      "capabilities": [
+        "read-state",
+        "visualize",
+        "forecast-advisory"
+      ],
+      "readOnly": true
+    },
+    {
+      "id": "codegen-agent",
+      "environments": [
+        "x-tier-dev",
+        "x-tier-xcore"
+      ],
+      "capabilities": [
+        "draft-change",
+        "draft-rule",
+        "open-review-request"
+      ],
+      "productionWritesForbidden": true
+    },
+    {
+      "id": "hermes",
+      "environments": [
+        "x-tier-dev",
+        "x-tier-xcore",
+        "x-tier-prod"
+      ],
+      "capabilities": [
+        "evaluate-policy",
+        "simulate-transition",
+        "request-approval",
+        "emit-decision-record",
+        "recommend-remediation"
+      ],
+      "forbiddenCapabilities": [
+        "approve-own-request",
+        "impersonate-human",
+        "execute-deployment",
+        "execute-rollback",
+        "disable-safety"
+      ]
+    }
+  ],
+  "runtime": {
+    "executionModel": "event-driven-at-least-once",
+    "states": [
+      "INIT",
+      "PRECHECK",
+      "PLAN",
+      "AWAIT_APPROVAL",
+      "EXECUTE",
+      "VERIFY",
+      "NOTIFY",
+      "COMPLETE",
+      "FAILED",
+      "ROLLED_BACK"
+    ],
+    "terminalStates": [
+      "COMPLETE",
+      "FAILED",
+      "ROLLED_BACK"
+    ],
+    "idempotencyRequired": true,
+    "correlationRequired": true,
+    "maximumHopCount": 16,
+    "approvalTimeoutBehavior": "FAILED"
+  },
+  "promotion": {
+    "source": "x-tier-xcore",
+    "target": "x-tier-prod",
+    "requiredEvidence": [
+      "immutable-source-revision",
+      "artifact-sha256",
+      "artifact-provenance",
+      "test-results",
+      "security-results",
+      "xcore-experiment-record",
+      "deployment-plan",
+      "what-if-output",
+      "human-approval-record"
+    ],
+    "predictionPolicy": {
+      "mode": "advisory-only",
+      "unknownStateRequired": true,
+      "unitsRequired": true,
+      "windowRequired": true,
+      "sampleSizeRequired": true,
+      "modelVersionRequired": true,
+      "minimumEvidenceRequired": true
+    }
+  },
+  "integrations": {
+    "github": {
+      "role": "source-review-release-authority",
+      "writeMode": "reviewed-pull-request",
+      "protectedEnvironments": [
+        "x-tier-dev",
+        "x-tier-xcore",
+        "x-tier-prod"
+      ]
+    },
+    "azure": {
+      "role": "infrastructure-and-deployment-target",
+      "deploymentState": "gated",
+      "authentication": "oidc-federated-workload-identity",
+      "effectiveSubjectResolution": "live-policy",
+      "clientSecretsForbidden": true,
+      "workloadRolePolicy": "least-privilege-no-owner"
+    },
+    "azureDevOps": {
+      "organization": "Heli0sDev",
+      "role": "discovery-and-sync-target",
+      "accessMode": "read-only",
+      "sourceAuthority": false,
+      "releaseAuthority": false
+    },
+    "sharepoint": {
+      "role": "governance-and-evidence",
+      "currentScope": "owner-scoped-onedrive",
+      "targetScope": "team-owned-sharepoint-site",
+      "deploymentAuthority": false
+    },
+    "slack": {
+      "role": "notification-and-acknowledgement",
+      "approvalAuthority": false,
+      "deploymentAuthority": false
+    },
+    "linear": {
+      "role": "work-and-incident-tracking",
+      "approvalAuthority": false,
+      "deploymentAuthority": false
+    },
+    "openai": {
+      "organization": "Machina",
+      "project": "Helios",
+      "role": "model-provider",
+      "keyMaterialInSourceForbidden": true,
+      "secretReference": "azure-key-vault-managed-identity",
+      "modelOutputsAreAuthority": false
+    }
+  },
+  "evidence": {
+    "appendOnlyDecisionRecords": true,
+    "artifactProvenanceRequired": true,
+    "identityAttributionRequired": true,
+    "timestampsUtcRequired": true,
+    "rawSecretsForbidden": true
+  }
+}
