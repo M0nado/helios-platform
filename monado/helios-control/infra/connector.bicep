@@ -279,7 +279,7 @@ resource apiAuth 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
         enabled: true
         registration: {
           clientId: entraClientId
-          openIdIssuer: 'https://login.microsoftonline.com/${entraTenantId}/v2.0'
+          openIdIssuer: '${az.environment().authentication.loginEndpoint}${entraTenantId}/v2.0'
         }
         validation: {
           allowedAudiences: [ teamsSsoApplicationIdUri ]
