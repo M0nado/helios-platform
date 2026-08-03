@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "2.0.0",
+  "contractId": "monadoblade-permanent-identities",
+  "authority": "M0nado/helios-platform",
+  "defaultIdentity": "core",
+  "legacyContract": {
+    "path": "config/profiles/monadoblade-profiles.v1.json",
+    "status": "supported-migration-input",
+    "migrationRule": "v1 profiles map to a permanent identity, capability overlay, or governed workflow; they never add sectors to the v2 wheel"
+  },
+  "invariants": {
+    "permanentIdentityCount": 6,
+    "identityWheelIsClosed": true,
+    "profileColorIsNeverTheOnlySignal": true,
+    "recoveryAndQuarantineAreWorkflows": true,
+    "sysAdminIsLocalOffline": true,
+    "remoteIdentityActivationDenied": true
+  },
+  "identities": [
+    {
+      "id": "core",
+      "displayName": "Core",
+      "kanji": "核",
+      "color": "#53F6FF",
+      "audioCue": "wyvern-core-harmonic",
+      "backgroundPreset": "core-horizon",
+      "uiGrammar": "harmony-orbit",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "networkMode": "normal-protected",
+      "alvisMode": "governed-hybrid",
+      "allowedOverlays": ["personal"],
+      "resourceIntent": ["balanced", "quiet", "responsive", "battery-aware"]
+    },
+    {
+      "id": "developer",
+      "displayName": "Developer",
+      "kanji": "創",
+      "color": "#2F86FF",
+      "audioCue": "wyvern-developer-code-rise",
+      "backgroundPreset": "developer-grid-storm",
+      "uiGrammar": "build-graph-terminal",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "networkMode": "developer-approved-egress",
+      "alvisMode": "governed-hybrid",
+      "allowedOverlays": ["sysops"],
+      "resourceIntent": ["build-throughput", "native-toolchain", "container-ready", "test-parallelism"]
+    },
+    {
+      "id": "studio",
+      "displayName": "Studio",
+      "kanji": "響",
+      "color": "#D64DFF",
+      "audioCue": "wyvern-studio-harmonic-bloom",
+      "backgroundPreset": "studio-resonance-field",
+      "uiGrammar": "spatial-waveform",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "networkMode": "creative-approved-egress",
+      "alvisMode": "governed-hybrid",
+      "allowedOverlays": ["personal"],
+      "resourceIntent": ["audio-realtime", "render-balanced", "low-jitter", "plugin-isolation"]
+    },
+    {
+      "id": "gamer",
+      "displayName": "Gamer",
+      "kanji": "迅",
+      "color": "#62FF4A",
+      "audioCue": "wyvern-gamer-velocity-lock",
+      "backgroundPreset": "gamer-velocity-plains",
+      "uiGrammar": "minimal-launch-hud",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "networkMode": "gaming-low-latency-firewalled",
+      "alvisMode": "governed-local-preferred",
+      "allowedOverlays": [],
+      "resourceIntent": ["frame-time", "input-latency", "gpu-priority", "background-throttle"]
+    },
+    {
+      "id": "ai-server",
+      "displayName": "AI / Server",
+      "kanji": "智",
+      "color": "#7A6BFF",
+      "audioCue": "wyvern-ai-topology-pulse",
+      "backgroundPreset": "ai-server-mesh-night",
+      "uiGrammar": "topology-queue-mesh",
+      "windowsRole": "standard-user-bounded-operator",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "networkMode": "service-allowlist",
+      "alvisMode": "governed-hybrid",
+      "allowedOverlays": ["sysops"],
+      "resourceIntent": ["model-routing", "worker-health", "queue-latency", "memory-governance"]
+    },
+    {
+      "id": "sysadmin",
+      "displayName": "Sysadmin",
+      "kanji": "統",
+      "color": "#FFB000",
+      "audioCue": "wyvern-sysadmin-mechanical-lock",
+      "backgroundPreset": "sysadmin-sealed-ledger",
+      "uiGrammar": "mechanical-ledger",
+      "windowsRole": "local-administrator",
+      "interactive": true,
+      "administrator": true,
+      "hidden": true,
+      "enabledByDefault": false,
+      "networkMode": "offline-local-only",
+      "alvisMode": "local-offline-read-plan",
+      "allowedOverlays": [],
+      "resourceIntent": ["stability", "integrity", "recovery", "minimal-background-load"],
+      "activation": {
+        "physicalPresenceRequired": true,
+        "minimumFactors": 2,
+        "allowedFactors": ["fido2", "encrypted-usb-token", "windows-hello", "offline-recovery-secret"],
+        "remoteActivationDenied": true,
+        "cloudActivationDenied": true,
+        "aiActivationDenied": true
+      }
+    }
+  ],
+  "capabilityOverlays": [
+    {
+      "id": "personal",
+      "displayName": "Personal / Quiet",
+      "becomesIdentity": false,
+      "allowedIdentities": ["core", "studio"],
+      "capabilities": ["privacy-first", "quiet-notifications", "personal-backup", "productivity"]
+    },
+    {
+      "id": "sysops",
+      "displayName": "Systems Operations",
+      "becomesIdentity": false,
+      "allowedIdentities": ["developer", "ai-server"],
+      "capabilities": ["observability", "incident-correlation", "cloud-readiness", "bounded-service-operations"],
+      "writeActionsRequireApproval": true
+    }
+  ],
+  "workflowStates": [
+    {
+      "id": "standard",
+      "selectableOnIdentityWheel": false,
+      "requiresSysAdmin": false,
+      "purpose": "normal post-authenticated profile operation"
+    },
+    {
+      "id": "airgap",
+      "selectableOnIdentityWheel": false,
+      "requiresSysAdmin": true,
+      "purpose": "temporary network-sealed maintenance or evidence workflow"
+    },
+    {
+      "id": "recovery",
+      "selectableOnIdentityWheel": false,
+      "requiresSysAdmin": true,
+      "purpose": "rollback-first recovery workflow exposed only through approved local tooling"
+    },
+    {
+      "id": "quarantine",
+      "selectableOnIdentityWheel": false,
+      "requiresSysAdmin": true,
+      "purpose": "isolated evidence and inspection workflow; never a login identity"
+    }
+  ]
+}

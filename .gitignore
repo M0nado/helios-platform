@@ -76,6 +76,8 @@ pip-delete-this-directory.txt
 ## Logs
 logs/
 *.log
+*.crdownload
+.reboot_needed
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

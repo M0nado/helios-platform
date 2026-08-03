@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "contractId": "monadoblade-energy-effects",
+  "identityContract": "config/profiles/monadoblade-profiles.v2.json",
+  "shellContract": "config/gui/monado-profile-shell.v2.json",
+  "energyTransfer": {
+    "phases": ["kanji-breathe", "kanji-grow", "tone-lock", "aperture-transfer", "blade-filament", "particle-response", "chroma-response", "commit"],
+    "previewIsReversible": true,
+    "bladeBodyColor": "#DFFFFF",
+    "identityColorIsAccentOnly": true,
+    "idleCollapsesHolograms": true
+  },
+  "wyvern": {
+    "optional": true,
+    "maximumEventsPerSecond": 8,
+    "maximumSimultaneousVoices": 6,
+    "masterGainMaximum": 0.65,
+    "respectsSystemQuietHours": true,
+    "respectsUserMute": true,
+    "failureMode": "silent",
+    "cues": [
+      { "identity": "core", "kanji": "核", "color": "#53F6FF", "cue": "wyvern-core-harmonic", "character": "clear centered fifth" },
+      { "identity": "developer", "kanji": "創", "color": "#2F86FF", "cue": "wyvern-developer-code-rise", "character": "glass pulse with rising binary overtone" },
+      { "identity": "studio", "kanji": "響", "color": "#D64DFF", "cue": "wyvern-studio-harmonic-bloom", "character": "wide harmonic bloom" },
+      { "identity": "gamer", "kanji": "迅", "color": "#62FF4A", "cue": "wyvern-gamer-velocity-lock", "character": "short low-latency impact" },
+      { "identity": "ai-server", "kanji": "智", "color": "#7A6BFF", "cue": "wyvern-ai-topology-pulse", "character": "layered node pulse" },
+      { "identity": "sysadmin", "kanji": "統", "color": "#FFB000", "cue": "wyvern-sysadmin-mechanical-lock", "character": "quiet physical relay lock" }
+    ]
+  },
+  "chroma": {
+    "optional": true,
+    "vendorAdapter": "Razer-Chroma-SDK",
+    "maximumFramesPerSecond": 30,
+    "maximumBrightness": 0.65,
+    "minimumTransitionMilliseconds": 80,
+    "rateLimited": true,
+    "deviceDiscoveryRequiresOptIn": true,
+    "failureMode": "screen-preview-only",
+    "patterns": [
+      { "identity": "core", "color": "#53F6FF", "pattern": "calm-center-breath" },
+      { "identity": "developer", "color": "#2F86FF", "pattern": "key-grid-trace" },
+      { "identity": "studio", "color": "#D64DFF", "pattern": "stereo-wave" },
+      { "identity": "gamer", "color": "#62FF4A", "pattern": "velocity-edge" },
+      { "identity": "ai-server", "color": "#7A6BFF", "pattern": "topology-node-pulse" },
+      { "identity": "sysadmin", "color": "#FFB000", "pattern": "single-local-lock" }
+    ]
+  },
+  "particles": {
+    "fixedPool": true,
+    "maximumCapacity": 8192,
+    "computePassesPerUpdate": 1,
+    "instancedDrawsPerFrame": 1,
+    "identityColorIsAccentOnly": true,
+    "failureMode": "disabled"
+  },
+  "failureIsolation": {
+    "audio": true,
+    "chroma": true,
+    "particles": true,
+    "anyEffectMayFailWithoutBlockingShell": true
+  },
+  "accessibility": {
+    "colorIsNotOnlySignal": true,
+    "kanjiAndShapeRemainVisible": true,
+    "soundMayBeDisabled": true,
+    "particlesMayBeDisabled": true,
+    "reducedMotionUsesStaticFocusRing": true
+  }
+}

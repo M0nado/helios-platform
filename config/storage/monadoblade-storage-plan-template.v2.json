@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "2.0.0",
+  "contractId": "monadoblade-storage-plan-template",
+  "identityContract": "config/profiles/monadoblade-profiles.v2.json",
+  "legacyLayout": "config/storage/monadoblade-partitions.2x2tb.v1.json",
+  "mode": "plan-only",
+  "apply": {
+    "enabled": false,
+    "availableFromGui": false,
+    "availableFromAlvis": false,
+    "availableFromConversationalRequest": false
+  },
+  "deviceSelection": {
+    "selectedDisk": null,
+    "requireExactModel": true,
+    "requireSerial": true,
+    "requireUniqueId": true,
+    "requireCapacityMatch": true,
+    "systemOrBootDiskDenied": true,
+    "oemRecoveryDeletionDenied": true
+  },
+  "planOutputs": [
+    "device-inventory.json",
+    "proposed-layout.json",
+    "what-if.txt",
+    "rollback.md",
+    "backup-evidence.json",
+    "bitlocker-recovery-evidence.json",
+    "operator-receipt.json"
+  ],
+  "logicalVolumes": [
+    {
+      "id": "common-core",
+      "label": "MONADO_COMMON",
+      "purpose": ["shared-signed-apps", "themes", "sanitized-assets"],
+      "identityAccess": ["core", "developer", "studio", "gamer", "ai-server"],
+      "executablePromotionRequiresApproval": true
+    },
+    {
+      "id": "developer",
+      "label": "MONADO_DEV",
+      "purpose": ["repositories", "toolchains", "builds", "caches"],
+      "identityAccess": ["developer", "ai-server-read"],
+      "devDriveCandidate": true
+    },
+    {
+      "id": "studio",
+      "label": "MONADO_STUDIO",
+      "purpose": ["sessions", "samples", "renders", "plugin-staging"],
+      "identityAccess": ["studio"],
+      "lowLatencyPreferred": true
+    },
+    {
+      "id": "ai-models",
+      "label": "MONADO_AI_MODELS",
+      "purpose": ["model-manifests", "approved-weights", "evaluations", "vector-stores"],
+      "identityAccess": ["ai-server", "developer-read", "studio-read-approved"],
+      "modelExecutionRequiresLicenseAndHash": true
+    },
+    {
+      "id": "secure",
+      "label": "MONADO_SECURE",
+      "purpose": ["local-policy", "recovery-tools", "protected-evidence"],
+      "identityAccess": ["sysadmin"],
+      "bitLockerRequired": true,
+      "autoMount": false
+    },
+    {
+      "id": "quarantine",
+      "label": "MONADO_QUARANTINE",
+      "purpose": ["untrusted-incoming", "scan-staging", "rejected", "receipts"],
+      "identityAccess": ["sysadmin", "sysops-read-approved"],
+      "workflowOnly": true,
+      "executeDenied": true,
+      "autoMount": false
+    },
+    {
+      "id": "backup",
+      "label": "MONADO_BACKUP",
+      "purpose": ["system-images", "repo-bundles", "profile-backups", "recovery-media"],
+      "identityAccess": ["sysadmin", "profile-owner-restore-approved"],
+      "bitLockerRequired": true,
+      "autoMount": false
+    }
+  ],
+  "usbWizard": {
+    "presentationConsumesShellKit": true,
+    "previewConsumesEnvironmentRenderer": true,
+    "inventoryIsReadOnly": true,
+    "generatesPlanOnly": true,
+    "directDiskCommandsDenied": true,
+    "bootConfigurationWritesDenied": true,
+    "winReDeploymentDeniedUntilSeparateApprovedExecutor": true
+  },
+  "approvalGates": [
+    "exact-device-identity",
+    "backup-evidence-current",
+    "bitlocker-recovery-evidence-current",
+    "signed-plan-hash",
+    "rollback-reviewed",
+    "local-physical-presence",
+    "typed-target-confirmation",
+    "separate-approved-executor"
+  ],
+  "rollback": {
+    "required": true,
+    "mustPrecedeApply": true,
+    "preserveOemRecovery": true,
+    "preserveWindowsBootManager": true,
+    "restoreEvidenceRequired": true
+  }
+}

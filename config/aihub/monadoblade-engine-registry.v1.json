@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "registryId": "monadoblade-engine-candidates",
+  "mode": "evaluation-only",
+  "sourceIntake": "config/integrations/monadoblade-delivery-fabric.v1.json",
+  "identityContract": "config/profiles/monadoblade-profiles.v2.json",
+  "training": {
+    "enabled": false,
+    "autonomousPromotion": false,
+    "productionDataAllowed": false,
+    "secretOrCredentialDataAllowed": false,
+    "quarantineEvidenceAllowed": false,
+    "maximumLocalEvaluationCycles": 3,
+    "artifactRoot": ".run/aihub/evaluations",
+    "artifactRootIsGitIgnored": true
+  },
+  "languageOwnership": {
+    "csharp": ["enterprise-policy", "typed-orchestration", "approval-and-event-contracts"],
+    "fsharp": ["scoring", "ranking", "regression-and-policy-analysis"],
+    "cpp": ["profiled-hot-paths", "memory-pressure", "rendering", "bounded-security-kernels"],
+    "python": ["offline-experiments", "provider-adapters", "evaluation-glue"]
+  },
+  "engines": [
+    {
+      "id": "integration-policy-host",
+      "family": "policy",
+      "ownerLanguage": "csharp",
+      "status": "contract-candidate",
+      "effects": ["plan"],
+      "identities": ["core", "developer", "ai-server"],
+      "purpose": "validate cross-service policy and approval envelopes"
+    },
+    {
+      "id": "contextual-bandit-router",
+      "family": "routing",
+      "ownerLanguage": "python",
+      "status": "experiment-only",
+      "effects": ["evaluate"],
+      "identities": ["developer", "ai-server"],
+      "purpose": "compare model-route candidates in bounded offline evaluation"
+    },
+    {
+      "id": "drift-detector",
+      "family": "governance",
+      "ownerLanguage": "fsharp",
+      "status": "contract-candidate",
+      "effects": ["score", "report"],
+      "identities": ["developer", "ai-server", "sysadmin"],
+      "purpose": "flag evaluation or policy drift without applying changes"
+    },
+    {
+      "id": "security-anomaly-core",
+      "family": "security",
+      "ownerLanguage": "cpp",
+      "status": "profile-before-implementation",
+      "effects": ["score", "report"],
+      "identities": ["ai-server", "sysadmin"],
+      "purpose": "candidate low-allocation anomaly scoring hot path"
+    },
+    {
+      "id": "memory-pressure-optimizer",
+      "family": "optimization",
+      "ownerLanguage": "cpp",
+      "status": "profile-before-implementation",
+      "effects": ["recommend"],
+      "identities": ["developer", "studio", "gamer", "ai-server"],
+      "purpose": "recommend bounded memory rebalance after profiling"
+    },
+    {
+      "id": "vector-retrieval-ranker",
+      "family": "retrieval",
+      "ownerLanguage": "fsharp",
+      "status": "contract-candidate",
+      "effects": ["score", "rank"],
+      "identities": ["developer", "studio", "ai-server"],
+      "purpose": "rank sanitized retrieval candidates with deterministic evidence"
+    },
+    {
+      "id": "mesh-consensus-engine",
+      "family": "mesh",
+      "ownerLanguage": "csharp",
+      "status": "experiment-only",
+      "effects": ["plan", "report"],
+      "identities": ["ai-server"],
+      "purpose": "produce a consensus proposal; never self-promote or execute"
+    }
+  ],
+  "alvis": {
+    "exposedTool": "plan_engine_evaluation",
+    "directTrainingTool": null,
+    "directPromotionTool": null,
+    "directExecutionTool": null
+  },
+  "promotionGates": [
+    "owning-repository-implementation",
+    "license-and-data-review",
+    "deterministic-baseline",
+    "security-and-privacy-review",
+    "resource-budget-evidence",
+    "regression-suite",
+    "human-approved-pull-request"
+  ],
+  "rollback": {
+    "modelOrPolicyPromotionIsVersioned": true,
+    "previousBaselineRetained": true,
+    "automaticRollbackOnRegression": true,
+    "rollbackNeverGrantsAdditionalPrivilege": true
+  }
+}

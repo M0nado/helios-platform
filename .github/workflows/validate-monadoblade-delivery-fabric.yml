@@ -1,0 +1,122 @@
+name: Validate Monadoblade delivery fabric
+
+on:
+  pull_request:
+    paths:
+      - 'config/profiles/monadoblade-profiles.v2.json'
+      - 'config/gui/monado-profile-shell.v2.json'
+      - 'config/experience/monadoblade-living-environments.v1.json'
+      - 'config/experience/monadoblade-effects.v1.json'
+      - 'config/aihub/monadoblade-engine-registry.v1.json'
+      - 'config/storage/monadoblade-storage-plan-template.v2.json'
+      - 'config/integrations/monadoblade-delivery-fabric.v1.json'
+      - 'src/core/HELIOS.Platform.Contracts/MonadobladeDeliveryFabricContracts.cs'
+      - 'src/native/HELIOS.Native.Performance/**'
+      - 'tests/native/monadoblade_environment_smoke.cpp'
+      - 'scripts/validation/validate_monadoblade_delivery_fabric.py'
+      - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
+      - '.github/workflows/validate-monadoblade-delivery-fabric.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/profiles/monadoblade-profiles.v2.json'
+      - 'config/gui/monado-profile-shell.v2.json'
+      - 'config/experience/monadoblade-living-environments.v1.json'
+      - 'config/experience/monadoblade-effects.v1.json'
+      - 'config/aihub/monadoblade-engine-registry.v1.json'
+      - 'config/storage/monadoblade-storage-plan-template.v2.json'
+      - 'config/integrations/monadoblade-delivery-fabric.v1.json'
+      - 'src/core/HELIOS.Platform.Contracts/MonadobladeDeliveryFabricContracts.cs'
+      - 'src/native/HELIOS.Native.Performance/**'
+      - 'tests/native/monadoblade_environment_smoke.cpp'
+      - 'scripts/validation/validate_monadoblade_delivery_fabric.py'
+      - '.github/workflows/validate-monadoblade-delivery-fabric.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monadoblade-delivery-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-contracts:
+    name: Contracts and safety invariants
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate delivery fabric
+        run: python scripts/validation/validate_monadoblade_delivery_fabric.py
+
+      - name: Compile Python validator
+        run: python -m py_compile scripts/validation/validate_monadoblade_delivery_fabric.py
+
+      - name: Scan changed contract surfaces for secrets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          roots = [Path('config'), Path('docs/architecture'), Path('scripts/validation')]
+          patterns = [
+              re.compile(r'sk-[A-Za-z0-9_-]{20,}'),
+              re.compile(r'github_pat_[A-Za-z0-9_]{20,}'),
+              re.compile(r'(?i)(client_secret|api_key|access_token)\s*[:=]\s*["\'][^"\']{12,}["\']'),
+          ]
+          for root in roots:
+              for path in root.rglob('*'):
+                  if not path.is_file():
+                      continue
+                  text = path.read_text(encoding='utf-8', errors='ignore')
+                  for pattern in patterns:
+                      if pattern.search(text):
+                          raise SystemExit(f'Potential secret in {path}')
+          print('no secret patterns detected')
+          PY
+
+  build-contracts:
+    name: C# contract build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build platform contracts
+        run: dotnet build src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj --configuration Release --warnaserror
+
+  native-environment:
+    name: C++ environment smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure native tests
+        run: cmake -S src/native/HELIOS.Native.Performance -B build/monadoblade-native -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build native tests
+        run: cmake --build build/monadoblade-native --config Release --parallel 2
+
+      - name: Run native tests
+        run: ctest --test-dir build/monadoblade-native --output-on-failure
+
+      - name: Check bounded shader contract
+        shell: bash
+        run: |
+          test -f src/native/HELIOS.Native.Performance/shaders/monadoblade_environment_particles.hlsl
+          grep -Fq '[numthreads(64, 1, 1)]' src/native/HELIOS.Native.Performance/shaders/monadoblade_environment_particles.hlsl
+          grep -Fq 'activeParticleCount' src/native/HELIOS.Native.Performance/shaders/monadoblade_environment_particles.hlsl

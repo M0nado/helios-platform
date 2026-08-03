@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "2.0.0",
+  "shellId": "monadoblade-single-core-shell",
+  "identityContract": "config/profiles/monadoblade-profiles.v2.json",
+  "securityBoundary": {
+    "runsAfterWindowsAuthentication": true,
+    "replacesWindowsCredentialProvider": false,
+    "capturesPasswords": false,
+    "writesBootConfiguration": false,
+    "fallbackShell": "windows-native-safe-neutral",
+    "profileCipherDelegatesToWindowsSecurity": true,
+    "sysAdminRemoteActivationDenied": true
+  },
+  "stateMachine": [
+    "schematic-boot",
+    "cinematic-idle",
+    "proximity-awake",
+    "wheel-open",
+    "identity-preview",
+    "windows-secure-confirmation",
+    "identity-committed",
+    "shell-active",
+    "safe-fallback"
+  ],
+  "energyBus": {
+    "authoritativeSignals": ["interactionEnergy", "identityColor", "bladeExtension", "windImpulse", "shellReveal"],
+    "consumers": ["monado-core", "kanji-wheel", "blade", "particles", "wyvern-audio", "chroma", "shell-surfaces"],
+    "failureIsolation": true,
+    "soundOrLightingFailureNeverBlocksIdentityActivation": true,
+    "reducedMotionSupported": true
+  },
+  "boot": {
+    "visualMode": "pale-analog-terminal-schematic",
+    "persistentProfileHolograms": false,
+    "bladeIsProgressIndicator": true,
+    "bladeBaseColor": "#DFFFFF",
+    "stages": [
+      { "id": "rails-lock", "mechanism": "two indexed locking rails converge", "cue": "wyvern-rail-lock" },
+      { "id": "coils-charge", "mechanism": "six field coils phase in sequence", "cue": "wyvern-coil-charge" },
+      { "id": "motors-spin", "mechanism": "two aperture motors counter-rotate", "cue": "wyvern-motor-rise" },
+      { "id": "shutters-open", "mechanism": "four iris shutters retract", "cue": "wyvern-shutter-snap" },
+      { "id": "kanji-resolve", "mechanism": "core Kanji resolves inside the physical aperture", "cue": "wyvern-kanji-lock" },
+      { "id": "ether-extend", "mechanism": "cyan-white shaped ether blade grows upward to full length", "cue": "wyvern-ether-full" }
+    ],
+    "diagnostics": ["indexed-rail-position", "coil-phase", "rotor-rpm", "iris-lock", "frame-budget", "fallback-ready"]
+  },
+  "login": {
+    "composition": "upright-centered-monado-with-one-aperture-wheel",
+    "identityPlate": "restrained-upper-corner",
+    "title": "MONADO",
+    "profileCipher": {
+      "visualStyle": "compact-matrix-terminal",
+      "recordsInput": false,
+      "storesInput": false,
+      "delegatesConfirmation": true
+    },
+    "idle": {
+      "orbitalHologramsVisible": false,
+      "apertureBreath": true,
+      "bladeState": "quiet-cyan-white",
+      "wakeInputs": ["pointer-proximity", "keyboard-focus", "controller-focus", "touch"]
+    }
+  },
+  "monado": {
+    "orientation": "upright",
+    "chassisColor": "restrained-crimson",
+    "bladeBaseColor": "#DFFFFF",
+    "bladeBodyRemainsCyanWhite": true,
+    "singleAperture": true,
+    "duplicateDecorativeWheelDenied": true,
+    "profileColorUsage": ["kanji", "aperture-aura", "thin-blade-filament", "particles", "chroma"]
+  },
+  "profileWheel": {
+    "interaction": "hold-aim-release-or-click-confirm",
+    "centeredOnPhysicalAperture": true,
+    "sectorCount": 6,
+    "selectedSectorMovesInward": true,
+    "selectedSectorGrows": true,
+    "selectedSectorPlaysOneCue": true,
+    "previewDoesNotCommit": true,
+    "sectors": [
+      { "identity": "core", "kanji": "核", "color": "#53F6FF", "angle": 0 },
+      { "identity": "developer", "kanji": "創", "color": "#2F86FF", "angle": 60 },
+      { "identity": "studio", "kanji": "響", "color": "#D64DFF", "angle": 120 },
+      { "identity": "gamer", "kanji": "迅", "color": "#62FF4A", "angle": 180 },
+      { "identity": "ai-server", "kanji": "智", "color": "#7A6BFF", "angle": 240 },
+      { "identity": "sysadmin", "kanji": "統", "color": "#FFB000", "angle": 300, "hiddenUntilLocallyAuthorized": true }
+    ],
+    "previewSequence": [
+      "kanji-phase-breathe",
+      "focused-kanji-grow",
+      "identity-tone-lock",
+      "color-filament-enters-aperture",
+      "cyan-white-blade-extends-full",
+      "particles-and-chroma-follow",
+      "explicit-confirmation-commits"
+    ]
+  },
+  "shell": {
+    "startControl": "monado-wheel-button",
+    "alvisControl": "separate-governed-command-surface",
+    "taskbar": "windows-native-actions-with-profile-materials",
+    "flyouts": ["network", "volume", "power", "notifications", "profile-status"],
+    "identityLayouts": {
+      "core": "harmony-orbit",
+      "developer": "build-graph-terminal",
+      "studio": "waveform-spatial-console",
+      "gamer": "minimal-launch-hud",
+      "ai-server": "agent-topology-and-queues",
+      "sysadmin": "quiet-offline-ledger"
+    }
+  },
+  "alvis": {
+    "separateFromIdentityWheel": true,
+    "allowedToolPrefixes": ["search_", "fetch_", "plan_", "request_"],
+    "directExecutorToolsDenied": true,
+    "sysAdminMode": "local-offline-read-plan",
+    "consequentialRequestsRequireHumanApproval": true
+  },
+  "adapters": {
+    "wyvernAudio": {
+      "optional": true,
+      "rateLimited": true,
+      "respectsSystemQuietHours": true,
+      "failureMode": "silent"
+    },
+    "chroma": {
+      "optional": true,
+      "rateLimited": true,
+      "requiresVendorSdk": true,
+      "failureMode": "screen-preview-only"
+    },
+    "particles": {
+      "optional": true,
+      "fixedPool": true,
+      "failureMode": "static-environment"
+    }
+  },
+  "accessibility": {
+    "keyboardComplete": true,
+    "screenReaderLabels": true,
+    "highContrast": true,
+    "reducedMotion": true,
+    "soundOptional": true,
+    "colorIsNotOnlySignal": true
+  }
+}
