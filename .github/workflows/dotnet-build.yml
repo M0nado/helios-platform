@@ -62,20 +62,20 @@ jobs:
           dotnet --list-runtimes
           echo "========================"
 
-      - name: Restore Dependencies
-        run: dotnet restore
+      - name: Restore Minimal Platform
+        run: dotnet restore src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj
 
-      - name: Build Solution
+      - name: Build Minimal Platform
         run: |
-          dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj \
+          dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj \
             --configuration Release \
             --no-restore \
             -p:ContinueOnError=true \
             -p:TreatWarningsAsErrors=false
 
-      - name: Publish Application
+      - name: Publish Minimal Platform
         run: |
-          dotnet publish src/core/HELIOS.Platform/HELIOS.Platform.csproj \
+          dotnet publish src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj \
             -c Release \
             -o ./publish \
             --no-build
