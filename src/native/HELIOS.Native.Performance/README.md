@@ -16,3 +16,9 @@ This module is the planned landing zone for C++/XCore performance backends. It k
 2. Native code must include benchmarks and tests before becoming required runtime code.
 3. Interop boundaries should be documented and versioned.
 4. Branch intelligence should rank native/XCore branches separately under `src/native`.
+
+## Monadoblade living environment
+
+`monadoblade_environment_renderer.hpp` defines the portable scene planner used behind a WinUI `SwapChainPanel`. It converts frame time, GPU and memory pressure, battery, thermals, occlusion, reduced-motion settings, local time, weather, wind, pointer movement, and profile energy into a fixed rendering budget.
+
+The design uses four parallax horizon cards, instanced grass ribbons, a fixed particle pool, and low-resolution fog. Covered or minimized surfaces suspend immediately. The matching HLSL compute shader performs one bounded particle-update dispatch; audio and Chroma remain optional consumers and cannot block the shell.

@@ -301,6 +301,7 @@ We welcome contributions! Please:
 
 ## 🔗 Related Repositories
 
+- **[Monadoblade Delivery Fabric v2](docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md)** - Canonical six-identity shell, ALVIS, renderer, USB, and automation contracts
 - [helios-monado-blade](https://github.com/M0nado/helios-monado-blade) - Engine details
 - [helios-security-setup](https://github.com/M0nado/helios-security-setup) - Security system
 - [helios-ai-hub](https://github.com/M0nado/helios-ai-hub) - AI orchestrator

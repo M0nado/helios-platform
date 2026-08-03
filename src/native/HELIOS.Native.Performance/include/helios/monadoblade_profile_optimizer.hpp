@@ -7,6 +7,9 @@
 
 namespace helios::monadoblade {
 
+// Legacy v1 profile optimizer. The v2 six-identity living environment is defined in
+// monadoblade_environment_renderer.hpp; this type remains stable for existing callers.
+
 enum class Profile : std::size_t {
   Developer,
   SysAdmin,

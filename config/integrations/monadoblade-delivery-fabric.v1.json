@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "contractId": "monadoblade-delivery-fabric",
+  "correlationId": "github-M0nado-helios-platform-issue-207",
+  "authority": {
+    "codeAndRelease": "M0nado/helios-platform",
+    "crossRepositoryPolicy": "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
+    "identityContract": "config/profiles/monadoblade-profiles.v2.json",
+    "shellContract": "config/gui/monado-profile-shell.v2.json",
+    "environmentContract": "config/experience/monadoblade-living-environments.v1.json",
+    "effectsContract": "config/experience/monadoblade-effects.v1.json",
+    "engineRegistry": "config/aihub/monadoblade-engine-registry.v1.json",
+    "storagePlan": "config/storage/monadoblade-storage-plan-template.v2.json"
+  },
+  "repositories": [
+    {
+      "name": "M0nado/helios-platform",
+      "role": "canonical-platform",
+      "status": "active",
+      "owns": ["contracts", "policy", "release-integration", "validation", "evidence"]
+    },
+    {
+      "name": "M0nado/helios-gui-framework",
+      "role": "shared-winui-framework",
+      "status": "existing-extraction-target",
+      "owns": ["shell-kit", "profile-wheel", "taskbar", "flyouts", "account-surfaces", "alvis-ui"]
+    },
+    {
+      "name": "M0nado/helios-monado-blade",
+      "role": "cinematic-engine",
+      "status": "existing-integration-target",
+      "owns": ["monado-model", "aperture-animation", "cinematic-renderer", "environment-adapter"]
+    },
+    {
+      "name": "M0nado/helios-ai-hub",
+      "role": "ai-orchestration",
+      "status": "existing-integration-target",
+      "owns": ["model-adapters", "engine-registry", "evaluation-runtime", "foundry-connectors"]
+    },
+    {
+      "name": "M0nado/helios-usb-wizard",
+      "role": "local-usb-product",
+      "status": "planned-gated-by-issue-149",
+      "owns": ["device-inventory", "dry-run-storage-plan", "offline-bundle-preview", "rollback-evidence"]
+    }
+  ],
+  "packages": [
+    {
+      "id": "HELIOS.Monadoblade.Contracts",
+      "owner": "M0nado/helios-platform",
+      "consumers": ["helios-gui-framework", "helios-monado-blade", "helios-ai-hub", "helios-usb-wizard"],
+      "failureMode": "reject-unknown-contract-version"
+    },
+    {
+      "id": "HELIOS.Monadoblade.ShellKit",
+      "owner": "M0nado/helios-gui-framework",
+      "consumers": ["helios-platform", "helios-usb-wizard"],
+      "failureMode": "windows-native-safe-neutral"
+    },
+    {
+      "id": "HELIOS.Monadoblade.Renderer",
+      "owner": "M0nado/helios-monado-blade",
+      "consumers": ["helios-gui-framework", "helios-usb-wizard-preview"],
+      "failureMode": "static-background"
+    },
+    {
+      "id": "HELIOS.Chroma.Adapter",
+      "owner": "M0nado/helios-gui-framework",
+      "consumers": ["shell-energy-bus"],
+      "optional": true,
+      "failureMode": "screen-preview-only"
+    },
+    {
+      "id": "HELIOS.Wyvern.Audio",
+      "owner": "M0nado/helios-gui-framework",
+      "consumers": ["shell-energy-bus"],
+      "optional": true,
+      "failureMode": "silent"
+    },
+    {
+      "id": "HELIOS.ALVIS.Surface",
+      "owner": "M0nado/helios-gui-framework",
+      "consumers": ["helios-platform", "helios-ai-hub"],
+      "failureMode": "read-only-local-status"
+    },
+    {
+      "id": "HELIOS.USB.DeviceBroker.Contracts",
+      "owner": "M0nado/helios-platform",
+      "consumers": ["helios-usb-wizard"],
+      "failureMode": "inventory-only-no-apply"
+    }
+  ],
+  "alvis": {
+    "directExecutorToolsDenied": true,
+    "toolClasses": [
+      { "prefix": "search_", "effect": "read-only", "approval": "none" },
+      { "prefix": "fetch_", "effect": "read-only", "approval": "none" },
+      { "prefix": "plan_", "effect": "plan-only", "approval": "none" },
+      { "prefix": "request_", "effect": "pending-approval", "approval": "human-required" }
+    ],
+    "sysAdmin": {
+      "network": "denied",
+      "providers": "local-approved-only",
+      "effects": ["read-only", "plan-only"],
+      "externalWrites": "denied"
+    },
+    "eventEnvelope": "config/integrations/event-contract.schema.json"
+  },
+  "collaborationProjection": {
+    "github": {
+      "role": "engineering-source-of-truth",
+      "issue": "https://github.com/M0nado/helios-platform/issues/207",
+      "requiredEvidence": ["branch", "pull-request", "exact-head-sha", "checks", "review", "merge"]
+    },
+    "linear": {
+      "role": "delivery-tracking",
+      "record": "https://linear.app/641974/issue/JOH-44/canonicalize-monadoblade-six-profile-delivery-fabric",
+      "mayTriggerExecution": false
+    },
+    "slack": {
+      "role": "engineering-notification-and-canvas",
+      "record": "https://helios-xk97943.slack.com/docs/T0B8Z1H0MV1/F0BL7F6BS75",
+      "mayTriggerExecution": false
+    },
+    "teams": {
+      "role": "enterprise-collaboration-notification-and-handoff",
+      "destinationResolutionRequiredBeforeWrite": true,
+      "mayTriggerExecution": false
+    },
+    "sharepoint": {
+      "role": "governed-runbook-and-release-evidence",
+      "record": "https://heli0s-my.sharepoint.com/personal/jmore_heli0s_onmicrosoft_com/Documents/Helios/Governance/MonadoBlade/MONADOBLADE_DELIVERY_FABRIC_V1.md?web=1",
+      "mayTriggerExecution": false
+    },
+    "azureDevOps": {
+      "role": "discovery-and-read-only-projection",
+      "serviceConnectionRequiredForWrite": true,
+      "mayTriggerExecution": false
+    },
+    "adobe": {
+      "role": "visual-source-assets-and-component-boards",
+      "codeAuthority": false
+    }
+  },
+  "githubAutomation": {
+    "branchPattern": "agent/monadoblade-*",
+    "pullRequestDefault": "draft",
+    "requiredValidation": ["contract-validator", "csharp-contract-build", "cpp-environment-smoke", "secret-pattern-scan"],
+    "directToMainDenied": true,
+    "forcePushDenied": true,
+    "deployment": "not-part-of-this-contract",
+    "cloudOrDeviceMutation": false
+  },
+  "legacySourceIntake": [
+    {
+      "name": "ml_registry.py",
+      "sha256": "aa6d7a874b9e185893960f5b75a10c7799646b022e7631e6815c5c8f4dc5dfe7",
+      "disposition": "design-input",
+      "absorbedAs": ["engine-registry-contract", "backend-ownership-map"],
+      "rawImport": false
+    },
+    {
+      "name": "build_super_outputs.py",
+      "sha256": "0e117eb3a407d2f08fce5a26558181199e969b1a872081b36c55172b960d4c3f",
+      "disposition": "reference-only",
+      "reason": "depends on absent security_optimizer and vm_orchestrator modules",
+      "rawImport": false
+    },
+    {
+      "name": "aihub_control_server.py",
+      "sha256": "c0a65a348a9a44dfabec43501d346b0811772954c61747ba812a71e61b297535",
+      "disposition": "prototype-quarantined",
+      "reason": "defaults to 0.0.0.0 and exposes unauthenticated task and training POST routes",
+      "rawImport": false
+    },
+    {
+      "name": "deep_engine_fabric.py",
+      "sha256": "26246a00e4b6ca23a7d2eff3f4beea8125d446a36fc74ebb1ae8e280c638a116",
+      "disposition": "design-input",
+      "absorbedAs": ["language-owner-boundaries", "plan-only-engine-catalog", "evaluation-candidates"],
+      "rawImport": false
+    },
+    {
+      "name": "ai.py",
+      "sha256": "e3c09a4931031d6ef1b5bdbfca85cc8fbcd894c693b5f142a2bb3dcd57a2bdb9",
+      "disposition": "reference-only",
+      "reason": "mutation commands require the governed ALVIS request and approval boundary",
+      "rawImport": false
+    },
+    {
+      "name": "hermes_xcore_training_loop.py",
+      "sha256": "5534eae4a7ff4fe6f5dfa51358591220177f9a93f9fed0a64252d02efe8dcb48",
+      "disposition": "evaluation-input",
+      "absorbedAs": ["bounded-cycle-concept", "score-and-reflect-contract", "local-artifact-policy"],
+      "rawImport": false
+    },
+    {
+      "name": "hermes_xcore_training_loop_pseudo.py",
+      "sha256": "bb772c971d920e3dbab4addb38edba41da39ab0247bcc2cd78acca6606c19000",
+      "disposition": "reference-only",
+      "reason": "pseudocode is superseded by versioned evaluation contracts",
+      "rawImport": false
+    },
+    {
+      "name": ".reboot_needed",
+      "sha256": "b625e5139b05722842537c7016e2e78c22d36212eaeae63fce2b2005b7808f33",
+      "disposition": "excluded-generated-state",
+      "rawImport": false
+    },
+    {
+      "name": "01_LocalRepair_20260604_013051.log",
+      "sha256": "11a996fd70aae1101058d589db67988bb31e9c2fbf70f46dcd3e15d6e61d1778",
+      "disposition": "excluded-machine-evidence",
+      "rawImport": false
+    },
+    {
+      "name": "00_Master_20260604_012614.log",
+      "sha256": "3b52e341b6af35a4ac7f3675b736da1b24f464f9b1ffc277c7f13aad9f96f2aa",
+      "disposition": "excluded-machine-evidence",
+      "rawImport": false
+    },
+    {
+      "name": "part13_v4-FINAL.txt.crdownload",
+      "sha256": "1e4ab0eabd609c68263882b2fb2e643493870fcd3b05906cd23589316cf41f76",
+      "disposition": "excluded-incomplete-download",
+      "rawImport": false
+    },
+    {
+      "name": "08_AzureDevStack.ps1.txt.crdownload",
+      "sha256": "265c0fbd9bc659ae5802837a6eb68af45fa71cfde225ef9a9cc0b8cf79a9586c",
+      "disposition": "excluded-incomplete-download",
+      "route": "existing governed Azure plan/what-if lane",
+      "rawImport": false
+    },
+    {
+      "name": "06a_AzureVNet_DNS.txt.crdownload",
+      "sha256": "2b87d47b7628204d35dab1bac5e30378f571e6f7815c733a11da5e9c0c9b37fb",
+      "disposition": "excluded-incomplete-download",
+      "route": "existing Bicep network modules and protected Azure workflow",
+      "rawImport": false
+    },
+    {
+      "name": "Deploy-WinRE.txt.crdownload",
+      "sha256": "b4c00bb186bdb3832ba0ab3b666ea672b3ff30f31f231eb268049845dfa7d555",
+      "disposition": "excluded-incomplete-download",
+      "route": "USB Wizard plan and local approval boundary",
+      "rawImport": false
+    },
+    {
+      "name": "03_M365Security.txt.crdownload",
+      "sha256": "077e94f7492bb647d119e0fa98b49e1f98f5cee13bb7587c7bcecf5133491f56",
+      "disposition": "excluded-incomplete-download",
+      "route": "tenant-admin reviewed Microsoft Graph policy lane",
+      "rawImport": false
+    },
+    {
+      "name": "06b_KeyVault_PrivateEndpoint.txt.crdownload",
+      "sha256": "6209c90733504c4fd7fa15078c5984135717d8dcf255b90bc3410b4610280c1f",
+      "disposition": "excluded-incomplete-download",
+      "route": "managed-identity and protected Bicep what-if lane",
+      "rawImport": false
+    }
+  ]
+}

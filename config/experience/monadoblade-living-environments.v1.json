@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "contractId": "monadoblade-living-environments",
+  "identityContract": "config/profiles/monadoblade-profiles.v2.json",
+  "renderer": {
+    "host": "WinUI3-SwapChainPanel",
+    "portablePlanner": "src/native/HELIOS.Native.Performance/include/helios/monadoblade_environment_renderer.hpp",
+    "particleShader": "src/native/HELIOS.Native.Performance/shaders/monadoblade_environment_particles.hlsl",
+    "depthTechnique": "layered-faux-3d",
+    "layers": ["sky-gradient", "distant-silhouette", "four-parallax-horizon-cards", "low-resolution-fog", "instanced-grass-ribbons", "fixed-pool-particles", "profile-energy-accents"],
+    "drawPolicy": {
+      "particleComputePassesPerUpdate": 1,
+      "particleInstancedDrawsPerFrame": 1,
+      "perParticleUiElementsDenied": true,
+      "suspendWhenMinimized": true,
+      "suspendWhenOccluded": true
+    }
+  },
+  "worldSignals": {
+    "time": {
+      "source": "local-device-clock",
+      "phases": ["night", "dawn", "day", "golden-hour", "dusk"],
+      "networkRequired": false
+    },
+    "weather": {
+      "default": "local-synthetic",
+      "optionalLiveAdapter": true,
+      "requiresLocationConsent": true,
+      "cacheMinutes": 30,
+      "fallback": "seasonal-seeded-simulation",
+      "neverBlocksShell": true
+    },
+    "wind": {
+      "inputs": ["weather-wind", "seeded-gust-field", "pointer-impulse", "profile-energy"],
+      "pointerRadiusPixels": 180,
+      "affects": ["grass-ribbons", "fog-offset", "motes", "blade-wake"]
+    },
+    "particles": {
+      "poolAllocation": "fixed-at-startup",
+      "recycleInPlace": true,
+      "cpuToGpuReadbackDenied": true,
+      "profileColorIsAccentOnly": true
+    }
+  },
+  "performance": {
+    "targetPresentationFps": 60,
+    "backgroundGpuFrameBudgetMs": 3.0,
+    "startupMemoryBudgetMiB": 96,
+    "qualityTiers": {
+      "suspended": { "particles": 0, "horizonCards": 0, "grassInstances": 0, "updatesPerSecond": 0, "fogScale": 0.0 },
+      "minimal": { "particles": 384, "horizonCards": 2, "grassInstances": 96, "updatesPerSecond": 15, "fogScale": 0.25 },
+      "balanced": { "particles": 3072, "horizonCards": 4, "grassInstances": 1024, "updatesPerSecond": 30, "fogScale": 0.5 },
+      "cinematic": { "particles": 8192, "horizonCards": 4, "grassInstances": 4096, "updatesPerSecond": 60, "fogScale": 0.67 }
+    },
+    "degradeInputs": ["frame-time", "gpu-utilization", "memory-pressure", "battery-level", "thermal-pressure", "remote-session", "reduced-motion", "minimized", "occluded"],
+    "qualityChangesAreHysteretic": true,
+    "rendererFailureMode": "static-background"
+  },
+  "presets": [
+    {
+      "id": "core-horizon",
+      "identity": "core",
+      "scene": "balanced titan-scale grassland with clean central interaction corridor",
+      "dayNight": "natural-cyan-gold",
+      "weather": ["clear", "soft-cloud", "light-mist", "gentle-rain"],
+      "windGain": 0.7,
+      "particleStyle": "cyan-white pollen motes",
+      "energyBehavior": "calm orbital harmony"
+    },
+    {
+      "id": "developer-grid-storm",
+      "identity": "developer",
+      "scene": "cool mountain field crossed by restrained schematic survey lines",
+      "dayNight": "blue-hour-biased",
+      "weather": ["clear", "fast-cloud", "electrical-drizzle"],
+      "windGain": 0.55,
+      "particleStyle": "blue code sparks and thin laser traces",
+      "energyBehavior": "build graph wakes around the horizon"
+    },
+    {
+      "id": "studio-resonance-field",
+      "identity": "studio",
+      "scene": "violet meadow with distant forms responding like a slow waveform",
+      "dayNight": "sunset-and-night-biased",
+      "weather": ["clear", "mist", "soft-rain"],
+      "windGain": 0.65,
+      "particleStyle": "violet harmonic dust",
+      "energyBehavior": "wind and fog pulse at low musical subdivisions"
+    },
+    {
+      "id": "gamer-velocity-plains",
+      "identity": "gamer",
+      "scene": "high-contrast open plain with fast readable depth and minimal overlays",
+      "dayNight": "high-clarity",
+      "weather": ["clear", "fast-cloud", "storm-edge"],
+      "windGain": 0.95,
+      "particleStyle": "sparse green velocity streaks",
+      "energyBehavior": "motion sharpens on selection and quiets during play"
+    },
+    {
+      "id": "ai-server-mesh-night",
+      "identity": "ai-server",
+      "scene": "night valley with distant service constellations and queue-like fireflies",
+      "dayNight": "night-biased",
+      "weather": ["clear", "low-cloud", "data-rain"],
+      "windGain": 0.45,
+      "particleStyle": "indigo topology pulses",
+      "energyBehavior": "bounded nodes wake only near active routes"
+    },
+    {
+      "id": "sysadmin-sealed-ledger",
+      "identity": "sysadmin",
+      "scene": "dark local vault landscape reduced to physical silhouettes and amber diagnostics",
+      "dayNight": "fixed-night-local",
+      "weather": ["still"],
+      "windGain": 0.2,
+      "particleStyle": "rare amber mechanical dust",
+      "energyBehavior": "quiet, deterministic, and offline"
+    }
+  ],
+  "accessibility": {
+    "reducedMotionMapsTo": "minimal",
+    "highContrastStaticFallback": true,
+    "weatherFlashDenied": true,
+    "rapidFullScreenLuminanceChangesDenied": true,
+    "soundAndColorAreOptionalSignals": true
+  }
+}

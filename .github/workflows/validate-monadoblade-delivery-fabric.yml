@@ -1,0 +1,159 @@
+name: Validate Monadoblade delivery fabric
+
+on:
+  pull_request:
+    paths:
+      - 'config/profiles/monadoblade-profiles.v2.json'
+      - 'config/gui/monado-profile-shell.v2.json'
+      - 'config/experience/monadoblade-living-environments.v1.json'
+      - 'config/experience/monadoblade-effects.v1.json'
+      - 'config/aihub/monadoblade-engine-registry.v1.json'
+      - 'config/storage/monadoblade-storage-plan-template.v2.json'
+      - 'config/integrations/monadoblade-delivery-fabric.v1.json'
+      - 'src/core/HELIOS.Platform.Contracts/MonadobladeDeliveryFabricContracts.cs'
+      - 'src/native/HELIOS.Native.Performance/**'
+      - 'tests/native/monadoblade_environment_smoke.cpp'
+      - 'scripts/validation/validate_monadoblade_delivery_fabric.py'
+      - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
+      - '.github/workflows/validate-monadoblade-delivery-fabric.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/profiles/monadoblade-profiles.v2.json'
+      - 'config/gui/monado-profile-shell.v2.json'
+      - 'config/experience/monadoblade-living-environments.v1.json'
+      - 'config/experience/monadoblade-effects.v1.json'
+      - 'config/aihub/monadoblade-engine-registry.v1.json'
+      - 'config/storage/monadoblade-storage-plan-template.v2.json'
+      - 'config/integrations/monadoblade-delivery-fabric.v1.json'
+      - 'src/core/HELIOS.Platform.Contracts/MonadobladeDeliveryFabricContracts.cs'
+      - 'src/native/HELIOS.Native.Performance/**'
+      - 'tests/native/monadoblade_environment_smoke.cpp'
+      - 'scripts/validation/validate_monadoblade_delivery_fabric.py'
+      - '.github/workflows/validate-monadoblade-delivery-fabric.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monadoblade-delivery-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-contracts:
+    name: Contracts and safety invariants
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate delivery fabric
+        run: python scripts/validation/validate_monadoblade_delivery_fabric.py
+
+      - name: Compile Python validator
+        run: python -m py_compile scripts/validation/validate_monadoblade_delivery_fabric.py
+
+      - name: Scan changed contract surfaces for secrets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          roots = [Path('config'), Path('docs/architecture'), Path('scripts/validation')]
+          patterns = [
+              re.compile(r'sk-[A-Za-z0-9_-]{20,}'),
+              re.compile(r'github_pat_[A-Za-z0-9_]{20,}'),
+              re.compile(r'(?i)(client_secret|api_key|access_token)\s*[:=]\s*["\'][^"\']{12,}["\']'),
+          ]
+          for root in roots:
+              for path in root.rglob('*'):
+                  if not path.is_file():
+                      continue
+                  text = path.read_text(encoding='utf-8', errors='ignore')
+                  for pattern in patterns:
+                      if pattern.search(text):
+                          raise SystemExit(f'Potential secret in {path}')
+          print('no secret patterns detected')
+          PY
+
+  build-contracts:
+    name: C# contract build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build platform contracts
+        run: dotnet build src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj --configuration Release --warnaserror
+
+  native-environment:
+    name: C++ environment smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure native tests
+        run: cmake -S src/native/HELIOS.Native.Performance -B build/monadoblade-native -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build native tests
+        run: cmake --build build/monadoblade-native --config Release --parallel 2
+
+      - name: Run native tests
+        run: ctest --test-dir build/monadoblade-native --output-on-failure
+
+  shader-contract:
+    name: HLSL DXC compile
+    runs-on: windows-latest
+    env:
+      DXC_PACKAGE_VERSION: '1.9.2607.13'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET for pinned DXC restore
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore pinned Microsoft DXC
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $restoreRoot = Join-Path $env:RUNNER_TEMP 'monadoblade-dxc'
+          dotnet new classlib --name DxcRestore --output $restoreRoot --framework net8.0 --no-restore
+          dotnet add (Join-Path $restoreRoot 'DxcRestore.csproj') package Microsoft.Direct3D.DXC --version $env:DXC_PACKAGE_VERSION --no-restore
+          dotnet restore (Join-Path $restoreRoot 'DxcRestore.csproj') --use-lock-file
+
+          $packageRoot = Join-Path $env:USERPROFILE ".nuget\packages\microsoft.direct3d.dxc\$env:DXC_PACKAGE_VERSION\build\native\bin\x64"
+          $dxcPath = Join-Path $packageRoot 'dxc.exe'
+          if (-not (Test-Path -LiteralPath $dxcPath -PathType Leaf)) {
+            throw 'Pinned Microsoft.Direct3D.DXC package did not contain the Windows x64 dxc.exe compiler.'
+          }
+          "DXC_PATH=$dxcPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Compile bounded particle shader with DXC
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $shader = 'src/native/HELIOS.Native.Performance/shaders/monadoblade_environment_particles.hlsl'
+          $output = Join-Path $env:RUNNER_TEMP 'monadoblade_environment_particles.dxil'
+          & $env:DXC_PATH --version
+          if ($LASTEXITCODE -ne 0) { throw "DXC version probe failed with exit code $LASTEXITCODE." }
+          & $env:DXC_PATH -E CSMain -T cs_6_0 -HV 2021 -Ges -WX -Fo $output $shader
+          if ($LASTEXITCODE -ne 0) { throw "DXC shader compilation failed with exit code $LASTEXITCODE." }
+          if (-not (Test-Path -LiteralPath $output -PathType Leaf) -or (Get-Item -LiteralPath $output).Length -eq 0) {
+            throw 'DXC did not produce a non-empty DXIL artifact.'
+          }

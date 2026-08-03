@@ -21,4 +21,16 @@ if(BUILD_TESTING)
     target_compile_options(helios_native_engine_smoke PRIVATE -Wall -Wextra -Werror -pedantic)
   endif()
   add_test(NAME helios_native_engine_smoke COMMAND helios_native_engine_smoke)
+
+  add_executable(
+    monadoblade_environment_smoke
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../tests/native/monadoblade_environment_smoke.cpp
+  )
+  target_link_libraries(monadoblade_environment_smoke PRIVATE HELIOSNativePerformance)
+  if(MSVC)
+    target_compile_options(monadoblade_environment_smoke PRIVATE /W4 /WX /permissive-)
+  else()
+    target_compile_options(monadoblade_environment_smoke PRIVATE -Wall -Wextra -Werror -pedantic)
+  endif()
+  add_test(NAME monadoblade_environment_smoke COMMAND monadoblade_environment_smoke)
 endif()

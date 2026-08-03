@@ -13,10 +13,11 @@ This page helps you find what you need quickly.
 
 ### **I want to...understand the architecture**
 1. Overview: [ARCHITECTURE.md](ARCHITECTURE.md)
-2. Design: [ARCHITECTURE_GUIDE.md](ARCHITECTURE_GUIDE.md)
-3. Components: See components section below
-4. Deployment Flow: [DEPLOYMENT_PLAYBOOK.md](DEPLOYMENT_PLAYBOOK.md)
-5. API: [API.md](API.md) or [PHASE-4-API-REFERENCE.md](PHASE-4-API-REFERENCE.md)
+2. Monadoblade: [Delivery Fabric v2](architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md)
+3. Design: [ARCHITECTURE_GUIDE.md](ARCHITECTURE_GUIDE.md)
+4. Components: See components section below
+5. Deployment Flow: [DEPLOYMENT_PLAYBOOK.md](DEPLOYMENT_PLAYBOOK.md)
+6. API: [API.md](API.md) or [PHASE-4-API-REFERENCE.md](PHASE-4-API-REFERENCE.md)
 
 ### **I want to...contribute code**
 1. Setup: [CONTRIBUTING.md](CONTRIBUTING.md)

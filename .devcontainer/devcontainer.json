@@ -34,6 +34,8 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-python.black-formatter",
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
         "GitHub.copilot",
         "GitHub.vscode-pull-request-github",
         "eamodio.gitlens",
@@ -104,6 +106,6 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "pwsh -NoLogo -NoProfile -Command \"Write-Host 'HELIOS Codespace ready: restoring primary .NET projects...' -ForegroundColor Cyan; if (Test-Path 'src/core/HELIOS.Platform/HELIOS.Platform.csproj') { dotnet restore 'src/core/HELIOS.Platform/HELIOS.Platform.csproj' }; if (Test-Path 'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj') { dotnet restore 'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj' }; Write-Host 'Next: run ./scripts/build/build.ps1 or dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj' -ForegroundColor Green\"",
+  "postCreateCommand": "pwsh -NoLogo -NoProfile -Command \"Write-Host 'HELIOS Codespace ready: restoring contracts and validating Monadoblade...' -ForegroundColor Cyan; if (Test-Path 'src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj') { dotnet restore 'src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj' }; if (Test-Path 'src/core/HELIOS.Platform/HELIOS.Platform.csproj') { dotnet restore 'src/core/HELIOS.Platform/HELIOS.Platform.csproj' }; if (Test-Path 'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj') { dotnet restore 'tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj' }; if (Test-Path 'scripts/validation/validate_monadoblade_delivery_fabric.py') { python3 'scripts/validation/validate_monadoblade_delivery_fabric.py' }; Write-Host 'Next: run the Monadoblade validation workflow or build the affected project' -ForegroundColor Green\"",
   "postStartCommand": "pwsh -NoLogo -NoProfile -Command \"Write-Host 'Welcome back to HELIOS Platform Codespace' -ForegroundColor Green; gh --version | Select-Object -First 1; dotnet --version\""
 }

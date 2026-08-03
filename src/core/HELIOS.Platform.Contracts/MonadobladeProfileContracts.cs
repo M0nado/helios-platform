@@ -3,7 +3,8 @@ using System.Collections.ObjectModel;
 namespace HELIOS.Platform.Contracts.Monadoblade;
 
 /// <summary>
-/// Canonical Monadoblade operating profiles.
+/// Legacy v1 Monadoblade operating profiles retained for existing consumers.
+/// New identity-wheel consumers use <see cref="MonadobladeIdentityId"/> and the v2 delivery fabric.
 /// </summary>
 public enum MonadobladeProfileId
 {
