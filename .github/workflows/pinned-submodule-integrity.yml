@@ -1,0 +1,53 @@
+name: Pinned submodule integrity
+
+on:
+  pull_request:
+    paths:
+      - .gitmodules
+      - config/integrations/approved-submodules.json
+      - scripts/integrations/validate_pinned_submodules.py
+      - .github/workflows/pinned-submodule-integrity.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout superproject without stored credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - name: Create short-lived read-only installation token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.SUBMODULE_APP_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: M0nado
+          repositories: >-
+            helios-monado-blade,helios-security-setup,helios-ai-hub,
+            helios-dev-ai-hub,helios-build-agents,helios-gui-framework,
+            helios-software-stack
+
+      - name: Checkout exact recursive gitlinks
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Validate reviewed pins and repository integrity
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+          git submodule status --recursive
+          git ls-files --stage
+          git diff --cached --submodule=log --check
+          python3 scripts/integrations/validate_pinned_submodules.py
