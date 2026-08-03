@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Threading;
 using System.Threading.Tasks;
+using HELIOS.Platform.CloudSync.Providers;
 
 namespace HELIOS.Platform.CloudSync.Engine
 {

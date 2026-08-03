@@ -1,0 +1,70 @@
+{
+  "specializations": {
+    "csharp-gui": {
+      "title": "C# MAUI/WinUI/Super GUI specialist",
+      "focus": ["MonadoBlade GUI", "WinUI/MAUI patterns", "view models", "themes", "local command center integration"],
+      "checks": ["dotnet build HELIOS.Platform.slnx", "python3 scripts/dashboard/generate-gui.py"],
+      "paths": ["src/gui/MonadoBlade.GUI", "src/core/HELIOS.Platform/Presentation", "status-site"]
+    },
+    "csharp-core-vault": {
+      "title": "C# core/server/vault/security specialist",
+      "focus": ["backend services", "contracts", "vault/security boundaries", "safe integration APIs"],
+      "checks": ["dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj", "python3 scripts/security/apply_gate_preflight.py"],
+      "paths": ["src/core/HELIOS.Platform", "src/core/HELIOS.Platform.Contracts", "src/Security"]
+    },
+    "cpp-xcore": {
+      "title": "C++ XCore/performance backend specialist",
+      "focus": ["native performance", "CMake", "XCore bridge", "hot-path optimization"],
+      "checks": ["cmake -S src/native/HELIOS.Native.Performance -B .build/native", "python3 scripts/build_graph/build_graph.py run --tag native --max-workers 2"],
+      "paths": ["src/native/HELIOS.Native.Performance"]
+    },
+    "fsharp-analytics": {
+      "title": "F# analytics/math/prediction specialist",
+      "focus": ["prediction models", "statistics", "analytics tests", "parallel/math correctness"],
+      "checks": ["dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"],
+      "paths": ["src/analytics/HELIOS.Analytics.FSharp", "tests/analytics/HELIOS.Analytics.FSharp.Tests"]
+    },
+    "python-automation": {
+      "title": "Python AIHub/automation/autorunner specialist",
+      "focus": ["build graph", "finish automation", "AIHub orchestration", "report generation"],
+      "checks": ["python3 -m py_compile scripts/build_graph/build_graph.py scripts/apply/finish_readiness_apply.py", "./finish.sh --full"],
+      "paths": ["scripts", "ai-integration"]
+    },
+    "deep-learning-ai-combo": {
+      "title": "Deep learning and cross-LLM integration specialist",
+      "focus": ["OpenAI", "Azure OpenAI", "Claude/Anthropic", "Codex", "provider routing", "local secret safety"],
+      "checks": ["python3 scripts/integrations/full_integration_matrix.py", "python3 scripts/integrations/super_stack_readiness.py"],
+      "paths": ["config/ai-services", "ai-integration/chatgpt-integration", "ai-integration/codex-integration"]
+    },
+    "github-yaml-codex": {
+      "title": "GitHub Actions/YAML/Codex MCP specialist",
+      "focus": ["workflow repair", "branch automation", "Codex packets", "safe PR automation"],
+      "checks": ["python3 scripts/control/validate_workflows.py", "python3 scripts/codex/generate-codex-tasks.py"],
+      "paths": [".github/workflows", "scripts/codex", "config/github-mcp.example.json"]
+    },
+    "azure-bicep": {
+      "title": "Azure/Bicep/Cloud Shell/Key Vault specialist",
+      "focus": ["Azure CLI", "Bicep", "what-if", "Key Vault", "safe cloud plans"],
+      "checks": ["python3 scripts/azure/azure_connection_pipeline.py --stage all", "python3 scripts/azure/azure_what_if.py"],
+      "paths": ["infra/azure", "scripts/azure"]
+    },
+    "hermes-fleet": {
+      "title": "Hermes/Fleet/XCore deep agent specialist",
+      "focus": ["Hermes fleet readiness", "XCore agent lanes", "agent config", "dry-run production safety"],
+      "checks": ["python3 scripts/agents/hermes_fleet_readiness.py", "python3 scripts/integrations/deep_agent_readiness.py"],
+      "paths": ["scripts/agents", "config/hermes-fleet.example.json", "HERMES_SWIFT_COMPLETE_DELIVERY_INDEX.md"]
+    },
+    "security": {
+      "title": "Security/vault/preflight specialist",
+      "focus": ["secret scanning", "apply gates", "allowlist triage", "vault-safe operations"],
+      "checks": ["python3 scripts/security/secret_preflight.py", "python3 scripts/security/apply_gate_preflight.py"],
+      "paths": ["scripts/security", "config/security-preflight-allowlist.json"]
+    },
+    "dashboard-server": {
+      "title": "Super GUI/local server command-center specialist",
+      "focus": ["dashboard", "status site", "local server port", "branch/action visibility"],
+      "checks": ["python3 scripts/dashboard/generate-gui.py", "python3 scripts/web/helios-web.py --help"],
+      "paths": ["scripts/dashboard", "scripts/web", "status-site"]
+    }
+  }
+}

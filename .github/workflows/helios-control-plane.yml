@@ -1,0 +1,145 @@
+name: HELIOS Control Plane
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_pages:
+        description: 'Publish GitHub Pages dashboard'
+        required: false
+        default: 'false'
+      update_wiki:
+        description: 'Generate wiki export artifact'
+        required: false
+        default: 'false'
+      run_full_tests:
+        description: 'Run full available tests'
+        required: false
+        default: 'true'
+  push:
+    branches: [ main, develop, work ]
+    paths:
+      - 'scripts/**'
+      - 'src/analytics/**'
+      - 'src/core/HELIOS.Platform.Contracts/**'
+      - 'src/native/**'
+      - 'tests/analytics/**'
+      - 'infra/**'
+      - '.github/workflows/helios-control-plane.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  intelligence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: 01 HELIOS Command Center single entry point
+        run: |
+          python3 scripts/control/helios-control.py
+          python3 scripts/analysis/repo_inventory.py
+          python3 scripts/analysis/hybrid_gap_analysis.py
+      - name: 02 Unified secrets map and integration readiness
+        run: |
+          python3 scripts/integrations/check-connections.py
+          python3 scripts/integrations/cross_access_profiles.py
+          python3 scripts/integrations/readiness_score.py
+          python3 scripts/integrations/app_automation.py
+          python3 scripts/control/validate_workflows.py
+      - name: 03 GitHub inventory
+        run: python3 scripts/github/github-inventory.py
+      - name: 04 Azure inventory
+        run: python3 scripts/azure/azure-inventory.py
+      - name: 05 Control-plane permissions model
+        run: test -f docs/security/CONTROL_PLANE_PERMISSIONS.md
+      - name: 06 Build graph report
+        run: python3 scripts/build_graph/build_graph.py
+      - name: 07 Branch merge prune recommendations
+        run: |
+          python3 scripts/analysis/branch_intelligence.py
+          python3 scripts/analysis/merge_prune_recommendations.py
+          python3 scripts/graphs/generate_graphs.py
+      - name: 08 Dashboard actions page and GUI
+        run: |
+          python3 scripts/control/doctor.py
+          python3 scripts/github/update-pr-from-reports.py --dry-run > /tmp/helios-pr-preview.md
+          python3 scripts/dashboard/generate-actions.py
+          python3 scripts/dashboard/generate-gui.py
+      - name: 09 Codex task packets
+        run: python3 scripts/codex/generate-codex-tasks.py
+      - name: 10 Opt-in AI enrichment readiness
+        run: python3 scripts/ai/enrich-ideas.py
+      - name: 11 GitHub desired-state manifest
+        run: test -f config/github-control.example.json
+      - name: 12 Azure desired-state manifest
+        run: test -f config/azure-control.example.json
+      - name: 13 Hosted GitHub workflow expansion
+        run: test -f .github/workflows/helios-control-plane.yml
+      - name: 14 Cloud Shell full setup
+        run: bash -n scripts/cloudshell/helios-cloudshell.sh
+      - name: 15 Long-term org enterprise apply-mode controls
+        run: test -f docs/security/CONTROL_PLANE_PERMISSIONS.md
+      - name: Wiki export
+        if: ${{ github.event.inputs.update_wiki == 'true' }}
+        run: python3 scripts/github/update-wiki-from-reports.py
+      - name: Build analytics projects
+        run: dotnet build tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj
+      - name: Test analytics projects
+        if: ${{ github.event.inputs.run_full_tests != 'false' }}
+        run: dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-build
+      - name: Native/XCore configure validation
+        run: cmake -S src/native/HELIOS.Native.Performance -B .build/native
+      - name: Native/XCore build validation
+        run: cmake --build .build/native
+      - name: Stage status site
+        run: |
+          mkdir -p status-site/reports
+          cp reports/branch-intelligence/*.md status-site/reports/
+          cp reports/integrations/*.json status-site/reports/ || true
+          cp reports/control-plane/*.md status-site/reports/ || true
+          cp reports/project-inventory/*.md status-site/reports/ || true
+          cp reports/build-graph/*.md status-site/reports/ || true
+          cp reports/codex/*.md status-site/reports/ || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helios-control-plane
+          path: |
+            reports/branch-intelligence/
+            reports/integrations/
+            reports/control-plane/
+            .github/PULL_REQUEST_BODY.md
+            reports/project-inventory/
+            reports/build-graph/
+            reports/codex/
+            status-site/
+          retention-days: 30
+      - name: Upload Pages artifact
+        if: ${{ github.event.inputs.publish_pages == 'true' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: status-site
+
+  deploy-pages:
+    if: ${{ github.event.inputs.publish_pages == 'true' }}
+    needs: intelligence
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

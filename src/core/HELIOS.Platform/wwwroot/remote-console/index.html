@@ -29,6 +29,7 @@
                 <li><a href="#" data-tab="files" class="nav-link">File Manager</a></li>
                 <li><a href="#" data-tab="sessions" class="nav-link">Sessions</a></li>
                 <li><a href="#" data-tab="settings" class="nav-link">Settings</a></li>
+                <li><a href="#" data-tab="aihub" class="nav-link">AIHub Control</a></li>
             </ul>
         </nav>
 
@@ -322,6 +323,38 @@
                         <tbody id="sessionsTable">
                         </tbody>
                     </table>
+                </div>
+            </section>
+
+
+
+            <!-- AIHub Control Tab -->
+            <section id="aihub" class="tab-content">
+                <div class="section-header">
+                    <h2>AIHub Hermes/XCore Unified Control</h2>
+                    <button class="btn btn-primary" id="refreshAIHubBtn">Refresh AIHub View</button>
+                </div>
+                <div class="aihub-hero">
+                    <div>
+                        <h3>Hybrid local/cloud command center</h3>
+                        <p>Visual controls for GitHub branches, commits, issues, runners, Codespaces, Pages/wiki, Azure Key Vault/Bicep/SQL/Cosmos/vector lanes, Codex/ChatGPT/Copilot/Claude/local models, and Hermes/XCore agent fleets.</p>
+                    </div>
+                    <div class="aihub-mode-buttons">
+                        <button class="btn btn-secondary" data-aihub-command="plan-only">Plan Only</button>
+                        <button class="btn btn-secondary" data-aihub-command="auto-local">Auto Local</button>
+                        <button class="btn btn-secondary" data-aihub-command="repo-live">Repo Live</button>
+                        <button class="btn btn-secondary" data-aihub-command="cloud-live">Cloud Live</button>
+                    </div>
+                </div>
+                <input id="aihubSearch" class="aihub-search" placeholder="Search agents, GitHub, Azure, vault, modules...">
+                <div class="dashboard-grid" id="aihubPartyGrid"></div>
+                <div class="card">
+                    <h3>Setup / Vault / Live Flags</h3>
+                    <div class="aihub-command-list" id="aihubCommandList"></div>
+                </div>
+                <div class="card">
+                    <h3>Module/Submodule Fill Plan</h3>
+                    <div id="aihubModulePlan"></div>
                 </div>
             </section>
 

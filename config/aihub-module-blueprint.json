@@ -1,0 +1,103 @@
+{
+  "principle": "C# is the secure WinUI3/API/vault/orchestration foundation; C++ owns desktop performance, rendering, memory, security-sensitive native helpers, and low-cost hot paths; F# owns deep learning, prediction, ranking, security/performance analytics, and async query scoring; Python is reserved for AIHub libraries, LLM/agent/provider glue, Linux/WSL2 integration, and specialized ML libraries that immediately hand results back to C#.",
+  "modules": [
+    {
+      "id": "gui-command-center",
+      "foundation": "C# WinUI3/C# contracts",
+      "submodules": [
+        "shell navigation",
+        "command palette",
+        "agent party cards",
+        "vault setup forms",
+        "GitHub graph",
+        "Azure graph",
+        "branch issue board",
+        "learning feedback"
+      ],
+      "cpp": [
+        "rendering overlays",
+        "large graph layout",
+        "low-latency telemetry panels",
+        "memory-efficient diff visualization"
+      ],
+      "fsharp": [
+        "UI priority scoring",
+        "branch/commit recommendation ranking",
+        "XP progress prediction"
+      ],
+      "python": [
+        "provider discovery",
+        "report ingestion",
+        "LLM/agent text generation"
+      ]
+    },
+    {
+      "id": "usbwizard",
+      "foundation": "C# wizard flow and safety policy",
+      "submodules": [
+        "boot media plan",
+        "Windows profile presets",
+        "partition model",
+        "security baseline",
+        "performance profile",
+        "offline vault handoff",
+        "driver recovery"
+      ],
+      "cpp": [
+        "device scan hot path",
+        "partition layout validation",
+        "checksum verification",
+        "secure memory handling"
+      ],
+      "fsharp": [
+        "risk scoring",
+        "profile fit prediction",
+        "rollback confidence",
+        "security/performance tradeoff ranking"
+      ],
+      "python": [
+        "Linux/WSL2 imaging helpers only when libraries/tools make it safer"
+      ]
+    },
+    {
+      "id": "aihub-engine",
+      "foundation": "C# orchestration planner and typed route contracts",
+      "submodules": [
+        "LLM provider router",
+        "Hermes/XCore registry",
+        "prompt/tool catalog",
+        "learning ledger",
+        "cost/speed/quality optimizer"
+      ],
+      "cpp": [
+        "vector similarity",
+        "agent graph comparison",
+        "native model-adjacent scoring kernels",
+        "memory-pressure aware batching"
+      ],
+      "fsharp": [
+        "deep score fusion",
+        "ensemble ranking",
+        "prediction analytics",
+        "natural-selection prompt/tool scoring"
+      ],
+      "python": [
+        "OpenAI/Claude/Ollama/Codex/Copilot adapters",
+        "Linux local-model bridge",
+        "specialized ML libraries"
+      ]
+    }
+  ],
+  "languageTargets": {
+    "csharp": "foundation and secure orchestration",
+    "cpp": "more desktop performance/security/rendering/hot paths",
+    "fsharp": "deep learning and analytics throughout",
+    "python": "only specialized AIHub libraries, agents, LLMs, Linux glue"
+  },
+  "contractFiles": [
+    "src/core/HELIOS.Platform.Contracts/AIHubEngineContracts.cs",
+    "src/core/HELIOS.Platform.Contracts/GuiAndUsbWizardModules.cs",
+    "src/analytics/HELIOS.Analytics.FSharp/AIHub/AiHubLearningEngine.fs",
+    "src/native/HELIOS.Native.Performance/include/helios/aihub_native_engine.hpp"
+  ]
+}

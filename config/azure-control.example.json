@@ -1,0 +1,10 @@
+{
+  "environmentName": "dev",
+  "resourceGroup": "helios-dev-rg",
+  "location": "eastus",
+  "template": "infra/azure/main.bicep",
+  "parameters": "infra/azure/parameters/dev.json",
+  "resources": ["storage", "keyVault", "logAnalytics"],
+  "expectedSecretsFrom": "config/secrets-map.example.json",
+  "applyMode": "disabled-by-default"
+}

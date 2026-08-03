@@ -1,2 +1,20 @@
 <Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/core/">
+    <Project Path="src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/core/HELIOS.Platform.Minimal/">
+    <Project Path="src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj" />
+  </Folder>
+  <Folder Name="/src/core/HELIOS.Platform/" />
+  <Folder Name="/src/core/HELIOS.Platform/Phase10/" />
+  <Folder Name="/src/core/HELIOS.Platform/Phase10/Users/">
+    <Project Path="src/core/HELIOS.Platform/Phase10/Users/HELIOS.Platform.Phase10.Users.csproj" />
+  </Folder>
+  <Folder Name="/src/core/HELIOS.Platform/Phase10/Users/Tests/">
+    <Project Path="src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj" />
+  </Folder>
+  <Folder Name="/src/Security/">
+    <Project Path="src/Security/SecurityValidator.csproj" />
+  </Folder>
 </Solution>

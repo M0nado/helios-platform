@@ -1,0 +1,63 @@
+name: HELIOS Integration Sync
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened, edited, labeled, unlabeled, closed, reopened]
+  pull_request:
+    types: [opened, synchronize, ready_for_review, closed]
+  workflow_run:
+    workflows: ["HELIOS Control Plane"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  id-token: write
+
+jobs:
+  event-payload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build normalized integration event
+        shell: bash
+        run: |
+          mkdir -p reports/integrations
+          cat > reports/integrations/event.json <<JSON
+          {
+            "repository": "${GITHUB_REPOSITORY}",
+            "event": "${GITHUB_EVENT_NAME}",
+            "ref": "${GITHUB_REF}",
+            "sha": "${GITHUB_SHA}",
+            "runId": "${GITHUB_RUN_ID}",
+            "runAttempt": "${GITHUB_RUN_ATTEMPT}"
+          }
+          JSON
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helios-integration-event
+          path: reports/integrations/event.json
+          retention-days: 14
+
+  azure-federation-check:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Verify federated Azure configuration
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          test -n "$AZURE_CLIENT_ID"
+          test -n "$AZURE_TENANT_ID"
+          test -n "$AZURE_SUBSCRIPTION_ID"
+          echo "Azure federation variables are configured. No client secret is required."
+
+# Slack, Linear, Teams, and SharePoint delivery is intentionally delegated to
+# dedicated connector services or Azure Functions using federated identity.
+# Do not place webhook secrets directly in this workflow.

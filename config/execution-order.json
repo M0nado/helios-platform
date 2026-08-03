@@ -1,0 +1,21 @@
+{
+  "order": [
+    "HELIOS Command Center single entry point",
+    "Unified secrets map",
+    "GitHub inventory",
+    "Azure inventory",
+    "Control-plane permissions model",
+    "Build graph",
+    "Branch merge/prune recommendations",
+    "Dashboard actions page",
+    "Codex task packet generation",
+    "Opt-in AI enrichment",
+    "GitHub desired-state manifest",
+    "Azure desired-state manifest",
+    "Hosted GitHub workflow expansion",
+    "Cloud Shell full setup",
+    "Long-term org/enterprise apply-mode controls"
+  ],
+  "safeByDefault": true,
+  "mutationRequires": ["--apply", "explicit scope", "human review"]
+}

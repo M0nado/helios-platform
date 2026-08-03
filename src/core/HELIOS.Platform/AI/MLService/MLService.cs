@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using HELIOS.Platform.Data;
 
 namespace HELIOS.Platform.AI.MLService
 {

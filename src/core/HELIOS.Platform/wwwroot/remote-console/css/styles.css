@@ -618,3 +618,92 @@ pre {
 .text-muted {
     color: #95a5a6;
 }
+
+
+/* AIHub unified control plane */
+.aihub-hero {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 18px;
+    align-items: center;
+    background: linear-gradient(135deg, #182848 0%, #4b6cb7 100%);
+    color: #fff;
+    padding: 24px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    box-shadow: 0 12px 30px rgba(24, 40, 72, 0.25);
+}
+.aihub-mode-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.aihub-agent-card {
+    border-left: 6px solid #667eea;
+    position: relative;
+    overflow: hidden;
+}
+.aihub-agent-icon {
+    font-size: 32px;
+    float: right;
+}
+.xp-bar {
+    height: 10px;
+    background: #e8ecf7;
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+.xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00c6ff, #7f00ff);
+}
+.aihub-command-list code {
+    display: block;
+    background: #101827;
+    color: #d9ecff;
+    padding: 10px;
+    border-radius: 8px;
+    margin: 8px 0;
+    overflow-x: auto;
+}
+.aihub-module-item {
+    padding: 12px;
+    border: 1px solid #dbe3f4;
+    border-radius: 10px;
+    margin: 10px 0;
+    background: #f8fbff;
+}
+
+.aihub-search { width: 100%; padding: 12px 14px; border: 1px solid #b9c7e6; border-radius: 999px; margin: 0 0 16px; font-size: 15px; }
+.aihub-agent-card:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0,0,0,.16); }
+
+
+/* AIHub self-learning frame */
+.aihub-learning-frame {
+    border: 1px solid rgba(102, 126, 234, 0.35);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.10));
+    border-radius: 14px;
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+}
+
+.aihub-learning-tier {
+    border-left: 4px solid #667eea;
+    background: rgba(255, 255, 255, 0.82);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.aihub-situation-pill {
+    display: inline-flex;
+    align-items: center;
+    margin: 4px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #edf2ff;
+    color: #2c3e50;
+    font-size: 12px;
+    font-weight: 600;
+}

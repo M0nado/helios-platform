@@ -1,0 +1,49 @@
+name: AIHub SuperShell Vault Wizard
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Safe wizard mode
+        required: false
+        default: plan-only
+        type: choice
+        options:
+          - plan-only
+          - auto-local
+          - repo-live
+          - cloud-live
+  schedule:
+    - cron: '17 6 * * *'
+
+permissions:
+  contents: read
+  actions: read
+  pages: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate AIHub SuperShell vault wizard
+        run: |
+          python3 -m py_compile scripts/integrations/aihub_supershell_vault_wizard.py scripts/integrations/aihub_unified_control_plane.py scripts/dashboard/generate-gui.py
+          python3 scripts/integrations/aihub_supershell_vault_wizard.py
+          python3 scripts/integrations/aihub_unified_control_plane.py
+          python3 scripts/dashboard/generate-gui.py
+      - name: Upload wizard reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: aihub-supershell-vault-wizard
+          path: |
+            reports/integrations/aihub-supershell-vault-wizard.*
+            reports/integrations/aihub-unified-control-plane.*
+            status-site/index.html

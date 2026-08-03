@@ -1,0 +1,156 @@
+{
+  "roles": {
+    "csharp": {
+      "role": "Secure AI-access orchestration core and clean framework that connects GUI, cloud, agents, C++, F#, and Python partner engines",
+      "useFor": [
+        "AI access gateway",
+        "GUI shell",
+        "service orchestration",
+        "contracts",
+        "security boundaries",
+        "plugin hosting",
+        "cross-language partner coordination",
+        "cloud sync control"
+      ],
+      "avoidFor": [
+        "hot-path numerical kernels",
+        "manual memory/performance algorithms",
+        "large exploratory data/AI library glue when Python already dominates"
+      ],
+      "paths": [
+        "src/core",
+        "src/gui",
+        "src/Security"
+      ]
+    },
+    "cpp": {
+      "role": "Preferred performance, memory, graphics/rendering, and XCore algorithm engine",
+      "useFor": [
+        "hot-path algorithms",
+        "memory-sensitive code",
+        "native graphics/rendering",
+        "XCore bridge",
+        "performance backends",
+        "low-level integrations"
+      ],
+      "avoidFor": [
+        "workflow glue",
+        "report generation",
+        "cloud auth wrappers"
+      ],
+      "paths": [
+        "src/native"
+      ]
+    },
+    "fsharp": {
+      "role": "Analytics, math, prediction, search/ranking, statistical/deep-learning orchestration",
+      "useFor": [
+        "analytics",
+        "prediction",
+        "ranking",
+        "search",
+        "math pipelines",
+        "model evaluation",
+        "parallel transformations"
+      ],
+      "avoidFor": [
+        "GUI shell",
+        "imperative OS automation"
+      ],
+      "paths": [
+        "src/analytics",
+        "tests/analytics"
+      ]
+    },
+    "python": {
+      "role": "Linux tooling, AIHub/library glue, automation, report generation, cross-LLM adapters",
+      "useFor": [
+        "setup automation",
+        "GitHub/Azure wrappers",
+        "report generation",
+        "AI provider library integration",
+        "Linux scripts"
+      ],
+      "avoidFor": [
+        "long-term core orchestration",
+        "performance kernels",
+        "security-critical runtime",
+        "math/search code that belongs in F#"
+      ],
+      "paths": [
+        "scripts",
+        "ai-integration"
+      ]
+    }
+  },
+  "replacementRules": [
+    {
+      "ifPathContains": [
+        "rendering",
+        "render",
+        "effects",
+        "particle",
+        "laser",
+        "lightning",
+        "gpu",
+        "fps",
+        "frame",
+        "memoryprofiler",
+        "performance",
+        "native",
+        "xcore"
+      ],
+      "prefer": "cpp",
+      "reason": "performance/memory/rendering/XCore should bias to C++"
+    },
+    {
+      "ifPathContains": [
+        "analytics",
+        "prediction",
+        "predictive",
+        "ranking",
+        "search",
+        "statistics",
+        "model",
+        "/ml/",
+        "anomaly",
+        "feature",
+        "intelligence",
+        "optimizer"
+      ],
+      "prefer": "fsharp",
+      "reason": "analytics/search/math/prediction/deep scoring should bias to F#"
+    },
+    {
+      "ifPathContains": [
+        "setup",
+        "github",
+        "azure",
+        "report",
+        "dashboard",
+        "aihub",
+        "openai",
+        "codex",
+        "agent",
+        "workflow"
+      ],
+      "prefer": "python",
+      "reason": "tooling/report/provider glue can remain Python"
+    },
+    {
+      "ifPathContains": [
+        "core",
+        "gui",
+        "security",
+        "contract",
+        "orchestr",
+        "service",
+        "plugin",
+        "theme",
+        "sync"
+      ],
+      "prefer": "csharp",
+      "reason": "framework/security/orchestration should bias to C#"
+    }
+  ]
+}

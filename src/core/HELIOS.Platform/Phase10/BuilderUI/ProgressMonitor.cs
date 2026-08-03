@@ -34,7 +34,7 @@ namespace HELIOS.Platform.Phase10.BuilderUI
         /// </summary>
         private void InitializeUI()
         {
-            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10), Spacing = 10 };
+            var panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness(10) };
 
             // Overall progress section
             panel.Children.Add(new TextBlock { Text = "Overall Progress", FontWeight = System.Windows.FontWeights.Bold, FontSize = 14 });
@@ -71,13 +71,13 @@ namespace HELIOS.Platform.Phase10.BuilderUI
             panel.Children.Add(_timeRemainingText);
 
             // Control buttons
-            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(0, 10, 0, 0) };
+            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
             
             _pauseResumeButton = new Button { Content = "Pause", Width = 100, Padding = new Thickness(10, 5, 10, 5) };
             _pauseResumeButton.Click += PauseResumeButton_Click;
             buttonPanel.Children.Add(_pauseResumeButton);
 
-            _cancelButton = new Button { Content = "Cancel", Width = 100, Padding = new Thickness(10, 5, 10, 5) };
+            _cancelButton = new Button { Content = "Cancel", Width = 100, Padding = new Thickness(10, 5, 10, 5), Margin = new Thickness(10, 0, 0, 0) };
             _cancelButton.Click += CancelButton_Click;
             buttonPanel.Children.Add(_cancelButton);
 

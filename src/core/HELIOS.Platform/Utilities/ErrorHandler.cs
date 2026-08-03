@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using HELIOS.Platform.Core.Logging;
 
 namespace HELIOS.Platform.Utilities
 {
@@ -31,7 +32,7 @@ namespace HELIOS.Platform.Utilities
                 return false;
             }
 
-            _logger.Warn($"Download failed for {component}, retry {retryCount + 1}/3: {ex.Message}");
+            _logger.Warning($"Download failed for {component}, retry {retryCount + 1}/3: {ex.Message}");
             return true;  // Caller should retry
         }
 
@@ -88,7 +89,7 @@ namespace HELIOS.Platform.Utilities
                 return false;
             }
 
-            _logger.Warn($"Network error for {url}, retry {retryCount + 1}/5: {ex.Message}");
+            _logger.Warning($"Network error for {url}, retry {retryCount + 1}/5: {ex.Message}");
             return true;  // Caller should retry
         }
 

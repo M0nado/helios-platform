@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/integration-event-v1.json",
+  "title": "HELIOS Integration Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "source",
+    "eventType",
+    "repository",
+    "correlationId",
+    "environment",
+    "occurredAt",
+    "dataClassification",
+    "links",
+    "payload"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "eventId": { "type": "string", "minLength": 8 },
+    "source": {
+      "type": "string",
+      "enum": ["github", "azure", "hermes", "xcore", "codex", "github-copilot", "microsoft-copilot", "copilot-studio", "helios-platform", "monado-blade"]
+    },
+    "eventType": { "type": "string", "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*$" },
+    "repository": { "type": ["string", "null"] },
+    "entityId": { "type": ["string", "null"] },
+    "correlationId": { "type": "string", "minLength": 4 },
+    "causationId": { "type": ["string", "null"] },
+    "environment": { "type": "string", "enum": ["local", "development", "test", "staging", "production"] },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "dataClassification": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"] },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["human", "service", "agent", "workflow"] },
+        "id": { "type": "string" },
+        "displayName": { "type": ["string", "null"] }
+      },
+      "required": ["type", "id"]
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rel", "href"],
+        "properties": {
+          "rel": { "type": "string" },
+          "href": { "type": "string", "format": "uri" }
+        }
+      }
+    },
+    "payload": { "type": "object" }
+  }
+}

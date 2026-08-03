@@ -50,8 +50,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
+      - name: Verify PowerShell
+        run: $PSVersionTable.PSVersion
+        shell: pwsh
       
       - name: Build Phase
         run: |
@@ -82,8 +83,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
+      - name: Verify PowerShell
+        run: $PSVersionTable.PSVersion
+        shell: pwsh
       
       - name: Run Phase Tests
         run: |

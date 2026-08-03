@@ -1,0 +1,14 @@
+{
+  "domains": [
+    {"name": "command-center", "paths": ["helios.sh", "COMMAND_CENTER.md", "scripts/control"], "priority": 100, "next": "Keep one entry point for every local, Cloud Shell, Codespaces, and CI action."},
+    {"name": "github-control", "paths": [".github", "scripts/github", "config/github-control.example.json"], "priority": 95, "next": "Add drift reports before any apply-mode support."},
+    {"name": "azure-hybrid", "paths": ["infra/azure", "scripts/azure", "docs/architecture/AZURE_HYBRID_ARCHITECTURE.md"], "priority": 95, "next": "Add private endpoint and self-hosted runner modules after what-if validation."},
+    {"name": "ai-orchestration", "paths": ["scripts/ai", "ai-integration", "scripts/ai-services"], "priority": 90, "next": "Unify ChatGPT/OpenAI, Azure OpenAI, Claude, and Codex routing behind safe provider manifests."},
+    {"name": "dotnet-visual-studio-maui", "paths": ["*.csproj", "*.slnx", "docs/integration/VISUAL_STUDIO_MAUI_SETUP.md"], "priority": 88, "next": "Add solution-level build targets for GUI, MAUI-ready front ends, contracts, and analytics."},
+    {"name": "fsharp-analytics", "paths": ["src/analytics", "tests/analytics"], "priority": 86, "next": "Connect analytics scoring into branch intelligence and build graph scoring."},
+    {"name": "native-xcore", "paths": ["src/native"], "priority": 84, "next": "Add benchmark harness and C ABI boundaries for C#/F#/Python callers."},
+    {"name": "python-automation", "paths": ["scripts", "reports"], "priority": 82, "next": "Normalize all Python entry points into build graph nodes and command-center actions."},
+    {"name": "security-compliance", "paths": ["docs/security", "scripts/security", "installer/security", "src/Security"], "priority": 90, "next": "Add secret scanning, policy checks, and compliance report generation to CI."},
+    {"name": "docs-dashboard", "paths": ["docs", "status-site", "dashboards"], "priority": 78, "next": "Keep generated status pages separate from durable architecture docs."}
+  ]
+}

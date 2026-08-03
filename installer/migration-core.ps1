@@ -344,6 +344,7 @@ class ConflictResolver {
                 return $conflict
             }
         }
+        throw "Unsupported conflict resolution strategy: $($this.ResolutionStrategy)"
     }
 
     [hashtable] MergeValues([hashtable]$old, [hashtable]$new) {

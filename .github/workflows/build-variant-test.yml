@@ -23,6 +23,7 @@ on:
 permissions:
   contents: read
   checks: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -70,7 +71,9 @@ jobs:
               "coverage": true
             }
           ]'
-          echo "variants=$VARIANTS" >> $GITHUB_OUTPUT
+          echo "variants<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$VARIANTS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Build Matrix
         id: matrix
@@ -80,16 +83,18 @@ jobs:
             {"os": "ubuntu-latest", "node": "20"},
             {"os": "windows-latest", "node": "18"}
           ]'
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "matrix<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
   test-variants:
-    name: Test ${{ matrix.variant.name }} on Node ${{ matrix.node }}
-    runs-on: ${{ matrix.os }}
+    name: Test ${{ matrix.variant.name }} on Node ${{ matrix.platform.node }} (${{ matrix.platform.os }})
+    runs-on: ${{ matrix.platform.os }}
     needs: setup-variants
     strategy:
       matrix:
         variant: ${{ fromJson(needs.setup-variants.outputs.variants) }}
-        include: ${{ fromJson(needs.setup-variants.outputs.matrix) }}
+        platform: ${{ fromJson(needs.setup-variants.outputs.matrix) }}
       fail-fast: false
     env:
       NODE_ENV: ${{ matrix.variant.env }}
@@ -103,18 +108,28 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      - name: Setup Node.js ${{ matrix.node }}
+      - name: Setup Node.js ${{ matrix.platform.node }}
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
-          cache: 'npm'
+          node-version: ${{ matrix.platform.node }}
+
+      - name: Detect Node project
+        id: node_project
+        shell: bash
+        run: |
+          if [ -f package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No package.json found at repository root; skipping Node variant steps."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Display Configuration
         run: |
           echo "===== Build Configuration ====="
           echo "Variant: ${{ matrix.variant.name }}"
-          echo "OS: ${{ matrix.os }}"
-          echo "Node: ${{ matrix.node }}"
+          echo "OS: ${{ matrix.platform.os }}"
+          echo "Node: ${{ matrix.platform.node }}"
           echo "Environment: ${{ matrix.variant.env }}"
           echo "Minify: ${{ matrix.variant.minify }}"
           echo "Sourcemap: ${{ matrix.variant.sourcemap }}"
@@ -122,27 +137,43 @@ jobs:
           echo "==============================="
 
       - name: Install Dependencies
-        run: npm ci
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Build for ${{ matrix.variant.name }}
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           npm run build:${{ matrix.variant.name }}
 
       - name: Run Tests
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           npm test -- --testTimeout=30000
 
       - name: Generate Coverage
-        if: matrix.variant.name == 'test'
+        if: steps.node_project.outputs.exists == 'true' && matrix.variant.name == 'test'
+        shell: bash
         run: |
           npm run test:coverage
 
       - name: Validate Build Output
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           ls -la dist/ || echo "No dist directory"
           echo "Build output size: $(du -sh dist 2>/dev/null || echo 'N/A')"
 
       - name: Performance Check
+        if: steps.node_project.outputs.exists == 'true'
+        shell: bash
         run: |
           if [ -f "dist/bundle.js" ]; then
             SIZE=$(stat -f%z "dist/bundle.js" 2>/dev/null || stat -c%s "dist/bundle.js" 2>/dev/null)
@@ -154,9 +185,9 @@ jobs:
 
       - name: Upload Variant Artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: variant-${{ matrix.variant.name }}-node${{ matrix.node }}-${{ matrix.os }}
+          name: variant-${{ matrix.variant.name }}-node${{ matrix.platform.node }}-${{ matrix.platform.os }}
           path: |
             dist/
             coverage/
@@ -170,7 +201,7 @@ jobs:
     if: always()
     steps:
       - name: Download All Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: variants
 

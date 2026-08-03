@@ -1,0 +1,76 @@
+name: Branch Intelligence Dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      fetch_remotes:
+        description: 'Fetch configured remotes before ranking'
+        required: false
+        default: 'false'
+      enrich_ideas:
+        description: 'Mark ideas for optional AI enrichment when credentials are configured'
+        required: false
+        default: 'false'
+  schedule:
+    - cron: '30 2 * * *'
+  push:
+    branches:
+      - main
+      - develop
+      - work
+    paths:
+      - 'docs/integration/remote-manifest.json'
+      - 'docs/integration/BRANCH_INTELLIGENCE.md'
+      - 'scripts/analysis/branch_intelligence.py'
+      - '.github/workflows/branch-intelligence.yml'
+      - 'src/native/HELIOS.Native.Performance/**'
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+
+jobs:
+  branch-intelligence:
+    name: Rank Branches, Ideas, and Connectivity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run branch intelligence
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          HELIOS_PLATFORM_REMOTE_URL: ${{ secrets.HELIOS_PLATFORM_REMOTE_URL }}
+          HELIOS_CONTROL_REMOTE_URL: ${{ secrets.HELIOS_CONTROL_REMOTE_URL }}
+          HERMES_FLEET_REMOTE_URL: ${{ secrets.HERMES_FLEET_REMOTE_URL }}
+          XCORE_REMOTE_URL: ${{ secrets.XCORE_REMOTE_URL }}
+        run: |
+          ARGS=()
+          if [ "${{ github.event.inputs.fetch_remotes }}" = "true" ]; then
+            ARGS+=(--fetch)
+          fi
+          if [ "${{ github.event.inputs.enrich_ideas }}" = "true" ]; then
+            ARGS+=(--enrich-ideas)
+          fi
+          python3 scripts/analysis/branch_intelligence.py "${ARGS[@]}"
+
+      - name: Publish dashboard summary
+        run: |
+          cat reports/branch-intelligence/dashboard.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload branch intelligence reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-intelligence
+          path: reports/branch-intelligence/
+          retention-days: 30

@@ -98,7 +98,7 @@ namespace HELIOS.Platform.Phase10.Quarantine
                     var signatures = GetKnownSignatures();
                     foreach (var sig in signatures)
                     {
-                        if (ContainsSignature(fileBytes, sig.Signature))
+                        if (ContainsSignature(fileBytes, sig.Bytes))
                         {
                             result.SignaturesDetected.Add(sig.Name);
                             _logger.LogInfo($"Signature detected: {sig.Name}");
@@ -435,16 +435,16 @@ namespace HELIOS.Platform.Phase10.Quarantine
         {
             return new List<Signature>
             {
-                new Signature { Name = "WannaCry", Signature = Encoding.ASCII.GetBytes("WANNACRY") },
-                new Signature { Name = "Locky", Signature = Encoding.ASCII.GetBytes("LOCKY") },
-                new Signature { Name = "Emotet", Signature = Encoding.ASCII.GetBytes("EMOTET") }
+                new Signature { Name = "WannaCry", Bytes = Encoding.ASCII.GetBytes("WANNACRY") },
+                new Signature { Name = "Locky", Bytes = Encoding.ASCII.GetBytes("LOCKY") },
+                new Signature { Name = "Emotet", Bytes = Encoding.ASCII.GetBytes("EMOTET") }
             };
         }
 
         private class Signature
         {
             public string Name { get; set; }
-            public byte[] Signature { get; set; }
+            public byte[] Bytes { get; set; }
         }
 
         #endregion

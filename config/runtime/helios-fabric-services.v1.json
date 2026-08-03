@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "fabricId": "helios-fabric",
+  "defaultTransport": "local-grpc",
+  "developmentTransports": ["local-grpc", "loopback-http", "sqlite-outbox"],
+  "enterpriseTransports": ["azure-service-bus", "azure-event-hubs", "azure-signalr", "application-insights"],
+  "messageRequirements": {
+    "typedContracts": true,
+    "correlationId": true,
+    "causationId": true,
+    "idempotencyKey": true,
+    "profileId": true,
+    "securityClassification": true,
+    "schemaVersion": true,
+    "createdAtUtc": true,
+    "evidenceReference": true,
+    "secretValuesDenied": true
+  },
+  "services": [
+    {
+      "id": "control-center",
+      "runtime": "winui3",
+      "language": "csharp",
+      "mode": "interactive",
+      "publishes": ["profile.switch.requested", "task.requested", "approval.response", "ui.telemetry.preference"],
+      "subscribes": ["profile.state", "system.metrics", "security.state", "aihub.state", "vm.state", "container.state", "deployment.state", "quarantine.state"]
+    },
+    {
+      "id": "devhub",
+      "runtime": "winui3",
+      "language": "csharp",
+      "mode": "interactive",
+      "publishes": ["project.create.requested", "build.requested", "test.requested", "model.route.requested", "promotion.requested"],
+      "subscribes": ["project.state", "build.state", "test.state", "model.route.state", "github.state", "azure.state"]
+    },
+    {
+      "id": "profile-broker",
+      "runtime": "windows-service",
+      "language": "csharp",
+      "mode": "local-system-bounded",
+      "publishes": ["profile.state", "profile.policy.violation", "profile.readiness"],
+      "subscribes": ["profile.switch.requested", "authorization.state", "storage.state", "service.health"]
+    },
+    {
+      "id": "storage-catalog",
+      "runtime": "windows-service",
+      "language": "csharp",
+      "publishes": ["storage.state", "volume.state", "hierarchy.drift", "backup.state"],
+      "subscribes": ["storage.scan.requested", "backup.verify.requested"]
+    },
+    {
+      "id": "crosspartition-broker",
+      "runtime": "windows-service",
+      "language": "csharp",
+      "publishes": ["transfer.state", "transfer.receipt", "quarantine.scan.requested"],
+      "subscribes": ["transfer.requested", "quarantine.decision", "approval.response"]
+    },
+    {
+      "id": "quarantine-scanner",
+      "runtime": "windows-service-and-isolated-workers",
+      "language": "csharp-cpp-python",
+      "publishes": ["quarantine.state", "quarantine.finding", "quarantine.decision.recommended", "driver.trust.state", "model.trust.state"],
+      "subscribes": ["quarantine.scan.requested", "sandbox.result", "catalog.trust.policy"]
+    },
+    {
+      "id": "script-execution-broker",
+      "runtime": "windows-service",
+      "language": "csharp",
+      "publishes": ["script.plan", "script.state", "script.evidence", "approval.requested"],
+      "subscribes": ["script.requested", "approval.response", "authorization.state"]
+    },
+    {
+      "id": "aihub-main-brain",
+      "runtime": "dotnet-service",
+      "language": "csharp-fsharp-python-cpp",
+      "publishes": ["aihub.state", "model.route.state", "optimization.recommendation", "anomaly.finding", "evaluation.state", "approval.requested"],
+      "subscribes": ["task.requested", "system.metrics", "build.state", "test.state", "security.state", "vm.state", "container.state", "model.telemetry", "profile.state"]
+    },
+    {
+      "id": "hermes-coordinator",
+      "runtime": "docker-or-dotnet-service",
+      "language": "python-csharp",
+      "publishes": ["hermes.state", "agent.state", "task.dispatch.state", "training.state"],
+      "subscribes": ["task.dispatch.requested", "model.route.state", "agent.policy", "evaluation.state"]
+    },
+    {
+      "id": "xcore-runtime",
+      "runtime": "native-and-managed",
+      "language": "cpp-csharp-fsharp",
+      "publishes": ["xcore.state", "native.metrics", "security.anomaly", "memory.optimization", "routing.score"],
+      "subscribes": ["native.task.requested", "optimization.policy", "system.metrics", "security.policy"]
+    },
+    {
+      "id": "vm-container-watcher",
+      "runtime": "dotnet-service",
+      "language": "csharp",
+      "publishes": ["vm.state", "container.state", "wsl.state", "sandbox.state", "capacity.state"],
+      "subscribes": ["vm.action.requested", "container.action.requested", "profile.state", "resource.policy"]
+    },
+    {
+      "id": "metrics-aggregator",
+      "runtime": "dotnet-service",
+      "language": "csharp-cpp",
+      "publishes": ["system.metrics", "profile.metrics", "model.telemetry", "performance.regression"],
+      "subscribes": ["native.metrics", "vm.state", "container.state", "build.state", "security.state"]
+    },
+    {
+      "id": "integration-broker",
+      "runtime": "aspnet-core",
+      "language": "csharp",
+      "publishes": ["github.state", "linear.state", "slack.state", "azure.state", "foundry.state", "integration.evidence"],
+      "subscribes": ["github.operation.requested", "linear.operation.requested", "slack.operation.requested", "azure.operation.requested", "foundry.operation.requested", "approval.response"]
+    },
+    {
+      "id": "evidence-rollback-service",
+      "runtime": "dotnet-service",
+      "language": "csharp-fsharp",
+      "publishes": ["evidence.state", "rollback.state", "policy.drift"],
+      "subscribes": ["script.evidence", "deployment.state", "transfer.receipt", "security.state", "backup.state"]
+    }
+  ],
+  "authorization": {
+    "denyByDefault": true,
+    "managedIdentityInAzure": true,
+    "localServiceIdentityOnWindows": true,
+    "perToolPolicy": true,
+    "perProfilePolicy": true,
+    "externalWritesNeedApproval": true,
+    "productionNeedsProtectedEnvironment": true,
+    "sysAdminNeedsPhysicalTwoFactor": true
+  }
+}

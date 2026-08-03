@@ -2,6 +2,7 @@ namespace HELIOS.Platform.Core.Cloud;
 
 using System.Net.Http.Headers;
 using System.Text.Json;
+using HELIOS.Platform.Core.Logging;
 
 /// <summary>
 /// OneDrive cloud storage provider implementation.

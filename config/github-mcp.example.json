@@ -1,0 +1,25 @@
+{
+  "name": "helios-github-mcp-readiness",
+  "safeByDefault": true,
+  "tokenSource": "GITHUB_TOKEN environment variable or GitHub Actions runtime token",
+  "secretStorage": [
+    "GitHub Actions secrets",
+    "Codespaces secrets",
+    "Azure Key Vault"
+  ],
+  "recommendedScopes": [
+    "repo:read for inventory",
+    "actions:read for workflow status",
+    "pull_requests:write only when applying PR body updates"
+  ],
+  "localAgentGui": {
+    "command": "./helios.sh dashboard",
+    "appReadiness": "./helios.sh apps",
+    "openUrls": "./helios.sh apps --open"
+  },
+  "notes": [
+    "Do not commit MCP tokens or generated client configuration containing secrets.",
+    "Use official GitHub authentication flows; this repo only reports readiness and commands.",
+    "Remote MCP gateway URLs can be represented by GITHUB_MCP_SERVER_URL when available."
+  ]
+}

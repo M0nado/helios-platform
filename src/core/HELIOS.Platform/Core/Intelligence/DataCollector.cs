@@ -12,7 +12,7 @@ namespace HELIOS.Platform.Core.Intelligence
     /// <summary>
     /// Aggregates metrics from all services in real-time with caching support.
     /// </summary>
-    public class DataCollector : IDataCollector, IDisposable
+    public class DataCollector : Interfaces.IDataCollector, IDisposable
     {
         private readonly Dictionary<string, Func<Task<double>>> _metricSources = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);

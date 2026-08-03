@@ -1,0 +1,52 @@
+name: Azure Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: 'Target resource group'
+        required: true
+      location:
+        description: 'Azure location'
+        required: false
+        default: 'eastus'
+      deploy:
+        description: 'Deploy after validation and what-if'
+        required: false
+        default: 'false'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Build Bicep
+        run: az bicep build --file infra/azure/main.bicep
+      - name: Validate deployment
+        run: |
+          az deployment group validate \
+            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --template-file infra/azure/main.bicep \
+            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+      - name: What-if
+        run: |
+          az deployment group what-if \
+            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --template-file infra/azure/main.bicep \
+            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+      - name: Deploy
+        if: ${{ github.event.inputs.deploy == 'true' }}
+        run: |
+          az deployment group create \
+            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --template-file infra/azure/main.bicep \
+            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"

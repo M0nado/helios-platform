@@ -1,0 +1,202 @@
+{
+  "profiles": [
+    {
+      "id": "github-user",
+      "displayName": "GitHub User",
+      "provider": "github",
+      "scope": "user",
+      "cli": "gh",
+      "authCheck": "gh auth status",
+      "inventory": "python3 scripts/github/github-inventory.py",
+      "secretSource": "GitHub Secrets",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "github-org",
+      "displayName": "GitHub Organization",
+      "provider": "github",
+      "scope": "org",
+      "cli": "gh",
+      "authCheck": "gh auth status",
+      "inventory": "python3 scripts/github/github-inventory.py",
+      "secretSource": "GitHub Organization Secrets",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "github-enterprise",
+      "displayName": "GitHub Enterprise",
+      "provider": "github",
+      "scope": "enterprise",
+      "cli": "gh",
+      "authCheck": "gh auth status",
+      "inventory": "python3 scripts/github/github-inventory.py",
+      "secretSource": "GitHub Enterprise Secrets",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "azure-subscription",
+      "displayName": "Azure Subscription",
+      "provider": "azure",
+      "scope": "subscription",
+      "cli": "az",
+      "authCheck": "az account show",
+      "inventory": "python3 scripts/azure/azure-inventory.py",
+      "secretSource": "Azure Key Vault",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "entra-id",
+      "displayName": "Microsoft Entra ID",
+      "provider": "microsoft-365",
+      "scope": "tenant",
+      "cli": "az",
+      "authCheck": "az account show",
+      "inventory": "python3 scripts/integrations/cross_access_profiles.py",
+      "secretSource": "Azure Key Vault",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "purview",
+      "displayName": "Microsoft Purview",
+      "provider": "microsoft-365",
+      "scope": "tenant",
+      "cli": "az",
+      "authCheck": "az account show",
+      "inventory": "python3 scripts/integrations/cross_access_profiles.py",
+      "secretSource": "Azure Key Vault",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "m365-copilot",
+      "displayName": "Microsoft 365 Copilot",
+      "provider": "microsoft-365",
+      "scope": "tenant",
+      "cli": "az",
+      "authCheck": "az account show",
+      "inventory": "python3 scripts/control/helios-control.py ai",
+      "secretSource": "Azure Key Vault",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "openai",
+      "displayName": "OpenAI / ChatGPT APIs",
+      "provider": "openai",
+      "scope": "api",
+      "cli": "python3",
+      "authCheck": "OPENAI_API_KEY",
+      "inventory": "python3 scripts/ai/enrich-ideas.py",
+      "secretSource": "OPENAI_API_KEY",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "azure-openai",
+      "displayName": "Azure OpenAI",
+      "provider": "azure-openai",
+      "scope": "api",
+      "cli": "az",
+      "authCheck": "AZURE_OPENAI_ENDPOINT+AZURE_OPENAI_API_KEY",
+      "inventory": "python3 scripts/ai/enrich-ideas.py",
+      "secretSource": "Azure Key Vault",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "claude",
+      "displayName": "Anthropic Claude",
+      "provider": "anthropic",
+      "scope": "api",
+      "cli": "python3",
+      "authCheck": "ANTHROPIC_API_KEY",
+      "inventory": "python3 scripts/ai/enrich-ideas.py",
+      "secretSource": "ANTHROPIC_API_KEY",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "codex",
+      "displayName": "Codex",
+      "provider": "openai",
+      "scope": "developer-agent",
+      "cli": "codex",
+      "authCheck": "codex --version",
+      "inventory": "python3 scripts/codex/generate-codex-tasks.py",
+      "secretSource": "Codex local auth",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "visual-studio-maui",
+      "displayName": "Visual Studio / MAUI",
+      "provider": "dotnet",
+      "scope": "developer-workstation",
+      "cli": "dotnet",
+      "authCheck": "dotnet workload list",
+      "inventory": "python3 scripts/build_graph/build_graph.py",
+      "secretSource": "none",
+      "applyMode": "not-applicable"
+    },
+    {
+      "id": "m365-copilot-standard",
+      "displayName": "Microsoft 365 Copilot Standard / Work",
+      "provider": "microsoft-365",
+      "scope": "tenant-user",
+      "cli": "az",
+      "authCheck": "az account show",
+      "inventory": "python3 scripts/control/helios-control.py ai",
+      "secretSource": "Azure Key Vault / Microsoft Graph app registration",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "m365-copilot-pro",
+      "displayName": "Microsoft 365 Copilot Pro / Consumer",
+      "provider": "microsoft-365",
+      "scope": "user",
+      "cli": "python3",
+      "authCheck": "M365_COPILOT_PRO_ACCOUNT",
+      "inventory": "python3 scripts/integrations/cross_access_profiles.py",
+      "secretSource": "User account / browser session, not stored in repo",
+      "applyMode": "not-applicable"
+    },
+    {
+      "id": "chatgpt-free-plus-pro-team",
+      "displayName": "ChatGPT UI Plans Free/Plus/Pro/Team",
+      "provider": "openai",
+      "scope": "user-or-workspace",
+      "cli": "python3",
+      "authCheck": "CHATGPT_WORKSPACE_ID",
+      "inventory": "python3 scripts/integrations/cross_access_profiles.py",
+      "secretSource": "Browser/workspace auth, not stored in repo",
+      "applyMode": "not-applicable"
+    },
+    {
+      "id": "openai-responses-api",
+      "displayName": "OpenAI Responses API",
+      "provider": "openai",
+      "scope": "api",
+      "cli": "python3",
+      "authCheck": "OPENAI_API_KEY",
+      "inventory": "python3 scripts/ai/enrich-ideas.py",
+      "secretSource": "OPENAI_API_KEY",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "openai-agents-api",
+      "displayName": "OpenAI Agents / Tools API Readiness",
+      "provider": "openai",
+      "scope": "api",
+      "cli": "python3",
+      "authCheck": "OPENAI_API_KEY",
+      "inventory": "python3 scripts/ai/enrich-ideas.py",
+      "secretSource": "OPENAI_API_KEY",
+      "applyMode": "disabled"
+    },
+    {
+      "id": "claude-api",
+      "displayName": "Anthropic Claude Messages API",
+      "provider": "anthropic",
+      "scope": "api",
+      "cli": "python3",
+      "authCheck": "ANTHROPIC_API_KEY",
+      "inventory": "python3 scripts/ai/enrich-ideas.py",
+      "secretSource": "ANTHROPIC_API_KEY",
+      "applyMode": "disabled"
+    }
+  ]
+}

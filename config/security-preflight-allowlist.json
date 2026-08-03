@@ -1,0 +1,22 @@
+{
+  "secretPreflight": {
+    "pathPrefixes": [
+      "docs/",
+      "tests/",
+      "ai-integration/",
+      "cloud-integration/",
+      "PHASE_",
+      "scripts/ai-services/"
+    ],
+    "notes": "Known docs, examples, generated phase guides, and tests can contain placeholder-looking key names. Production strict mode can reduce this allowlist over time."
+  },
+  "applyGatePreflight": {
+    "pathPrefixes": [
+      "docs/",
+      "tests/",
+      "scripts/automation/",
+      "scripts/deploy/"
+    ],
+    "notes": "Documentation, legacy setup automation, and deploy helper scripts are currently allowlisted while production apply paths move behind explicit --apply/what-if gates."
+  }
+}

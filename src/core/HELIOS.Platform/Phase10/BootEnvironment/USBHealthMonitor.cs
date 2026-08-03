@@ -43,20 +43,23 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                     return null;
                 }
 
-                var deviceInfo = new USBDeviceInfo
+                var drive = FindRemovableDrive(deviceId);
+                if (drive == null)
                 {
-                    DeviceId = deviceId,
-                    FriendlyName = $"USB Device {deviceId}",
-                    CapacityBytes = 64L * 1024 * 1024 * 1024, // 64GB
-                    UsedBytes = new Random().Next((int)(32 * 1024 * 1024), (int)(48 * 1024 * 1024 * 1024)),
-                    FileSystem = "NTFS",
-                    IsHealthy = true,
-                    ErrorCount = 0,
-                    LastHealthCheck = DateTime.UtcNow,
-                    HealthPercentage = 95.0f
-                };
+                    _logger.Warning($"USB device was not found or is not removable: {deviceId}");
+                    return new USBDeviceInfo
+                    {
+                        DeviceId = deviceId,
+                        FriendlyName = "Unverified USB device",
+                        FileSystem = "Unknown",
+                        IsHealthy = false,
+                        ErrorCount = 1,
+                        LastHealthCheck = DateTime.UtcNow,
+                        HealthPercentage = 0
+                    };
+                }
 
-                return deviceInfo;
+                return CreateDeviceInfo(drive);
             }
             catch (Exception ex)
             {
@@ -171,31 +174,10 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             {
                 _logger.Debug("Enumerating all USB devices");
 
-                var devices = new List<USBDeviceInfo>
-                {
-                    new USBDeviceInfo
-                    {
-                        DeviceId = "USB001",
-                        FriendlyName = "Kingston DataTraveler 3.0",
-                        CapacityBytes = 64L * 1024 * 1024 * 1024,
-                        UsedBytes = 20L * 1024 * 1024 * 1024,
-                        FileSystem = "NTFS",
-                        IsHealthy = true,
-                        ErrorCount = 0,
-                        HealthPercentage = 98.0f
-                    },
-                    new USBDeviceInfo
-                    {
-                        DeviceId = "USB002",
-                        FriendlyName = "SanDisk Cruzer Blade",
-                        CapacityBytes = 32L * 1024 * 1024 * 1024,
-                        UsedBytes = 8L * 1024 * 1024 * 1024,
-                        FileSystem = "FAT32",
-                        IsHealthy = true,
-                        ErrorCount = 0,
-                        HealthPercentage = 97.5f
-                    }
-                };
+                var devices = DriveInfo.GetDrives()
+                    .Where(drive => drive.DriveType == DriveType.Removable)
+                    .Select(CreateDeviceInfo)
+                    .ToList();
 
                 _logger.Debug($"Found {devices.Count} USB device(s)");
                 return devices;
@@ -260,17 +242,18 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                     return false;
                 }
 
-                // Stop monitoring first
-                if (_monitoringTasks.ContainsKey(deviceId))
+                if (_monitoringTasks.Remove(deviceId, out var monitoringTask))
                 {
-                    await StopUSBMonitorAsync(deviceId);
+                    monitoringTask.Cancel();
+                    monitoringTask.Dispose();
+                    _monitoredDevices.Remove(deviceId);
                 }
 
-                // Flush any pending operations
-                await Task.Delay(500);
-
-                _logger.Info($"USB device safely ejected: {deviceId}");
-                return true;
+                // No platform ejection API is wired here. Returning success would let an
+                // erase/deployment wizard proceed on a device that is still mounted.
+                _logger.Warning(
+                    $"USB ejection is not available for {deviceId}; monitoring stopped, device remains mounted");
+                return false;
             }
             catch (Exception ex)
             {
@@ -312,6 +295,36 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
         }
 
         // Private helper methods
+
+        private static DriveInfo FindRemovableDrive(string deviceId)
+        {
+            return DriveInfo.GetDrives().FirstOrDefault(drive =>
+                drive.DriveType == DriveType.Removable &&
+                (string.Equals(drive.Name, deviceId, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(drive.RootDirectory.FullName, deviceId, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        private static USBDeviceInfo CreateDeviceInfo(DriveInfo drive)
+        {
+            var isReady = drive.IsReady;
+            var capacity = isReady ? drive.TotalSize : 0;
+            var freeSpace = isReady ? drive.AvailableFreeSpace : 0;
+
+            return new USBDeviceInfo
+            {
+                DeviceId = drive.Name,
+                FriendlyName = isReady && !string.IsNullOrWhiteSpace(drive.VolumeLabel)
+                    ? drive.VolumeLabel
+                    : drive.Name,
+                CapacityBytes = capacity,
+                UsedBytes = Math.Max(0, capacity - freeSpace),
+                FileSystem = isReady ? drive.DriveFormat : "Unknown",
+                IsHealthy = isReady,
+                ErrorCount = isReady ? 0 : 1,
+                LastHealthCheck = DateTime.UtcNow,
+                HealthPercentage = isReady ? 100 : 0
+            };
+        }
 
         private async Task MonitorDeviceBackgroundAsync(string deviceId, TimeSpan checkInterval, CancellationToken ct)
         {

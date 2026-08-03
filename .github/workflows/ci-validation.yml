@@ -6,18 +6,22 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+
 jobs:
   syntax-check:
     runs-on: ubuntu-latest
     name: PowerShell Syntax Validation
     
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          powershell-version: '7.3'
+          persist-credentials: false
+      
+      - name: Verify PowerShell
+        run: $PSVersionTable.PSVersion
+        shell: pwsh
       
       - name: Check PowerShell Syntax
         shell: pwsh
@@ -27,7 +31,7 @@ jobs:
             $file = $_.FullName
             Write-Host "Checking: $file"
             try {
-              $content = Get-Content -Path $file
+              $content = Get-Content -Path $file -Raw
               [scriptblock]::Create($content) | Out-Null
               Write-Host "✅ OK" -ForegroundColor Green
             } catch {
@@ -45,10 +49,12 @@ jobs:
     name: Markdown Validation
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       
       - name: Run markdownlint
-        uses: nosborn/github-action-markdown-cli@v3.3.0
+        uses: nosborn/github-action-markdown-cli@508d6cefd8f0cc99eab5d2d4685b1d5f470042c1 # v3.5.0
         with:
           files: .
           config_file: .markdownlint.json
@@ -58,7 +64,9 @@ jobs:
     name: advisory-Documentation Completeness
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       
       - name: Check Required Documentation
         run: |
@@ -87,10 +95,13 @@ jobs:
     name: Test PowerShell Scripts
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
+      - name: Verify PowerShell
+        run: $PSVersionTable.PSVersion
+        shell: pwsh
       
       - name: Run Unit Tests
         run: |
@@ -107,12 +118,17 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     name: Security Scanning
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       
       - name: Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -120,7 +136,7 @@ jobs:
           output: 'trivy-results.sarif'
       
       - name: Upload Trivy Results
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -129,7 +145,9 @@ jobs:
     name: File Structure Validation
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
       
       - name: Validate Directory Structure
         run: |
@@ -161,32 +179,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Report Status
+        env:
+          DOCUMENTATION_ADVISORY: ${{ needs.advisory-documentation-check.result }}
+          FILE_INTEGRITY: ${{ needs.file-integrity.result }}
+          MARKDOWN: ${{ needs.markdown-check.result }}
+          SCRIPT_TESTS: ${{ needs.test-scripts.result }}
+          SECURITY_SCAN: ${{ needs.security-scan.result }}
+          SYNTAX: ${{ needs.syntax-check.result }}
         run: |
           echo "## Validation Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Syntax Check: ${{ needs.syntax-check.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Markdown Check: ${{ needs.markdown-check.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Documentation (advisory): ${{ needs.advisory-documentation-check.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Script Tests: ${{ needs.test-scripts.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- File Integrity: ${{ needs.file-integrity.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Syntax Check: $SYNTAX" >> $GITHUB_STEP_SUMMARY
+          echo "- Markdown Check: $MARKDOWN" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation (advisory): $DOCUMENTATION_ADVISORY" >> $GITHUB_STEP_SUMMARY
+          echo "- Script Tests: $SCRIPT_TESTS" >> $GITHUB_STEP_SUMMARY
+          echo "- Security Scan: $SECURITY_SCAN" >> $GITHUB_STEP_SUMMARY
+          echo "- File Integrity: $FILE_INTEGRITY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          failed=0
-          for result in \
-            "${{ needs.syntax-check.result }}" \
-            "${{ needs.markdown-check.result }}" \
-            "${{ needs.test-scripts.result }}" \
-            "${{ needs.security-scan.result }}" \
-            "${{ needs.file-integrity.result }}"; do
+          for result in "$SYNTAX" "$MARKDOWN" "$SCRIPT_TESTS" "$SECURITY_SCAN" "$FILE_INTEGRITY"; do
             if [ "$result" != "success" ]; then
-              failed=1
+              echo "❌ One or more required validation checks failed"
+              exit 1
             fi
           done
-
-          if [ "$failed" -ne 0 ]; then
-            echo "❌ One or more required validation checks failed"
-            exit 1
-          fi
 
           echo "✅ All required validation checks passed"

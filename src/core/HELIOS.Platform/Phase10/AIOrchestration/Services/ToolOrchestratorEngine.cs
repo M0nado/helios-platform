@@ -153,7 +153,7 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
             {
                 await _toolsLock.WaitAsync();
 
-                if (!_tools.TryRemove(toolId, out var tool))
+                if (!_tools.Remove(toolId, out var tool))
                 {
                     _logger.LogWarning("Tool {ToolId} not found for unregistration", toolId);
                     return false;

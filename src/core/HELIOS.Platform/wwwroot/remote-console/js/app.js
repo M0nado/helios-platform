@@ -231,3 +231,64 @@ window.addEventListener('beforeunload', () => {
         window.remoteAccessApp.wsClient.close();
     }
 });
+
+
+// Static AIHub preview for the built-in server GUI. Live data comes from generated reports when served by HELIOS.
+function renderAIHubControlPlane() {
+    const party = [
+        { id: 'hermes-branch-sentinel', icon: '🛡️', family: 'Hermes', type: 'Branch/autofix', xp: 74, specialization: 'GitHub branches, commits, PR safety, merge/prune packets' },
+        { id: 'xcore-native-sprinter', icon: '⚡', family: 'XCore', type: 'C++ performance', xp: 81, specialization: 'Hot paths, memory, graph comparisons, native scoring clusters' },
+        { id: 'xcore-fsharp-oracle', icon: '🔮', family: 'XCore', type: 'F# learning', xp: 79, specialization: 'Prediction, async queries, scoring, ranking, branch priority' },
+        { id: 'hermes-cloud-keeper', icon: '☁️', family: 'Hermes', type: 'Azure/Bicep', xp: 68, specialization: 'Key Vault, Bicep what-if, SQL/Cosmos/vector, hybrid policy' }
+    ];
+    const commands = [
+        'scripts/setup/bootstrap-local-tools.sh',
+        'python3 scripts/integrations/aihub_unified_control_plane.py',
+        'python3 scripts/integrations/aihub_supershell_vault_wizard.py',
+        'python3 scripts/analysis/aihub_language_skill_profiles.py',
+        'scripts/setup/simple-build.sh module',
+        'scripts/setup/simple-build.sh quick',
+        'scripts/setup/simple-build.sh absorb',
+        'scripts/setup/simple-build.sh finish',
+        'python3 scripts/agents/branch_test_autofix_plan.py',
+        'python3 scripts/build_graph/build_graph.py run --profile full --max-workers 2',
+        'python3 scripts/dashboard/generate-gui.py'
+    ];
+    const modules = [
+        'C# orchestration foundation: secure API, vault, GUI state, policy flags, engine routing.',
+        'F# learning engine: prediction, branch issue scoring, agent XP ranking, merge selection.',
+        'C++ native performance engine: weighted similarity, memory pressure, fast graph comparison.',
+        'Python AIHub glue: provider setup, Linux libraries, API bridges, report automation.',
+        'YAML/Bicep/JSON/MD fabric: workflows, cloud IaC, live flags, knowledge ledgers.'
+    ];
+    const grid = document.getElementById('aihubPartyGrid');
+    if (grid) {
+        const search = document.getElementById('aihubSearch');
+        const query = search ? search.value.toLowerCase() : '';
+        const visibleParty = party.filter(p => !query || `${p.id} ${p.family} ${p.type} ${p.specialization}`.toLowerCase().includes(query));
+        grid.innerHTML = visibleParty.map(p => `
+            <div class="card aihub-agent-card">
+                <span class="aihub-agent-icon">${p.icon}</span>
+                <h3>${p.id}</h3>
+                <p>${p.family} · ${p.type}</p>
+                <div class="xp-bar"><div class="xp-fill" style="width:${p.xp}%"></div></div>
+                <p>XP ${p.xp} · ${p.specialization}</p>
+            </div>`).join('');
+    }
+    const commandList = document.getElementById('aihubCommandList');
+    if (commandList) {
+        commandList.innerHTML = commands.map(c => `<code>${c}</code>`).join('');
+    }
+    const modulePlan = document.getElementById('aihubModulePlan');
+    if (modulePlan) {
+        modulePlan.innerHTML = modules.map(m => `<div class="aihub-module-item">${m}</div>`).join('');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderAIHubControlPlane();
+    const refresh = document.getElementById('refreshAIHubBtn');
+    if (refresh) {
+        refresh.addEventListener('click', renderAIHubControlPlane);
+    }
+});
