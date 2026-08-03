@@ -162,16 +162,16 @@ def validate_bootstrap(root: Path = ROOT) -> list[str]:
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser(description=__doc__)
     argument_parser.add_argument(
-        "--declarations-only",
+        "--bootstrap",
         action="store_true",
         help="validate registry and .gitmodules while approved gitlinks are being bootstrapped",
     )
     arguments = argument_parser.parse_args()
-    failures = validate_bootstrap() if arguments.declarations_only else validate()
+    failures = validate_bootstrap() if arguments.bootstrap else validate()
     if failures:
         print("Repository integrity validation failed:", file=sys.stderr)
         for failure in failures:
             print(f"- {failure}", file=sys.stderr)
         raise SystemExit(1)
-    scope = "declarations" if arguments.declarations_only else "declarations and gitlinks"
+    scope = "empty-bootstrap" if arguments.bootstrap and not gitlinks(ROOT) else "full-gitlink"
     print(f"Repository registry and submodule {scope} are consistent.")
