@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "slack": {
+    "enabled": false,
+    "channelAllowlist": ["helios-control-plane"],
+    "tokenSecretName": "slack-bot-token",
+    "signingSecretName": "slack-signing-secret",
+    "disableLinkUnfurling": true,
+    "maximumMessageLength": 3000,
+    "inboundExecutionAllowed": false
+  },
+  "znc": {
+    "enabled": false,
+    "notificationOnly": true,
+    "tlsRequired": true,
+    "listenerPort": 6697,
+    "credentialSecretName": "znc-sasl-password",
+    "networkAllowlist": [],
+    "channelAllowlist": [],
+    "inboundExecutionAllowed": false
+  },
+  "delivery": {
+    "maximumNotificationsPerCorrelationPerHour": 3,
+    "requireCorrelationId": true,
+    "requireEvidenceLink": true,
+    "retryDelaysSeconds": [2, 10, 30],
+    "deadLetterAfterAttempts": 3
+  }
+}
