@@ -54,6 +54,7 @@ jobs:
     name: Deploy Infrastructure
     needs: preflight
     runs-on: ubuntu-latest
+    environment: azure-dev
     if: github.event.inputs.phase == 'infrastructure' || github.event.inputs.phase == 'all' || github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
