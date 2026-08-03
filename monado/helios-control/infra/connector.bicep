@@ -35,6 +35,9 @@ param containerAppsInfrastructureSubnetId string = ''
 param commonTags object = {}
 
 var suffix = uniqueString(resourceGroup().id, environmentName, serviceName)
+var validatedContainerAppsInfrastructureSubnetId = environmentName != 'prod' || !empty(containerAppsInfrastructureSubnetId)
+  ? containerAppsInfrastructureSubnetId
+  : fail('Production requires a delegated Container Apps infrastructure subnet.')
 var governedTags = union(commonTags, {
   'helios-managed': 'true'
   'helios-service': serviceName
@@ -166,8 +169,8 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   location: location
   tags: governedTags
   properties: {
-    vnetConfiguration: !empty(containerAppsInfrastructureSubnetId) ? {
-      infrastructureSubnetId: containerAppsInfrastructureSubnetId
+    vnetConfiguration: !empty(validatedContainerAppsInfrastructureSubnetId) ? {
+      infrastructureSubnetId: validatedContainerAppsInfrastructureSubnetId
       internal: true
     } : null
     appLogsConfiguration: {
@@ -193,7 +196,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: empty(containerAppsInfrastructureSubnetId)
+        external: empty(validatedContainerAppsInfrastructureSubnetId)
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false

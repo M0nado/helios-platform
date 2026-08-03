@@ -27,12 +27,18 @@ param(
 
     [Parameter(Mandatory)]
     [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
-    [string] $AllowedPrincipalObjectId
+    [string] $AllowedPrincipalObjectId,
+
+    [string] $ContainerAppsInfrastructureSubnetId = $env:HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID
 )
 
 $ErrorActionPreference = 'Stop'
 $templateFile = Join-Path $PSScriptRoot '../infra/main.bicep'
 $previewDigest = '0' * 64
+
+if ($EnvironmentName -eq 'prod' -and [string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) {
+    throw 'Production preview requires -ContainerAppsInfrastructureSubnetId.'
+}
 
 if ([string]::IsNullOrWhiteSpace($ContainerImage)) {
     # This value is intentionally undeployable unless the template's preview
@@ -68,6 +74,7 @@ $deploymentParameters = @(
     "entraClientId=$EntraClientId"
     "entraTenantId=$EntraTenantId"
     "allowedPrincipalObjectId=$AllowedPrincipalObjectId"
+    "containerAppsInfrastructureSubnetId=$ContainerAppsInfrastructureSubnetId"
 )
 
 az deployment group what-if `

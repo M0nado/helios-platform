@@ -16,6 +16,11 @@ fi
 : "${AZ_RESOURCE_GROUP:=helios-rg}"
 : "${AZ_LOCATION:=eastus2}"
 : "${HELIOS_ENVIRONMENT:=dev}"
+: "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:=}"
+if [[ "$HELIOS_ENVIRONMENT" == "prod" && -z "$HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID" ]]; then
+  echo 'Production preview requires HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID.' >&2
+  exit 2
+fi
 : "${HELIOS_CONTAINER_IMAGE:=heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000}"
 : "${GITHUB_ORG:=M0nado}"
 : "${GITHUB_REPO:=helios-platform}"
@@ -64,7 +69,8 @@ if [[ "$APPLY" != true ]]; then
         allowPreviewPlaceholder=true \
         entraClientId="$HELIOS_ENTRA_CLIENT_ID" \
         entraTenantId="$AZ_TENANT_ID" \
-        allowedPrincipalObjectId="$SIGNED_IN_OBJECT_ID"
+        allowedPrincipalObjectId="$SIGNED_IN_OBJECT_ID" \
+        containerAppsInfrastructureSubnetId="$HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID"
   else
     echo 'Preview only: create/select the resource group and set HELIOS_ENTRA_CLIENT_ID to run ARM what-if.'
   fi

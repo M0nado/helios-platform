@@ -38,6 +38,7 @@ param(
     [string] $ImageReference,
     [string] $ContainerRegistryName,
     [string] $AllowedPrincipalObjectId,
+    [string] $ContainerAppsInfrastructureSubnetId = $env:HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID,
 
     [string] $GitHubOwner = 'M0nado',
     [string] $GitHubRepository = 'helios-platform',
@@ -1660,6 +1661,7 @@ function Invoke-BicepPreview {
         [Parameter(Mandatory)] [string] $PrincipalObjectId,
         [Parameter(Mandatory)] [string] $ImmutableImage,
         [Parameter(Mandatory)] [string] $RegistryName,
+        [AllowEmptyString()] [string] $ContainerAppsInfrastructureSubnetId,
         [Parameter(Mandatory)] [string] $TemplatePath
     )
 
@@ -1671,7 +1673,8 @@ function Invoke-BicepPreview {
         "allowPreviewPlaceholder=$($isPreviewPlaceholder.ToString().ToLowerInvariant())",
         "entraClientId=$ConnectorClientId",
         "entraTenantId=$($Context.TenantId)",
-        "allowedPrincipalObjectId=$PrincipalObjectId"
+        "allowedPrincipalObjectId=$PrincipalObjectId",
+        "containerAppsInfrastructureSubnetId=$ContainerAppsInfrastructureSubnetId"
     )
 
     $validateArguments = @(
@@ -1729,6 +1732,9 @@ try {
     }
     elseif ($GitHubEnvironment -cne $expectedGitHubEnvironment) {
         throw "GitHubEnvironment must be '$expectedGitHubEnvironment' for EnvironmentName '$EnvironmentName'. The workflow has no alternate preview alias."
+    }
+    if ($EnvironmentName -eq 'prod' -and [string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) {
+        throw 'Production planning, configuration, and publishing require -ContainerAppsInfrastructureSubnetId.'
     }
     if ($GitHubOwner -notmatch '^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$') {
         throw 'GitHubOwner is not a valid GitHub account or organization name.'
@@ -1920,6 +1926,7 @@ try {
             AZURE_SUBSCRIPTION_ID = [string] $azureContext.SubscriptionId
             AZURE_RESOURCE_GROUP = $selectedResourceGroup
             HELIOS_CONTAINER_REGISTRY_NAME = $resolvedRegistryName
+            HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID = $ContainerAppsInfrastructureSubnetId
             HELIOS_ENTRA_CLIENT_ID = [string] $connectorApplication.appId
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID = $principalObjectId
             HELIOS_REQUIRED_REVIEWER_ID = $RequiredReviewerId
@@ -1984,6 +1991,7 @@ try {
             -PrincipalObjectId $principalObjectId `
             -ImmutableImage $immutableImage `
             -RegistryName $resolvedRegistryName `
+            -ContainerAppsInfrastructureSubnetId $ContainerAppsInfrastructureSubnetId `
             -TemplatePath $template)
     }
 
