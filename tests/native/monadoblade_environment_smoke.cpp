@@ -42,6 +42,47 @@ int main() {
   };
   static_assert(choose_quality(constrained) == QualityTier::Balanced);
 
+  constexpr RuntimeSignals enterBalanced{
+      .frameMilliseconds = 20.5,
+      .gpuUtilization = 0.70,
+      .memoryPressure = 0.60,
+      .batteryLevel = 0.80,
+      .thermalPressure = 0.40,
+  };
+  static_assert(choose_quality(enterBalanced, QualityTier::Cinematic) == QualityTier::Balanced);
+
+  constexpr RuntimeSignals remainBalanced{
+      .frameMilliseconds = 19.0,
+      .gpuUtilization = 0.70,
+      .memoryPressure = 0.60,
+      .batteryLevel = 0.80,
+      .thermalPressure = 0.40,
+  };
+  static_assert(choose_quality(remainBalanced, QualityTier::Balanced) == QualityTier::Balanced);
+
+  constexpr RuntimeSignals recoverCinematic{
+      .frameMilliseconds = 16.0,
+      .gpuUtilization = 0.60,
+      .memoryPressure = 0.60,
+      .batteryLevel = 0.80,
+      .thermalPressure = 0.40,
+  };
+  static_assert(choose_quality(recoverCinematic, QualityTier::Balanced) == QualityTier::Cinematic);
+
+  constexpr RuntimeSignals remainMinimal{
+      .frameMilliseconds = 12.0,
+      .gpuUtilization = 0.40,
+      .memoryPressure = 0.40,
+      .batteryLevel = 0.18,
+      .thermalPressure = 0.40,
+  };
+  static_assert(choose_quality(remainMinimal, QualityTier::Minimal) == QualityTier::Minimal);
+
+  static_assert(daylight_for_hour(5.0) == 0.05);
+  static_assert(daylight_for_hour(8.0) == 1.0);
+  static_assert(daylight_for_hour(17.0) == 1.0);
+  static_assert(daylight_for_hour(21.0) == 0.05);
+
   constexpr EnvironmentSignals sunset{
       .localHour = 19.0,
       .weatherIntensity = 0.40,
@@ -54,7 +95,7 @@ int main() {
   static_assert(gamerPlan.budget.horizonCards == 4);
   static_assert(gamerPlan.windAmplitude > 0.50);
 
-  if (require(std::abs(gamerPlan.daylight - 0.5) < 1e-9, "sunset daylight regression") ||
+  if (require(std::abs(gamerPlan.daylight - 0.525) < 1e-9, "sunset daylight regression") ||
       require(gamerPlan.particleEmission > 0.50, "interaction emission regression")) {
     return 1;
   }

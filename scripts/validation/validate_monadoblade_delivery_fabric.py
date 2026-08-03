@@ -23,6 +23,15 @@ OVERLAYS = {"personal", "sysops"}
 WORKFLOWS = {"standard", "airgap", "recovery", "quarantine"}
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+CONTRACT_VERSIONS = {
+    "config/profiles/monadoblade-profiles.v2.json": "2.0.0",
+    "config/gui/monado-profile-shell.v2.json": "2.0.0",
+    "config/experience/monadoblade-living-environments.v1.json": "1.0.0",
+    "config/experience/monadoblade-effects.v1.json": "1.0.0",
+    "config/aihub/monadoblade-engine-registry.v1.json": "1.0.0",
+    "config/storage/monadoblade-storage-plan-template.v2.json": "2.0.0",
+    "config/integrations/monadoblade-delivery-fabric.v1.json": "1.0.0",
+}
 
 
 class ContractError(RuntimeError):
@@ -42,6 +51,12 @@ def load_json(root: Path, relative_path: str) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError) as exc:
         raise ContractError(f"invalid JSON in {relative_path}: {exc}") from exc
     require(isinstance(value, dict), f"contract root must be an object: {relative_path}")
+    expected_version = CONTRACT_VERSIONS.get(relative_path)
+    require(expected_version is not None, f"validator has no supported version for {relative_path}")
+    require(
+        value.get("version") == expected_version,
+        f"unsupported contract version for {relative_path}: expected {expected_version}, got {value.get('version')}",
+    )
     return value
 
 
@@ -263,7 +278,7 @@ def validate_delivery(data: dict[str, Any]) -> None:
 
     projection = data.get("collaborationProjection", {})
     require(projection.get("github", {}).get("role") == "engineering-source-of-truth", "GitHub must remain engineering truth")
-    for destination in ("linear", "slack", "sharepoint", "azureDevOps"):
+    for destination in ("linear", "slack", "teams", "sharepoint", "azureDevOps"):
         require(projection.get(destination, {}).get("mayTriggerExecution") is False, f"{destination} cannot trigger execution")
 
     intake = data.get("legacySourceIntake")

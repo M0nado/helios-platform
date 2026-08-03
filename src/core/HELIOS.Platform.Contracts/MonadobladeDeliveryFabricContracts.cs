@@ -237,6 +237,18 @@ public sealed record AlvisToolPolicy(
 /// </summary>
 public static class MonadobladeDeliveryFabricCatalog
 {
+    private static (string Kanji, string Color) CanonicalEnergyFor(MonadobladeIdentityId identity) =>
+        identity switch
+        {
+            MonadobladeIdentityId.Core => ("核", "#53F6FF"),
+            MonadobladeIdentityId.Developer => ("創", "#2F86FF"),
+            MonadobladeIdentityId.Studio => ("響", "#D64DFF"),
+            MonadobladeIdentityId.Gamer => ("迅", "#62FF4A"),
+            MonadobladeIdentityId.AiServer => ("智", "#7A6BFF"),
+            MonadobladeIdentityId.SysAdmin => ("統", "#FFB000"),
+            _ => throw new ArgumentOutOfRangeException(nameof(identity), identity, "Unknown Monadoblade identity.")
+        };
+
     public static IReadOnlyDictionary<MonadobladeIdentityId, MonadobladeIdentityDefinition> ValidateIdentities(
         IEnumerable<MonadobladeIdentityDefinition> identities)
     {
@@ -246,6 +258,13 @@ public static class MonadobladeDeliveryFabricCatalog
         foreach (var identity in materialized)
         {
             identity.Validate();
+            var canonical = CanonicalEnergyFor(identity.Id);
+            if (!string.Equals(identity.Energy.Kanji, canonical.Kanji, StringComparison.Ordinal) ||
+                !string.Equals(identity.Energy.Color, canonical.Color, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Identity {identity.Id} requires canonical energy {canonical.Kanji}/{canonical.Color}.");
+            }
         }
 
         var duplicates = materialized

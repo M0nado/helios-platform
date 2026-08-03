@@ -145,12 +145,13 @@ flowchart TD
     C --> D["Draft pull request"]
     D --> E["Actions, review, exact-head evidence"]
     E --> F["Protected merge"]
-    F --> G["Linear, Slack, SharePoint projections"]
+    F --> G["Linear, Slack, Teams, SharePoint projections"]
 ```
 
 - GitHub owns code, PRs, checks, review, release evidence, and the exact merged SHA.
 - Linear tracks delivery state; JOH-44 is the current lane.
 - Slack carries fast engineering notification and the delivery canvas.
+- Teams carries enterprise handoff only after exact recipient/channel resolution; it cannot trigger execution.
 - SharePoint holds governed architecture/runbook and release evidence.
 - Azure DevOps remains discovery/read-only until an approved service connection and executor exist.
 - Adobe holds visual assets and component boards, never code authority.

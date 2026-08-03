@@ -85,28 +85,69 @@ struct ScenePlan {
     return 0.05;
   }
   if (localHour < 8.0) {
-    return clamp01((localHour - 5.0) / 3.0);
+    return 0.05 + 0.95 * clamp01((localHour - 5.0) / 3.0);
   }
   if (localHour < 17.0) {
     return 1.0;
   }
-  return clamp01((21.0 - localHour) / 4.0);
+  return 0.05 + 0.95 * clamp01((21.0 - localHour) / 4.0);
 }
 
-[[nodiscard]] constexpr QualityTier choose_quality(const RuntimeSignals& signals) noexcept {
+[[nodiscard]] constexpr bool requires_minimal_quality(const RuntimeSignals& signals) noexcept {
+  return signals.reducedMotion || signals.remoteSession || signals.batteryLevel <= 0.15 ||
+         signals.thermalPressure >= 0.90;
+}
+
+[[nodiscard]] constexpr bool has_balanced_pressure(const RuntimeSignals& signals) noexcept {
+  return signals.frameMilliseconds >= 20.0 || signals.gpuUtilization >= 0.85 ||
+         signals.memoryPressure >= 0.85 || signals.batteryLevel <= 0.35 ||
+         signals.thermalPressure >= 0.72;
+}
+
+[[nodiscard]] constexpr bool can_leave_minimal_quality(const RuntimeSignals& signals) noexcept {
+  return !signals.reducedMotion && !signals.remoteSession && signals.batteryLevel >= 0.22 &&
+         signals.thermalPressure <= 0.82;
+}
+
+[[nodiscard]] constexpr bool can_enter_cinematic_quality(const RuntimeSignals& signals) noexcept {
+  return !signals.reducedMotion && !signals.remoteSession && signals.frameMilliseconds <= 17.5 &&
+         signals.gpuUtilization <= 0.75 && signals.memoryPressure <= 0.75 &&
+         signals.batteryLevel >= 0.45 && signals.thermalPressure <= 0.62;
+}
+
+[[nodiscard]] constexpr QualityTier choose_initial_quality(const RuntimeSignals& signals) noexcept {
   if (signals.minimized || signals.occluded) {
     return QualityTier::Suspended;
   }
-  if (signals.reducedMotion || signals.remoteSession || signals.batteryLevel <= 0.15 ||
-      signals.thermalPressure >= 0.90) {
+  if (requires_minimal_quality(signals)) {
     return QualityTier::Minimal;
   }
-  if (signals.frameMilliseconds >= 20.0 || signals.gpuUtilization >= 0.85 ||
-      signals.memoryPressure >= 0.85 || signals.batteryLevel <= 0.35 ||
-      signals.thermalPressure >= 0.72) {
+  if (has_balanced_pressure(signals)) {
     return QualityTier::Balanced;
   }
   return QualityTier::Cinematic;
+}
+
+[[nodiscard]] constexpr QualityTier choose_quality(
+    const RuntimeSignals& signals,
+    const QualityTier previousQuality) noexcept {
+  if (signals.minimized || signals.occluded) {
+    return QualityTier::Suspended;
+  }
+  if (requires_minimal_quality(signals)) {
+    return QualityTier::Minimal;
+  }
+  if (previousQuality == QualityTier::Minimal && !can_leave_minimal_quality(signals)) {
+    return QualityTier::Minimal;
+  }
+  if (previousQuality == QualityTier::Balanced && !can_enter_cinematic_quality(signals)) {
+    return QualityTier::Balanced;
+  }
+  return has_balanced_pressure(signals) ? QualityTier::Balanced : QualityTier::Cinematic;
+}
+
+[[nodiscard]] constexpr QualityTier choose_quality(const RuntimeSignals& signals) noexcept {
+  return choose_initial_quality(signals);
 }
 
 [[nodiscard]] constexpr SceneBudget budget_for(const QualityTier tier) noexcept {
@@ -168,8 +209,9 @@ struct ScenePlan {
 [[nodiscard]] constexpr ScenePlan build_scene_plan(
     const Identity identity,
     const RuntimeSignals& runtime,
-    const EnvironmentSignals& environment) noexcept {
-  const auto quality = choose_quality(runtime);
+    const EnvironmentSignals& environment,
+    const QualityTier previousQuality = QualityTier::Cinematic) noexcept {
+  const auto quality = choose_quality(runtime, previousQuality);
   const auto budget = budget_for(quality);
   const auto tuning = tuning_for(identity);
   const auto qualityGain = quality == QualityTier::Cinematic ? 1.0 :

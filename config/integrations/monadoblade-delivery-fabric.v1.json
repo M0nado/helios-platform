@@ -123,6 +123,11 @@
       "record": "https://helios-xk97943.slack.com/docs/T0B8Z1H0MV1/F0BL7F6BS75",
       "mayTriggerExecution": false
     },
+    "teams": {
+      "role": "enterprise-collaboration-notification-and-handoff",
+      "destinationResolutionRequiredBeforeWrite": true,
+      "mayTriggerExecution": false
+    },
     "sharepoint": {
       "role": "governed-runbook-and-release-evidence",
       "record": "https://heli0s-my.sharepoint.com/personal/jmore_heli0s_onmicrosoft_com/Documents/Helios/Governance/MonadoBlade/MONADOBLADE_DELIVERY_FABRIC_V1.md?web=1",
