@@ -24,7 +24,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 env:
   DEPLOYMENT_DIR: ./deployment
@@ -38,7 +37,7 @@ jobs:
     name: Pre-flight Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       
       - name: Run Pre-flight Checks
         run: |
@@ -55,9 +54,15 @@ jobs:
     needs: preflight
     runs-on: ubuntu-latest
     environment: azure-dev
-    if: github.event.inputs.phase == 'infrastructure' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    permissions:
+      contents: read
+      id-token: write
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      contains(fromJSON('["infrastructure","agents","ai-services","security","monitoring","verification","all"]'), inputs.phase))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       
       - name: Validate federated identity inputs
         shell: bash
@@ -69,7 +74,7 @@ jobs:
           test -n "$AZURE_RESOURCE_GROUP"
 
       - name: Sign in to Azure with workload identity federation
-        uses: azure/login@v2
+        uses: azure/login@1384c340ab2dda50fed2bee3041d1d87018aa5e8 # v2
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
@@ -85,7 +90,7 @@ jobs:
             --no-pretty-print | tee azure-what-if.json
 
       - name: Upload what-if evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: azure-what-if-${{ github.sha }}
           path: azure-what-if.json
@@ -95,13 +100,16 @@ jobs:
     name: Deploy Agent Fleet
     needs: infrastructure
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'agents' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      contains(fromJSON('["agents","ai-services","security","monitoring","verification","all"]'), inputs.phase))
     strategy:
       matrix:
         agent: ['storage', 'security', 'software', 'gui', 'optimization', 'testing']
       max-parallel: 3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       
       - name: Deploy Agent - ${{ matrix.agent }}
         run: |
@@ -112,9 +120,12 @@ jobs:
     name: Initialize AI Services
     needs: agents
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'ai-services' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      contains(fromJSON('["ai-services","security","monitoring","verification","all"]'), inputs.phase))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       
       - name: Initialize AI Services
         run: |
@@ -128,9 +139,12 @@ jobs:
     name: Deploy Security Layer
     needs: ai-services
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'security' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      contains(fromJSON('["security","monitoring","verification","all"]'), inputs.phase))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       
       - name: Deploy Security Framework
         run: |
@@ -144,9 +158,12 @@ jobs:
     name: Setup Monitoring
     needs: security
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'monitoring' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      contains(fromJSON('["monitoring","verification","all"]'), inputs.phase))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       
       - name: Setup Dashboards
         run: |
@@ -160,9 +177,12 @@ jobs:
     name: Verification & Go-Live
     needs: [agents, ai-services, security, monitoring]
     runs-on: ubuntu-latest
-    if: github.event.inputs.phase == 'verification' || github.event.inputs.phase == 'all' || github.event_name == 'push'
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      contains(fromJSON('["verification","all"]'), inputs.phase))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       
       - name: Run Verification Tests
         run: |
