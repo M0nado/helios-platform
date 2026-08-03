@@ -10,6 +10,7 @@ builder.Services.AddHttpClient<IAzureInventoryService, AzureInventoryService>();
 builder.Services.AddHttpClient("helios-connectors", client => client.Timeout = TimeSpan.FromSeconds(15))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton<IEdgeAutomationPlanner, EdgeAutomationPlanner>();
+builder.Services.AddSingleton<NetworkPathCatalog>();
 builder.Services.AddSingleton<ISetupWizardService, SetupWizardService>();
 builder.Services.AddSingleton<IConnectorDispatcher, ConnectorDispatcher>();
 builder.Services.AddSingleton<IControlRunStore>(services =>
@@ -72,6 +73,7 @@ app.MapGet("/openapi/v1.json", (HttpRequest request) =>
         ["/connector/resources"] = new { get = new { operationId = "ListAzureResources", summary = "List read-only resource metadata.", parameters = new[] { new { name = "typePrefix", @in = "query", required = false, schema = new { type = "string" } } }, responses = new Dictionary<string, object> { ["200"] = new { description = "Azure resources" }, ["401"] = new { description = "Entra authentication required" } } } },
         ["/connector/foundry"] = new { get = new { operationId = "ListFoundryResources", summary = "List Foundry-related resources.", responses = new Dictionary<string, object> { ["200"] = new { description = "Foundry resources" }, ["401"] = new { description = "Entra authentication required" } } } },
         ["/control/connectors"] = new { get = new { operationId = "ListConnectorBindings", summary = "List safe connector binding state without endpoints or secrets.", responses = new Dictionary<string, object> { ["200"] = new { description = "Connector states" }, ["401"] = new { description = "Entra authentication required" } } } },
+        ["/control/network-paths"] = new { get = new { operationId = "GetEffectiveNetworkPaths", summary = "Show effective allowed and denied network paths.", responses = new Dictionary<string, object> { ["200"] = new { description = "Effective edge and egress decisions" }, ["401"] = new { description = "Entra authentication required" }, ["403"] = new { description = "Control Center origin required" } } } },
         ["/control/runs"] = new { post = new {
             operationId = "StartControlRun",
             summary = "Start an idempotent Diagnose, Plan, Save, and Sync run that cannot apply.",
@@ -199,6 +201,14 @@ app.MapGet("/control/connectors", (HttpContext context, IConnectorDispatcher dis
         mode = context.RequestServices.GetRequiredService<IConfiguration>()["HELIOS_CONNECTOR_DELIVERY_MODE"] ?? "dry-run",
         bindings = dispatcher.GetStatus()
     });
+});
+
+app.MapGet("/control/network-paths", (HttpContext context, NetworkPathCatalog catalog) =>
+{
+    SetControlResponseHeaders(context);
+    if (!IsControlOriginAllowed(context)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    return Results.Json(catalog.GetEffectivePaths());
 });
 
 app.MapPost("/control/runs", async (HttpContext context, ControlRunCoordinator coordinator, CancellationToken cancellationToken) =>

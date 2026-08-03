@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "edge": {
+    "approved": ["Azure Front Door Premium -> Private Link -> internal APIM"],
+    "directPublicIngress": "denied",
+    "disableGate": ["health", "oauth", "mcp", "webhook", "rollback"]
+  },
+  "egress": {
+    "productionDecision": "azureFirewall",
+    "natGatewayAllowedProfiles": ["dev-isolated"],
+    "approvedDestinations": {
+      "github": ["github.com", "api.github.com", "*.githubusercontent.com", "*.actions.githubusercontent.com"],
+      "microsoftIdentityAzure": ["login.microsoftonline.com", "management.azure.com", "*.azure.com", "*.windows.net"],
+      "slack": ["slack.com", "api.slack.com"],
+      "linear": ["api.linear.app"],
+      "sharePointGraph": ["graph.microsoft.com", "*.sharepoint.com"],
+      "modelProviders": ["api.openai.com", "*.openai.azure.com", "api.anthropic.com"]
+    },
+    "default": "deny",
+    "profileRule": "A destination is allowed only when its integration profile is enabled. Model providers require an enabled provider profile."
+  },
+  "effectivePaths": [
+    { "source": "internet", "destination": "front-door-premium", "decision": "allow", "reason": "approved external edge" },
+    { "source": "front-door-premium", "destination": "apim", "decision": "allow", "reason": "private link and health probe" },
+    { "source": "internet", "destination": "apim-or-workload", "decision": "deny", "reason": "direct public ingress disabled" },
+    { "source": "workloads", "destination": "private-platform-services", "decision": "allow", "reason": "private endpoint and private DNS" },
+    { "source": "workloads", "destination": "enabled-profile-destinations", "decision": "allow", "reason": "firewall application allowlist" },
+    { "source": "workloads", "destination": "internet-other", "decision": "deny", "reason": "firewall default deny" },
+    { "source": "internet", "destination": "management", "decision": "deny", "reason": "management is private and approval-gated" }
+  ]
+}

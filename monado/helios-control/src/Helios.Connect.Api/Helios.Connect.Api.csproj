@@ -10,4 +10,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <ProjectReference Include="../Helios.Connect.Contracts/Helios.Connect.Contracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../config/network-paths.json" Link="network-paths.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
