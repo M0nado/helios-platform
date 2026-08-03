@@ -13,7 +13,7 @@ on:
       - '.github/workflows/multi-repo-sync.yml'
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -27,12 +27,10 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Submodules
+      - name: Validate committed submodule pins
         run: |
-          git config --global user.email "helios-bot@platform.local"
-          git config --global user.name "HELIOS Platform Bot"
-          git submodule update --init --recursive --remote
-          git submodule foreach --recursive "git fetch origin"
+          python scripts/integrations/validate_repository_integrity.py
+          git submodule update --init --recursive --checkout
 
       - name: Check Submodule Status
         id: check-status
@@ -41,38 +39,6 @@ jobs:
           git submodule foreach 'echo "=== $name ===" && git status && git log --oneline -1'
           STATUS_OUTPUT=$(git diff --name-only HEAD)
           echo "changes_detected=$([[ -n "$STATUS_OUTPUT" ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-
-      - name: Commit Changes
-        if: steps.check-status.outputs.changes_detected == 'true'
-        run: |
-          git add -A
-          git commit -m "chore: sync submodules to latest remote versions"
-          git push origin HEAD:${{ github.ref }}
-
-      - name: Create Pull Request
-        if: steps.check-status.outputs.changes_detected == 'true' && github.ref == 'refs/heads/develop'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          commit-message: "chore: sync submodules to latest versions"
-          title: "[SYNC] Submodule Updates"
-          body: |
-            ## Submodule Synchronization
-            
-            This PR updates all submodules to their latest remote versions.
-            
-            ### Changes:
-            ```
-            ${{ steps.check-status.outputs.changes_detected }}
-            ```
-            
-            - [ ] Review submodule changes
-            - [ ] Verify component compatibility
-            - [ ] Run integration tests
-          branch: sync/submodules-${{ github.run_number }}
-          delete-branch: true
-          labels: |
-            chore
-            automated
 
       - name: Report Sync Status
         run: |
