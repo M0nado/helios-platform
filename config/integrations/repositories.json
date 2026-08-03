@@ -24,6 +24,11 @@
       "authority": ["model-adapters", "agent-runtime", "memory-adapters", "foundry-connectors"]
     },
     {
+      "name": "M0nado/helios-dev-ai-hub",
+      "role": "development-ai-orchestration",
+      "authority": ["development-model-adapters", "development-agent-runtime"]
+    },
+    {
       "name": "M0nado/helios-monado-blade",
       "role": "monado-engine",
       "authority": ["monado-blade", "themed-interaction", "engine-contracts"]
