@@ -35,10 +35,48 @@ def gitlinks(root: Path) -> dict[str, str]:
     links: dict[str, str] = {}
     for line in result.stdout.splitlines():
         metadata, path = line.split("\t", 1)
-        mode, sha, _stage = metadata.split()
+        mode, sha, stage = metadata.split()
+        if stage != "0":
+            raise ValueError(f"unmerged index entry at stage {stage}: {path}")
         if mode == "160000":
+            if path in links:
+                raise ValueError(f"duplicate gitlink index entry: {path}")
             links[path] = sha
     return links
+
+
+def validate_registry(registry: object) -> tuple[list[dict[str, object]], list[str]]:
+    """Return structurally valid repository entries and field-oriented errors."""
+    if not isinstance(registry, dict):
+        return [], ["$: expected object"]
+    repositories = registry.get("repositories")
+    if not isinstance(repositories, list):
+        return [], ["$.repositories: expected array"]
+    entries: list[dict[str, object]] = []
+    errors: list[str] = []
+    allowed_modes = {"canonical", "contract-only", "pinned-submodule"}
+    for index, entry in enumerate(repositories):
+        prefix = f"$.repositories[{index}]"
+        if not isinstance(entry, dict):
+            errors.append(f"{prefix}: expected object")
+            continue
+        valid = True
+        for field in ("name", "role", "integrationMode"):
+            if not isinstance(entry.get(field), str) or not entry[field].strip():
+                errors.append(f"{prefix}.{field}: expected nonempty string")
+                valid = False
+        authority = entry.get("authority")
+        if not isinstance(authority, list) or not authority or any(
+            not isinstance(item, str) or not item.strip() for item in authority
+        ):
+            errors.append(f"{prefix}.authority: expected nonempty string array")
+            valid = False
+        if isinstance(entry.get("integrationMode"), str) and entry["integrationMode"] not in allowed_modes:
+            errors.append(f"{prefix}.integrationMode: unsupported value")
+            valid = False
+        if valid:
+            entries.append(entry)
+    return entries, errors
 
 
 def validate(root: Path = ROOT, *, require_gitlinks: bool = True) -> list[str]:
@@ -48,18 +86,13 @@ def validate(root: Path = ROOT, *, require_gitlinks: bool = True) -> list[str]:
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         return [f"cannot read repository registry: {exc}"]
-    entries = registry.get("repositories", [])
-    names = [entry.get("name", "").casefold() for entry in entries]
+    entries, errors = validate_registry(registry)
+    names = [str(entry["name"]).casefold() for entry in entries]
     if len(names) != len(set(names)):
         errors.append("repository registry contains duplicate names")
 
-    allowed_modes = {"canonical", "contract-only", "pinned-submodule"}
-    for entry in entries:
-        if entry.get("integrationMode") not in allowed_modes:
-            errors.append(f"{entry.get('name')}: invalid or missing integrationMode")
-
     expected = {
-        entry["name"].casefold()
+        str(entry["name"]).casefold()
         for entry in entries
         if entry.get("integrationMode") == "pinned-submodule"
     }
@@ -104,7 +137,7 @@ def validate(root: Path = ROOT, *, require_gitlinks: bool = True) -> list[str]:
     if require_gitlinks:
         try:
             links = gitlinks(root)
-        except (OSError, subprocess.CalledProcessError) as exc:
+        except (OSError, subprocess.CalledProcessError, ValueError) as exc:
             errors.append(f"cannot inspect gitlinks: {exc}")
             return errors
         for path in sorted(set(declared) - set(links)):
@@ -121,7 +154,7 @@ def validate_bootstrap(root: Path = ROOT) -> list[str]:
         return declaration_errors
     try:
         links = gitlinks(root)
-    except (OSError, subprocess.CalledProcessError) as exc:
+    except (OSError, subprocess.CalledProcessError, ValueError) as exc:
         return [f"cannot inspect gitlinks: {exc}"]
     return validate(root) if links else []
 

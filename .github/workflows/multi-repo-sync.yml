@@ -2,14 +2,15 @@ name: Repository Declaration Audit
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
   push:
     branches:
       - main
       - develop
     paths:
       - '.gitmodules'
+      - 'config/integrations/repositories.json'
+      - 'scripts/integrations/validate_repository_integrity.py'
+      - 'tests/test_repository_integrity.py'
       - '.github/workflows/multi-repo-sync.yml'
 
 permissions:

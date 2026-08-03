@@ -2,6 +2,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -80,6 +81,31 @@ def test_malformed_registry_is_reported(repository: Path):
     errors = MODULE.validate(repository, require_gitlinks=False)
     assert len(errors) == 1
     assert errors[0].startswith("cannot read repository registry:")
+
+
+@pytest.mark.parametrize(
+    ("registry", "message"),
+    [
+        ([], "$: expected object"),
+        ({}, "$.repositories: expected array"),
+        ({"repositories": [None]}, "$.repositories[0]: expected object"),
+        ({"repositories": [{}]}, "$.repositories[0].name: expected nonempty string"),
+        (
+            {"repositories": [{"name": "x", "role": "x", "integrationMode": "bad", "authority": []}]},
+            "$.repositories[0].integrationMode: unsupported value",
+        ),
+    ],
+)
+def test_registry_structure_is_validated(repository: Path, registry: object, message: str):
+    (repository / "config/integrations/repositories.json").write_text(json.dumps(registry))
+    assert message in MODULE.validate(repository, require_gitlinks=False)
+
+
+def test_unmerged_index_entry_is_rejected(repository: Path, monkeypatch):
+    output = "160000 " + "1" * 40 + " 2\tmodules/example\n"
+    monkeypatch.setattr(MODULE.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout=output))
+    with pytest.raises(ValueError, match="unmerged index entry at stage 2"):
+        MODULE.gitlinks(repository)
 
 
 @pytest.mark.parametrize("path", ["../example", "/modules/example", "example"])
