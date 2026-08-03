@@ -2,14 +2,15 @@ name: Multi-Repo Sync
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
   push:
     branches:
       - main
       - develop
     paths:
       - '.gitmodules'
+      - 'config/integrations/repositories.json'
+      - 'scripts/validate_submodule_integrity.py'
+      - 'tests/test_validate_submodule_integrity.py'
       - '.github/workflows/multi-repo-sync.yml'
 
 permissions:
