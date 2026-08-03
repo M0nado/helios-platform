@@ -26,7 +26,7 @@ jobs:
           pwsh -Command "
           \$scriptsFound = Get-ChildItem -Path './src', './scripts' -Recurse -Filter '*.ps1' -ErrorAction SilentlyContinue
           if (\$scriptsFound) {
-            \$results = Invoke-ScriptAnalyzer -Path './src', './scripts' -Recurse -Severity Error, Warning
+            \$results = './src', './scripts' | Where-Object { Test-Path \$_ } | ForEach-Object { Invoke-ScriptAnalyzer -Path \$_ -Recurse -Severity Error, Warning }
             if (\$results) {
               \$results | Tee-Object -FilePath ps-analysis.txt
               exit 1
