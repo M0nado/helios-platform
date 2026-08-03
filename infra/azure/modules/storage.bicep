@@ -3,7 +3,8 @@ param location string
 param namePrefix string
 param environmentName string
 
-var safeName = toLower(replace('hls${namePrefix}${environmentName}reports', '-', ''))
+// This is the established resource identity; changing it requires an explicit data migration.
+var safeName = toLower(replace('${namePrefix}${environmentName}reports', '-', ''))
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   #disable-next-line BCP334

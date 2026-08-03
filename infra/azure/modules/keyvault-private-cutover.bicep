@@ -4,6 +4,8 @@ param environmentName string
 
 var vaultName = take(toLower(replace('${namePrefix}-${environmentName}-kv', '-', '')), 24)
 
+// This second-stage update intentionally repeats the vault's declarative settings.
+// main.bicep orders it after private endpoint creation and gates it on approval.
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: vaultName
   location: location
@@ -17,12 +19,6 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enabledForTemplateDeployment: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    // Keep the current path available during endpoint staging. Deployments must
-    // retain the cutover approval after the private path has been approved.
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
   }
 }
-
-output keyVaultName string = keyVault.name
-output keyVaultUri string = keyVault.properties.vaultUri
-output keyVaultId string = keyVault.id

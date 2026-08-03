@@ -2,6 +2,11 @@
 param location string = resourceGroup().location
 
 @description('Environment name, e.g. dev, test, prod.')
+@allowed([
+  'dev'
+  'test'
+  'prod'
+])
 param environmentName string = 'dev'
 
 @description('Prefix used for globally named resources.')
@@ -32,6 +37,10 @@ param hubVirtualNetworkId string = ''
 param azureFirewallPolicyId string = ''
 @description('Integration profiles approved for outbound access. Each profile becomes an explicit Firewall Policy application rule.')
 param enabledEgressProfiles array = []
+@description('Validated HTTPS relay destinations. Each item has a profile and bare callback FQDN (no scheme, port, path, or wildcard).')
+param connectorRelayDestinations array = []
+@description('Approval gate for disabling the Key Vault public data plane after its private endpoint has deployed successfully.')
+param keyVaultPrivateCutoverApproved bool = false
 @description('Existing regional Network Watcher resource group.')
 param networkWatcherResourceGroupName string = 'NetworkWatcherRG'
 @description('Existing regional Network Watcher name.')
@@ -40,6 +49,8 @@ param networkWatcherName string = 'NetworkWatcher_${location}'
 var firewallConfigurationComplete = egressMode != 'azureFirewall' || (!empty(azureFirewallPrivateIp) && !empty(hubVirtualNetworkId) && !empty(azureFirewallPolicyId))
 var validatedEgressMode = firewallConfigurationComplete && (environmentName != 'prod' || egressMode == 'azureFirewall') ? egressMode : fail('Production and all azureFirewall deployments require the firewall IP, hub VNet ID, and Firewall Policy ID.')
 var validatedConnectorBackendUrl = environmentName != 'prod' || !empty(connectorBackendUrl) ? connectorBackendUrl : fail('Production requires the internal connector backend URL.')
+var keyVaultName = take(toLower(replace('${namePrefix}-${environmentName}-kv', '-', '')), 24)
+var keyVaultId = resourceId('Microsoft.KeyVault/vaults', keyVaultName)
 
 module storage 'modules/storage.bicep' = {
   name: 'storage-${environmentName}'
@@ -50,7 +61,9 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
-module keyVault 'modules/keyvault.bicep' = {
+// The normal stage creates or updates the vault without closing its current path.
+// Once cutover is approved, only the post-private-endpoint update may manage it.
+module keyVault 'modules/keyvault.bicep' = if (!keyVaultPrivateCutoverApproved) {
   name: 'keyvault-${environmentName}'
   params: {
     location: location
@@ -82,6 +95,7 @@ module hubGovernance 'modules/hub-governance.bicep' = if (validatedEgressMode ==
     platformVirtualNetworkId: network.outputs.virtualNetworkId
     azureFirewallPolicyName: last(split(azureFirewallPolicyId, '/'))
     enabledEgressProfiles: enabledEgressProfiles
+    connectorRelayDestinations: connectorRelayDestinations
   }
 }
 
@@ -116,7 +130,7 @@ module privateEndpoints 'modules/private-endpoints.bicep' = {
     environmentName: environmentName
     virtualNetworkId: network.outputs.virtualNetworkId
     privateEndpointSubnetId: network.outputs.privateEndpointSubnetId
-    keyVaultId: keyVault.outputs.keyVaultId
+    keyVaultId: keyVaultId
     storageAccountId: storage.outputs.storageAccountId
     cosmosAccountId: cosmosAccountId
     serviceBusNamespaceId: serviceBusNamespaceId
@@ -125,6 +139,18 @@ module privateEndpoints 'modules/private-endpoints.bicep' = {
     aiServiceResourceIds: aiServiceResourceIds
     openAiServiceResourceIds: openAiServiceResourceIds
   }
+}
+
+module keyVaultPrivateCutover 'modules/keyvault-private-cutover.bicep' = if (keyVaultPrivateCutoverApproved) {
+  name: 'keyvault-private-cutover-${environmentName}'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    environmentName: environmentName
+  }
+  dependsOn: [
+    privateEndpoints
+  ]
 }
 
 module privateEdge 'modules/private-edge.bicep' = {
@@ -141,8 +167,8 @@ module privateEdge 'modules/private-edge.bicep' = {
 
 output storageAccountName string = storage.outputs.storageAccountName
 output logAnalyticsWorkspaceName string = observability.outputs.logAnalyticsWorkspaceName
-output keyVaultName string = keyVault.outputs.keyVaultName
-output keyVaultUri string = keyVault.outputs.keyVaultUri
+output keyVaultName string = keyVaultName
+output keyVaultUri string = 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}'
 output virtualNetworkName string = network.outputs.virtualNetworkName
 output frontDoorEndpointHostName string = privateEdge.outputs.frontDoorEndpointHostName
 output directPublicIngress string = privateEdge.outputs.directPublicIngress

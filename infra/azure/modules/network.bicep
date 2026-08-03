@@ -115,14 +115,20 @@ resource routeTables 'Microsoft.Network/routeTables@2023-11-01' = [for subnet in
   tags: tags
   properties: {
     disableBgpRoutePropagation: false
-    routes: egressMode == 'azureFirewall' ? [{
+    routes: egressMode == 'azureFirewall' ? concat(subnet.name == 'apim' ? [{
+      name: 'apim-control-plane-return'
+      properties: {
+        addressPrefix: 'ApiManagement'
+        nextHopType: 'Internet'
+      }
+    }] : [], [{
       name: 'approved-egress-via-firewall'
       properties: {
         addressPrefix: '0.0.0.0/0'
         nextHopType: 'VirtualAppliance'
         nextHopIpAddress: azureFirewallPrivateIp
       }
-    }] : []
+    }]) : []
   }
 }]
 
