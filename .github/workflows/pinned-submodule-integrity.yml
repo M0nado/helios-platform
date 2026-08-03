@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - .gitmodules
+      - modules/**
       - config/integrations/approved-submodules.json
       - scripts/integrations/validate_pinned_submodules.py
       - .github/workflows/pinned-submodule-integrity.yml
@@ -36,17 +37,17 @@ jobs:
             helios-software-stack
 
       - name: Checkout exact recursive gitlinks
-        uses: actions/checkout@v4
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          persist-credentials: false
-          submodules: recursive
-          fetch-depth: 0
+        env:
+          SUBMODULE_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          basic_auth="$(printf 'x-access-token:%s' "$SUBMODULE_TOKEN" | base64 -w 0)"
+          echo "::add-mask::$basic_auth"
+          git submodule sync --recursive
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
+            submodule update --init --recursive
 
       - name: Validate reviewed pins and repository integrity
         run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive
           git submodule status --recursive
           git ls-files --stage
           git diff --cached --submodule=log --check

@@ -27,7 +27,7 @@ def main() -> int:
 
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
     entries = data.get("submodules", [])
-    if not data.get("approved") or not entries:
+    if data.get("approved") is not True or not entries:
         print("BLOCKED: manifest is not approved or contains no submodules")
         return 2
 
