@@ -27,3 +27,7 @@ app.MapGet("/api/status", () => Results.Ok(new
 }));
 
 app.Run();
+
+public partial class Program
+{
+}

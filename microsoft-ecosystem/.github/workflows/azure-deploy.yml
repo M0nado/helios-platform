@@ -37,6 +37,21 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Test minimal deployment app
+        run: |
+          dotnet test ./tests/HELIOS.Platform.Minimal.Tests/HELIOS.Platform.Minimal.Tests.csproj \
+            --configuration Release \
+            --logger "trx;LogFileName=minimal-platform-tests.trx" \
+            --verbosity minimal
+
+      - name: Upload minimal app test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minimal-platform-test-results
+          path: '**/minimal-platform-tests.trx'
+          if-no-files-found: warn
+
       - name: Build deployment package
         run: |
           dotnet publish ./src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj \
@@ -145,6 +160,11 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Verify Azure CLI context
+        run: |
+          az version
+          az account show --output table
+
       - name: Deploy infrastructure
         run: |
           az deployment group create \
@@ -162,6 +182,7 @@ jobs:
       - name: Run smoke tests
         run: |
           curl -f "$AZURE_HEALTH_BASE_URL/health" || exit 1
+          curl -f "$AZURE_HEALTH_BASE_URL/api/status" || exit 1
 
       - name: Notify Teams
         if: success()
@@ -206,6 +227,11 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify Azure CLI context
+        run: |
+          az version
+          az account show --output table
 
       - name: Create deployment approval
         id: approval
