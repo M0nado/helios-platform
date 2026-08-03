@@ -1,8 +1,6 @@
 param location string
 param namePrefix string
 param environmentName string
-param logAnalyticsWorkspaceId string
-param flowLogStorageId string
 
 @allowed([
   'natGateway'
@@ -13,6 +11,7 @@ param egressMode string = 'natGateway'
 
 @description('Private IP of the approved hub Azure Firewall when egressMode is azureFirewall.')
 param azureFirewallPrivateIp string = ''
+param hubVirtualNetworkId string = ''
 
 var vnetName = take(toLower('${namePrefix}-${environmentName}-platform-vnet'), 64)
 var tags = {
@@ -151,31 +150,21 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   }
 }
 
-resource networkWatcher 'Microsoft.Network/networkWatchers@2023-11-01' = {
-  name: '${namePrefix}-${environmentName}-network-watcher'
-  location: location
-  tags: tags
+resource hubVirtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' existing = if (egressMode == 'azureFirewall') {
+  name: last(split(hubVirtualNetworkId, '/'))
+  scope: resourceGroup(split(hubVirtualNetworkId, '/')[2], split(hubVirtualNetworkId, '/')[4])
 }
 
-resource flowLogs 'Microsoft.Network/networkWatchers/flowLogs@2023-11-01' = [for (subnet, i) in subnetDefinitions: {
-  parent: networkWatcher
-  name: '${subnet.name}-flow-log'
-  location: location
+resource platformToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-11-01' = if (egressMode == 'azureFirewall') {
+  parent: virtualNetwork
+  name: 'platform-to-firewall-hub'
   properties: {
-    targetResourceId: nsgs[i].id
-    storageId: flowLogStorageId
-    enabled: true
-    retentionPolicy: { days: 30, enabled: true }
-    format: { type: 'JSON', version: 2 }
-    flowAnalyticsConfiguration: {
-      networkWatcherFlowAnalyticsConfiguration: {
-        enabled: true
-        workspaceResourceId: logAnalyticsWorkspaceId
-        trafficAnalyticsInterval: 10
-      }
-    }
+    remoteVirtualNetwork: { id: hubVirtualNetwork.id }
+    allowVirtualNetworkAccess: true
+    allowForwardedTraffic: true
+    useRemoteGateways: false
   }
-}]
+}
 
 output virtualNetworkName string = virtualNetwork.name
 output virtualNetworkId string = virtualNetwork.id

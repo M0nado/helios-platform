@@ -12,6 +12,8 @@ param containerRegistryId string
 
 @description('Resource IDs for enabled Azure AI/Cognitive Services accounts that support private endpoints.')
 param aiServiceResourceIds array = []
+@description('Resource IDs for Azure OpenAI accounts. These require the OpenAI-specific private DNS zone.')
+param openAiServiceResourceIds array = []
 
 var tags = {
   system: 'HELIOS'
@@ -28,6 +30,7 @@ var dnsZones = [
   'privatelink.search.windows.net'
   'privatelink.azurecr.io'
   'privatelink.cognitiveservices.azure.com'
+  'privatelink.openai.azure.com'
 ]
 var baseEndpoints = [
   { name: 'key-vault', resourceId: keyVaultId, groupId: 'vault', zoneIndex: 0 }
@@ -44,7 +47,13 @@ var aiEndpoints = map(aiServiceResourceIds, (resourceId, i) => {
   groupId: 'account'
   zoneIndex: 7
 })
-var endpoints = concat(baseEndpoints, aiEndpoints)
+var openAiEndpoints = map(openAiServiceResourceIds, (resourceId, i) => {
+  name: 'openai-service-${i}'
+  resourceId: resourceId
+  groupId: 'account'
+  zoneIndex: 8
+})
+var endpoints = concat(baseEndpoints, aiEndpoints, openAiEndpoints)
 
 resource zones 'Microsoft.Network/privateDnsZones@2020-06-01' = [for zone in dnsZones: {
   name: zone

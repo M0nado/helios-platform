@@ -3,6 +3,8 @@ param namePrefix string
 param environmentName string
 param apimSubnetId string
 param publisherEmail string
+@description('Internal HTTPS origin for the HELIOS connector. Empty is supported only while non-production infrastructure is staged.')
+param connectorBackendUrl string = ''
 param publisherName string = 'HELIOS Platform'
 
 var suffix = uniqueString(resourceGroup().id, environmentName)
@@ -32,6 +34,31 @@ resource apim 'Microsoft.ApiManagement/service@2023-09-01-preview' = {
   }
 }
 
+resource connectorApi 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = if (!empty(connectorBackendUrl)) {
+  parent: apim
+  name: 'helios-connector'
+  properties: {
+    displayName: 'HELIOS Connector'
+    path: ''
+    protocols: ['https']
+    serviceUrl: connectorBackendUrl
+    subscriptionRequired: false
+  }
+}
+
+var connectorMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+resource connectorOperations 'Microsoft.ApiManagement/service/apis/operations@2023-09-01-preview' = [for method in connectorMethods: if (!empty(connectorBackendUrl)) {
+  parent: connectorApi
+  name: toLower(method)
+  properties: {
+    displayName: '${method} connector route'
+    method: method
+    urlTemplate: '/{*path}'
+    templateParameters: [{ name: 'path', type: 'string', required: true }]
+    responses: []
+  }
+}]
+
 resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-02-01' = {
   name: '${namePrefix}-${environmentName}-edge'
   location: 'global'
@@ -52,7 +79,7 @@ resource originGroup 'Microsoft.Cdn/profiles/originGroups@2024-02-01' = {
   name: 'apim-private-origin'
   properties: {
     healthProbeSettings: {
-      probePath: '/health'
+      probePath: '/status-0123456789abcdef'
       probeRequestType: 'GET'
       probeProtocol: 'Https'
       probeIntervalInSeconds: 30

@@ -39,6 +39,10 @@ param allowedPrincipalObjectId string
 
 @description('Optional canonical HTTPS origin for Edge/custom DNS. Leave empty to use the Container Apps FQDN.')
 param publicBaseUrl string = ''
+@description('Delegated infrastructure subnet used by the internal Container Apps environment. Required in production.')
+param containerAppsInfrastructureSubnetId string = ''
+
+var validatedInfrastructureSubnetId = environmentName != 'prod' || !empty(containerAppsInfrastructureSubnetId) ? containerAppsInfrastructureSubnetId : fail('Production requires a delegated Container Apps infrastructure subnet.')
 
 @description('Exact Git commit used to build the immutable connector image and generated setup bootstrap.')
 @minLength(40)
@@ -64,6 +68,7 @@ module connector './connector.bicep' = {
     allowedPrincipalObjectId: allowedPrincipalObjectId
     publicBaseUrl: publicBaseUrl
     sourceCommitSha: sourceCommitSha
+    containerAppsInfrastructureSubnetId: validatedInfrastructureSubnetId
     commonTags: commonTags
   }
 }
