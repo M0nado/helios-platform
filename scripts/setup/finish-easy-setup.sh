@@ -14,8 +14,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-scripts/setup/bootstrap-local-tools.sh
-TOOLS_DIR="${HELIOS_TOOLS_DIR:-$ROOT_DIR/.tools}"
+scripts/setup/bootstrap-local-tools.sh --install-only
+TOOLS_DIR="${HELIOS_TOOLS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/helios/tools}"
 export PATH="$TOOLS_DIR/dotnet:$TOOLS_DIR/gh/bin:$TOOLS_DIR/azcli-venv/bin:$PATH"
 
 python3 scripts/apply/finish_readiness_apply.py --apply

@@ -2,7 +2,6 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
-export PATH="$ROOT/.tools/dotnet:$ROOT/.tools/gh/bin:$ROOT/.tools/azcli-venv/bin:$PATH"
 profile="quick"
 agents="0"
 mode="auto"
@@ -14,7 +13,9 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
 done
-scripts/setup/bootstrap-local-tools.sh
+scripts/setup/bootstrap-local-tools.sh --install-only
+TOOLS_DIR="${HELIOS_TOOLS_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/helios/tools}"
+export PATH="$TOOLS_DIR/dotnet:$TOOLS_DIR/gh/bin:$TOOLS_DIR/azcli-venv/bin:$PATH"
 python3 scripts/agents/agent_fleet_control_catalog.py --agents "$agents" --mode "$mode"
 python3 scripts/agents/branch_test_autofix_plan.py
 python3 scripts/agents/branch_fix_agents.py --max-branches 88

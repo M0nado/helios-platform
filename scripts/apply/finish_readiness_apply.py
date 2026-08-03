@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[2]
 OUT=ROOT/'reports/apply/finish-readiness-apply.json'
 MD=ROOT/'reports/apply/finish-readiness-apply.md'
 SAFE_STEPS=[
-    {'id':'bootstrap-tools','command':'scripts/setup/bootstrap-local-tools.sh','mutates':'local .tools only','apply':True},
+    {'id':'bootstrap-tools','command':'scripts/setup/bootstrap-local-tools.sh --install-only','mutates':'local XDG tools directory only','apply':True},
     {'id':'secret-preflight','command':'python3 scripts/security/secret_preflight.py','mutates':'reports only','apply':True},
     {'id':'apply-gate-preflight','command':'python3 scripts/security/apply_gate_preflight.py','mutates':'reports only','apply':True},
     {'id':'hermes-fleet-readiness','command':'python3 scripts/agents/hermes_fleet_readiness.py','mutates':'reports only','apply':True},
@@ -54,7 +54,7 @@ SAFE_STEPS=[
 ]
 
 def tool_path_env():
-    tools=ROOT/'.tools'
+    tools=Path(os.environ.get('HELIOS_TOOLS_DIR', os.path.join(os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share')), 'helios', 'tools')))
     paths=[tools/'dotnet',tools/'gh/bin',tools/'azcli-venv/bin']
     env=os.environ.copy()
     env['PATH']=':'.join(str(p) for p in paths)+':'+env.get('PATH','')
