@@ -7,6 +7,7 @@ import argparse
 import configparser
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -32,7 +33,34 @@ def _repository_from_url(url: str) -> str | None:
     return match.group("name") if match else None
 
 
-def validate(repository_map: Path, gitmodules: Path) -> list[str]:
+def _load_tracked_gitlinks(gitmodules: Path, errors: list[str]) -> set[str]:
+    """Return mode-160000 paths from the index containing ``gitmodules``."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(gitmodules.parent), "ls-files", "--stage", "-z"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        errors.append(f"{gitmodules}: cannot inspect tracked gitlinks: {exc}")
+        return set()
+
+    gitlinks: set[str] = set()
+    for entry in result.stdout.split("\0"):
+        if not entry:
+            continue
+        metadata, separator, path = entry.partition("\t")
+        if separator and metadata.split(maxsplit=1)[0] == "160000":
+            gitlinks.add(path)
+    return gitlinks
+
+
+def validate(
+    repository_map: Path,
+    gitmodules: Path,
+    tracked_gitlinks: set[str] | None = None,
+) -> list[str]:
     """Return human-readable integrity errors for the supplied files."""
     errors: list[str] = []
     document = _load_json(repository_map, errors)
@@ -118,6 +146,13 @@ def validate(repository_map: Path, gitmodules: Path) -> list[str]:
                 errors.append(
                     f"{gitmodules}: submodule repository {repository!r} is absent from {repository_map}"
                 )
+
+    if tracked_gitlinks is None:
+        tracked_gitlinks = _load_tracked_gitlinks(gitmodules, errors)
+    for path in sorted(paths - tracked_gitlinks):
+        errors.append(f"{gitmodules}: declared submodule path {path!r} is not a tracked gitlink")
+    for path in sorted(tracked_gitlinks - paths):
+        errors.append(f"{gitmodules}: tracked gitlink {path!r} is not declared as a submodule")
 
     return errors
 

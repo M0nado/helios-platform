@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,7 +58,11 @@ class RepositoryIntegrityTests(unittest.TestCase):
 
     def validate(self):
         self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
-        return validator.validate(self.repository_map, self.gitmodules)
+        return validator.validate(
+            self.repository_map,
+            self.gitmodules,
+            tracked_gitlinks={"modules/module"},
+        )
 
     def test_accepts_consistent_repository_metadata(self):
         self.assertEqual(self.validate(), [])
@@ -95,6 +100,51 @@ class RepositoryIntegrityTests(unittest.TestCase):
         self.repository_map.write_text("{", encoding="utf-8")
         errors = validator.validate(self.repository_map, self.gitmodules)
         self.assertTrue(any("cannot read valid JSON" in error for error in errors))
+
+    def test_rejects_declared_submodule_without_tracked_gitlink(self):
+        self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
+
+        errors = validator.validate(
+            self.repository_map,
+            self.gitmodules,
+            tracked_gitlinks=set(),
+        )
+
+        self.assertTrue(any("is not a tracked gitlink" in error for error in errors))
+
+    def test_rejects_tracked_gitlink_without_submodule_declaration(self):
+        self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
+
+        errors = validator.validate(
+            self.repository_map,
+            self.gitmodules,
+            tracked_gitlinks={"modules/module", "modules/undeclared"},
+        )
+
+        self.assertTrue(any("is not declared as a submodule" in error for error in errors))
+
+    def test_reads_mode_160000_entries_from_git_index(self):
+        completed = mock.Mock(
+            stdout=(
+                "100644 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0\t.gitmodules\0"
+                "160000 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 0\tmodules/module\0"
+            )
+        )
+
+        with mock.patch.object(validator.subprocess, "run", return_value=completed) as run:
+            errors = self.validate_without_supplied_gitlinks()
+
+        self.assertEqual(errors, [])
+        run.assert_called_once_with(
+            ["git", "-C", str(self.gitmodules.parent), "ls-files", "--stage", "-z"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def validate_without_supplied_gitlinks(self):
+        self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
+        return validator.validate(self.repository_map, self.gitmodules)
 
 
 if __name__ == "__main__":
