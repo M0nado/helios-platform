@@ -173,5 +173,7 @@ if __name__ == "__main__":
         for failure in failures:
             print(f"- {failure}", file=sys.stderr)
         raise SystemExit(1)
-    scope = "empty-bootstrap" if arguments.bootstrap and not gitlinks(ROOT) else "full-gitlink"
+    # Do not inspect the index a second time after successful validation: the
+    # index could change between calls or the second Git invocation could fail.
+    scope = "bootstrap (empty or automatically full-gitlink)" if arguments.bootstrap else "full-gitlink"
     print(f"Repository registry and submodule {scope} are consistent.")
