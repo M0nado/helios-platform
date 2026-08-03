@@ -25,7 +25,7 @@ def github_name(url: str) -> str:
 
 def gitlinks(root: Path) -> dict[str, str]:
     result = subprocess.run(
-        ["git", "ls-files", "--stage", "modules/"],
+        ["git", "ls-files", "--stage"],
         cwd=root,
         check=True,
         capture_output=True,
