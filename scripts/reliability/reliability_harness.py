@@ -55,7 +55,9 @@ class OperationObservation:
         )
         if any(value < 0 for value in numeric):
             raise ValueError("metric values cannot be negative")
+ Reject non-finite and negative timing metrics
 
+When telemetry contains NaN/infinite latency or a negative detection or recovery duration, the observation passes validation because comparisons with NaN are false and the optional timing fields are not checked at all. The CLI then exits successfully with invalid evidence such as meanTimeToDetectSeconds: -3.0 or emits non-standard JSON tokens such as NaN, which can corrupt reliability calculations or be rejected by strict JSON consumers; validate every duration as finite and nonnegative.
 
 def _rate(successes: int, attempts: int) -> float | None:
     return successes / attempts if attempts else None
