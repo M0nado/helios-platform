@@ -73,7 +73,7 @@ def validate(root: Path = ROOT) -> list[str]:
             errors.append(f"duplicate submodule path: {path}")
         declared[path] = name
 
-    declared_names = set(declared.values())
+When .gitmodules declares the same approved GitHub repository at two different paths and both paths have 160000 gitlinks, converting the declaration values to a set collapses the duplicate, so the expected/declared-name comparisons are empty and the later path comparison also succeeds. That lets an extra copy of an approved pinned submodule enter the index without a distinct registry entry; reject duplicate declared repository names or URLs before this set conversion.
     for name in sorted(expected - declared_names):
         errors.append(f"pinned-submodule missing from .gitmodules: {name}")
     for name in sorted(declared_names - expected):
