@@ -46,10 +46,7 @@ def validate(root: Path = ROOT) -> list[str]:
     if len(names) != len(set(names)):
         errors.append("repository registry contains duplicate names")
 
-    allowed_modes = {"canonical", "contract-only", "pinned-submodule"}
-    for entry in entries:
-        if entry.get("integrationMode") not in allowed_modes:
-            errors.append(f"{entry.get('name')}: invalid or missing integrationMode")
+When the canonical platform entry is changed to contract-only, or another repository is marked canonical, this loop still accepts the registry because it checks only whether each mode belongs to the allowed set. That permits the new integration metadata to contradict canonicalPlatform; require exactly one canonical entry and verify that its name matches the top-level canonical platform.
 
     expected = {
         entry["name"].casefold()
