@@ -20,8 +20,8 @@ public sealed class ConnectSession
     public required ConnectMode Mode { get; init; }
     public ConnectStage Stage { get; set; }
     public RepositoryIdentity? Repository { get; set; }
-    public Collection<EvidenceItem> Evidence { get; } = [];
-    public Collection<CommandPlan> Plans { get; } = [];
+public Collection<EvidenceItem> Evidence { get; init; } = [];
+    public Collection<CommandPlan> Plans { get; init; } = [];
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public int CommandsExecutedByHelios => 0;
     public int RemoteMutationsPerformedByHelios => 0;
