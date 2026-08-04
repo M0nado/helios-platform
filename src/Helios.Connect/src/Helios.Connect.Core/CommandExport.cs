@@ -10,7 +10,7 @@ public sealed class ReviewBundleExporter
 
     public string Export(ConnectSession session, string sessionDirectory)
     {
-        var root = Path.Combine(sessionDirectory, "review-bundle");
+        var root = SafeCombine(sessionDirectory, "review-bundle");
         foreach (var directory in new[] { "plans", "approvals", "commands", "verification", "rollback" })
             Directory.CreateDirectory(Path.Combine(root, directory));
         File.WriteAllText(Path.Combine(root, "README.md"), "# HELIOS reviewed command bundle\n\nCommands are inert text. A human must review and execute them externally.\n");
@@ -28,6 +28,14 @@ public sealed class ReviewBundleExporter
             .ToDictionary(x => Path.GetRelativePath(root, x), x => $"sha256:{Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(x))).ToLowerInvariant()}");
         WriteJson(root, "hashes.json", hashes);
         return root;
+    }
+
+    private static string SafeCombine(string basePath, string childSegment)
+    {
+        if (Path.IsPathRooted(childSegment))
+            throw new ArgumentException("Path segment must be relative.", nameof(childSegment));
+
+        return Path.Combine(basePath, childSegment);
     }
 
     private static string Render(CommandPlan plan) => $"## {plan.Description}\n\nRisk: {plan.Risk}; role: {plan.RequiredRole}; plan: {plan.PlanHash}\n\n```text\n{plan.Command}\n```";
