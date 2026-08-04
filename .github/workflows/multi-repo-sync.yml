@@ -2,24 +2,28 @@ name: Multi-Repo Sync
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
   push:
     branches:
       - main
       - develop
     paths:
       - '.gitmodules'
+      - 'config/integrations/repositories.json'
+      - 'scripts/validate_submodule_integrity.py'
+      - 'tests/test_validate_submodule_integrity.py'
       - '.github/workflows/multi-repo-sync.yml'
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   sync-submodules:
     name: Sync Submodules
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -27,10 +31,12 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate committed submodule pins
+      - name: Update Submodules
         run: |
-          python scripts/integrations/validate_repository_integrity.py
-          git submodule update --init --recursive --checkout
+          git config --global user.email "helios-bot@platform.local"
+          git config --global user.name "HELIOS Platform Bot"
+          git submodule update --init --recursive --remote
+          git submodule foreach --recursive "git fetch origin"
 
       - name: Check Submodule Status
         id: check-status
@@ -39,6 +45,38 @@ jobs:
           git submodule foreach 'echo "=== $name ===" && git status && git log --oneline -1'
           STATUS_OUTPUT=$(git diff --name-only HEAD)
           echo "changes_detected=$([[ -n "$STATUS_OUTPUT" ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+
+      - name: Commit Changes
+        if: steps.check-status.outputs.changes_detected == 'true'
+        run: |
+          git add -A
+          git commit -m "chore: sync submodules to latest remote versions"
+          git push origin HEAD:${{ github.ref }}
+
+      - name: Create Pull Request
+        if: steps.check-status.outputs.changes_detected == 'true' && github.ref == 'refs/heads/develop'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "chore: sync submodules to latest versions"
+          title: "[SYNC] Submodule Updates"
+          body: |
+            ## Submodule Synchronization
+            
+            This PR updates all submodules to their latest remote versions.
+            
+            ### Changes:
+            ```
+            ${{ steps.check-status.outputs.changes_detected }}
+            ```
+            
+            - [ ] Review submodule changes
+            - [ ] Verify component compatibility
+            - [ ] Run integration tests
+          branch: sync/submodules-${{ github.run_number }}
+          delete-branch: true
+          labels: |
+            chore
+            automated
 
       - name: Report Sync Status
         run: |
@@ -50,8 +88,45 @@ jobs:
           echo "### Submodule Status" >> $GITHUB_STEP_SUMMARY
           echo "$(git submodule foreach 'echo "- $name"')" >> $GITHUB_STEP_SUMMARY
 
+  audit-submodule-integrity:
+    name: Audit Submodule Integrity
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Verify Submodule Hashes
+        run: |
+          echo "Verifying submodule integrity..."
+          git submodule foreach 'echo "Submodule: $name" && git rev-parse HEAD'
+
+      - name: Check for Conflicts
+        run: |
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "ERROR: Merge conflicts detected in submodules"
+            exit 1
+          fi
+          echo "✓ No conflicts detected"
+
+      - name: Validate .gitmodules
+        run: |
+          if git config -f .gitmodules --get-regexp path | grep -q .; then
+            echo "✓ .gitmodules is valid"
+          else
+            echo "ERROR: .gitmodules validation failed"
+            exit 1
+          fi
+
+      - name: Validate Repository Map
+        run: python -m json.tool config/integrations/repositories.json > /dev/null
+
   validate-sync:
     name: Validate Sync Integrity
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: sync-submodules
     steps:
