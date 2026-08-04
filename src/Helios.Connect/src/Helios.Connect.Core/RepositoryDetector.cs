@@ -39,7 +39,10 @@ public sealed class RepositoryDetector
     {
         if (!head.StartsWith("ref: ", StringComparison.Ordinal)) return RequireSha(head);
         var reference = head[5..];
-        var loose = Path.Combine(git, reference.Replace('/', Path.DirectorySeparatorChar));
+        var relativeReference = reference.Replace('/', Path.DirectorySeparatorChar);
+        if (Path.IsPathRooted(relativeReference))
+            throw new InvalidDataException("Git reference must be a relative path.");
+        var loose = Path.Combine(git, relativeReference);
         if (File.Exists(loose)) return RequireSha(File.ReadAllText(loose).Trim());
         var match = File.ReadLines(Path.Combine(git, "packed-refs"))
             .FirstOrDefault(x => x.EndsWith($" {reference}", StringComparison.Ordinal));
