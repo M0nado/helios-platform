@@ -210,6 +210,8 @@ def main() -> int:
     parser.add_argument("--slo", type=float, default=0.999)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
+    if not 0 < args.slo < 1:
+        parser.error("--slo must be between 0 and 1")
     observations = [OperationObservation(**item) for item in json.loads(args.observations.read_text())]
     report = summarize(observations)
     report.update({"sloTarget": args.slo, "generatedAt": datetime.now(timezone.utc).isoformat()})
