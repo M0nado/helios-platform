@@ -137,8 +137,15 @@ class FailureScenario:
     def __post_init__(self) -> None:
         if self.target not in FAILURE_TARGETS:
             raise ValueError(f"target must be one of {sorted(FAILURE_TARGETS)}")
-        if not 0 <= self.probability <= 1 or self.max_injections < 1:
-            raise ValueError("invalid probability or max_injections")
+        if (
+            not 0 <= self.probability <= 1
+            or isinstance(self.max_injections, bool)
+            or not isinstance(self.max_injections, int)
+            or self.max_injections < 1
+        ):
+            raise ValueError(
+                "probability must be between 0 and 1 and max_injections must be a positive integer"
+            )
 
 
 class ControlledFailureInjector:
