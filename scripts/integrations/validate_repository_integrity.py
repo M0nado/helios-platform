@@ -59,9 +59,7 @@ def validate(root: Path = ROOT) -> list[str]:
     parser = configparser.ConfigParser()
     parser.read(root / ".gitmodules")
     declared: dict[str, str] = {}
-    for section in parser.sections():
-        path = parser[section].get("path", "")
-        url = parser[section].get("url", "")
+When a section header is changed from [submodule "name"] to an arbitrary header such as [foo] while retaining its path, url, and gitlink, this loop still treats it as a valid declaration and the validator returns success. Git does not recognize that mapping—git submodule status exits with no submodule mapping found in .gitmodules—so require the expected submodule section form or read declarations through Git's config interface.
         try:
             name = github_name(url)
         except ValueError as exc:
