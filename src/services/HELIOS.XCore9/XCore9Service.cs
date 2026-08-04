@@ -12,7 +12,23 @@ public sealed class XCore9Service : IXCore9Service
 
     public XCore9Service(IXCoreAnalytics analytics, IXCoreAuthorization authorization, IXCoreAuditSink audit, IEnumerable<WorkerTemplate> templates, IEnumerable<ToolchainDefinition> toolchains, IEnumerable<ToolDefinition> tools, RoutingPolicy initialPolicy, XCore9Options? options = null)
     {
-        _analytics=analytics; _authorization=authorization; _audit=audit; _options=options ?? new(); _templates=templates.ToDictionary(x=>x.TemplateId, StringComparer.Ordinal); _toolchains=toolchains.ToDictionary(x=>x.ToolchainId, StringComparer.Ordinal); _tools=tools.ToDictionary(x=>x.ToolId, StringComparer.Ordinal); _activePolicy=initialPolicy;
+        _analytics = analytics;
+        _authorization = authorization;
+        _audit = audit;
+        _options = options ?? new();
+        _templates = templates.ToDictionary(
+            x => x.TemplateId,
+            x => x with { AllowedToolchainIds = x.AllowedToolchainIds.ToHashSet(StringComparer.Ordinal) },
+            StringComparer.Ordinal);
+        _toolchains = toolchains.ToDictionary(
+            x => x.ToolchainId,
+            x => x with { ToolIds = x.ToolIds.ToHashSet(StringComparer.Ordinal) },
+            StringComparer.Ordinal);
+        _tools = tools.ToDictionary(
+            x => x.ToolId,
+            x => x with { Dependencies = x.Dependencies.ToHashSet(StringComparer.Ordinal) },
+            StringComparer.Ordinal);
+        _activePolicy = initialPolicy;
         if (_templates.Values.Any(x=>x.MaxInstances < 1 || x.CpuUnits < 1 || x.MemoryMiB < 1 || string.IsNullOrWhiteSpace(x.PromptDigest))) throw new ArgumentException("Every template must declare bounded resources and an immutable prompt digest.");
     }
     public async ValueTask IngestRunHistoryAsync(RunHistoryEntry entry, string actor, CancellationToken token) { token.ThrowIfCancellationRequested(); await Demand(actor,"run-history.ingest",token); ValidateEnvelope(entry.CorrelationId,entry.EvidenceLinks); var sanitized=entry with { Features=ExtractFeatures(entry) }; lock(_gate) _history.Add(sanitized); await _audit.WriteAsync(entry.CorrelationId,"xcore9.run.ingested",actor,entry.EvidenceLinks,token); }
