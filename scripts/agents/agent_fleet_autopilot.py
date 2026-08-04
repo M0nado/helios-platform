@@ -43,11 +43,11 @@ JOB_BLUEPRINTS=[
 ]
 
 XCORE_TYPES=[
- {'id':'xcore-x5','style':'balanced local worker','bestFor':'small repo tasks, safe checks, dashboard refresh','cost':0.55,'speed':72,'quality':70,'parallelism':5},
- {'id':'xcore-x6','style':'parallel optimizer','bestFor':'multi-file refactor plans, branch compare, test matrix','cost':0.85,'speed':78,'quality':76,'parallelism':6},
- {'id':'xcore-x7','style':'native/performance specialist','bestFor':'C++ hot paths, CMake, memory/security scans','cost':1.15,'speed':82,'quality':82,'parallelism':7},
- {'id':'xcore-x8','style':'cloud/fleet coordinator','bestFor':'Azure/GitHub/Codespaces runners and larger agent groups','cost':1.45,'speed':88,'quality':86,'parallelism':8},
- {'id':'xcore-x9','style':'learning strategist','bestFor':'F# scoring, model routing, XP ledgers, prompt/tool promotion','cost':1.75,'speed':84,'quality':91,'parallelism':9}
+ {'id':'xcore-x5','style':'balanced local worker','bestFor':'small repo tasks, safe checks, dashboard refresh','cost':None,'speed':None,'quality':None,'benchmarkStatus':'unresolved','parallelism':5},
+ {'id':'xcore-x6','style':'parallel optimizer','bestFor':'multi-file refactor plans, branch compare, test matrix','cost':None,'speed':None,'quality':None,'benchmarkStatus':'unresolved','parallelism':6},
+ {'id':'xcore-x7','style':'native/performance specialist','bestFor':'C++ hot paths, CMake, memory/security scans','cost':None,'speed':None,'quality':None,'benchmarkStatus':'unresolved','parallelism':7},
+ {'id':'xcore-x8','style':'cloud/fleet coordinator','bestFor':'Azure/GitHub/Codespaces runners and larger agent groups','cost':None,'speed':None,'quality':None,'benchmarkStatus':'unresolved','parallelism':8},
+ {'id':'xcore-x9','style':'learning strategist','bestFor':'F# scoring, model routing, XP ledgers, prompt/tool promotion','cost':None,'speed':None,'quality':None,'benchmarkStatus':'unresolved','parallelism':9}
 ]
 
 HERMES_MODEL_TYPES=[
@@ -168,7 +168,7 @@ def main():
  lines += ['','## Unified IDE mesh']+[f"- `{i['id']}` — {i['role']} / {i['bestFor']} (`{i['safeCommand']}`)" for i in payload['ideMesh']]
  lines += ['','## Non-overlap optimal job board','', '| Job | Primary | Backup | IDE | Status | Handoff |', '| --- | --- | --- | --- | --- | --- |']
  for j in payload['optimalJobBoard']: lines.append(f"| {j['job']} | {j['primary']} | {j['backup']} | {j['ide']} | {j['status']} | {j['handoff']} |")
- lines += ['','## XCore type differences']+[f"- `{x['id']}` — {x['style']}; {x['bestFor']} (parallelism {x['parallelism']}, cost {x['cost']})" for x in payload['xcoreTypes']]
+ lines += ['','## XCore type differences']+[f"- `{x['id']}` — {x['style']}; {x['bestFor']} (parallelism {x['parallelism']}; benchmark metrics {x['benchmarkStatus']})" for x in payload['xcoreTypes']]
  lines += ['','## Real Hermes model types (looked up from Nous/Hugging Face)']+[f"- `{h['id']}` — {h['family']} {h['parameters']} on {h['base']}; {h['bestFor']} ({h['mode']})" for h in payload['hermesModelTypes']]
  lines += ['','## Smart autoparty by task']+[f"- **{p['task']}**: {', '.join(p['party'])} using `{p['model']}` — {p['why']}" for p in payload['smartAutoParty']]
  lines += ['','## Subagent sliders']+[f"- {s['label']}: default {s['default']} / tools {', '.join(s['tools'])}" for s in payload['subagentSliders']]
