@@ -122,8 +122,12 @@ def burn_rate(error_events: int, total_events: int, slo_target: float) -> float:
 
 def prioritize_burn_rates(windows: Mapping[str, float]) -> dict[str, Any]:
     """Classify multi-window burn evidence using standard fast/slow thresholds."""
-    fast = windows.get("1h", 0) >= 14.4 and windows.get("5m", 0) >= 14.4
-    slow = windows.get("6h", 0) >= 6 and windows.get("30m", 0) >= 6
+    required_windows = {"5m", "30m", "1h", "6h"}
+    missing_windows = required_windows.difference(windows)
+    if missing_windows:
+        raise ValueError(f"missing burn-rate windows: {sorted(missing_windows)}")
+    fast = windows["1h"] >= 14.4 and windows["5m"] >= 14.4
+    slow = windows["6h"] >= 6 and windows["30m"] >= 6
     priority = "critical" if fast else "high" if slow else "normal"
     return {"priority": priority, "fastBurn": fast, "slowBurn": slow, "windows": dict(windows)}
 
