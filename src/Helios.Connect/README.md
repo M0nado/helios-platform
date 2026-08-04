@@ -7,7 +7,7 @@ HELIOS Connect is the typed, zero-remote-mutation core shared by the CLI, GitHub
 - `auto` performs local discovery by default. Pass `--approve-read-only` to explicitly authorize the allowlisted GitHub and Azure identity checks; unavailable access is recorded rather than guessed.
 - `operator` renders reviewed commands for a human-controlled terminal. It cannot execute them.
 - `dashboard` reads sanitized session evidence locally.
-- `verify` refreshes approved read-only evidence and classifies drift without reconciliation.
+- `verify` refreshes local repository identity and classifies repository drift without reconciliation.
 - Cloud Shell support is an inert handoff to `https://portal.azure.com/#cloudshell/`; it never owns a browser or terminal session.
 
 Every mode reports `Commands executed by HELIOS: 0` and `Remote mutations performed by HELIOS: 0`.
