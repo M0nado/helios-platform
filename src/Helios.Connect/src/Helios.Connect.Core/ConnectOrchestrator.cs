@@ -13,7 +13,7 @@ public sealed class ConnectOrchestrator(IEnumerable<IReadOnlyDiscoveryAdapter> a
                 foreach (var item in evidence) session.Evidence.Add(item);
                 results.Add(new(adapter.Provider, true, evidence, null));
             }
-            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or System.Text.Json.JsonException)
             {
                 var item = new EvidenceItem($"{adapter.Provider}.unavailable", EvidenceKind.Unresolved, "unavailable", $"{adapter.Provider}: {ex.Message}");
                 session.Evidence.Add(item);
