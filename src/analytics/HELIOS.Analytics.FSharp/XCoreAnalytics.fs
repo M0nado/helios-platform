@@ -9,6 +9,7 @@ type XCoreAnalytics() =
     let finite value = if Double.IsFinite value then value else 0.0
     interface IXCoreAnalytics with
         member _.CalibrateConfidence(rawConfidence, sampleCount) =
+            if sampleCount < 0 then invalidArg "sampleCount" "Sample count must be non-negative."
             let bounded = Math.Clamp(finite rawConfidence, 0.0, 1.0)
             bounded * (float sampleCount / (float sampleCount + 20.0))
         member _.Rank(candidates) =
