@@ -21,8 +21,10 @@ on:
       - 'scripts/**'
       - 'src/analytics/**'
       - 'src/core/HELIOS.Platform.Contracts/**'
+      - 'src/services/HELIOS.XCore9/**'
       - 'src/native/**'
       - 'tests/analytics/**'
+      - 'tests/HELIOS.XCore9.Tests/**'
       - 'infra/**'
       - '.github/workflows/helios-control-plane.yml'
 
@@ -97,10 +99,14 @@ jobs:
         if: ${{ github.event.inputs.update_wiki == 'true' }}
         run: python3 scripts/github/update-wiki-from-reports.py
       - name: Build analytics projects
-        run: dotnet build tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj
+        run: |
+          dotnet build tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj
+          dotnet build tests/HELIOS.XCore9.Tests/HELIOS.XCore9.Tests.csproj
       - name: Test analytics projects
         if: ${{ github.event.inputs.run_full_tests != 'false' }}
-        run: dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-build
+        run: |
+          dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --no-build
+          dotnet test tests/HELIOS.XCore9.Tests/HELIOS.XCore9.Tests.csproj --no-build
       - name: Native/XCore configure validation
         run: cmake -S src/native/HELIOS.Native.Performance -B .build/native
       - name: Native/XCore build validation
