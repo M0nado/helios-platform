@@ -31,7 +31,15 @@ public sealed class ReviewBundleExporter
     }
 
     private static string Render(CommandPlan plan) => $"## {plan.Description}\n\nRisk: {plan.Risk}; role: {plan.RequiredRole}; plan: {plan.PlanHash}\n\n```text\n{plan.Command}\n```";
-    private static void WriteJson(string root, string name, object? value) => File.WriteAllText(Path.Combine(root, name), JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
+    private static void WriteJson(string root, string name, object? value)
+    {
+        if (Path.IsPathRooted(name))
+            throw new ArgumentException("Path must be relative.", nameof(name));
+
+        File.WriteAllText(
+            Path.Combine(root, name),
+            JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
+    }
 }
 
 public sealed class AzureCloudShellHandoff : IExternalCommandHandoff
