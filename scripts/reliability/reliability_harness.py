@@ -45,7 +45,14 @@ class OperationObservation:
     def __post_init__(self) -> None:
         if self.outcome not in OUTCOMES:
             raise ValueError(f"outcome must be one of {sorted(OUTCOMES)}")
-        numeric = (self.latency_ms, self.queue_age_seconds, self.errors, self.retries, self.dead_letters)
+        numeric = (
+            self.latency_ms,
+            self.queue_age_seconds,
+            self.errors,
+            self.retries,
+            self.dead_letters,
+            *(value for value in (self.detection_seconds, self.recovery_seconds) if value is not None),
+        )
         if any(value < 0 for value in numeric):
             raise ValueError("metric values cannot be negative")
 
