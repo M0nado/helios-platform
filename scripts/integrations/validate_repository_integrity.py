@@ -80,10 +80,9 @@ def validate(root: Path = ROOT) -> list[str]:
         errors.append(f"unapproved .gitmodules repository: {name}")
 
     links = gitlinks(root)
-    for path in sorted(set(declared) - set(links)):
-        errors.append(f"declared submodule has no 160000 gitlink: {path}")
-    for path in sorted(set(links) - set(declared)):
-        errors.append(f"orphan 160000 gitlink: {path}")
+   When a PR changes a modules/... gitlink to an arbitrary 40-character SHA, git ls-files --stage still reports mode 160000, and this loop only compares path sets, so the integrity check succeeds even though a later submodule checkout cannot resolve that recorded commit. Git's submodule docs describe update/checkout as using the commit recorded in the superproject, so fetch or otherwise verify each recorded SHA against its declared URL before accepting the pin: https://git-scm.com/docs/git-submodule.
+
+Useful? React with 👍 / 👎.
     return errors
 
 
