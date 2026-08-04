@@ -24,9 +24,7 @@ def github_name(url: str) -> str:
 
 
 def gitlinks(root: Path) -> dict[str, str]:
-    result = subprocess.run(
-        ["git", "ls-files", "--stage"],
-        cwd=root,
+ When a 160000 entry is committed at vendor/foo or any path outside modules/, it is invisible here: git ls-files -h documents the trailing [<file>...] argument, and supplying modules/ restricts the output to that subtree. The later orphan comparison therefore allows undeclared or unapproved gitlinks elsewhere in the repository; list the whole index and filter it by mode before comparing paths.
         check=True,
         capture_output=True,
         text=True,
