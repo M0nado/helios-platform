@@ -7,11 +7,11 @@ internal static class ConnectCli
     public static async Task<int> RunAsync(string[] args)
     {
         if (args.Length == 0 || args[0] != "connect") return Usage();
-        var root = RepositoryDetector.FindRoot(Environment.CurrentDirectory);
-        var store = new SessionStore(root);
-        var command = args.ElementAtOrDefault(1)?.ToLowerInvariant() ?? "guided";
+var command = args.ElementAtOrDefault(1)?.ToLowerInvariant() ?? "guided";
         try
         {
+            var root = RepositoryDetector.FindRoot(Environment.CurrentDirectory);
+            var store = new SessionStore(root);
             return command switch
             {
                 "guided" => await StartAsync(ConnectMode.Guided, root, store, false),
