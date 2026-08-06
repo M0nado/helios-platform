@@ -1,0 +1,334 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v2/experience.contract.v2.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-enterprise-experience-v2",
+  "commonCoreInstall": {
+    "mode": "single-shared-baseline",
+    "noApplicationDuplication": true,
+    "packages": [
+      "HELIOS.ControlCenter",
+      "HELIOS.ProfileBroker",
+      "HELIOS.CrossPartitionClient",
+      "HELIOS.TelemetryAgent",
+      "Microsoft.WindowsTerminal",
+      "Microsoft.PowerShell",
+      "Git.Git",
+      "GitHub.cli",
+      "Microsoft.Edge"
+    ]
+  },
+  "profileLinks": {
+    "core": [
+      "common-core"
+    ],
+    "developer": [
+      "developer-core",
+      "developer-ai",
+      "developer-native"
+    ],
+    "gamer": [
+      "gamer-launchers",
+      "gamer-capture"
+    ],
+    "studio": [
+      "studio-audio",
+      "studio-video",
+      "studio-3d"
+    ],
+    "personal": [
+      "personal-productivity",
+      "personal-media"
+    ],
+    "sysops": [
+      "sysops-security",
+      "sysops-observability",
+      "sysops-cloud"
+    ],
+    "ai-server": [
+      "server-runtime",
+      "server-observability",
+      "server-ai-workers"
+    ],
+    "sysadmin": [
+      "sysadmin-security",
+      "sysadmin-recovery",
+      "sysadmin-driver-disk"
+    ]
+  },
+  "alvis": {
+    "assistantId": "ALVIS",
+    "mode": "reactive-assistant",
+    "singleAssistantInstance": true,
+    "administrator": false,
+    "autonomousApplyDenied": true,
+    "requireApprovalForExternalWrites": true
+  },
+  "profiles": {
+    "core": {
+      "semanticUi": "neutral-command-center",
+      "theme": "core-silver-blue",
+      "chromaProfile": "core-calm",
+      "wyvernAudioProfile": "core-neutral",
+      "serviceBudget": {
+        "alwaysOnMax": 8,
+        "backgroundPriority": "normal"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 4
+      },
+      "storageRoots": [
+        "common",
+        "evidence",
+        "software-vault/read-only"
+      ],
+      "networkPolicy": "protected-default",
+      "telemetryPolicy": "balanced",
+      "alvisToolBudget": {
+        "maxConcurrentTools": 2,
+        "allow": [
+          "status.read",
+          "event.search",
+          "proposal.create"
+        ],
+        "deny": [
+          "tenant.apply",
+          "disk.apply"
+        ]
+      }
+    },
+    "developer": {
+      "semanticUi": "code-and-model-operations",
+      "theme": "developer-cyan-grid",
+      "chromaProfile": "developer-reactive",
+      "wyvernAudioProfile": "developer-focus",
+      "serviceBudget": {
+        "alwaysOnMax": 10,
+        "backgroundPriority": "normal"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 6
+      },
+      "storageRoots": [
+        "common",
+        "ai-server/read",
+        "evidence",
+        "games/read"
+      ],
+      "networkPolicy": "developer-approved-egress",
+      "telemetryPolicy": "detailed-build-test",
+      "alvisToolBudget": {
+        "maxConcurrentTools": 4,
+        "allow": [
+          "repo.read",
+          "build.plan",
+          "test.plan",
+          "sync.proposal"
+        ],
+        "deny": [
+          "production.deploy",
+          "rbac.apply"
+        ]
+      }
+    },
+    "gamer": {
+      "semanticUi": "latency-first-overlay",
+      "theme": "gamer-green-energy",
+      "chromaProfile": "gamer-performance",
+      "wyvernAudioProfile": "gamer-impact",
+      "serviceBudget": {
+        "alwaysOnMax": 6,
+        "backgroundPriority": "throttled"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 3
+      },
+      "storageRoots": [
+        "games",
+        "common",
+        "evidence/read"
+      ],
+      "networkPolicy": "gaming-low-latency-firewalled",
+      "telemetryPolicy": "frame-time-focused",
+      "alvisToolBudget": {
+        "maxConcurrentTools": 2,
+        "allow": [
+          "performance.read",
+          "profile.recommend"
+        ],
+        "deny": [
+          "driver.apply",
+          "firewall.apply"
+        ]
+      }
+    },
+    "studio": {
+      "semanticUi": "audio-render-cockpit",
+      "theme": "studio-violet-wave",
+      "chromaProfile": "studio-spatial",
+      "wyvernAudioProfile": "studio-harmonic",
+      "serviceBudget": {
+        "alwaysOnMax": 7,
+        "backgroundPriority": "audio-critical"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 5
+      },
+      "storageRoots": [
+        "music-studio",
+        "common",
+        "evidence/read"
+      ],
+      "networkPolicy": "plugin-and-cloud-approved",
+      "telemetryPolicy": "audio-and-render-focused",
+      "alvisToolBudget": {
+        "maxConcurrentTools": 3,
+        "allow": [
+          "plugin.scan.plan",
+          "render.queue.recommend",
+          "backup.verify"
+        ],
+        "deny": [
+          "plugin.promote.apply",
+          "driver.apply"
+        ]
+      }
+    },
+    "personal": {
+      "semanticUi": "quiet-personal-shell",
+      "theme": "personal-calm",
+      "chromaProfile": "personal-soft",
+      "wyvernAudioProfile": "personal-soft",
+      "serviceBudget": {
+        "alwaysOnMax": 5,
+        "backgroundPriority": "low"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 2
+      },
+      "storageRoots": [
+        "personal",
+        "common",
+        "evidence/read"
+      ],
+      "networkPolicy": "normal-protected",
+      "telemetryPolicy": "privacy-focused",
+      "alvisToolBudget": {
+        "maxConcurrentTools": 2,
+        "allow": [
+          "backup.status",
+          "privacy.read"
+        ],
+        "deny": [
+          "external.broadcast",
+          "sensitive.index.apply"
+        ]
+      }
+    },
+    "sysops": {
+      "semanticUi": "operations-cockpit",
+      "theme": "sysops-blue-amber",
+      "chromaProfile": "sysops-alert",
+      "wyvernAudioProfile": "sysops-alert",
+      "serviceBudget": {
+        "alwaysOnMax": 12,
+        "backgroundPriority": "high"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 7
+      },
+      "storageRoots": [
+        "ai-server",
+        "vm",
+        "evidence",
+        "common"
+      ],
+      "networkPolicy": "infra-vpn-monitored",
+      "telemetryPolicy": "operations-and-security-detailed",
+      "alvisToolBudget": {
+        "maxConcurrentTools": 4,
+        "allow": [
+          "incident.correlation",
+          "service.health.read",
+          "sync.proposal",
+          "rollback.plan"
+        ],
+        "deny": [
+          "tenant.apply",
+          "firewall.apply"
+        ]
+      }
+    },
+    "ai-server": {
+      "semanticUi": "daemon-runtime-view",
+      "theme": "ai-server-graphite",
+      "chromaProfile": "ai-server-muted",
+      "wyvernAudioProfile": "ai-server-muted",
+      "serviceBudget": {
+        "alwaysOnMax": 16,
+        "backgroundPriority": "service-controlled"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 8
+      },
+      "storageRoots": [
+        "ai-server",
+        "vm",
+        "common",
+        "evidence"
+      ],
+      "networkPolicy": "deny-by-default-service-allowlist",
+      "telemetryPolicy": "service-uptime-and-safety",
+      "alvisToolBudget": {
+        "maxConcurrentTools": 3,
+        "allow": [
+          "worker.health.read",
+          "queue.health.read",
+          "capacity.recommend"
+        ],
+        "deny": [
+          "unsupervised.scale.apply",
+          "external.message.send"
+        ]
+      }
+    },
+    "sysadmin": {
+      "semanticUi": "sealed-vault-admin",
+      "theme": "sysadmin-amber-graphite",
+      "chromaProfile": "sysadmin-restricted",
+      "wyvernAudioProfile": "sysadmin-restricted",
+      "serviceBudget": {
+        "alwaysOnMax": 6,
+        "backgroundPriority": "security-critical"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 3
+      },
+      "storageRoots": [
+        "software-vault",
+        "evidence",
+        "airgap"
+      ],
+      "networkPolicy": "local-first-restricted",
+      "telemetryPolicy": "security-and-evidence-only",
+      "alvisToolBudget": {
+        "maxConcurrentTools": 1,
+        "allow": [
+          "read-only-audit",
+          "risk-recommendation"
+        ],
+        "deny": [
+          "administrator-write",
+          "disk-apply",
+          "tenant-apply",
+          "policy-enforcement-apply"
+        ]
+      }
+    }
+  },
+  "dedicatedTargets": {
+    "guiModuleIssue": 172,
+    "guiReusableThemeIssue": 195,
+    "usbWizardIssue": 171,
+    "linkagePolicy": "link-not-duplicate"
+  }
+}

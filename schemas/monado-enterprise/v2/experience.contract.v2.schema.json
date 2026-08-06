@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monado-enterprise/v2/experience.contract.v2.schema.json",
+  "title": "Monado enterprise experience contract v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "commonCoreInstall",
+    "profileLinks",
+    "alvis",
+    "profiles",
+    "dedicatedTargets"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "contractId": {
+      "const": "monado-enterprise-experience-v2"
+    },
+    "commonCoreInstall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "noApplicationDuplication",
+        "packages"
+      ],
+      "properties": {
+        "mode": {
+          "const": "single-shared-baseline"
+        },
+        "noApplicationDuplication": {
+          "const": true
+        },
+        "packages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "profileLinks": {
+      "type": "object",
+      "required": [
+        "core",
+        "developer",
+        "gamer",
+        "studio",
+        "personal",
+        "sysops",
+        "ai-server",
+        "sysadmin"
+      ],
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(core|developer|gamer|studio|personal|sysops|ai-server|sysadmin)$": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "alvis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assistantId",
+        "mode",
+        "singleAssistantInstance",
+        "administrator",
+        "autonomousApplyDenied",
+        "requireApprovalForExternalWrites"
+      ],
+      "properties": {
+        "assistantId": {
+          "const": "ALVIS"
+        },
+        "mode": {
+          "const": "reactive-assistant"
+        },
+        "singleAssistantInstance": {
+          "const": true
+        },
+        "administrator": {
+          "const": false
+        },
+        "autonomousApplyDenied": {
+          "const": true
+        },
+        "requireApprovalForExternalWrites": {
+          "const": true
+        }
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "core",
+        "developer",
+        "gamer",
+        "studio",
+        "personal",
+        "sysops",
+        "ai-server",
+        "sysadmin"
+      ],
+      "patternProperties": {
+        "^(core|developer|gamer|studio|personal|sysops|ai-server|sysadmin)$": {
+          "$ref": "#/$defs/profileExperience"
+        }
+      }
+    },
+    "dedicatedTargets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "guiModuleIssue",
+        "guiReusableThemeIssue",
+        "usbWizardIssue",
+        "linkagePolicy"
+      ],
+      "properties": {
+        "guiModuleIssue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "guiReusableThemeIssue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "usbWizardIssue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "linkagePolicy": {
+          "const": "link-not-duplicate"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "profileExperience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semanticUi",
+        "theme",
+        "chromaProfile",
+        "wyvernAudioProfile",
+        "serviceBudget",
+        "processBudget",
+        "storageRoots",
+        "networkPolicy",
+        "telemetryPolicy",
+        "alvisToolBudget"
+      ],
+      "properties": {
+        "semanticUi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "theme": {
+          "type": "string",
+          "minLength": 1
+        },
+        "chromaProfile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "wyvernAudioProfile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "serviceBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "alwaysOnMax",
+            "backgroundPriority"
+          ],
+          "properties": {
+            "alwaysOnMax": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "backgroundPriority": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "processBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxHighPriorityProcesses"
+          ],
+          "properties": {
+            "maxHighPriorityProcesses": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "storageRoots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "networkPolicy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "telemetryPolicy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "alvisToolBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxConcurrentTools",
+            "allow",
+            "deny"
+          ],
+          "properties": {
+            "maxConcurrentTools": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "allow": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "deny": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonadoProfileManifest version="2.0.0" profileId="developer">
+  <DisplayName>Developer</DisplayName>
+  <SemanticUi>code-and-model-operations</SemanticUi>
+  <Theme>developer-cyan-grid</Theme>
+  <ChromaProfile>developer-reactive</ChromaProfile>
+  <WyvernAudioProfile>developer-focus</WyvernAudioProfile>
+  <ServiceBudget alwaysOnMax="10" backgroundPriority="normal" />
+  <ProcessBudget maxHighPriorityProcesses="6" />
+  <NetworkPolicy>developer-approved-egress</NetworkPolicy>
+  <TelemetryPolicy>detailed-build-test</TelemetryPolicy>
+  <AlvisToolBudget maxConcurrentTools="4" denyAutonomousApply="true" />
+  <StateModel recoveryState="false" quarantineState="false" overlayAirgapAllowed="true" />
+</MonadoProfileManifest>

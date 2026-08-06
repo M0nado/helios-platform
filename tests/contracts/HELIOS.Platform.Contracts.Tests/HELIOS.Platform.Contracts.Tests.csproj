@@ -6,22 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="AnalyticsEngineTests.fs" />
-    <Compile Include="AiHubLearningEngineTests.fs" />
-    <Compile Include="MonadoEnterpriseProfileScoringV2Tests.fs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="../../../src/analytics/HELIOS.Analytics.FSharp/HELIOS.Analytics.FSharp.fsproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNETTestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVisualStudioVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj" />
   </ItemGroup>
 </Project>
