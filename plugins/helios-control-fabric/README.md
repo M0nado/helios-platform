@@ -25,6 +25,7 @@ DevOps mirror, or activate external connector delivery.
 
     python plugins/helios-control-fabric/scripts/helios.py doctor
     python plugins/helios-control-fabric/scripts/helios.py targets
+    python plugins/helios-control-fabric/scripts/helios.py setup --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
