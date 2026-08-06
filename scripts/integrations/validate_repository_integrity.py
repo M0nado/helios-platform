@@ -24,7 +24,12 @@ def github_name(url: str) -> str:
 
 
 def gitlinks(root: Path) -> dict[str, str]:
- When a 160000 entry is committed at vendor/foo or any path outside modules/, it is invisible here: git ls-files -h documents the trailing [<file>...] argument, and supplying modules/ restricts the output to that subtree. The later orphan comparison therefore allows undeclared or unapproved gitlinks elsewhere in the repository; list the whole index and filter it by mode before comparing paths.
+    # When a 160000 entry is committed at vendor/foo or any path outside modules/,
+    # it is invisible here: git ls-files -h documents the trailing [<file>...]
+    # argument, and supplying modules/ restricts the output to that subtree. The
+    # later orphan comparison therefore allows undeclared or unapproved gitlinks
+    # elsewhere in the repository; list the whole index and filter it by mode
+    # before comparing paths.
         check=True,
         capture_output=True,
         text=True,
@@ -46,8 +51,12 @@ def validate(root: Path = ROOT) -> list[str]:
     if len(names) != len(set(names)):
         errors.append("repository registry contains duplicate names")
 
-When the canonical platform entry is changed to contract-only, or another repository is marked canonical, this loop still accepts the registry because it checks only whether each mode belongs to the allowed set. That permits the new integration metadata to contradict canonicalPlatform; require exactly one canonical entry and verify that its name matches the top-level canonical platform.
-
+    # When the canonical platform entry is changed to contract-only, or another
+    # repository is marked canonical, this loop still accepts the registry
+    # because it checks only whether each mode belongs to the allowed set. That
+    # permits the new integration metadata to contradict canonicalPlatform;
+    # require exactly one canonical entry and verify that its name matches the
+    # top-level canonical platform.
     expected = {
         entry["name"].casefold()
         for entry in entries
@@ -56,7 +65,12 @@ When the canonical platform entry is changed to contract-only, or another reposi
     parser = configparser.ConfigParser()
     parser.read(root / ".gitmodules")
     declared: dict[str, str] = {}
-When a section header is changed from [submodule "name"] to an arbitrary header such as [foo] while retaining its path, url, and gitlink, this loop still treats it as a valid declaration and the validator returns success. Git does not recognize that mapping—git submodule status exits with no submodule mapping found in .gitmodules—so require the expected submodule section form or read declarations through Git's config interface.
+    # When a section header is changed from [submodule "name"] to an arbitrary
+    # header such as [foo] while retaining its path, url, and gitlink, this loop
+    # still treats it as a valid declaration and the validator returns success.
+    # Git does not recognize that mapping—git submodule status exits with no
+    # submodule mapping found in .gitmodules—so require the expected submodule
+    # section form or read declarations through Git's config interface.
         try:
             name = github_name(url)
         except ValueError as exc:
@@ -66,16 +80,28 @@ When a section header is changed from [submodule "name"] to an arbitrary header 
             errors.append(f"duplicate submodule path: {path}")
         declared[path] = name
 
-When .gitmodules declares the same approved GitHub repository at two different paths and both paths have 160000 gitlinks, converting the declaration values to a set collapses the duplicate, so the expected/declared-name comparisons are empty and the later path comparison also succeeds. That lets an extra copy of an approved pinned submodule enter the index without a distinct registry entry; reject duplicate declared repository names or URLs before this set conversion.
+    # When .gitmodules declares the same approved GitHub repository at two
+    # different paths and both paths have 160000 gitlinks, converting the
+    # declaration values to a set collapses the duplicate, so the
+    # expected/declared-name comparisons are empty and the later path comparison
+    # also succeeds. That lets an extra copy of an approved pinned submodule
+    # enter the index without a distinct registry entry; reject duplicate
+    # declared repository names or URLs before this set conversion.
     for name in sorted(expected - declared_names):
         errors.append(f"pinned-submodule missing from .gitmodules: {name}")
     for name in sorted(declared_names - expected):
         errors.append(f"unapproved .gitmodules repository: {name}")
 
     links = gitlinks(root)
-   When a PR changes a modules/... gitlink to an arbitrary 40-character SHA, git ls-files --stage still reports mode 160000, and this loop only compares path sets, so the integrity check succeeds even though a later submodule checkout cannot resolve that recorded commit. Git's submodule docs describe update/checkout as using the commit recorded in the superproject, so fetch or otherwise verify each recorded SHA against its declared URL before accepting the pin: https://git-scm.com/docs/git-submodule.
-
-Useful? React with 👍 / 👎.
+    # When a PR changes a modules/... gitlink to an arbitrary 40-character SHA,
+    # git ls-files --stage still reports mode 160000, and this loop only compares
+    # path sets, so the integrity check succeeds even though a later submodule
+    # checkout cannot resolve that recorded commit. Git's submodule docs describe
+    # update/checkout as using the commit recorded in the superproject, so fetch
+    # or otherwise verify each recorded SHA against its declared URL before
+    # accepting the pin: https://git-scm.com/docs/git-submodule.
+    #
+    # Useful? React with 👍 / 👎.
     return errors
 
 
