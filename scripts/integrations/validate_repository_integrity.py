@@ -105,7 +105,9 @@ def validate(root: Path = ROOT) -> list[str]:
     # accepting the pin: https://git-scm.com/docs/git-submodule.
     #
     # Useful? React with 👍 / 👎.
-    return errors
+fter the syntax errors identified elsewhere are repaired, a checkout with missing or undeclared gitlinks can still pass this validator because gitlinks(root) is computed and then discarded before returning. Fresh evidence in this commit is that neither the declared-without-gitlink nor orphan-gitlink comparison remains before this return; restore both checks so the integrity gate validates the index it reads.
+
+AGENTS.md reference: [AGENTS.md:L28-L28](https://github.com/M0nado/helios-platform/blob/bdb569357af640c3f121e12cf5e0a50e24f5de5f/AGENTS.md#L28-L28)
 
 
 if __name__ == "__main__":
