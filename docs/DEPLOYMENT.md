@@ -1,641 +1,258 @@
-# HELIOS Platform - Deployment Guide
+# HELIOS Platform Deployment Guide
 
-**Version:** 1.0.0  
-**Last Updated:** 2024  
-**Target Audience:** DevOps engineers, system administrators, operations teams
+This repository deploys HELIOS through a shared Bash entrypoint at `scripts/deploy/deploy-platform.sh`, with GitHub Actions and Azure Pipelines acting as the two supported CI/CD entrypoints.
 
----
+## Deployment surfaces
 
-## Table of Contents
+- `scripts/deploy/deploy-platform.sh` is the canonical deployment entrypoint.
+- `.github/workflows/deploy.yml` runs the shared script from GitHub Actions using Azure OIDC.
+- `azure-pipelines.yml` runs the same shared script from Azure Pipelines through an Azure service connection.
+- `deployment/main.bicep` is the resource-group-scoped Bicep template invoked by the script.
+- `deployment/parameters/platform.parameters.example.json` is the example parameter file for optional overrides.
 
-1. [Deployment Overview](#deployment-overview)
-2. [Pre-Deployment Checklist](#pre-deployment-checklist)
-3. [Installation Options](#installation-options)
-4. [Phase-Based Deployment](#phase-based-deployment)
-5. [Post-Deployment Steps](#post-deployment-steps)
-6. [Rollback Procedures](#rollback-procedures)
-7. [Verification & Sign-Off](#verification--sign-off)
+## Supported phases and targets
 
----
+The shared deploy script accepts these phases:
 
-## Deployment Overview
+- `preflight`
+- `infrastructure`
+- `container-apps`
+- `aks`
+- `integrations`
+- `verification`
+- `all`
 
-HELIOS deploys enterprise infrastructure through 6 coordinated phases in approximately 30-40 minutes.
+Supported targets:
 
-### Deployment Timeline
+- `aca`
+- `aks`
+- `both`
 
-```
-Phase 0: Pre-flight     (5 min)  ✅ System validation
-Phase 1: Infrastructure (5 min)  ✅ Azure/AWS provisioning
-Phase 2: Agents         (10 min) ✅ Agent fleet launch
-Phase 3: AI Services    (8 min)  ✅ AI model registration
-Phase 4: Security       (4 min)  ✅ Security framework
-Phase 5: Monitoring     (2 min)  ✅ Dashboard setup
-Phase 6: Verification   (1 min)  ✅ 42 validation tests
-────────────────────────────────────
-TOTAL:                  (35 min) ✅ Production Ready
-```
+`all` runs preflight, infrastructure, the selected platform targets, integrations, and verification.
 
-### Deployment Tiers
+## Required local prerequisites
 
-| Tier | Use Case | Compute | Cost | Deployment Time |
-|------|----------|---------|------|-----------------|
-| **Lite** | Development/Testing | 1 node, 2 CPU | $50/month | 20 min |
-| **Standard** | Small to Medium Production | 3 nodes, 4 CPU | $200/month | 35 min |
-| **Enterprise** | Large Production | 5+ nodes, 8+ CPU | $500+/month | 40 min |
+- Azure CLI installed and authenticated.
+- Bicep support available through `az bicep`.
+- Python 3 available for JSON validation and deployment status artifact generation.
+- A target Azure subscription with permission to create or update resources in the target resource group.
 
----
+## Environment configuration
 
-## Pre-Deployment Checklist
+Copy `.env.template` to a local `.env` and populate the deployment values you need.
 
-### Week Before Deployment
+Core variables used by the deployment path:
 
-- [ ] **Review Requirements**
-  - [ ] Deployment tier selected
-  - [ ] Region/location decided
-  - [ ] Compliance frameworks identified
-  
-- [ ] **Prepare Infrastructure**
-  - [ ] Cloud subscription created and authorized
-  - [ ] Resource quotas verified
-  - [ ] Network planning completed
-  
-- [ ] **Team Preparation**
-  - [ ] Stakeholders identified
-  - [ ] Deployment team trained
-  - [ ] Rollback procedures documented
-  - [ ] Change request approved
-
-### Day Before Deployment
-
-- [ ] **Final Verification**
-  - [ ] System prerequisites checked
-  - [ ] Network connectivity tested
-  - [ ] Credentials ready and secured
-  - [ ] Deployment scripts downloaded
-  
-- [ ] **Backup & Documentation**
-  - [ ] Existing systems backed up (if migration)
-  - [ ] Current configuration documented
-  - [ ] Maintenance window communicated
-  
-- [ ] **Communication**
-  - [ ] Stakeholders notified
-  - [ ] Support team briefed
-  - [ ] Emergency contacts listed
-
-### Deployment Day - Morning
-
-- [ ] **Final Checks**
-  - [ ] All team members online and ready
-  - [ ] Monitoring tools accessible
-  - [ ] Rollback procedure reviewed
-  - [ ] Deployment logs configured
-  
-- [ ] **System Status**
-  - [ ] All prerequisites green
-  - [ ] No active alerts or issues
-  - [ ] Sufficient resources available
-
----
-
-## Installation Options
-
-### Option 1: GitHub Codespace (Recommended for First-Time)
-
-**Advantages:**
-- No local setup required
-- Pre-configured environment
-- Browser-based access
-- Easy to share with team
-
-**Steps:**
-1. Navigate to https://github.com/codespaces/new?repo=M0nado/helios-platform
-2. Click "Create codespace on main"
-3. Wait for environment setup (3-5 minutes)
-4. Open integrated terminal
-5. Run: `./scripts/deploy.ps1`
-
-**Estimated Time:** 45 minutes (including setup)
-
-### Option 2: Local Installation (Windows)
-
-**Advantages:**
-- Full control
-- Works offline
-- Customizable
-- Good for testing
-
-**Requirements:**
-- Windows 11 Pro or Server 2022+
-- PowerShell 7.4+
-- .NET 8.0 SDK
-- Docker Desktop
-- Azure CLI
-- 50GB+ disk space
-
-**Steps:**
-
-```powershell
-# 1. Clone repository
-git clone https://github.com/M0nado/helios-platform.git
-cd helios-platform
-
-# 2. Verify prerequisites
-.\verify-setup.sh
-
-# 3. Configure environment
-Copy-Item .env.template .env
-notepad .env
-# Add your Azure subscription and settings
-
-# 4. Deploy
-.\scripts\deploy.ps1
+```bash
+export AZURE_SUBSCRIPTION_ID="00000000-0000-0000-0000-000000000000"
+export AZURE_TENANT_ID="00000000-0000-0000-0000-000000000000"
+export AZURE_CLIENT_ID="00000000-0000-0000-0000-000000000000"
+export AZURE_CLIENT_SECRET="YOUR_AZURE_CLIENT_SECRET"
+export HELIOS_RESOURCE_GROUP="rg-helios"
+export HELIOS_LOCATION="eastus"
+export HELIOS_ENVIRONMENT="prod"
+export HELIOS_BASE_NAME="helios"
+export HELIOS_DEPLOY_OBSERVABILITY=true
+export HELIOS_PARAMETERS_FILE=""
+export DEPLOYMENT_OUTPUT_DIR="./deployment-artifacts"
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+export DEPLOYMENT_STATUS_WEBHOOK="https://example.com/helios/deployments"
+export HUBSPOT_TOKEN="YOUR_HUBSPOT_PRIVATE_APP_TOKEN"
 ```
 
-**Estimated Time:** 40 minutes
+Notes:
 
-### Option 3: Hybrid Cloud Deployment
+- GitHub Actions uses OIDC for the deploy workflow and does not require `AZURE_CLIENT_SECRET` in that job.
+- The cloud integration runtime still uses service principal auth, so keep `AZURE_CLIENT_SECRET` populated until the runtime config is migrated.
+- The template still keeps the older `AZURE_RESOURCE_GROUP` and `AZURE_LOCATION` values for runtime compatibility. The deploy workflow uses `HELIOS_RESOURCE_GROUP` and `HELIOS_LOCATION`.
 
-**Advantages:**
-- Mix of on-premise and cloud
-- Gradual migration capability
-- Maintain existing systems
-- Flexible architecture
+## Running the shared deployment script locally
 
-**Configuration:**
-```json
-{
-  "deployment": {
-    "primaryRegion": "azure-eastus",
-    "secondaryRegion": "on-premise",
-    "hybridMode": true,
-    "dataLocation": "on-premise",
-    "computeLocation": "azure"
-  }
-}
+Run a full deployment:
+
+```bash
+./scripts/deploy/deploy-platform.sh \
+  --resource-group "$HELIOS_RESOURCE_GROUP" \
+  --phase all \
+  --target both \
+  --location "$HELIOS_LOCATION" \
+  --environment "$HELIOS_ENVIRONMENT" \
+  --base-name "$HELIOS_BASE_NAME" \
+  --what-if false
 ```
 
----
+Run a what-if preview for Container Apps only:
 
-## Phase-Based Deployment
-
-### Phase 0: Pre-flight Validation (5 min)
-
-**Purpose:** Verify system readiness
-
-**What It Checks:**
-1. Operating System - Windows 11 Pro+
-2. PowerShell - 7.4+
-3. .NET Framework - 8.0+
-4. Docker - Running and healthy
-5. Azure CLI - Authenticated
-6. Network - Internet connectivity
-7. Disk Space - 50GB+ available
-8. Memory - 8GB+ available
-9. Ports - Required ports open
-10. Admin Rights - Running as admin
-
-**Run Manually:**
-```powershell
-.\scripts\phase-0-preflight.ps1
-
-# Output
-✅ Check 1: Windows 11 Pro ........................... PASSED
-✅ Check 2: PowerShell 7.4.0 ......................... PASSED
-✅ Check 3: .NET 8.0.0 .............................. PASSED
-✅ Check 4: Docker Desktop ........................... PASSED
-✅ Check 5: Azure CLI ................................ PASSED
-✅ Check 6: Network connectivity ..................... PASSED
-✅ Check 7: Disk space (75GB available) .............. PASSED
-✅ Check 8: Memory (16GB available) .................. PASSED
-✅ Check 9: Required ports open ...................... PASSED
-✅ Check 10: Administrator privileges ............... PASSED
-
-✅ PRE-FLIGHT VALIDATION PASSED
-Ready to proceed to Phase 1
+```bash
+PARAMETERS_FILE="deployment/parameters/platform.parameters.example.json" \
+./scripts/deploy/deploy-platform.sh \
+  --resource-group "$HELIOS_RESOURCE_GROUP" \
+  --phase container-apps \
+  --target aca \
+  --location "$HELIOS_LOCATION" \
+  --environment "$HELIOS_ENVIRONMENT" \
+  --base-name "$HELIOS_BASE_NAME" \
+  --what-if true
 ```
 
-**Success Criteria:** All 10 checks pass
+## Deployment artifacts and instant reporting
 
-**Troubleshooting:**
-```powershell
-# If PowerShell check fails
-# Install: https://github.com/PowerShell/PowerShell/releases
+Each run writes artifacts under:
 
-# If .NET check fails
-# Install: https://dotnet.microsoft.com/download/dotnet/8.0
-
-# If Docker check fails
-# Start Docker Desktop application
-Start-Service Docker
-
-# If Azure CLI check fails
-az login
+```text
+deployment-artifacts/<environment>/<run-id>/
 ```
 
-### Phase 1: Infrastructure Deployment (5 min)
+Per-run outputs include:
 
-**Purpose:** Provision cloud resources
+- `deploy.log`
+- `deployment-summary.md`
+- `deployment-status.json`
+- per-deployment JSON or what-if log files
+- `account.json`
+- `bicep-version.txt`
+- verification outputs when verification runs
 
-**Deployed Resources:**
-- Virtual Network with subnets
-- Load Balancer
-- Container Registry
-- SQL Database
-- Redis Cache
-- Blob Storage
-- Key Vault
-- Managed Identity
+Latest pointers are also published to:
 
-**Run:**
-```powershell
-.\scripts\phase-1-infrastructure.ps1 -Region "eastus" -Tier "Enterprise"
+- `deployment-artifacts/latest-summary.md`
+- `deployment-artifacts/latest-status.json`
+- `deployment-artifacts/latest-run-dir.txt`
 
-# Real-time progress
-🔄 Creating resource group ............................ IN PROGRESS
-🔄 Creating virtual network ........................... IN PROGRESS
-✅ Virtual network created
-🔄 Creating container registry ........................ IN PROGRESS
-✅ Container registry created
-# ... more resources ...
-✅ PHASE 1 COMPLETE: 23 resources deployed
+If configured, the deploy script posts start and completion notifications to:
+
+- `SLACK_WEBHOOK_URL`
+- `DEPLOYMENT_STATUS_WEBHOOK`
+
+Both notifications include status, phase, target, environment, resource group, run ID, source ref, commit SHA, and run URL when available.
+
+## GitHub Actions deployment flow
+
+The GitHub workflow supports both push-triggered deployment file changes and manual dispatch.
+
+Key inputs:
+
+- `phase`
+- `target`
+- `environment`
+- `location`
+- `resource_group`
+- `base_name`
+- `deploy_observability`
+- `parameters_file`
+- `what_if`
+
+The workflow does the following:
+
+1. Checks out the repository.
+2. Installs Azure CLI.
+3. Authenticates with Azure using `azure/login@v2` and OIDC.
+4. Validates the deploy script, key JSON files, and `deployment/main.bicep`.
+5. Executes the shared deploy script.
+6. Uploads deployment assets and run artifacts.
+
+Required GitHub secrets:
+
+- `AZURE_SUBSCRIPTION_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_CLIENT_ID`
+
+Optional GitHub secrets:
+
+- `SLACK_WEBHOOK_URL`
+- `DEPLOYMENT_STATUS_WEBHOOK`
+
+Useful GitHub variables:
+
+- `HELIOS_RESOURCE_GROUP`
+- `HELIOS_LOCATION`
+- `HELIOS_BASE_NAME`
+- `HELIOS_DEPLOY_OBSERVABILITY`
+- `HELIOS_PARAMETERS_FILE`
+- `HELIOS_CONTROL_PLANE_IMAGE`
+- `HELIOS_HUBSPOT_SYNC_IMAGE`
+- `HELIOS_AKS_IMAGE`
+- `HELIOS_SLACK_CHANNEL`
+- `HUBSPOT_BASE_URL`
+- `HUBSPOT_TOKEN`
+
+## Azure Pipelines deployment flow
+
+`azure-pipelines.yml` exposes the same deployment shape through pipeline parameters.
+
+Important parameters:
+
+- `phase`
+- `target`
+- `environmentName`
+- `location`
+- `resourceGroup`
+- `baseName`
+- `deployObservability`
+- `parametersFile`
+- `whatIf`
+
+The pipeline:
+
+1. Validates the deploy script, JSON config files, and Bicep template.
+2. Exports deployment metadata into environment variables.
+3. Runs the shared deploy script through `AzureCLI@2`.
+4. Uploads the generated deployment summary to the build summary.
+5. Publishes deployment assets and deployment run artifacts.
+
+Pipeline variables to set when posting is required:
+
+- `slackWebhookUrl`
+- `deploymentStatusWebhook`
+- `hubspotToken`
+
+## Rollback and recovery
+
+This deployment path is incremental and ARM/Bicep-based; there is no single custom rollback script in this repository.
+
+Recommended recovery pattern:
+
+1. Use `deployment-artifacts/latest-summary.md` and `deployment-artifacts/latest-status.json` to identify the failed phase.
+2. Review the matching per-run logs in `deployment-artifacts/<environment>/<run-id>/`.
+3. Fix parameters, images, or secrets.
+4. Re-run the affected phase or platform target.
+5. If needed, use Azure deployment history from the target resource group to redeploy a prior known-good template input set.
+
+## Verification checks
+
+A healthy run should produce:
+
+- a non-empty deployment summary
+- a non-empty deployment status JSON file
+- uploaded CI artifacts in GitHub Actions or Azure Pipelines
+- verification outputs when `phase=verification` or `phase=all`
+
+For local validation before committing deployment changes, run:
+
+```bash
+bash -n ./scripts/deploy/deploy-platform.sh
+python3 - <<'PY'
+import json
+from pathlib import Path
+for path in [
+    Path('deployment/logicapps/azure-monitor-to-slack.definition.json'),
+    Path('deployment/parameters/platform.parameters.example.json'),
+    Path('cloud-integration/configs/azure.config.json'),
+    Path('cloud-integration/configs/github.config.json'),
+]:
+    with path.open('r', encoding='utf-8') as handle:
+        json.load(handle)
+print('JSON validation complete')
+PY
+az bicep build --file ./deployment/main.bicep >/dev/null
 ```
 
-**Validation:**
-```powershell
-# Verify resources in Azure
-az resource list --resource-group "helios-prod" --output table
-
-# Expected output shows 23 resources
-```
-
-**Estimated Duration:** 5-7 minutes
-
-### Phase 2: Agent Fleet Deployment (10 min)
-
-**Purpose:** Launch 6 build agents
-
-**Agents Deployed:**
-1. Storage Agent (2 instances)
-2. Security Agent (3 instances)
-3. Software Agent (2 instances)
-4. GUI Agent (1 instance)
-5. Optimization Agent (1 instance)
-6. Testing Agent (1 instance)
-
-**Run:**
-```powershell
-.\scripts\phase-2-agents.ps1
-
-# Progress
-🔄 Launching Storage Agent ........................... IN PROGRESS
-✅ Storage Agent running (2 replicas)
-🔄 Launching Security Agent .......................... IN PROGRESS
-✅ Security Agent running (3 replicas)
-# ... more agents ...
-✅ PHASE 2 COMPLETE: 6 agents operational
-```
-
-**Health Check:**
-```powershell
-Get-HeliosAgent
-
-# Output
-Name              Type           Status    Uptime    CPU    Memory
-──────────────────────────────────────────────────────────────
-Storage-01        Storage        Running   8s        12%    256MB
-Storage-02        Storage        Running   8s        10%    245MB
-Security-01       Security       Running   7s        8%     198MB
-# ... more agents ...
-```
-
-**Estimated Duration:** 8-12 minutes
-
-### Phase 3: AI Services Registration (8 min)
-
-**Purpose:** Register and configure AI models
-
-**Services Configured:**
-- **Tier 1 (Free):** Ollama, Gemini, Copilot
-- **Tier 2 (Standard):** Azure OpenAI, Claude, Gemini Pro
-- **Tier 3 (Specialist):** Fabric, NVIDIA, Copilot Studio
-
-**Run:**
-```powershell
-.\scripts\phase-3-ai-services.ps1
-
-# Progress
-🔄 Registering Ollama .................................. IN PROGRESS
-✅ Ollama registered
-🔄 Registering Azure OpenAI ........................... IN PROGRESS
-✅ Azure OpenAI registered
-# ... more services ...
-✅ PHASE 3 COMPLETE: 12 AI services registered
-```
-
-**Verify:**
-```powershell
-Get-HeliosAIService
-
-# Output
-Name            Status  Tier              Requests  LatencyMs
-──────────────────────────────────────────────────────────
-ollama          Active  Tier1-Free        0         N/A
-azure-openai    Active  Tier2-Standard    0         N/A
-claude          Active  Tier2-Standard    0         N/A
-# ... more services ...
-```
-
-**Estimated Duration:** 6-10 minutes
-
-### Phase 4: Security Framework Activation (4 min)
-
-**Purpose:** Enable 8-layer security architecture
-
-**Security Activated:**
-- MFA enrollment
-- Certificate generation
-- Vault configuration
-- Encryption keys
-- Audit logging
-- Compliance policies
-- Code signing
-- AI verification
-
-**Run:**
-```powershell
-.\scripts\phase-4-security.ps1
-
-# Progress
-🔄 Enabling MFA ......................................... IN PROGRESS
-✅ MFA enabled
-🔄 Generating certificates ............................ IN PROGRESS
-✅ Certificates generated and installed
-# ... more security ...
-✅ PHASE 4 COMPLETE: 8-layer security active
-```
-
-**Verify:**
-```powershell
-Get-HeliosSecurityStatus
-
-# Output
-Physical        : ✅ Enabled (TPM 2.0)
-Authentication  : ✅ Enabled (MFA)
-Secrets         : ✅ Enabled (Dual Vault)
-CodeSigning     : ✅ Enabled (RSA 2048)
-Execution       : ✅ Enabled (Docker)
-Changes         : ✅ Enabled (7-Stage)
-Audit           : ✅ Enabled (WORM)
-AI              : ✅ Enabled (Consensus)
-ComplianceScore : 98%
-```
-
-**Estimated Duration:** 3-5 minutes
-
-### Phase 5: Monitoring Setup (2 min)
-
-**Purpose:** Activate real-time dashboards
-
-**Dashboards Activated:**
-1. Cost Dashboard
-2. Performance Dashboard
-3. Security Dashboard
-4. Compliance Dashboard
-5. AI Dashboard
-6. Agents Dashboard
-7. System Dashboard
-
-**Run:**
-```powershell
-.\scripts\phase-5-monitoring.ps1
-
-# Progress
-🔄 Starting cost dashboard ............................ IN PROGRESS
-✅ Cost dashboard running
-🔄 Starting performance dashboard .................... IN PROGRESS
-✅ Performance dashboard running
-# ... more dashboards ...
-✅ PHASE 5 COMPLETE: 7 dashboards online
-```
-
-**Access Dashboards:**
-```
-https://localhost:8080/dashboards/cost
-https://localhost:8080/dashboards/performance
-https://localhost:8080/dashboards/security
-https://localhost:8080/dashboards/compliance
-https://localhost:8080/dashboards/ai
-https://localhost:8080/dashboards/agents
-https://localhost:8080/dashboards/system
-```
-
-**Estimated Duration:** 1-3 minutes
-
-### Phase 6: Verification & Go-Live (1 min)
-
-**Purpose:** Run 42 validation tests
-
-**Test Categories:**
-- Infrastructure tests (5 tests)
-- Agent health tests (6 tests)
-- AI service tests (4 tests)
-- Security tests (8 tests)
-- Monitoring tests (4 tests)
-- Performance tests (5 tests)
-- Integration tests (5 tests)
-
-**Run:**
-```powershell
-.\scripts\phase-6-verification.ps1
-
-# Real-time output
-Running 42 verification tests...
-✅ Test 1/42: Infrastructure - VNet connectivity ... PASSED
-✅ Test 2/42: Infrastructure - Resources accessible . PASSED
-# ... all 42 tests ...
-✅ Test 42/42: System - Performance baseline ........ PASSED
-
-✅ ALL 42 TESTS PASSED
-✅ DEPLOYMENT VERIFIED
-✅ READY FOR PRODUCTION
-```
-
-**Report:**
-```powershell
-Export-HeliosVerificationReport -OutputPath ./verification-report.html
-
-# Report includes:
-# - Test results (42/42 passed)
-# - Performance baseline
-# - Security assessment
-# - Resource inventory
-# - Go-live sign-off sheet
-```
-
-**Estimated Duration:** 1-2 minutes
-
----
-
-## Post-Deployment Steps
-
-### 1. Verify Deployment (Within 1 Hour)
-
-```powershell
-# Check overall health
-Get-HeliosHealth
-
-# Expected output
-Status              : Healthy
-HealthScore         : 95/100
-Deployments         : 1 (prod-1)
-Agents              : 6 (All Running)
-AIServices          : 12 (All Active)
-UpSinceLast         : 5 minutes
-```
-
-### 2. User Access Setup (Within 2 Hours)
-
-```powershell
-# Create admin user
-New-HeliosUser -Name "admin" -Email "admin@company.com" -Role "Administrator"
-
-# Create service accounts
-New-HeliosServiceAccount -Name "automation-sa" -Permissions "Deploy,Query"
-
-# Grant team access
-Add-HeliosGroupPermission -Group "DevOps" -Permission "Manage-Deployments"
-```
-
-### 3. Configure Notifications (Within 2 Hours)
-
-```powershell
-# Email alerts
-Set-HeliosAlert -Channel Email -Recipient "ops@company.com" `
-                -Severity Critical -Enabled $true
-
-# Slack integration
-Set-HeliosAlert -Channel Slack -WebhookUrl "https://hooks.slack.com/..." `
-                -Enabled $true
-```
-
-### 4. Backup Configuration (Within 24 Hours)
-
-```powershell
-# Export configuration
-Export-HeliosConfig -OutputPath "./helios-config-backup.json"
-
-# Create backup
-Start-HeliosBackup -Type Full -Destination "azure-backup"
-```
-
-### 5. Documentation Updates (Within 24 Hours)
-
-- Update runbooks with deployment details
-- Document any customizations made
-- Record access credentials securely
-- Create disaster recovery plan
-
-### 6. Team Training (Within 48 Hours)
-
-- Train ops team on dashboards
-- Review monitoring and alerting
-- Practice common procedures
-- Review rollback procedures
-
----
-
-## Rollback Procedures
-
-### Partial Rollback (Single Phase)
-
-If deployment fails in a specific phase:
-
-```powershell
-# Rollback to specific phase
-Undo-HeliosDeployment -Name "prod-1" -ToPhase 3
-
-# This will:
-# - Stop Phase 4 and beyond
-# - Preserve Phases 0-3
-# - Keep existing data
-# - Allow fixing and retrying
-```
-
-### Full Rollback (Entire Deployment)
-
-If critical issues discovered:
-
-```powershell
-# Full rollback
-Undo-HeliosDeployment -Name "prod-1" -Complete
-
-# This will:
-# - Delete all HELIOS resources
-# - Preserve backup data
-# - Restore pre-deployment state
-# - Take approximately 10-15 minutes
-```
-
-### Rollback During Phase (Emergency)
-
-If problems during deployment:
-
-```powershell
-# Emergency stop
-Stop-HeliosDeployment -Name "prod-1" -Force
-
-# Review logs
-Get-HeliosDeploymentLogs -Name "prod-1" -Last 100
-
-# Analyze failure
-Get-HeliosDeploymentStatus -Name "prod-1" -Verbose
-
-# Retry or rollback
-Restart-HeliosDeployment -Name "prod-1" -FromPhase 2
-```
-
----
-
-## Verification & Sign-Off
-
-### Pre-Deployment Sign-Off
-
-```markdown
-□ All prerequisites verified
-□ Stakeholders informed
-□ Backup/DR plan reviewed
-□ Team ready and online
-□ Deployment window approved
-
-Signed: _________________ Date: ________
-```
-
-### Post-Deployment Sign-Off
-
-```markdown
-□ All 42 tests passed
-□ Health score >90
-□ No critical alerts
-□ Dashboards accessible
-□ Users can access
-□ Backup verified
-□ Documentation updated
-
-Signed: _________________ Date: ________
-```
-
----
-
-## Additional Resources
-
-- **Operations Guide:** [OPERATIONS.md](OPERATIONS.md)
-- **Performance Guide:** [PERFORMANCE.md](PERFORMANCE.md)
-- **Troubleshooting:** [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- **CLI Reference:** [../CLI_REFERENCE.md](../CLI_REFERENCE.md)
-
----
-
-**Last Updated:** 2024  
-**Version:** 1.0.0
+## Related files
+
+- `scripts/deploy/deploy-platform.sh`
+- `.github/workflows/deploy.yml`
+- `azure-pipelines.yml`
+- `deployment/main.bicep`
+- `deployment/parameters/platform.parameters.example.json`
+- `cloud-integration/configs/azure.config.json`
+- `cloud-integration/configs/github.config.json`
