@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).resolve().parents[2]
+SUPPORTED_INTEGRATION_MODES = {"canonical", "pinned-submodule", "contract-only"}
 
 
 def github_name(url: str) -> str:
@@ -24,13 +25,9 @@ def github_name(url: str) -> str:
 
 
 def gitlinks(root: Path) -> dict[str, str]:
-    # When a 160000 entry is committed at vendor/foo or any path outside modules/,
-    # it is invisible here: git ls-files -h documents the trailing [<file>...]
-    # argument, and supplying modules/ restricts the output to that subtree. The
-    # later orphan comparison therefore allows undeclared or unapproved gitlinks
-    # elsewhere in the repository; list the whole index and filter it by mode
-    # before comparing paths.
- When a 160000 entry is committed at vendor/foo or any path outside modules/, it is invisible here: git ls-files -h documents the trailing [<file>...] argument, and supplying modules/ restricts the output to that subtree. The later orphan comparison therefore allows undeclared or unapproved gitlinks elsewhere in the repository; list the whole index and filter it by mode before comparing paths.
+    result = subprocess.run(
+        ["git", "ls-files", "--stage"],
+        cwd=root,
         check=True,
         capture_output=True,
         text=True,
@@ -52,6 +49,11 @@ def validate(root: Path = ROOT) -> list[str]:
     if len(names) != len(set(names)):
         errors.append("repository registry contains duplicate names")
 
+    integration_modes = [entry.get("integrationMode", "") for entry in entries]
+    for mode in sorted(set(integration_modes)):
+        if mode not in SUPPORTED_INTEGRATION_MODES:
+            errors.append(f"unsupported integrationMode: {mode}")
+
     canonical_platform = registry.get("canonicalPlatform", "").casefold()
     canonical_entries = [
         entry["name"].casefold()
@@ -61,15 +63,13 @@ def validate(root: Path = ROOT) -> list[str]:
     if len(canonical_entries) != 1:
         errors.append("repository registry must contain exactly one canonical integrationMode")
     elif canonical_entries[0] != canonical_platform:
-        errors.append(
-            "canonical integrationMode entry does not match canonicalPlatform"
-        )
+        errors.append("canonical integrationMode entry does not match canonicalPlatform")
 
     expected = {
         entry["name"].casefold()
         for entry in entries
         if entry.get("integrationMode") == "pinned-submodule"
-    }hen a noncanonical entry is mistyped, for example contract-only becomes contrcat-only, this code simply excludes it from the pinned set and still returns success as long as the submodule declarations match. That lets the new repository contract carry a mode no workflow or validator understands, so validate every integrationMode against the supported values before deriving expected.
+    }
     parser = configparser.ConfigParser()
     parser.read(root / ".gitmodules")
     declared: dict[str, str] = {}
@@ -121,6 +121,7 @@ def validate(root: Path = ROOT) -> list[str]:
             errors.append(f"gitlink has invalid commit SHA at {path}: {sha}")
 
     return errors
+
 
 if __name__ == "__main__":
     failures = validate()
