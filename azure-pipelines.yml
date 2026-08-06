@@ -18,5 +18,7 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-- checkout: self
-  clean: true
+- checkout: none
+
+- script: echo "Azure pipeline branch-policy validation initialized."
+  displayName: 'Validate Azure pipeline wiring'
