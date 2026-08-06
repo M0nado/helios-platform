@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "description": "Language ownership for HELIOS so Python remains glue while C# owns UI/core, F# owns analytics/ML, and C++ owns native hot paths.",
+  "languages": {
+    "csharp": {
+      "role": "frontend-core-orchestration-contracts-cloud-services",
+      "ownedPaths": ["src/core", "src/frontend", "src/ui", "tools/helios.ps1", "docs/ui-xenoblade", "HELIOS.Platform.csproj"],
+      "requiredChecks": ["csharp-contracts-build", "csharp-core-build", "main-tests", "security-tests"],
+      "mergeWeight": 28,
+      "ownerAgent": "csharp-center"
+    },
+    "fsharp": {
+      "role": "analytics-ml-ranking-learning-model-selection",
+      "ownedPaths": ["src/analytics", "tests/analytics"],
+      "requiredChecks": ["fsharp-analytics-tests", "language-aware-merge-score"],
+      "mergeWeight": 22,
+      "ownerAgent": "fsharp-oracle"
+    },
+    "cpp": {
+      "role": "native-performance-diff-merge-acceleration-local-runtime",
+      "ownedPaths": ["src/native"],
+      "requiredChecks": ["native-cpp-build", "native-benchmark-baseline"],
+      "mergeWeight": 20,
+      "ownerAgent": "cpp-accelerator"
+    },
+    "python": {
+      "role": "aihub-provider-glue-report-generation-compatibility-wrappers",
+      "ownedPaths": ["scripts", "tools/aihub"],
+      "requiredChecks": ["python-entrypoints", "python-aihub-smoke"],
+      "mergeWeight": 10,
+      "ownerAgent": "python-aihub"
+    },
+    "bicep": {
+      "role": "azure-infrastructure",
+      "ownedPaths": ["infra", "tools/azure"],
+      "requiredChecks": ["azure-bicep-build", "azure-validate", "azure-what-if"],
+      "mergeWeight": 18,
+      "ownerAgent": "azure-warden"
+    },
+    "github": {
+      "role": "workflow-repository-automation",
+      "ownedPaths": [".github", "config/helios-github-setup.json", "scripts/github"],
+      "requiredChecks": ["policy-gate", "conflict-forecast", "mass-integration-score"],
+      "mergeWeight": 16,
+      "ownerAgent": "github-admiral"
+    }
+  },
+  "decisionOrder": ["csharp", "fsharp", "cpp", "bicep", "github", "python"]
+}

@@ -75,7 +75,17 @@ docker run hello-world
 # Install from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli-windows
 # Verify
 az --version
+
+# Bootstrap HELIOS Hermes XCore Azure CLI extensions, defaults, and optional resource group
+./tools/azure/setup-helios-azure-cli.ps1 `
+  -SubscriptionId '<subscription-id>' `
+  -TenantId '<tenant-id>' `
+  -CreateResourceGroup
 ```
+
+The HELIOS bootstrap script installs and updates the Azure CLI extensions used by the integration toolchain (`azure-devops`, `containerapp`, `ml`, and `resource-graph`), selects the target subscription, sets default location/resource group values, and exports `HELIOS_*` session variables for Hermes XCore services.
+
+For the full branch-integration, Azure, mixed-language build, security, performance, F# analytics, C++ backend, and Python AIHub sequence, follow [HELIOS Hermes XCore: best steps to get everything working](./HELIOS_HERMES_XCORE_WORKING_STEPS.md).
 
 **6. Code Editor** (choose one)
 ```powershell
@@ -599,3 +609,15 @@ dotnet test --configuration Debug
 
 **Last Updated:** 2024  
 **Version:** 1.0.0
+
+
+## Local .NET SDK bootstrap
+
+If `dotnet --info` is not available on a runner or local machine, install a repo-local SDK without committing binaries:
+
+```bash
+tools/dotnet/setup-local-dotnet.sh
+export DOTNET_ROOT="$PWD/.dotnet-local" PATH="$PWD/.dotnet-local:$PATH" DOTNET_CLI_TELEMETRY_OPTOUT=1
+```
+
+The `.dotnet-local/` directory is ignored by Git. Use it to build the C# orchestration core, F# analytics engine, and C# CLI when the container image does not provide .NET.

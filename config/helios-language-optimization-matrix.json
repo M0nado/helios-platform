@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "principle": "C# is the lightweight reliable user-facing frame and safety/orchestration core; C++, F#, and Python feed specialized algorithms back into that core; YAML/JSON/Bicep define deterministic automation and cloud state.",
+  "languages": {
+    "csharp": {
+      "role": "thin user-facing core, typed object framework, safety boundary, cross-language orchestration",
+      "bestFor": [
+        "WinUI/WPF dashboard shell",
+        "C# CLI command routing",
+        "typed contracts and report validation",
+        "policy and audit coordination",
+        "GitHub/Azure service wrappers",
+        "safe local runner bridge",
+        "object model for agents/models/branches",
+        "Edge browser launch/readiness wrapper",
+        "interop with F# libraries",
+        "interop with C++ native libraries",
+        "managed Python process orchestration",
+        "secret-safe UI and approval prompts",
+        "final gate coordination",
+        "configuration loading with schema validation",
+        "cross-platform .NET runner tooling",
+        "dependency injection and reliable services",
+        "minimal frontend state management",
+        "structured logs and telemetry envelope",
+        "error simplification for humans",
+        "plugin/MCP host shell",
+        "stable extension surface for all other languages"
+      ],
+      "avoidFor": ["large numeric kernels", "hot-path diff matrix work", "prototype-only provider experiments", "long-running ML training"],
+      "mergeSignals": ["contracts changed", "UI changed", "orchestration changed", "security/policy changed", "cloud wrapper changed"],
+      "requiredChecks": ["csharp-contracts-build", "csharp-core-build", "main-tests", "security-tests", "report-contract-validation"]
+    },
+    "cpp": {
+      "role": "fast native acceleration for hot paths, graphics/rendering helpers, CPU/GPU/data/memory-intensive work",
+      "bestFor": [
+        "file overlap matrices",
+        "large diff acceleration",
+        "native path normalization",
+        "vector and embedding math",
+        "SIMD scoring kernels",
+        "GPU/CPU rendering helpers",
+        "high-frequency telemetry compression",
+        "memory-sensitive indexes",
+        "native local runtime adapters",
+        "large branch set intersection",
+        "benchmark baselines",
+        "project graph acceleration",
+        "low-level network/data streaming when needed",
+        "graphics buffers for advanced GUI visualizations",
+        "cache-efficient feature extraction",
+        "native plugin ABI",
+        "fast secret pattern scanning",
+        "binary format readers",
+        "large report indexing",
+        "CPU/GPU hardware feature probes",
+        "performance regression detection"
+      ],
+      "avoidFor": ["high-level policy decisions", "user-facing safety prompts", "cloud SDK orchestration", "business object lifecycle"],
+      "mergeSignals": ["src/native changed", "benchmark changed", "graphics/native rendering changed", "hot-path scoring changed"],
+      "requiredChecks": ["native-cpp-build", "native-benchmark-baseline"]
+    },
+    "fsharp": {
+      "role": "functional analytics, async workflows, scoring, prediction, ML-style math, ranking and learning",
+      "bestFor": [
+        "merge risk formulas",
+        "branch ranking",
+        "agent XP curves",
+        "model routing optimization",
+        "cost/speed/quality scoring",
+        "learning summaries",
+        "Bayesian or probabilistic ranking",
+        "time-series failure trends",
+        "async analytics pipelines",
+        "data normalization",
+        "feature weighting",
+        "confidence intervals",
+        "multi-objective optimization",
+        "policy risk scoring",
+        "test flakiness prediction",
+        "branch clustering",
+        "mathematical explainability",
+        "agent party selection",
+        "sub-specialization scoring",
+        "merge order recommendation",
+        "functional transformations over reports"
+      ],
+      "avoidFor": ["native memory kernels", "UI shell plumbing", "provider API glue that has mature Python SDKs"],
+      "mergeSignals": ["analytics changed", "ranking formula changed", "learning model changed", "F# tests changed"],
+      "requiredChecks": ["fsharp-analytics-tests", "fsharp-category-report", "language-aware-merge-score"]
+    },
+    "python": {
+      "role": "agent glue, Linux runners, provider SDKs, premade ML/AI libraries, geometry/data experiments, report generation",
+      "bestFor": [
+        "OpenAI/ChatGPT provider adapters",
+        "Hermes/XCore HTTP adapters",
+        "LangChain or similar library prototypes",
+        "geometric/prototyping libraries",
+        "Linux runner glue",
+        "Markdown and JSON report rendering",
+        "AIHub smoke tests",
+        "data ingestion",
+        "quick ML prototypes before F# promotion",
+        "notebook-like experiments converted to scripts",
+        "provider health checks",
+        "Azure CLI output parsing",
+        "GitHub CLI wrapper reports",
+        "MCP/plugin scaffolding",
+        "agent handoff packet generation",
+        "offline report summarization",
+        "schema compatibility wrappers",
+        "test fixture generation",
+        "safe subprocess orchestration",
+        "cross-platform fallback checks",
+        "premade ecosystem integration"
+      ],
+      "avoidFor": ["permanent core orchestration", "user-facing shell reliability", "native hot-path loops", "final production scoring if F# engine exists"],
+      "mergeSignals": ["provider adapter changed", "report generator changed", "Linux runner script changed", "AIHub smoke changed"],
+      "requiredChecks": ["python-entrypoints", "python-aihub-smoke"]
+    },
+    "yaml": {
+      "role": "GitHub Actions and declarative runner workflow state",
+      "bestFor": ["workflow triggers", "job permissions", "artifact upload", "runner matrix", "manual dispatch inputs", "schedules", "guarded apply jobs"],
+      "requiredChecks": ["policy-gate", "final-gate"]
+    },
+    "json": {
+      "role": "declarative registries, model stores, policy, agents, reports, schema-compatible contracts",
+      "bestFor": ["agent registries", "model stores", "policy rules", "language ownership", "merge reports", "learning events", "dashboard data"],
+      "requiredChecks": ["json-configs", "report-contract-validation"]
+    },
+    "bicep": {
+      "role": "Azure infrastructure declaration and cloud environment setup",
+      "bestFor": ["resource groups", "Key Vault", "storage", "monitoring", "network", "deployment outputs", "what-if review"],
+      "requiredChecks": ["azure-bicep-build", "azure-validate", "azure-what-if"]
+    }
+  },
+  "decisionHeuristics": [
+    "Prefer C# when the feature is user-facing, safety-sensitive, contract-heavy, or coordinates other systems.",
+    "Prefer C++ when the work is hot-path, memory-sensitive, CPU/GPU-heavy, graphics/rendering related, or benchmarkable.",
+    "Prefer F# when the work is scoring, ranking, async analytics, prediction, learning, or mathematical transformation.",
+    "Prefer Python when mature AI/data/provider libraries reduce cost or when Linux runner/report glue is the goal.",
+    "Prefer YAML/JSON/Bicep when the output is declarative automation, configuration, report state, or cloud infrastructure."
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "formations": [
+    {"id": "core-stability-party", "label": "Core Stability Party", "agents": ["csharp-center", "security-warden", "github-admiral"], "requiredChecks": ["csharp-contracts-build", "csharp-core-build", "security-tests"], "xpReward": 120},
+    {"id": "analytics-party", "label": "Analytics Party", "agents": ["fsharp-oracle", "model-optimizer", "learning-scribe"], "requiredChecks": ["fsharp-analytics-tests", "language-aware-merge-score"], "xpReward": 110},
+    {"id": "performance-party", "label": "Performance Party", "agents": ["cpp-accelerator", "benchmark-sentinel", "csharp-center"], "requiredChecks": ["native-cpp-build", "native-benchmark-baseline"], "xpReward": 115},
+    {"id": "cloud-setup-party", "label": "Cloud Setup Party", "agents": ["azure-warden", "github-admiral", "vault-guardian"], "requiredChecks": ["azure-bicep-build", "policy-gate", "vault-readiness"], "xpReward": 105},
+    {"id": "aihub-party", "label": "AIHub Party", "agents": ["python-aihub", "model-router", "hermes-xcore-sage"], "requiredChecks": ["python-entrypoints", "provider-health", "model-cost-speed-optimizer"], "xpReward": 90},
+    {"id": "full-merge-raid", "label": "Full Merge Raid", "agents": ["csharp-center", "fsharp-oracle", "cpp-accelerator", "github-admiral", "azure-warden"], "requiredChecks": ["final-gate", "conflict-forecast", "language-aware-merge-score"], "xpReward": 200}
+  ]
+}

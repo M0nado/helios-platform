@@ -1,6 +1,7 @@
 # Helios Platform Development Configuration
 
 ## Build Results
+.dotnet-local/
 bin/
 obj/
 dist/

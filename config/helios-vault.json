@@ -1,0 +1,1 @@
+{"version":1,"requiredSecrets":["HELIOS_AUTOMATION_TOKEN","AZURE_CREDENTIALS","OPENAI_API_KEY"],"azureKeyVault":{"nameEnv":"HELIOS_KEY_VAULT_NAME","resourceGroupEnv":"HELIOS_RESOURCE_GROUP"},"trackedEnvFilesBlocked":true}

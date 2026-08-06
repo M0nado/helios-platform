@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "targetBranch": "main",
+  "integrationBranch": "integration/helios-hermes-xcore-auto",
+  "priorityBranches": [
+    "helios-control",
+    "hermes-fleet-production"
+  ],
+  "branchNamePatterns": [
+    "helios",
+    "hermes",
+    "he-",
+    "HE"
+  ],
+  "excludeBranchPatterns": [
+    "gh-pages",
+    "dependabot/",
+    "renovate/"
+  ],
+  "scoreWeights": {
+    "priorityBranch": 1000,
+    "heliosName": 120,
+    "hermesName": 120,
+    "csharp": 90,
+    "winuiFrontend": 80,
+    "cppNative": 80,
+    "fsharpAnalytics": 80,
+    "pythonAIHub": 75,
+    "azure": 70,
+    "githubAutomation": 70,
+    "security": 70,
+    "tests": 55,
+    "submodules": 45,
+    "docs": 12,
+    "largeChangePenalty": 20
+  },
+  "pathWeights": {
+    "src/core": "csharp",
+    "src/gui": "winuiFrontend",
+    "docs/ui-xenoblade": "winuiFrontend",
+    "src/native": "cppNative",
+    "src/analytics": "fsharpAnalytics",
+    "tests/analytics": "fsharpAnalytics",
+    "scripts/ai": "pythonAIHub",
+    "scripts/ai-integration": "pythonAIHub",
+    "tools/azure": "azure",
+    "scripts/azure": "azure",
+    ".github/workflows": "githubAutomation",
+    "config": "githubAutomation",
+    "src/Security": "security",
+    "installer/security": "security",
+    "tests": "tests",
+    ".gitmodules": "submodules",
+    "docs": "docs"
+  },
+  "validationCommands": [
+    "git diff --check",
+    "python3 -m json.tool config/helios-agents.json",
+    "python3 -m py_compile scripts/github/mass_integration.py"
+  ],
+  "pullRequest": {
+    "title": "Automated HELIOS Hermes XCore mass integration",
+    "labels": [
+      "automation",
+      "helios",
+      "hermes-xcore",
+      "mass-integration"
+    ],
+    "autoMergeMethod": "squash",
+    "deleteBranch": false
+  },
+  "conflictForecast": {
+    "maxRiskScore": 120,
+    "blockHighRisk": true,
+    "overrideFlag": "--override-conflict-risk",
+    "priorityBranches": [
+      "helios-control",
+      "hermes-fleet-production"
+    ]
+  }
+}

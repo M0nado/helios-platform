@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "description": "Configurable multi-LLM cross-optimization router for cloud, local, Codex/code, Hermes, and XCore agent roles.",
+  "routingObjectives": ["quality", "cost", "latency", "privacy", "contextFit", "codeAccuracy", "safety", "parallelConsensus"],
+  "providerFamilies": [
+    {"id": "openai", "type": "cloud", "roles": ["reasoning", "code", "agent-planning", "summarization"], "env": ["OPENAI_API_KEY"], "defaultWeight": 100},
+    {"id": "azure-openai", "type": "cloud-private", "roles": ["enterprise-chat", "reasoning", "summarization"], "env": ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY"], "defaultWeight": 95},
+    {"id": "codex", "type": "code-agent", "roles": ["patching", "repo-analysis", "test-fixing"], "env": ["CODEX_HOME"], "defaultWeight": 94},
+    {"id": "anthropic", "type": "cloud", "roles": ["long-context-review", "safety-review", "architecture"], "env": ["ANTHROPIC_API_KEY"], "defaultWeight": 88},
+    {"id": "google-gemini", "type": "cloud", "roles": ["multimodal", "large-context", "summarization"], "env": ["GOOGLE_API_KEY"], "defaultWeight": 84},
+    {"id": "mistral", "type": "cloud-or-local", "roles": ["fast-generation", "classification", "summarization"], "env": ["MISTRAL_API_KEY"], "defaultWeight": 78},
+    {"id": "cohere", "type": "cloud", "roles": ["rerank", "embedding", "classification"], "env": ["COHERE_API_KEY"], "defaultWeight": 72},
+    {"id": "local-llama", "type": "local", "roles": ["private-classification", "summarization", "offline-agent"], "env": ["LOCAL_LLM_ENDPOINT"], "defaultWeight": 70},
+    {"id": "deepseek", "type": "cloud-or-local", "roles": ["code", "math", "reasoning"], "env": ["DEEPSEEK_API_KEY"], "defaultWeight": 76},
+    {"id": "xai", "type": "cloud", "roles": ["fast-research", "summarization"], "env": ["XAI_API_KEY"], "defaultWeight": 70}
+  ],
+  "agentModelProfiles": [
+    {"agent": "branch-integrator", "primaryRoles": ["repo-analysis", "classification"], "preferredFamilies": ["codex", "openai", "local-llama"], "parallelism": 3},
+    {"agent": "csharp-core-builder", "primaryRoles": ["code", "test-fixing"], "preferredFamilies": ["codex", "openai", "deepseek"], "parallelism": 2},
+    {"agent": "security-validator", "primaryRoles": ["safety-review", "private-classification"], "preferredFamilies": ["anthropic", "openai", "local-llama"], "parallelism": 2},
+    {"agent": "fsharp-analytics-validator", "primaryRoles": ["math", "reasoning", "classification"], "preferredFamilies": ["openai", "deepseek", "local-llama"], "parallelism": 3},
+    {"agent": "native-performance-benchmarker", "primaryRoles": ["code", "math", "benchmark-review"], "preferredFamilies": ["codex", "deepseek", "openai"], "parallelism": 2},
+    {"agent": "python-aihub-integrator", "primaryRoles": ["agent-planning", "provider-routing", "summarization"], "preferredFamilies": ["openai", "azure-openai", "mistral", "local-llama"], "parallelism": 4},
+    {"agent": "frontend-observability-checker", "primaryRoles": ["multimodal", "ui-review", "summarization"], "preferredFamilies": ["google-gemini", "openai", "local-llama"], "parallelism": 2},
+    {"agent": "final-gate-runner", "primaryRoles": ["parallelConsensus", "risk-review", "summarization"], "preferredFamilies": ["openai", "anthropic", "azure-openai", "local-llama"], "parallelism": 4},
+    {"agent": "hermes-xcore-orchestrator", "primaryRoles": ["fleet-planning", "native-analytics", "reasoning"], "preferredFamilies": ["openai", "deepseek", "local-llama"], "parallelism": 3},
+    {"agent": "xcore-digital-twin", "primaryRoles": ["simulation", "math", "benchmark-review"], "preferredFamilies": ["deepseek", "openai", "local-llama"], "parallelism": 3}
+  ],
+  "optimizationPolicies": [
+    {"id": "cheap-first", "rule": "Use local or low-cost family for classification, dedupe, log summarization, and low-risk report generation."},
+    {"id": "parallel-consensus", "rule": "For high-risk merge/security/architecture decisions, run 2-4 families in parallel and require agreement or escalate to final-gate-runner."},
+    {"id": "privacy-first", "rule": "Use local or Azure-private endpoints for secrets, proprietary telemetry, customer data, and security scan excerpts."},
+    {"id": "compress-context", "rule": "Summarize branch diffs, logs, and reports before sending expensive or long-context prompts."},
+    {"id": "learn-provider-quality", "rule": "Record acceptance, failure, latency, and token cost per agent/profile/provider to update weights."}
+  ]
+}

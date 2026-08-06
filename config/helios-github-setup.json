@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "repository": {
+    "autoMerge": true,
+    "deleteBranchOnMerge": false,
+    "squashMerge": true,
+    "mergeCommit": true,
+    "rebaseMerge": true
+  },
+  "labels": [
+    {"name": "automation", "color": "0e8a16", "description": "Automated HELIOS workflow or runner output"},
+    {"name": "helios", "color": "1d76db", "description": "HELIOS platform integration work"},
+    {"name": "hermes-xcore", "color": "5319e7", "description": "Hermes XCore integration and acceleration work"},
+    {"name": "mass-integration", "color": "fbca04", "description": "Automated branch scoring, merge, PR, or auto-merge flow"},
+    {"name": "no-review-auto", "color": "b60205", "description": "Runner-owned no-human-review automation path"}
+  ],
+  "branchProtection": {
+    "enabled": false,
+    "branch": "main",
+    "requiredStatusChecks": [
+      "Status and registry validation",
+      "Score, pull, merge, PR, and auto-merge candidates"
+    ],
+    "enforceAdmins": false,
+    "requiredApprovingReviewCount": 0
+  },
+  "workflows": [
+    ".github/workflows/helios-shell.yml",
+    ".github/workflows/helios-mass-integration.yml",
+    ".github/workflows/helios-repository-setup.yml"
+  ],
+  "requiredSecrets": [
+    "GITHUB_TOKEN"
+  ],
+  "optionalSecrets": [
+    "HELIOS_AUTOMATION_TOKEN",
+    "AZURE_SUBSCRIPTION_ID",
+    "AZURE_TENANT_ID",
+    "OPENAI_API_KEY",
+    "AZURE_OPENAI_API_KEY",
+    "MCP_SERVER_URL"
+  ]
+}

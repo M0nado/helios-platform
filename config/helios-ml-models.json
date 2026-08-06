@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "models": [
+    {"id": "merge-risk-heuristic", "ownerLanguage": "fsharp", "type": "heuristic-weighted-score", "maturity": "active", "inputs": ["reports/mass-integration/conflict-forecast.json", "config/helios-language-ownership.json"], "metric": "blocked-risk-precision"},
+    {"id": "merge-risk-logistic", "ownerLanguage": "fsharp", "type": "logistic-regression", "maturity": "planned", "inputs": ["reports/learning/events.jsonl"], "metric": "auc"},
+    {"id": "conflict-gradient-boost", "ownerLanguage": "fsharp", "type": "gradient-boosted-trees", "maturity": "planned", "inputs": ["branch-file-overlap", "project-graph"], "metric": "conflict-recall"},
+    {"id": "agent-model-bandit", "ownerLanguage": "fsharp", "type": "contextual-bandit", "maturity": "prototype", "inputs": ["reports/agents/agent-xp.json", "reports/ai-providers/provider-health.json"], "metric": "verified-success-per-cost"},
+    {"id": "native-overlap-accelerator", "ownerLanguage": "cpp", "type": "hot-path-set-intersection", "maturity": "prototype", "inputs": ["git changed files"], "metric": "files-per-second"},
+    {"id": "aihub-provider-prototype", "ownerLanguage": "python", "type": "provider-adapter-smoke", "maturity": "active", "inputs": ["config/helios-model-store.json"], "metric": "provider-readiness"}
+  ]
+}

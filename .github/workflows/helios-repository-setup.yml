@@ -1,0 +1,46 @@
+name: HELIOS Repository Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply GitHub repository setup with gh instead of verify-only reports"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+  checks: read
+  administration: write
+
+jobs:
+  repository-setup:
+    name: Verify or apply GitHub automation setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Verify GitHub setup
+        if: ${{ inputs.apply != true }}
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        run: python3 scripts/github/setup_repository.py verify
+
+      - name: Apply GitHub setup
+        if: ${{ inputs.apply == true }}
+        env:
+          GH_TOKEN: ${{ secrets.HELIOS_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        run: python3 scripts/github/setup_repository.py setup --apply
+
+      - name: Upload GitHub setup reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-github-setup-reports
+          path: reports/github-setup
+          if-no-files-found: warn
