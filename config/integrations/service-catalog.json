@@ -33,7 +33,19 @@
       "kind": "connector-adapter",
       "status": "authorization-required",
       "authentication": "oauth-or-bot-token",
-      "secretSource": "azure-key-vault"
+      "secretSource": "azure-key-vault",
+      "configuration": "config/integrations/slack-znc.example.json",
+      "executionBoundary": "outbound-notification-only"
+    },
+    {
+      "name": "znc-notification-bridge",
+      "owner": "M0nado/helios-platform",
+      "kind": "optional-irc-relay",
+      "status": "authorization-required",
+      "authentication": "tls-and-sasl",
+      "secretSource": "azure-key-vault",
+      "configuration": "config/integrations/slack-znc.example.json",
+      "executionBoundary": "outbound-notification-only"
     },
     {
       "name": "linear-adapter",
