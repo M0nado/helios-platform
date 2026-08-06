@@ -58,6 +58,7 @@ Run the plugin doctor, then generate a plan:
 
 ```bash
 python plugins/helios-control-fabric/scripts/helios.py doctor
+python plugins/helios-control-fabric/scripts/helios.py setup --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev

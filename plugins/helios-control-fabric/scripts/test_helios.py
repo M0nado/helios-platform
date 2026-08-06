@@ -62,6 +62,36 @@ class HeliosCliTests(unittest.TestCase):
         )
         self.assertNotIn("federationSubject", plan)
 
+    def test_setup_bundle_covers_all_requested_surfaces(self) -> None:
+        bundle = HELIOS.full_setup_bundle("azure-dev")
+        self.assertEqual(bundle["executionMode"], "plan-only")
+        self.assertEqual(
+            bundle["setupBundle"],
+            "files-modules-services-environments-integrations",
+        )
+        self.assertGreater(bundle["files"]["total"], 0)
+        self.assertIn(
+            "monado/helios-control/config/integrations.json",
+            [item["path"] for item in bundle["files"]["required"]],
+        )
+        self.assertTrue(
+            any(
+                item["name"] == "Helios.Connect.Api"
+                for item in bundle["modules"]["items"]
+            )
+        )
+        self.assertGreater(bundle["services"]["total"], 0)
+        self.assertIn(
+            "github",
+            [item["id"] for item in bundle["integrations"]["destinations"]],
+        )
+        self.assertTrue(
+            bundle["environments"]["selectedEnvironmentCoverage"]["identityBindings"]
+        )
+        self.assertTrue(
+            bundle["environments"]["selectedEnvironmentCoverage"]["automationAllowed"]
+        )
+
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             contract = HELIOS.oidc_contract(
@@ -174,7 +204,12 @@ class HeliosCliTests(unittest.TestCase):
             json.loads((HELIOS.ASSETS / name).read_text(encoding="utf-8"))
 
     def test_invalid_environment_fails(self) -> None:
-        for function in (HELIOS.release_plan, HELIOS.oidc_contract, HELIOS.edge_plan):
+        for function in (
+            HELIOS.release_plan,
+            HELIOS.oidc_contract,
+            HELIOS.edge_plan,
+            HELIOS.full_setup_bundle,
+        ):
             with self.subTest(function=function.__name__):
                 with self.assertRaises(ValueError):
                     function("production-now")
