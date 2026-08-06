@@ -15,7 +15,7 @@ def test_github_name_normalizes_canonical_url():
     assert MODULE.github_name("https://github.com/M0nado/helios-ai-hub.git") == "m0nado/helios-ai-hub"
 
 
-def test_current_checkout_reports_every_missing_gitlink():
+def test_current_checkout_reports_clean_validation():
     errors = MODULE.validate(ROOT)
     # The repository integrity check is now expected to pass cleanly.
     # Missing 160000 gitlinks are treated as validation failures by the script.
