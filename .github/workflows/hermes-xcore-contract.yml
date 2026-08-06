@@ -1,0 +1,41 @@
+name: Hermes XCore Contract
+
+on:
+  pull_request:
+    paths:
+      - "contracts/hermes-xcore/**"
+      - "docs/architecture/HERMES_XCORE_*.md"
+      - "tests/contracts/test_hermes_xcore_contract.py"
+      - ".github/workflows/hermes-xcore-contract.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "contracts/hermes-xcore/**"
+      - "docs/architecture/HERMES_XCORE_*.md"
+      - "tests/contracts/test_hermes_xcore_contract.py"
+      - ".github/workflows/hermes-xcore-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Parse machine-readable contracts
+        run: |
+          python -m json.tool contracts/hermes-xcore/v1/system.contract.json >/dev/null
+          python -m json.tool contracts/hermes-xcore/v1/event.schema.json >/dev/null
+
+      - name: Run contract conformance tests
+        run: python -m unittest -v tests/contracts/test_hermes_xcore_contract.py
