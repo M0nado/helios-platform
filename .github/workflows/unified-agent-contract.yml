@@ -7,13 +7,18 @@ on:
       - ".codex/**"
       - ".github/copilot-instructions.md"
       - "config/integrations/**"
-      -These integrity paths were added only to the pull_request filter; when a .gitmodules, modules/**, or validator-only change lands on main via a merge commit or direct push, this workflow's push trigger still watches only config/integrations/** and the architecture doc, so the new repository-integrity gate will not run for the files it validates. Add the same paths under on.push.paths or remove that filter so main-branch contract validation is enforced.
+      - ".gitmodules"
+      - "modules/**"
+      - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
       - ".github/workflows/unified-agent-contract.yml"
   push:
     branches: [main]
     paths:
       - "config/integrations/**"
+      - ".gitmodules"
+      - "modules/**"
+      - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
   workflow_dispatch:
 
