@@ -9,8 +9,7 @@ on:
     paths:
       - '.gitmodules'
       - 'config/integrations/repositories.json'
-      - 'scripts/validate_submodule_integrity.py'
-      - 'tests/test_validate_submodule_integrity.py'
+      - 'scripts/integrations/validate_repository_integrity.py'
       - '.github/workflows/multi-repo-sync.yml'
 
 permissions:
@@ -21,8 +20,6 @@ jobs:
     name: Sync Submodules
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -30,59 +27,19 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Submodules
+      - name: Checkout committed submodule pins
         run: |
-          git config --global user.email "helios-bot@platform.local"
-          git config --global user.name "HELIOS Platform Bot"
-          git submodule update --init --recursive --remote
-          git submodule foreach --recursive "git fetch origin"
+          git submodule update --init --recursive --checkout
 
-      - name: Check Submodule Status
-        id: check-status
-        run: |
-          echo "Status Report:"
-          git submodule foreach 'echo "=== $name ===" && git status && git log --oneline -1'
-          STATUS_OUTPUT=$(git diff --name-only HEAD)
-          echo "changes_detected=$([[ -n "$STATUS_OUTPUT" ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
-
-      - name: Commit Changes
-        if: steps.check-status.outputs.changes_detected == 'true'
-        run: |
-          git add -A
-          git commit -m "chore: sync submodules to latest remote versions"
-          git push origin HEAD:${{ github.ref }}
-
-      - name: Create Pull Request
-        if: steps.check-status.outputs.changes_detected == 'true' && github.ref == 'refs/heads/develop'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          commit-message: "chore: sync submodules to latest versions"
-          title: "[SYNC] Submodule Updates"
-          body: |
-            ## Submodule Synchronization
-            
-            This PR updates all submodules to their latest remote versions.
-            
-            ### Changes:
-            ```
-            ${{ steps.check-status.outputs.changes_detected }}
-            ```
-            
-            - [ ] Review submodule changes
-            - [ ] Verify component compatibility
-            - [ ] Run integration tests
-          branch: sync/submodules-${{ github.run_number }}
-          delete-branch: true
-          labels: |
-            chore
-            automated
+      - name: Validate repository integrity
+        run: python scripts/integrations/validate_repository_integrity.py
 
       - name: Report Sync Status
         run: |
           echo "## Multi-Repo Sync Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
-          echo "**Changes Detected**: ${{ steps.check-status.outputs.changes_detected }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Submodule checkout**: committed pins applied" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Submodule Status" >> $GITHUB_STEP_SUMMARY
           echo "$(git submodule foreach 'echo "- $name"')" >> $GITHUB_STEP_SUMMARY
