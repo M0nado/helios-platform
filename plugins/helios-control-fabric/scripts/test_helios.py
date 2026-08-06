@@ -149,10 +149,22 @@ class HeliosCliTests(unittest.TestCase):
         self.assertFalse(plan["synchronization"]["bidirectionalMerge"])
         self.assertEqual(plan["executionMode"], "plan-only")
 
-    def test_runner_topology_keeps_self_hosted_disabled(self) -> None:
+    def test_runner_topology_configures_xcore9_local_hermes_fleet(self) -> None:
         topology = HELIOS.runner_plan()
         self.assertEqual(topology["validation"]["provider"], "github-hosted")
-        self.assertFalse(topology["selfHosted"]["enabled"])
+        self.assertTrue(topology["selfHosted"]["enabled"])
+        self.assertEqual(
+            topology["selfHosted"]["activationMode"],
+            "manual-protected-environment-approval",
+        )
+        group = next(
+            item
+            for item in topology["selfHosted"]["groups"]
+            if item["name"] == "hermes-xcore9-local"
+        )
+        self.assertEqual(group["fleet"], "hermes")
+        self.assertEqual(len(group["runners"]), 4)
+        self.assertIn("xcore9", group["labels"])
         self.assertTrue(topology["release"]["immutableImageRequired"])
 
     def test_edge_plan_requires_private_link_and_separate_approval(self) -> None:

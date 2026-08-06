@@ -22,25 +22,28 @@
     "immutableImageRequired": true
   },
   "selfHosted": {
-    "enabled": false,
+    "enabled": true,
+    "activationMode": "manual-protected-environment-approval",
     "groups": [
       {
-        "name": "helios-linux",
+        "name": "hermes-xcore9-local",
         "labels": [
           "self-hosted",
           "linux",
-          "helios"
+          "x64",
+          "local",
+          "hermes-fleet",
+          "xcore9"
         ],
-        "ephemeral": true
-      },
-      {
-        "name": "helios-windows",
-        "labels": [
-          "self-hosted",
-          "windows",
-          "helios"
+        "ephemeral": true,
+        "fleet": "hermes",
+        "runners": [
+          "xcore9-01",
+          "xcore9-02",
+          "xcore9-03",
+          "xcore9-04"
         ],
-        "ephemeral": true
+        "purpose": "local-runner execution for Hermes fleet tasks"
       }
     ],
     "enablementRequirements": [

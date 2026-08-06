@@ -84,7 +84,15 @@ jobs:
           assert oidc["secretsStoredInGitHub"] is False
           assert devops["azureDevOps"]["readOnly"] is True
           assert devops["synchronization"]["automaticWrites"] is False
-          assert runners["selfHosted"]["enabled"] is False
+          assert runners["selfHosted"]["enabled"] is True
+          assert runners["selfHosted"]["activationMode"] == "manual-protected-environment-approval"
+          xcore_group = next(
+              group
+              for group in runners["selfHosted"]["groups"]
+              if group["name"] == "hermes-xcore9-local"
+          )
+          assert xcore_group["fleet"] == "hermes"
+          assert len(xcore_group["runners"]) == 4
           assert edge["targetEdge"]["connectivity"] == "Private Link"
           assert edge["automaticApply"] is False
           PY

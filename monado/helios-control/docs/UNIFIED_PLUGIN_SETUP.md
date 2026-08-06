@@ -17,7 +17,8 @@ same governed tools and Monado MCP Apps UI to approved hosts.
 - Target edge: Azure Front Door Premium to Container Apps over Private Link
 - Connector delivery: dry-run
 - Azure DevOps: read-only, plan-first
-- GitHub runners: hosted validation/release; self-hosted disabled
+- GitHub runners: hosted validation/release plus four local Hermes fleet
+  self-hosted XCore9 runners, with manual approval gates
 - Hermes learning: candidate-only
 - XCore: standby
 
@@ -136,10 +137,10 @@ plan-only; automatic writes and bidirectional merge remain disabled.
 
 ## Runner contract
 
-Validation and protected release use GitHub-hosted runners. Optional
-'helios-linux' and 'helios-windows' self-hosted groups are documented but
-disabled until they are ephemeral, isolated, allow-listed, and bound to a
-protected environment.
+Validation and protected release use GitHub-hosted runners. Local
+'hermes-xcore9-local' self-hosted runners are configured as four ephemeral
+XCore9 nodes for Hermes fleet work and remain subject to protected-environment
+approval, isolation, and egress allow-listing.
 
 ## Approval boundary
 

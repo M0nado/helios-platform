@@ -18,7 +18,7 @@ It connects the approved operator experience to:
 
 The plugin diagnoses, reads, searches, fetches, renders, and plans. It does not
 silently deploy Azure, assign RBAC, grant tenant consent, merge pull requests,
-publish Microsoft 365 apps, enable self-hosted runners, create a bidirectional
+publish Microsoft 365 apps, register or activate self-hosted runners, create a bidirectional
 DevOps mirror, or activate external connector delivery.
 
 ## Start

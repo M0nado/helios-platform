@@ -25,6 +25,6 @@
     "resourceUri": "ui://helios/control-center-v2.html",
     "azureEdgeTarget": "Azure Front Door Premium with Private Link",
     "azureDevOpsMode": "read-only plan-first",
-    "runnerMode": "GitHub-hosted; self-hosted disabled"
+    "runnerMode": "GitHub-hosted validation/release; self-hosted local Hermes fleet enabled (4 xcore9 runners, manual approval gates)"
   }
 }

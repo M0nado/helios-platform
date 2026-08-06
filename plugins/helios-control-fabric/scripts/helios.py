@@ -357,7 +357,17 @@ def print_human(payload: dict[str, Any]) -> None:
         print("HELIOS runner topology")
         print(f"  validation: {payload['validation']['provider']}")
         print(f"  release environment: {payload['release']['environment']}")
-        print("  self-hosted runners: disabled")
+        self_hosted = payload["selfHosted"]
+        if self_hosted.get("enabled"):
+            groups = self_hosted.get("groups", [])
+            configured = 0
+            for group in groups:
+                runners = group.get("runners") if isinstance(group, dict) else None
+                if isinstance(runners, list):
+                    configured += len(runners)
+            print(f"  self-hosted runners: enabled ({configured} configured)")
+        else:
+            print("  self-hosted runners: disabled")
     elif "targetEdge" in payload:
         print(f"HELIOS Azure Edge plan ({payload['environment']})")
         print(f"  service: {payload['targetEdge']['service']}")
