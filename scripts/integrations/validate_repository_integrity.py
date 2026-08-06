@@ -30,7 +30,9 @@ def gitlinks(root: Path) -> dict[str, str]:
     # later orphan comparison therefore allows undeclared or unapproved gitlinks
     # elsewhere in the repository; list the whole index and filter it by mode
     # before comparing paths.
- When a 160000 entry is committed at vendor/foo or any path outside modules/, it is invisible here: git ls-files -h documents the trailing [<file>...] argument, and supplying modules/ restricts the output to that subtree. The later orphan comparison therefore allows undeclared or unapproved gitlinks elsewhere in the repository; list the whole index and filter it by mode before comparing paths.
+    result = subprocess.run(
+        ["git", "ls-files", "--stage"],
+        cwd=root,
         check=True,
         capture_output=True,
         text=True,
@@ -69,7 +71,7 @@ def validate(root: Path = ROOT) -> list[str]:
         entry["name"].casefold()
         for entry in entries
         if entry.get("integrationMode") == "pinned-submodule"
-    }hen a noncanonical entry is mistyped, for example contract-only becomes contrcat-only, this code simply excludes it from the pinned set and still returns success as long as the submodule declarations match. That lets the new repository contract carry a mode no workflow or validator understands, so validate every integrationMode against the supported values before deriving expected.
+    }
     parser = configparser.ConfigParser()
     parser.read(root / ".gitmodules")
     declared: dict[str, str] = {}
