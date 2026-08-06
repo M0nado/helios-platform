@@ -50,10 +50,11 @@ Write-Host "  [3] Connect via VS Code Remote" -ForegroundColor Cyan
 Write-Host "  [4] Show Codespace URL" -ForegroundColor Cyan
 Write-Host "  [5] Delete a Codespace" -ForegroundColor Cyan
 Write-Host "  [6] Show Setup Guide" -ForegroundColor Cyan
+Write-Host "  [7] Validate HELIOS/Hermes Tooling (non-mutating)" -ForegroundColor Cyan
 Write-Host "  [0] Exit" -ForegroundColor Gray
 Write-Host ""
 
-$choice = Read-Host "Choose an option [0-6]"
+$choice = Read-Host "Choose an option [0-7]"
 
 switch ($choice) {
     "1" {
@@ -65,7 +66,7 @@ switch ($choice) {
         Write-Host "⏱️  Wait 3-5 minutes for initialization (first time)" -ForegroundColor Gray
         Write-Host "⏱️  Or 30 seconds (if you have existing codespaces)" -ForegroundColor Gray
         Write-Host ""
-        
+
         # Attempt to open in browser
         try {
             Start-Process "https://github.com/codespaces/new?repo=M0nado/helios-platform"
@@ -74,7 +75,7 @@ switch ($choice) {
             Write-Host "⚠️  Could not open browser. Please visit URL above manually." -ForegroundColor Yellow
         }
     }
-    
+
     "2" {
         Write-Host ""
         Write-Host "🔗 SSH Connection Instructions:" -ForegroundColor Green
@@ -89,7 +90,7 @@ switch ($choice) {
         Write-Host "    gh codespace ssh -c aged-space-gw4xgq7" -ForegroundColor Gray
         Write-Host ""
     }
-    
+
     "3" {
         Write-Host ""
         Write-Host "📱 VS Code Remote Connection:" -ForegroundColor Green
@@ -101,7 +102,7 @@ switch ($choice) {
         Write-Host "  Step 5: Choose your codespace from the list" -ForegroundColor Cyan
         Write-Host ""
     }
-    
+
     "4" {
         Write-Host ""
         Write-Host "🌐 Codespace URLs:" -ForegroundColor Green
@@ -116,12 +117,12 @@ switch ($choice) {
         Write-Host "    https://github.com/M0nado/helios-platform" -ForegroundColor Yellow
         Write-Host ""
     }
-    
+
     "5" {
         Write-Host ""
         Write-Host "🗑️  Delete Codespace:" -ForegroundColor Yellow
         Write-Host ""
-        
+
         try {
             $codespaces = gh codespace list --json name,repository --noheader 2>&1
             if ($codespaces -match "No codespaces") {
@@ -134,7 +135,7 @@ switch ($choice) {
                 Write-Host ""
                 Write-Host "⚠️  About to delete: $name" -ForegroundColor Yellow
                 $confirm = Read-Host "Are you sure? (yes/no)"
-                
+
                 if ($confirm -eq "yes") {
                     gh codespace delete -c $name
                     Write-Host "✅ Codespace deleted" -ForegroundColor Green
@@ -146,12 +147,12 @@ switch ($choice) {
             Write-Host "Could not delete codespace" -ForegroundColor Red
         }
     }
-    
+
     "6" {
         Write-Host ""
         Write-Host "📖 Opening Setup Guide..." -ForegroundColor Green
         Write-Host ""
-        
+
         $guideFile = "./CODESPACE_SETUP_GUIDE.md"
         if (Test-Path $guideFile) {
             Get-Content $guideFile | more
@@ -159,14 +160,28 @@ switch ($choice) {
             Write-Host "Setup guide not found. Please read: https://github.com/M0nado/helios-platform/blob/main/CODESPACE_SETUP_GUIDE.md" -ForegroundColor Yellow
         }
     }
-    
+
+
+    "7" {
+        Write-Host ""
+        Write-Host "🧪 Running non-mutating setup validation..." -ForegroundColor Green
+        Write-Host ""
+
+        $validator = Join-Path $PSScriptRoot "Validate-Setup.ps1"
+        if (Test-Path $validator) {
+            & $validator
+        } else {
+            Write-Host "Validator not found at $validator" -ForegroundColor Red
+        }
+    }
+
     "0" {
         Write-Host ""
         Write-Host "👋 Goodbye!" -ForegroundColor Green
         Write-Host ""
         exit
     }
-    
+
     default {
         Write-Host ""
         Write-Host "❌ Invalid option" -ForegroundColor Red
