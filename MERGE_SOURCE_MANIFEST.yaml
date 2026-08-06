@@ -1,0 +1,248 @@
+# HELIOS Platform consolidation source manifest
+# Created to make merge/subtree/submodule inputs explicit before any merge workflow runs.
+# Verification commands:
+#   git remote -v
+#   git branch --all
+#   cat .gitmodules
+version: 1
+created_utc: 2026-06-08
+repository_root: /Microsoft.NET/Framework/helios-platform
+current_branch: work
+policy:
+  pre_merge_gate: "Do not start merge, subtree, or submodule update workflows until every source below is reachable and reviewed."
+  default_target_branch: main
+  conflict_resolution_ownership:
+    csharp_winui: "helios-control owns WinUI 3 shell, C# front-end flows, XAML resources, MVVM/service wiring, and end-user control surfaces."
+    cpp_backend: "helios-monado-blade owns C++ performance backend, native interop boundaries, low-latency paths, security-sensitive native optimization, and Hermes XCore specialist hooks."
+    fsharp_analytics: "hermes-fleet-production owns F# math, prediction, analytics, fleet optimization models, parallel analytics semantics, and production telemetry interpretation."
+    python_ai_hub: "helios-ai-hub owns Python AI Hub integration, model orchestration, agent connectors, notebooks/scripts, and AI workflow compatibility."
+    azure_github_automation: "helios-build-agents owns Azure CLI, GitHub Actions, CI/CD, release automation, provisioning scripts, and cloud deployment workflows."
+merge_sources:
+  - id: helios-platform
+    kind: current_repository
+    git_remote_name: origin
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-platform.git
+    target_branch: work
+    source_branch: work
+    merge_order: 0
+    consolidation_mode: history
+    primary_areas:
+      - integration_baseline
+      - documentation
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+    notes: "Current repo is the integration baseline; preserve history and apply external sources into this branch only after the pre-merge gate passes."
+
+  - id: helios-control
+    kind: external_repository
+    git_remote_name: helios-control
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-control.git
+    submodule_path: modules/helios-control
+    target_branch: main
+    source_branch: main
+    merge_order: 1
+    consolidation_mode: subtree
+    primary_areas:
+      - csharp_winui
+      - control_plane
+      - user_experience
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+    notes: "Highest-priority source for C#/WinUI 3 front-end and control-plane consolidation. Stage as a submodule for auditability, then subtree or history-merge only after review."
+
+  - id: hermes-fleet-production
+    kind: external_repository
+    git_remote_name: hermes-fleet-production
+    git_remote_url_or_local_path: https://github.com/M0nado/hermes-fleet-production.git
+    submodule_path: modules/hermes-fleet-production
+    target_branch: main
+    source_branch: main
+    merge_order: 2
+    consolidation_mode: subtree
+    primary_areas:
+      - fsharp_analytics
+      - fleet_production
+      - prediction_models
+      - parallel_analytics
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+    notes: "Highest-priority source for Hermes production fleet analytics, F# prediction/math logic, and parallel optimization behavior."
+
+  - id: helios-monado-blade
+    kind: external_repository
+    git_remote_name: helios-monado-blade
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-monado-blade.git
+    submodule_path: modules/helios-monado-blade
+    target_branch: main
+    source_branch: main
+    merge_order: 3
+    consolidation_mode: submodule
+    primary_areas:
+      - cpp_backend
+      - performance
+      - native_security
+      - hermes_xcore
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+
+  - id: helios-security-setup
+    kind: external_repository
+    git_remote_name: helios-security-setup
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-security-setup.git
+    submodule_path: modules/helios-security-setup
+    target_branch: main
+    source_branch: main
+    merge_order: 4
+    consolidation_mode: submodule
+    primary_areas:
+      - security
+      - hardening
+      - compliance
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+
+  - id: helios-ai-hub
+    kind: external_repository
+    git_remote_name: helios-ai-hub
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-ai-hub.git
+    submodule_path: modules/helios-ai-hub
+    target_branch: main
+    source_branch: main
+    merge_order: 5
+    consolidation_mode: submodule
+    primary_areas:
+      - python_ai_hub
+      - model_orchestration
+      - ai_integration
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+
+  - id: helios-dev-ai-hub
+    kind: external_repository
+    git_remote_name: helios-dev-ai-hub
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-dev-ai-hub.git
+    submodule_path: modules/helios-dev-ai-hub
+    target_branch: main
+    source_branch: main
+    merge_order: 6
+    consolidation_mode: submodule
+    primary_areas:
+      - python_ai_hub
+      - development_ai_workflows
+      - experimentation
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+
+  - id: helios-build-agents
+    kind: external_repository
+    git_remote_name: helios-build-agents
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-build-agents.git
+    submodule_path: modules/helios-build-agents
+    target_branch: main
+    source_branch: main
+    merge_order: 7
+    consolidation_mode: submodule
+    primary_areas:
+      - azure_github_automation
+      - azure_cli
+      - github_actions
+      - cicd
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+    notes: "Primary owner for Azure CLI setup, GitHub automation, agent build pipelines, and deployment workflow consolidation."
+
+  - id: helios-gui-framework
+    kind: external_repository
+    git_remote_name: helios-gui-framework
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-gui-framework.git
+    submodule_path: modules/helios-gui-framework
+    target_branch: main
+    source_branch: main
+    merge_order: 8
+    consolidation_mode: submodule
+    primary_areas:
+      - csharp_winui
+      - gui_framework
+      - shared_ui_components
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+
+  - id: helios-software-stack
+    kind: external_repository
+    git_remote_name: helios-software-stack
+    git_remote_url_or_local_path: https://github.com/M0nado/helios-software-stack.git
+    submodule_path: modules/helios-software-stack
+    target_branch: main
+    source_branch: main
+    merge_order: 9
+    consolidation_mode: submodule
+    primary_areas:
+      - toolchain
+      - installer
+      - azure_cli
+      - developer_setup
+    conflict_resolution_owner_by_area:
+      csharp_winui: helios-control
+      cpp_backend: helios-monado-blade
+      fsharp_analytics: hermes-fleet-production
+      python_ai_hub: helios-ai-hub
+      azure_github_automation: helios-build-agents
+verification:
+  configured_remotes_required:
+    - origin
+    - helios-control
+    - hermes-fleet-production
+    - helios-monado-blade
+    - helios-security-setup
+    - helios-ai-hub
+    - helios-dev-ai-hub
+    - helios-build-agents
+    - helios-gui-framework
+    - helios-software-stack
+  submodule_entries_required:
+    - modules/helios-control
+    - modules/hermes-fleet-production
+    - modules/helios-monado-blade
+    - modules/helios-security-setup
+    - modules/helios-ai-hub
+    - modules/helios-dev-ai-hub
+    - modules/helios-build-agents
+    - modules/helios-gui-framework
+    - modules/helios-software-stack
+  expected_branch_listing_note: "git branch --all must include local integration branch work; remote-tracking branches appear after network access allows git fetch --all --prune."

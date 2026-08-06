@@ -32,3 +32,13 @@
 	path = modules/helios-software-stack
 	url = https://github.com/M0nado/helios-software-stack.git
 	branch = main
+
+[submodule "modules/helios-control"]
+	path = modules/helios-control
+	url = https://github.com/M0nado/helios-control.git
+	branch = main
+
+[submodule "modules/hermes-fleet-production"]
+	path = modules/hermes-fleet-production
+	url = https://github.com/M0nado/hermes-fleet-production.git
+	branch = main
