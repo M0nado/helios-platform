@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0",
+  "registryId": "helios-microsoft-copilot-xcore-connections",
+  "defaultPolicy": "deny-undeclared",
+  "parentRegistry": "helios-custom-connection-plane",
+  "connections": [
+    {
+      "id": "xcore-runtime-mcp",
+      "kind": "mcp",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "managed-identity-or-api-token-reference",
+        "secretReferences": ["XCORE_API_TOKEN"],
+        "recommendedStore": "kv-helios-core"
+      },
+      "readTools": [
+        "xcore_health",
+        "xcore_worker_inventory",
+        "xcore_route_metrics",
+        "xcore_engine_catalog",
+        "xcore_training_status",
+        "xcore_memory_summary"
+      ],
+      "writeTools": [
+        "xcore_register_worker",
+        "xcore_queue_bounded_task",
+        "xcore_submit_evaluation",
+        "xcore_trigger_approved_training"
+      ],
+      "approvalRequired": [
+        "fleet-capacity-change",
+        "new-engine-enable",
+        "production-training-trigger",
+        "memory-schema-migration"
+      ],
+      "healthCheck": "xcore_health_route_and_redacted_memory_test"
+    },
+    {
+      "id": "microsoft-copilot-agent-plane",
+      "kind": "microsoft-copilot-studio+m365-agents-toolkit",
+      "environment": ["dev", "test", "prod"],
+      "auth": {
+        "mode": "delegated-setup-and-entra-runtime",
+        "secretReferences": [],
+        "recommendedStore": "entra-and-power-platform-connection-references"
+      },
+      "readTools": [
+        "copilot_environment_resolve",
+        "copilot_solution_inventory",
+        "declarative_agent_validate",
+        "teams_package_validate",
+        "graph_action_readiness",
+        "foundry_handoff_readiness"
+      ],
+      "writeTools": [
+        "copilot_solution_export",
+        "copilot_solution_import_approved",
+        "teams_agent_publish_approved",
+        "copilot_connection_reference_bind_approved"
+      ],
+      "approvalRequired": [
+        "power-platform-environment-write",
+        "graph-admin-consent",
+        "teams-app-publish",
+        "production-agent-publish",
+        "new-connection-reference"
+      ],
+      "healthCheck": "resolve_environment_validate_agent_and_teams_package"
+    },
+    {
+      "id": "azure-toolchain-control",
+      "kind": "local-toolchain",
+      "environment": ["dev", "test"],
+      "auth": {
+        "mode": "interactive-developer-login-after-install",
+        "secretReferences": [],
+        "recommendedStore": "local-token-caches-owned-by-official-tools"
+      },
+      "readTools": [
+        "tool_detect",
+        "version_inventory",
+        "path_health",
+        "extension_inventory",
+        "install_plan",
+        "auth_status_redacted"
+      ],
+      "writeTools": [
+        "install_approved_tool",
+        "upgrade_approved_tool",
+        "repair_user_path",
+        "install_approved_extension"
+      ],
+      "approvalRequired": [
+        "administrator-elevation",
+        "machine-wide-install",
+        "major-version-upgrade",
+        "extension-install"
+      ],
+      "healthCheck": "all_required_tools_resolve_and_report_versions"
+    }
+  ]
+}

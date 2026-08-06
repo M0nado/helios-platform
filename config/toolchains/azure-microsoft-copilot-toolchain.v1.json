@@ -1,0 +1,176 @@
+{
+  "schemaVersion": "1.0",
+  "toolchainId": "helios-azure-microsoft-copilot",
+  "platform": "windows-x64",
+  "installationMode": "plan-first-approved-apply",
+  "versionPolicy": "latest-stable-with-recorded-version",
+  "requiresElevation": "per-tool",
+  "productionDeployment": false,
+  "pathRepairFirst": true,
+  "packageSources": [
+    "winget",
+    "dotnet-tool",
+    "npm",
+    "vscode-marketplace",
+    "official-microsoft-installer"
+  ],
+  "tools": [
+    {
+      "id": "azure-cli",
+      "displayName": "Azure CLI",
+      "required": true,
+      "install": {
+        "source": "winget",
+        "package": "Microsoft.AzureCLI",
+        "arguments": ["--exact"]
+      },
+      "verify": ["az version", "az account show"],
+      "authRequiredFor": ["az account show"],
+      "notes": "Close and reopen the terminal after installation before PATH verification."
+    },
+    {
+      "id": "azure-developer-cli",
+      "displayName": "Azure Developer CLI",
+      "required": true,
+      "install": {
+        "source": "winget",
+        "package": "Microsoft.Azd",
+        "arguments": []
+      },
+      "verify": ["azd version", "azd auth login --check-status"],
+      "authRequiredFor": ["azd auth login --check-status"]
+    },
+    {
+      "id": "bicep-cli",
+      "displayName": "Bicep CLI",
+      "required": true,
+      "install": {
+        "source": "azure-cli",
+        "command": "az bicep install"
+      },
+      "upgrade": "az bicep upgrade",
+      "verify": ["az bicep version", "az bicep build --file infra/bicep/enterprise/main.bicep"]
+    },
+    {
+      "id": "azure-functions-core-tools",
+      "displayName": "Azure Functions Core Tools v4",
+      "required": true,
+      "install": {
+        "source": "npm",
+        "package": "azure-functions-core-tools@4",
+        "arguments": ["--global", "--unsafe-perm", "true"]
+      },
+      "verify": ["func --version"]
+    },
+    {
+      "id": "power-platform-cli",
+      "displayName": "Microsoft Power Platform CLI",
+      "required": true,
+      "install": {
+        "source": "dotnet-tool",
+        "package": "Microsoft.PowerApps.CLI.Tool",
+        "arguments": ["--global"]
+      },
+      "verify": ["pac --version", "pac auth list"],
+      "authRequiredFor": ["pac auth list"]
+    },
+    {
+      "id": "microsoft-365-agents-toolkit",
+      "displayName": "Microsoft 365 Agents Toolkit",
+      "required": true,
+      "install": {
+        "source": "vscode-marketplace",
+        "package": "TeamsDevApp.ms-teams-vscode-extension",
+        "arguments": []
+      },
+      "verify": ["code --list-extensions --show-versions"],
+      "manualValidation": [
+        "Confirm the installed extension is branded Microsoft 365 Agents Toolkit or its current Microsoft successor.",
+        "Validate agent project creation, manifest validation, and Teams package validation in an isolated test workspace."
+      ]
+    },
+    {
+      "id": "github-cli",
+      "displayName": "GitHub CLI",
+      "required": true,
+      "install": {
+        "source": "winget",
+        "package": "GitHub.cli",
+        "arguments": ["--exact"]
+      },
+      "verify": ["gh --version", "gh auth status"],
+      "authRequiredFor": ["gh auth status"]
+    },
+    {
+      "id": "powershell-7",
+      "displayName": "PowerShell 7",
+      "required": true,
+      "install": {
+        "source": "winget",
+        "package": "Microsoft.PowerShell",
+        "arguments": ["--exact"]
+      },
+      "verify": ["pwsh --version"]
+    },
+    {
+      "id": "dotnet-sdk-8",
+      "displayName": ".NET 8 SDK",
+      "required": true,
+      "install": {
+        "source": "winget",
+        "package": "Microsoft.DotNet.SDK.8",
+        "arguments": ["--exact"]
+      },
+      "verify": ["dotnet --info", "dotnet --list-sdks"]
+    },
+    {
+      "id": "docker-desktop",
+      "displayName": "Docker Desktop",
+      "required": true,
+      "install": {
+        "source": "winget",
+        "package": "Docker.DockerDesktop",
+        "arguments": ["--exact"]
+      },
+      "verify": ["docker version", "docker compose version"]
+    },
+    {
+      "id": "nodejs-lts",
+      "displayName": "Node.js LTS",
+      "required": true,
+      "install": {
+        "source": "winget",
+        "package": "OpenJS.NodeJS.LTS",
+        "arguments": ["--exact"]
+      },
+      "verify": ["node --version", "npm --version"]
+    },
+    {
+      "id": "visual-studio-code",
+      "displayName": "Visual Studio Code",
+      "required": true,
+      "install": {
+        "source": "winget",
+        "package": "Microsoft.VisualStudioCode",
+        "arguments": ["--exact"]
+      },
+      "verify": ["code --version"]
+    }
+  ],
+  "requiredEnvironmentReferences": [
+    "AZURE_CLIENT_ID",
+    "AZURE_TENANT_ID",
+    "AZURE_SUBSCRIPTION_ID",
+    "OPENAI_API_KEY",
+    "OPENAI_PROJECT_ID",
+    "OPENAI_ORG_ID"
+  ],
+  "postInstallChecks": [
+    "Repair and verify System32 and tool PATH resolution before invoking tools.",
+    "Generate a version inventory JSON artifact.",
+    "Do not authenticate automatically or select an Azure subscription implicitly.",
+    "Do not install extensions or perform major upgrades without approval.",
+    "Run Bicep build and registry validation without Azure apply.",
+    "Validate Microsoft Copilot and XCore connections in development mode only."
+  ]
+}

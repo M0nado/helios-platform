@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1.0",
+  "setupId": "helios-enterprise-automatic-setup",
+  "defaultMode": "plan",
+  "productionEnabled": false,
+  "productionBlockerIssue": 162,
+  "canonicalRepository": "M0nado/helios-platform",
+  "phases": [
+    {
+      "id": "tools",
+      "description": "Install and verify approved developer and agent tools.",
+      "approval": "administrator-elevation-when-required",
+      "commands": [
+        "winget install Microsoft.AzureCLI",
+        "winget install Microsoft.Azd",
+        "winget install Microsoft.Azure.FunctionsCoreTools",
+        "winget install Microsoft.PowerShell",
+        "winget install GitHub.cli",
+        "winget install OpenJS.NodeJS.LTS",
+        "winget install Microsoft.DotNet.SDK.8",
+        "npm install -g @microsoft/m365agentstoolkit-cli",
+        "npm install -g @anthropic-ai/claude-code",
+        "az extension add --name azure-devops"
+      ]
+    },
+    {
+      "id": "developer-auth",
+      "description": "Complete user-controlled interactive authentication.",
+      "approval": "interactive-user-login",
+      "commands": [
+        "az login",
+        "azd auth login",
+        "gh auth login",
+        "claude",
+        "pac auth create",
+        "a365 auth login"
+      ]
+    },
+    {
+      "id": "context",
+      "description": "Select explicit Azure, Azure DevOps, Power Platform, and GitHub targets.",
+      "approval": "target-selection",
+      "commands": [
+        "az account list --output table",
+        "az account set --subscription <approved-subscription-id>",
+        "az devops configure --defaults organization=<approved-org> project=<approved-project>",
+        "pac org list",
+        "gh repo view M0nado/helios-platform"
+      ]
+    },
+    {
+      "id": "agent365-developer",
+      "description": "Create the Agent 365 blueprint and MCP manifest without granting admin consent.",
+      "approval": "agent-id-developer",
+      "commands": [
+        "a365 setup requirements",
+        "a365 setup infrastructure --dry-run",
+        "a365 setup blueprint --dry-run",
+        "a365 setup all --dry-run"
+      ]
+    },
+    {
+      "id": "agent365-admin-handoff",
+      "description": "Global Administrator reviews and grants only the approved MCP and Copilot Studio permissions.",
+      "approval": "global-administrator",
+      "commands": [
+        "a365 config display",
+        "a365 setup admin --config-dir <reviewed-config-directory>"
+      ]
+    },
+    {
+      "id": "azure-plan",
+      "description": "Compile Bicep and run development what-if before any deployment.",
+      "approval": "azure-subscription-selected",
+      "commands": [
+        "az bicep build --file infra/bicep/enterprise/main.bicep",
+        "az deployment group what-if --resource-group rg-helios-dev --template-file infra/bicep/enterprise/main.bicep --parameters environmentName=dev"
+      ]
+    },
+    {
+      "id": "connections",
+      "description": "Validate GitHub, Linear, Slack, Teams, SharePoint, Azure DevOps, Foundry, XCore, Hermes, and AIHub connections.",
+      "approval": "connector-oauth",
+      "commands": [
+        "claude mcp list",
+        "az devops project list",
+        "gh pr view 167 --repo M0nado/helios-platform",
+        "helios status",
+        "helios agents"
+      ]
+    },
+    {
+      "id": "development-apply",
+      "description": "Apply only the immutable, approved development plan.",
+      "approval": "protected-environment-and-human-review",
+      "commands": [
+        "az deployment group create --resource-group rg-helios-dev --template-file infra/bicep/enterprise/main.bicep --parameters environmentName=dev"
+      ]
+    },
+    {
+      "id": "production",
+      "description": "Production remains unavailable until issue 162 is closed and the protected environment approves the exact plan.",
+      "approval": "disabled",
+      "commands": []
+    }
+  ]
+}

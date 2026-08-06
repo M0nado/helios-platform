@@ -1,0 +1,99 @@
+name: HELIOS Enterprise Automatic Setup
+
+on:
+  pull_request:
+    paths:
+      - 'CLAUDE.md'
+      - '.mcp.json'
+      - '.claude/**'
+      - 'config/bootstrap/**'
+      - 'config/providers/**'
+      - 'docs/operations/ENTERPRISE_AUTOMATIC_SETUP.md'
+      - 'tools/helios-setup/**'
+      - 'tests/tools/test_helios_setup.py'
+      - '.github/workflows/enterprise-automatic-setup.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'CLAUDE.md'
+      - '.mcp.json'
+      - '.claude/**'
+      - 'config/bootstrap/**'
+      - 'config/providers/**'
+      - 'docs/operations/ENTERPRISE_AUTOMATIC_SETUP.md'
+      - 'tools/helios-setup/**'
+      - 'tests/tools/test_helios_setup.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-automatic-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate JSON contracts and safety gates
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          setup = json.loads(Path('config/bootstrap/enterprise-automatic-setup.v1.json').read_text(encoding='utf-8'))
+          provider = json.loads(Path('config/providers/claude-code-agent365.v1.json').read_text(encoding='utf-8'))
+          mcp = json.loads(Path('.mcp.json').read_text(encoding='utf-8'))
+          claude = json.loads(Path('.claude/settings.json').read_text(encoding='utf-8'))
+
+          assert setup['schemaVersion'] == '1.0'
+          assert setup['productionEnabled'] is False
+          assert setup['productionBlockerIssue'] == 162
+          phases = {phase['id']: phase for phase in setup['phases']}
+          required_phases = {
+              'tools', 'developer-auth', 'context', 'agent365-developer',
+              'agent365-admin-handoff', 'azure-plan', 'connections',
+              'development-apply', 'production'
+          }
+          assert required_phases == set(phases)
+          assert phases['production']['commands'] == []
+          assert all(phase.get('approval') for phase in phases.values())
+
+          assert provider['productionEnabled'] is False
+          assert provider['productionBlockerIssue'] == 162
+          assert provider['claudeCode']['defaultPermissionMode'] == 'plan'
+          assert provider['agent365']['adminConsentRequired'] is True
+          assert provider['agent365']['automaticAdminConsent'] is False
+          assert provider['azureMcp']['implicitSubscriptionSelection'] is False
+
+          servers = mcp['mcpServers']
+          assert {
+              'azure', 'github', 'linear', 'foundry', 'm365-copilot',
+              'm365-teams', 'm365-sharepoint-onedrive', 'm365-mail',
+              'm365-calendar'
+          } <= set(servers)
+          assert servers['azure']['args'] == ['-y', '@azure/mcp@latest', 'server', 'start']
+          assert '${AZURE_TENANT_ID}' in servers['m365-teams']['url']
+
+          denied = set(claude['permissions']['deny'])
+          assert 'Bash(az deployment * create:*)' in denied
+          assert 'Bash(az role assignment create:*)' in denied
+          assert 'Bash(gh pr merge:*)' in denied
+          assert 'Bash(a365 deploy:*)' in denied
+
+          assert Path('CLAUDE.md').exists()
+          assert Path('docs/operations/ENTERPRISE_AUTOMATIC_SETUP.md').exists()
+          PY
+      - name: Run setup controller unit tests
+        run: python -m unittest tests.tools.test_helios_setup -v
+      - name: Validate and render setup plan
+        run: |
+          python tools/helios-setup/helios_setup.py validate
+          python tools/helios-setup/helios_setup.py plan > setup-plan.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helios-enterprise-automatic-setup-plan
+          path: setup-plan.txt
+          retention-days: 30

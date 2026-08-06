@@ -1,0 +1,217 @@
+{
+  "schemaVersion": "1.0",
+  "fleetId": "helios-enterprise-deployment-fleet",
+  "canonicalRepository": "M0nado/helios-platform",
+  "companionFleetRepository": "Yolkster64/hermes-fleet-platforms",
+  "parentIssue": 165,
+  "productionBlockerIssue": 162,
+  "productionEnabled": false,
+  "defaultMode": "plan-and-validate",
+  "correlationRequired": true,
+  "evidenceLinkRequired": true,
+  "forbiddenGlobalCapabilities": [
+    "azure-owner-assignment",
+    "tenant-wide-graph-consent",
+    "long-lived-client-secret",
+    "plaintext-secret-output",
+    "unapproved-production-apply",
+    "persistent-data-destruction"
+  ],
+  "identities": {
+    "github": "workload-identity-federation",
+    "azureRuntime": "managed-identity",
+    "localBootstrap": "interactive-developer-login",
+    "openai": "key-vault-or-environment-reference"
+  },
+  "canonicalResources": {
+    "resourceGroup": "rg-helios-prod",
+    "keyVault": "kv-helios-core",
+    "cosmos": "cosmos-helios-memory",
+    "artifactStorage": "stheliosartifacts",
+    "containerAppsEnvironment": "cae-helios",
+    "logAnalytics": "log-helios"
+  },
+  "agents": [
+    {
+      "id": "deployment-supervisor",
+      "name": "HELIOS Deployment Supervisor",
+      "runtime": "csharp",
+      "purpose": "Own the deployment state machine, delegation, approvals, correlation IDs, and evidence aggregation.",
+      "allowed": ["read-plans", "delegate-bounded-task", "collect-evidence", "request-approval", "halt-fleet"],
+      "denied": ["direct-resource-write", "secret-readback"],
+      "requiresApprovalFor": ["production-transition", "rollback-execution"]
+    },
+    {
+      "id": "azure-cli-bootstrap",
+      "name": "Azure CLI and azd Bootstrap Agent",
+      "runtime": "powershell",
+      "purpose": "Validate az, azd, Bicep, Functions Core Tools, tenant context, subscription selection, and CLI health.",
+      "allowed": ["version-check", "auth-status", "subscription-list", "subscription-select-after-user-choice", "bicep-build"],
+      "denied": ["credential-capture", "implicit-subscription-selection", "production-apply"],
+      "requiresApprovalFor": ["interactive-login", "subscription-selection"]
+    },
+    {
+      "id": "bicep-infrastructure",
+      "name": "Bicep Infrastructure Agent",
+      "runtime": "csharp+azure-cli",
+      "purpose": "Compile modules, resolve outputs, run what-if, and create deterministic deployment plans.",
+      "allowed": ["bicep-build", "what-if", "output-map", "cost-estimate", "drift-report"],
+      "denied": ["apply-without-approved-environment", "delete-persistent-store"],
+      "requiresApprovalFor": ["deployment-apply"]
+    },
+    {
+      "id": "entra-identity",
+      "name": "Microsoft Entra Identity Agent",
+      "runtime": "csharp+graph",
+      "purpose": "Plan managed identities, app registrations, service principals, and least-privilege RBAC.",
+      "allowed": ["identity-plan", "rbac-diff", "permission-inventory", "federated-credential-plan"],
+      "denied": ["global-admin-grant", "owner-role-default", "client-secret-generation"],
+      "requiresApprovalFor": ["app-registration-create", "rbac-write", "admin-consent"]
+    },
+    {
+      "id": "github-oidc",
+      "name": "GitHub OIDC Federation Agent",
+      "runtime": "github-actions",
+      "purpose": "Bind protected GitHub environments to Entra federated credentials without client secrets.",
+      "allowed": ["subject-plan", "environment-check", "oidc-token-test", "workflow-permission-audit"],
+      "denied": ["repository-secret-client-secret", "unprotected-prod-subject"],
+      "requiresApprovalFor": ["federated-credential-write", "production-environment-change"]
+    },
+    {
+      "id": "keyvault-secret-broker",
+      "name": "Key Vault and Secret Broker Agent",
+      "runtime": "csharp+managed-identity",
+      "purpose": "Register secret references, rotation metadata, and runtime retrieval policies.",
+      "allowed": ["secret-reference-write", "rotation-plan", "access-test", "expiry-audit"],
+      "denied": ["secret-value-log", "secret-value-chat", "secret-export"],
+      "requiresApprovalFor": ["secret-create", "secret-rotate", "access-policy-write"]
+    },
+    {
+      "id": "foundry-platform",
+      "name": "Azure AI Foundry Agent",
+      "runtime": "csharp+foundry",
+      "purpose": "Register Foundry projects, deployments, evaluations, prompt assets, and agent endpoints.",
+      "allowed": ["project-readiness", "deployment-plan", "evaluation-run", "endpoint-health", "model-policy-check"],
+      "denied": ["production-model-swap-without-pr", "unbounded-agent-tool-access"],
+      "requiresApprovalFor": ["model-deploy", "agent-publish", "endpoint-scale-change"]
+    },
+    {
+      "id": "container-broker",
+      "name": "Container Apps and Functions Broker Agent",
+      "runtime": "csharp+containerapps",
+      "purpose": "Deploy and validate the normalized integration-event broker in Container Apps or Functions.",
+      "allowed": ["image-verify", "revision-plan", "health-check", "event-contract-test"],
+      "denied": ["latest-tag-production", "unsigned-image-deploy"],
+      "requiresApprovalFor": ["production-revision-activate"]
+    },
+    {
+      "id": "microsoft-graph",
+      "name": "Microsoft Graph Agent",
+      "runtime": "csharp+graph",
+      "purpose": "Provide least-privilege Graph operations for Teams, SharePoint, OneDrive, users, and governance metadata.",
+      "allowed": ["permission-readiness", "scoped-site-read", "scoped-site-write", "team-channel-message", "drive-item-publish"],
+      "denied": ["tenant-directory-dump", "mailbox-wide-read", "tenant-wide-sites-full-control"],
+      "requiresApprovalFor": ["graph-admin-consent", "new-application-permission"]
+    },
+    {
+      "id": "teams-operations",
+      "name": "Teams Operations Agent",
+      "runtime": "graph",
+      "purpose": "Post deployment, approval, incident, validation, and rollback events to Helios / Helios Ops.",
+      "allowed": ["post-channel-message", "reply-thread", "create-approved-ops-channel"],
+      "denied": ["mass-dm", "delete-message", "tenant-broadcast"],
+      "requiresApprovalFor": ["new-channel-create"]
+    },
+    {
+      "id": "sharepoint-publisher",
+      "name": "SharePoint and OneDrive Publisher Agent",
+      "runtime": "graph",
+      "purpose": "Publish governed runbooks, architecture, release evidence, compliance bundles, and rollback records.",
+      "allowed": ["create-folder", "upload-evidence", "version-file", "permission-audit"],
+      "denied": ["anonymous-link", "secret-publication", "source-repository-mirror"],
+      "requiresApprovalFor": ["permission-change", "external-share"]
+    },
+    {
+      "id": "linear-synchronizer",
+      "name": "Linear Synchronization Agent",
+      "runtime": "connector",
+      "purpose": "Mirror approved GitHub execution into Helios Integration Fabric while GitHub remains engineering source of truth.",
+      "allowed": ["create-linked-issue", "update-status", "save-comment", "project-status-update"],
+      "denied": ["delete-history", "close-github-source"],
+      "requiresApprovalFor": []
+    },
+    {
+      "id": "slack-operations",
+      "name": "Slack Operations Agent",
+      "runtime": "connector",
+      "purpose": "Post concise alerts, deployment summaries, approvals, and incidents to HELIOS operations channels.",
+      "allowed": ["send-channel-message", "reply-thread", "update-canvas", "upload-approved-evidence"],
+      "denied": ["secret-post", "private-dm-search-without-consent", "delete-history"],
+      "requiresApprovalFor": ["new-private-channel"]
+    },
+    {
+      "id": "hermes-registration",
+      "name": "Hermes Registration Agent",
+      "runtime": "python+csharp",
+      "purpose": "Register Hermes workers, skills, routing metadata, and evaluation endpoints.",
+      "allowed": ["register-agent", "health-check", "route-test", "evaluation-submit"],
+      "denied": ["production-deploy", "approval-bypass"],
+      "requiresApprovalFor": ["fleet-scale-change"]
+    },
+    {
+      "id": "aihub-registration",
+      "name": "AIHub Registration Agent",
+      "runtime": "python+csharp",
+      "purpose": "Register AIHub endpoints, engine catalog, task APIs, memory stores, and telemetry.",
+      "allowed": ["health-check", "engine-catalog-read", "task-contract-test", "telemetry-register"],
+      "denied": ["raw-memory-publish", "unreviewed-training-trigger-production"],
+      "requiresApprovalFor": ["production-training-trigger"]
+    },
+    {
+      "id": "openai-provider",
+      "name": "OpenAI Provider Agent",
+      "runtime": "openai-agents-sdk",
+      "purpose": "Provide governed OpenAI model routing, tool invocation, traces, and evaluations for HELIOS.",
+      "allowed": ["model-call", "bounded-tool-call", "trace-write", "evaluation-run"],
+      "denied": ["api-key-readback", "unbounded-shell", "production-write-without-approval"],
+      "requiresApprovalFor": ["new-tool-write-scope", "production-model-change"],
+      "secretReferences": ["OPENAI_API_KEY", "OPENAI_PROJECT_ID", "OPENAI_ORG_ID"]
+    },
+    {
+      "id": "validation-observability",
+      "name": "Validation and Observability Agent",
+      "runtime": "csharp+application-insights",
+      "purpose": "Run end-to-end validation and correlate GitHub, Azure, broker, connector, Hermes, and AIHub telemetry.",
+      "allowed": ["health-check", "synthetic-event", "query-telemetry", "generate-scorecard"],
+      "denied": ["telemetry-delete", "pii-export"],
+      "requiresApprovalFor": []
+    },
+    {
+      "id": "rollback-controller",
+      "name": "Rollback Agent",
+      "runtime": "csharp+azure-cli",
+      "purpose": "Prepare and execute approved rollback to a known deployment, identity, and connector state.",
+      "allowed": ["rollback-plan", "revision-switch", "parameter-restore", "permission-revoke-plan"],
+      "denied": ["persistent-data-delete", "unapproved-rollback"],
+      "requiresApprovalFor": ["rollback-execution"]
+    },
+    {
+      "id": "compliance-evidence",
+      "name": "Compliance Evidence Agent",
+      "runtime": "csharp",
+      "purpose": "Produce signed machine-readable and human-readable deployment evidence bundles.",
+      "allowed": ["hash-artifacts", "collect-run-links", "collect-rbac-summary", "publish-approved-evidence"],
+      "denied": ["secret-include", "evidence-rewrite-without-version"],
+      "requiresApprovalFor": ["evidence-publish"]
+    },
+    {
+      "id": "custom-connection-manager",
+      "name": "Custom Plugin and MCP Connection Agent",
+      "runtime": "chatgpt-app+mcp",
+      "purpose": "Register declared custom tools and resources for HELIOS without exposing arbitrary connector access.",
+      "allowed": ["manifest-validate", "tool-schema-register", "oauth-readiness", "connection-health", "least-privilege-review"],
+      "denied": ["dynamic-undocumented-tool", "credential-log", "cross-tenant-connection"],
+      "requiresApprovalFor": ["new-oauth-scope", "write-tool-enable", "production-app-publish"]
+    }
+  ]
+}

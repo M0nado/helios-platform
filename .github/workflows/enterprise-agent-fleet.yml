@@ -1,0 +1,229 @@
+name: HELIOS Enterprise Agent Fleet
+
+on:
+  pull_request:
+    paths:
+      - 'agents/**'
+      - 'config/agents/**'
+      - 'config/plugins/**'
+      - 'config/toolchains/**'
+      - 'skills/**'
+      - 'docs/agents/**'
+      - 'src/agents/**'
+      - '.github/workflows/enterprise-agent-fleet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'agents/**'
+      - 'config/agents/**'
+      - 'config/plugins/**'
+      - 'config/toolchains/**'
+      - 'skills/**'
+      - 'docs/agents/**'
+      - 'src/agents/**'
+  workflow_dispatch:
+    inputs:
+      request_production_enablement:
+        description: Validate whether production enablement is allowed
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  validate-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build typed enterprise agent contracts
+        run: dotnet build src/agents/HELIOS.EnterpriseAgents/HELIOS.EnterpriseAgents.csproj --configuration Release
+      - name: Validate all agent, subagent, toolchain, and connection registries
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          def load(path):
+              return json.loads(Path(path).read_text(encoding='utf-8'))
+
+          fleet = load('config/agents/enterprise-deployment-agent-fleet.v1.json')
+          subagents = load('config/agents/enterprise-deployment-subagents.v1.json')
+          cloud_subagents = load('config/agents/microsoft-365-cloud-devops-subagents.v1.json')
+          connections = load('config/plugins/custom-connections.v1.json')
+          supplemental = load('config/plugins/microsoft-copilot-xcore-connections.v1.json')
+          cloud_connections = load('config/plugins/microsoft-365-cloud-devops-connections.v1.json')
+          toolchain = load('config/toolchains/azure-microsoft-copilot-toolchain.v1.json')
+
+          required_fleet = {
+              'schemaVersion', 'fleetId', 'canonicalRepository', 'parentIssue',
+              'productionBlockerIssue', 'productionEnabled', 'defaultMode',
+              'forbiddenGlobalCapabilities', 'agents'
+          }
+          missing = sorted(required_fleet - set(fleet))
+          assert not missing, f'Missing fleet fields: {missing}'
+          assert fleet['canonicalRepository'] == 'M0nado/helios-platform'
+          assert fleet['productionBlockerIssue'] == 162
+          assert fleet['productionEnabled'] is False
+
+          agents = fleet['agents']
+          assert len(agents) == 20
+          agent_ids = [agent['id'] for agent in agents]
+          assert len(agent_ids) == len(set(agent_ids))
+
+          required_agent = {'id', 'name', 'runtime', 'purpose', 'allowed', 'denied', 'requiresApprovalFor'}
+          for agent in agents:
+              missing = sorted(required_agent - set(agent))
+              assert not missing, f"Agent {agent.get('id')} missing: {missing}"
+              assert agent['allowed'] and agent['denied']
+
+          forbidden = set(fleet['forbiddenGlobalCapabilities'])
+          assert {
+              'azure-owner-assignment', 'tenant-wide-graph-consent',
+              'long-lived-client-secret', 'plaintext-secret-output',
+              'unapproved-production-apply', 'persistent-data-destruction'
+          } <= forbidden
+
+          provider = next(agent for agent in agents if agent['id'] == 'openai-provider')
+          assert 'OPENAI_API_KEY' in provider.get('secretReferences', [])
+          assert 'api-key-readback' in provider['denied']
+
+          required_subagent = {
+              'id', 'name', 'parentAgent', 'runtime', 'purpose', 'allowed', 'denied',
+              'requiresApprovalFor', 'healthChecks', 'evidence'
+          }
+
+          assert subagents['parentFleet'] == fleet['fleetId']
+          first_wave = subagents['subagents']
+          assert len(first_wave) == 3
+          assert {item['id'] for item in first_wave} == {
+              'xcore-runtime', 'microsoft-copilot', 'azure-toolchain'
+          }
+
+          assert cloud_subagents['parentFleet'] == fleet['fleetId']
+          assert cloud_subagents['productionBlockerIssue'] == 162
+          cloud_items = cloud_subagents['subagents']
+          required_cloud_ids = {
+              'm365-copilot-orchestrator', 'm365-productivity-specialists',
+              'edge-copilot-workspace', 'azure-cloud-shell',
+              'azure-devops-control', 'github-enterprise-control',
+              'foundry-agent-service', 'unified-cli-control'
+          }
+          assert len(cloud_items) == 8
+          assert {item['id'] for item in cloud_items} == required_cloud_ids
+
+          all_subagents = first_wave + cloud_items
+          subagent_ids = [item['id'] for item in all_subagents]
+          assert len(subagent_ids) == len(set(subagent_ids))
+          valid_parent_ids = set(agent_ids) | set(subagent_ids)
+          for item in all_subagents:
+              missing = sorted(required_subagent - set(item))
+              assert not missing, f"Subagent {item.get('id')} missing: {missing}"
+              assert item['parentAgent'] in valid_parent_ids
+              assert item['allowed'] and item['denied'] and item['healthChecks'] and item['evidence']
+
+          xcore = next(item for item in first_wave if item['id'] == 'xcore-runtime')
+          assert 'azure-production-apply' in xcore['denied']
+          normal_copilot = next(item for item in cloud_items if item['id'] == 'm365-copilot-orchestrator')
+          assert 'automatic-admin-consent' in normal_copilot['denied']
+          cloud_shell = next(item for item in cloud_items if item['id'] == 'azure-cloud-shell')
+          assert 'implicit-subscription-selection' in cloud_shell['denied']
+          github_control = next(item for item in cloud_items if item['id'] == 'github-enterprise-control')
+          assert 'bypass-required-checks' in github_control['denied']
+          cli = next(item for item in cloud_items if item['id'] == 'unified-cli-control')
+          assert 'arbitrary-shell' in cli['denied']
+
+          required_connection = {
+              'id', 'kind', 'environment', 'auth', 'readTools', 'writeTools',
+              'approvalRequired', 'healthCheck'
+          }
+
+          all_connection_sets = [connections, supplemental, cloud_connections]
+          all_connections = []
+          for registry in all_connection_sets:
+              assert registry['defaultPolicy'] == 'deny-undeclared'
+              for item in registry['connections']:
+                  missing = sorted(required_connection - set(item))
+                  assert not missing, f"Connection {item.get('id')} missing: {missing}"
+                  assert item['auth'].get('mode')
+                  assert item['healthCheck']
+                  all_connections.append(item)
+
+          connection_ids = [item['id'] for item in all_connections]
+          assert len(connection_ids) == len(set(connection_ids))
+          assert {
+              'm365-copilot-front-door', 'm365-productivity-plane',
+              'edge-copilot-workspace', 'azure-cloud-shell-control',
+              'azure-devops-control', 'github-enterprise-control',
+              'foundry-agent-service', 'helios-unified-cli'
+          } <= set(connection_ids)
+
+          assert toolchain['toolchainId'] == 'helios-azure-microsoft-copilot'
+          assert toolchain['productionDeployment'] is False
+          assert toolchain['pathRepairFirst'] is True
+          tools = toolchain['tools']
+          tool_ids = [item['id'] for item in tools]
+          assert {
+              'azure-cli', 'azure-developer-cli', 'bicep-cli',
+              'azure-functions-core-tools', 'power-platform-cli',
+              'microsoft-365-agents-toolkit', 'github-cli', 'powershell-7',
+              'dotnet-sdk-8', 'docker-desktop', 'nodejs-lts', 'visual-studio-code'
+          } <= set(tool_ids)
+          assert len(tool_ids) == len(set(tool_ids))
+          for item in tools:
+              assert item.get('verify')
+
+          summary = {
+              'fleetId': fleet['fleetId'],
+              'coreAgentCount': len(agents),
+              'firstWaveSubagentCount': len(first_wave),
+              'cloudDevOpsSubagentCount': len(cloud_items),
+              'totalSubagentCount': len(all_subagents),
+              'totalOperationalRoles': len(agents) + len(all_subagents),
+              'connectionCount': len(all_connections),
+              'toolCount': len(tools),
+              'productionEnabled': fleet['productionEnabled'],
+              'productionBlockerIssue': fleet['productionBlockerIssue'],
+              'agentIds': agent_ids,
+              'subagentIds': subagent_ids,
+              'connectionIds': connection_ids,
+              'toolIds': tool_ids,
+          }
+          out = Path('artifacts/agent-fleet')
+          out.mkdir(parents=True, exist_ok=True)
+          (out / 'validation-summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          print(json.dumps(summary, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helios-enterprise-agent-fleet-validation
+          path: artifacts/agent-fleet/validation-summary.json
+          retention-days: 30
+
+  production-readiness-gate:
+    if: github.event_name == 'workflow_dispatch' && inputs.request_production_enablement
+    needs: validate-registry
+    runs-on: ubuntu-latest
+    environment: helios-prod-agent-fleet-approval
+    steps:
+      - name: Require issue 162 to be closed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state="$(gh issue view 162 --repo M0nado/helios-platform --json state --jq .state)"
+          test "$state" = "CLOSED" || {
+            echo 'Production enablement blocked: Issue #162 is not closed.'
+            exit 1
+          }
+      - name: Production readiness confirmed
+        run: echo 'All core agents, XCore, Microsoft 365 Copilot, Edge, Cloud Shell, Azure DevOps, GitHub enterprise, Foundry, unified CLI, protected environment, and Issue #162 gates passed. No Azure apply is performed by this workflow.'

@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1.0",
+  "registryId": "helios-microsoft-365-cloud-devops-connections",
+  "defaultPolicy": "deny-undeclared",
+  "connections": [
+    {
+      "id": "m365-copilot-front-door",
+      "kind": "copilot-orchestrator",
+      "environment": ["dev", "test", "prod"],
+      "auth": {"mode": "microsoft-graph-delegated-or-managed-identity", "secretReferences": [], "recommendedStore": "entra-and-connector-owned"},
+      "readTools": ["m365_readiness", "resolve_destination", "permission_summary", "copilot_environment_read"],
+      "writeTools": ["delegate_m365_task", "request_m365_approval", "publish_approved_result"],
+      "approvalRequired": ["new-graph-scope", "production-agent-publish", "external-share"],
+      "healthCheck": "resolve_profile_teams_sharepoint_onedrive_and_copilot_environment"
+    },
+    {
+      "id": "m365-productivity-plane",
+      "kind": "microsoft-365-specialists",
+      "environment": ["dev", "test", "prod"],
+      "auth": {"mode": "resource-scoped-microsoft-graph", "secretReferences": [], "recommendedStore": "entra-app-and-connector-owned"},
+      "readTools": ["outlook_context", "teams_context", "sharepoint_context", "onedrive_context", "planner_context", "office_document_context"],
+      "writeTools": ["outlook_draft", "teams_post", "sharepoint_publish", "onedrive_write", "planner_write", "office_document_plan"],
+      "approvalRequired": ["email-send", "delete", "permission-change", "external-share"],
+      "healthCheck": "bounded_readiness_for_each_m365_specialist"
+    },
+    {
+      "id": "edge-copilot-workspace",
+      "kind": "edge-workspace",
+      "environment": ["dev", "test", "prod"],
+      "auth": {"mode": "interactive-browser-profile", "secretReferences": [], "recommendedStore": "browser-and-entra-owned"},
+      "readTools": ["workspace_read", "approved_link_resolve", "edge_policy_read", "extension_inventory"],
+      "writeTools": ["workspace_update", "approved_extension_request"],
+      "approvalRequired": ["extension-install", "browser-policy-write", "workspace-share"],
+      "healthCheck": "edge_version_profile_and_approved_links"
+    },
+    {
+      "id": "azure-cloud-shell-control",
+      "kind": "azure-cloud-shell",
+      "environment": ["dev", "test", "prod"],
+      "auth": {"mode": "interactive-azure-session", "secretReferences": ["AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"], "recommendedStore": "active-cloud-shell-session"},
+      "readTools": ["az_account_show", "subscription_list", "resource_read", "log_query", "what_if_read"],
+      "writeTools": ["what_if_run", "approved_deployment_apply", "approved_rollback"],
+      "approvalRequired": ["subscription-selection", "rbac-write", "production-apply", "rollback"],
+      "healthCheck": "cloud_shell_launch_and_account_context"
+    },
+    {
+      "id": "azure-devops-control",
+      "kind": "azure-devops-mcp",
+      "environment": ["dev", "test", "prod"],
+      "auth": {"mode": "entra-oauth-or-azure-cli", "secretReferences": ["AZURE_DEVOPS_ORG"], "recommendedStore": "environment-reference"},
+      "readTools": ["organization_read", "project_read", "repo_read", "pipeline_read", "board_read", "artifact_read", "service_connection_read"],
+      "writeTools": ["approved_pipeline_run", "approved_board_update", "approved_service_connection_write", "approved_mirror_write"],
+      "approvalRequired": ["pipeline-run", "service-connection-write", "mirror-write", "environment-change"],
+      "healthCheck": "resolve_org_project_and_pipeline_inventory"
+    },
+    {
+      "id": "github-enterprise-control",
+      "kind": "github-app-control-plane",
+      "environment": ["dev", "test", "prod"],
+      "auth": {"mode": "github-app", "secretReferences": [], "recommendedStore": "connector-owned"},
+      "readTools": ["repository_inventory", "issue_read", "pr_read", "workflow_read", "codespace_read", "promotion_read"],
+      "writeTools": ["issue_write", "branch_write", "file_write", "pr_write", "approved_merge", "approved_promotion"],
+      "approvalRequired": ["merge", "protected-branch-change", "enterprise-promotion", "repository-archive"],
+      "healthCheck": "read_canonical_and_companion_repositories"
+    },
+    {
+      "id": "foundry-agent-service",
+      "kind": "azure-ai-foundry-agent-service",
+      "environment": ["dev", "test", "prod"],
+      "auth": {"mode": "managed-identity-or-developer-entra", "secretReferences": [], "recommendedStore": "entra-agent-identity"},
+      "readTools": ["project_readiness", "model_catalog", "agent_definition_read", "evaluation_read", "trace_read"],
+      "writeTools": ["approved_model_deploy", "approved_agent_publish", "approved_tool_connection", "evaluation_run"],
+      "approvalRequired": ["model-deploy", "agent-publish", "new-tool-connection", "entra-agent-registration"],
+      "healthCheck": "resolve_foundry_project_model_catalog_and_agent_service"
+    },
+    {
+      "id": "helios-unified-cli",
+      "kind": "local-cli-router",
+      "environment": ["dev", "test", "prod"],
+      "auth": {"mode": "delegated-to-specialist-cli", "secretReferences": [], "recommendedStore": "specialist-owned"},
+      "readTools": ["tool_discover", "version_report", "command_preview", "documentation_open"],
+      "writeTools": ["approved_command_run", "approved_package_install", "approved_extension_install"],
+      "approvalRequired": ["write-command", "elevation", "production-command", "package-install"],
+      "healthCheck": "manifest_load_command_router_and_redaction_tests"
+    }
+  ]
+}
