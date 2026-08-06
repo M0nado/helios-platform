@@ -30,6 +30,9 @@ def gitlinks(root: Path) -> dict[str, str]:
     # later orphan comparison therefore allows undeclared or unapproved gitlinks
     # elsewhere in the repository; list the whole index and filter it by mode
     # before comparing paths.
+    result = subprocess.run(
+        ["git", "ls-files", "--stage"],
+        cwd=root,
         check=True,
         capture_output=True,
         text=True,
