@@ -19,6 +19,30 @@
 ## Prerequisites
 
 ### Required Software
+
+HELIOS requires both the Azure CLI (`az`) and the PowerShell `Az.Accounts` module. The connection script and `helios azure` CLI commands fail early with remediation instructions when either prerequisite is missing; they do not silently fall back to only one tool.
+
+```powershell
+# Validate Azure CLI is installed
+az --version
+
+# Validate PowerShell Az module is installed
+pwsh -NoProfile -Command "Get-Module -ListAvailable Az.Accounts"
+
+# Run HELIOS prerequisite validation without logging in
+../scripts/connect-to-azure.ps1 -ValidateOnly
+
+# Install Azure CLI on Windows (winget)
+winget install --id Microsoft.AzureCLI
+
+# Install Azure CLI on macOS
+brew update && brew install azure-cli
+
+# Install Azure CLI on Ubuntu/Debian
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+```
+
 ```powershell
 # Check PowerShell version (must be 7.0+)
 $PSVersionTable.PSVersion
@@ -67,22 +91,63 @@ Contact Information:
 2. Set up agreement terms
 3. Create accounts for team members
 
-### 1.2 Verify Subscription
+### 1.2 Login and Verify Subscription
+
+Use Azure CLI for the authoritative login/subscription context and PowerShell Az for module-level validation.
 
 ```powershell
-# Connect to Azure
-Connect-AzAccount
+# Interactive browser login
+az login --tenant "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-# List subscriptions
-Get-AzSubscription | Format-Table Name, Id, State
+# Headless or remote terminal login
+az login --use-device-code --tenant "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-# Set current subscription
+# Managed identity login from an Azure VM/host
+az login --identity
+
+# Service principal login for automation
+az login --service-principal `
+  --username $env:AZURE_CLIENT_ID `
+  --password $env:AZURE_CLIENT_SECRET `
+  --tenant $env:AZURE_TENANT_ID
+
+# List subscriptions and select one
+az account list --output table
 $subscriptionId = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-Set-AzContext -SubscriptionId $subscriptionId
+az account set --subscription $subscriptionId
 
-# Verify connection
-Get-AzContext
+# Validate selected account, tenant, and subscription
+az account show --output table
+az account show --query "{tenantId:tenantId, subscriptionId:id, subscriptionName:name}" --output json
+
+# Mirror validation through PowerShell Az
+Connect-AzAccount -Tenant "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" -Subscription $subscriptionId
+Get-AzContext | Format-List Account, SubscriptionName, SubscriptionId, Tenant
 ```
+
+HELIOS also exposes Azure setup commands from the platform CLI:
+
+```powershell
+# Check installed tools and current Azure account
+helios azure status
+
+# Login with the interactive browser flow
+helios azure login --method=interactive --tenant="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Login with a device code for SSH/remote terminals
+helios azure login --method=device-code --tenant="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" --subscription="$subscriptionId"
+
+# Login from Azure-hosted compute using managed identity
+helios azure login --method=managed-identity --subscription="$subscriptionId"
+
+# Login with a service principal
+helios azure login --method=service-principal --tenant="$env:AZURE_TENANT_ID" --client-id="$env:AZURE_CLIENT_ID" --client-secret="$env:AZURE_CLIENT_SECRET" --subscription="$subscriptionId"
+
+# Persist the selected tenant/subscription to ~/.helios/azure.json
+helios azure configure --tenant="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" --subscription="$subscriptionId"
+```
+
+The `azure configure` command uses `az account set` and then validates with `az account show` before saving tenant, subscription, account, environment, and auth method to HELIOS configuration (`~/.helios/azure.json`).
 
 ### 1.3 Set Subscription Variables
 

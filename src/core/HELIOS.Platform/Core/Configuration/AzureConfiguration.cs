@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 
 namespace HELIOS.Platform.Core.Configuration
@@ -12,6 +14,9 @@ namespace HELIOS.Platform.Core.Configuration
         public string? SubscriptionId { get; set; }
         public string? ClientId { get; set; }
         public string? ClientSecret { get; set; }
+        public string? SubscriptionName { get; set; }
+        public string? AccountName { get; set; }
+        public string? EnvironmentName { get; set; } = "AzureCloud";
         public string? StorageAccountName { get; set; }
         public string? StorageAccountKey { get; set; }
         public string? KeyVaultUri { get; set; }
@@ -20,6 +25,33 @@ namespace HELIOS.Platform.Core.Configuration
         public string? SqlConnectionString { get; set; }
         public AuthenticationMethod AuthMethod { get; set; } = AuthenticationMethod.DefaultAzureCredential;
         public int TokenCacheExpiryMinutes { get; set; } = 60;
+
+        public static string GetDefaultConfigPath()
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Path.Combine(home, ".helios", "azure.json");
+        }
+
+        public void Save(string? path = null)
+        {
+            path ??= GetDefaultConfigPath();
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(path, json);
+        }
+
+        public static AzureConfiguration Load(string? path = null)
+        {
+            path ??= GetDefaultConfigPath();
+            if (!File.Exists(path))
+                return new AzureConfiguration();
+
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<AzureConfiguration>(json) ?? new AzureConfiguration();
+        }
     }
 
     /// <summary>
@@ -71,6 +103,13 @@ namespace HELIOS.Platform.Core.Configuration
         public CloudConfigurationBuilder WithSubscriptionId(string subscriptionId)
         {
             _config.SubscriptionId = subscriptionId;
+            return this;
+        }
+
+        public CloudConfigurationBuilder WithSubscription(string subscriptionId, string? subscriptionName = null)
+        {
+            _config.SubscriptionId = subscriptionId;
+            _config.SubscriptionName = subscriptionName;
             return this;
         }
 
