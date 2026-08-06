@@ -15,10 +15,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def github_name(url: str) -> str:
-    path = urlparse(url).path.strip("/")
+    parsed = urlparse(url)
+    if parsed.username or parsed.password:
+        raise ValueError(f"unsupported canonical GitHub URL: {url}")
+    path = parsed.path.strip("/")
     if path.endswith(".git"):
         path = path[:-4]
-    if urlparse(url).hostname != "github.com" or path.count("/") != 1:
+    if parsed.hostname != "github.com" or path.count("/") != 1:
         raise ValueError(f"unsupported canonical GitHub URL: {url}")
     return path.casefold()
 

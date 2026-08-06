@@ -1,6 +1,7 @@
 import importlib.util
 import sys
 from pathlib import Path
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +14,11 @@ SPEC.loader.exec_module(MODULE)
 
 def test_github_name_normalizes_canonical_url():
     assert MODULE.github_name("https://github.com/M0nado/helios-ai-hub.git") == "m0nado/helios-ai-hub"
+
+
+def test_github_name_rejects_embedded_credentials():
+    with pytest.raises(ValueError, match="unsupported canonical GitHub URL"):
+        MODULE.github_name("https://token@github.com/M0nado/helios-ai-hub.git")
 
 
 def test_current_checkout_reports_clean_validation():
