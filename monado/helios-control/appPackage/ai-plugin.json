@@ -1,0 +1,35 @@
+{
+  "schema_version": "v2.4",
+  "name_for_human": "HELIOS Control",
+  "namespace": "HeliosControl",
+  "description_for_human": "Governed HELIOS MCP Apps, Azure Edge, OIDC, DevOps, and agent control.",
+  "description_for_model": "Use this Remote MCP server to search and fetch HELIOS authorities, render the Monado control center, inspect read-only Azure and Foundry inventory and connector readiness, read saved control runs, and create non-executing automation or upgrade plans. It cannot deploy, merge, assign RBAC, grant tenant consent, approve private endpoints, enable runners, or activate connectors.",
+  "functions": [],
+  "runtimes": [
+    {
+      "type": "RemoteMCPServer",
+      "auth": {
+        "type": "OAuthPluginVault",
+        "reference_id": "${{M365_OAUTH_REFERENCE_ID}}"
+      },
+      "run_for_functions": [
+        "*"
+      ],
+      "spec": {
+        "url": "${{HELIOS_MCP_URL}}"
+      }
+    }
+  ],
+  "capabilities": {
+    "conversation_starters": [
+      {
+        "title": "Azure readiness",
+        "text": "Show the HELIOS Azure readiness gates."
+      },
+      {
+        "title": "Connector status",
+        "text": "List the governed HELIOS connector bindings."
+      }
+    ]
+  }
+}

@@ -12,7 +12,7 @@ namespace HELIOS.Platform.Core.Intelligence
     /// <summary>
     /// Extracts statistical features from time-series data for ML processing.
     /// </summary>
-    public class FeatureExtractor : IFeatureExtractor, IDisposable
+    public class FeatureExtractor : Interfaces.IFeatureExtractor, IDisposable
     {
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly ILogger<FeatureExtractor> _logger;

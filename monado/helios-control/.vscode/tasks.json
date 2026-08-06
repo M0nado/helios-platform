@@ -1,0 +1,57 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Helios: CLI Matrix",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoLogo", "-File", "${workspaceFolder}/scripts/Invoke-HeliosCliMatrix.ps1"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Helios: Azure Auth Status",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoLogo", "-File", "${workspaceFolder}/scripts/Invoke-HeliosCliMatrix.ps1", "-CheckAuthentication"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Helios: Azure Connect (Interactive Plan)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/Connect-HeliosAzureInteractive.ps1",
+        "-Mode",
+        "Plan"
+      ],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Helios: Start Local API",
+      "type": "process",
+      "command": "dotnet",
+      "args": ["run", "--project", "${workspaceFolder}/src/Helios.Connect.Api"],
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Helios: Claude Code",
+      "type": "shell",
+      "command": "claude",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Helios: Open Fleet Plan",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoLogo", "-File", "${workspaceFolder}/scripts/Start-HeliosLocalFleet.ps1", "-Mode", "Plan"],
+      "problemMatcher": []
+    }
+  ]
+}

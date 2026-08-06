@@ -24,7 +24,7 @@ namespace HELIOS.Platform.Core.Monitoring
             public Exception Exception { get; set; }
         }
 
-        private readonly string logFilePath;
+        private string logFilePath = string.Empty;
         private readonly int maxFileSize;
         private readonly object lockObject = new object();
         private readonly List<LogEntry> logBuffer;

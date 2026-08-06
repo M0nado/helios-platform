@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "helios": {
+      "type": "http",
+      "url": "${HELIOS_AZURE_CONNECTOR_URL}/mcp"
+    },
+    "m365-copilot": {
+      "type": "http",
+      "url": "https://agent365.svc.cloud.microsoft/agents/tenants/${AZURE_TENANT_ID}/servers/mcp_M365Copilot"
+    },
+    "m365-teams": {
+      "type": "http",
+      "url": "https://agent365.svc.cloud.microsoft/agents/tenants/${AZURE_TENANT_ID}/servers/mcp_TeamsServer"
+    },
+    "m365-sharepoint-onedrive": {
+      "type": "http",
+      "url": "https://agent365.svc.cloud.microsoft/agents/tenants/${AZURE_TENANT_ID}/servers/mcp_ODSPRemoteServer"
+    },
+    "m365-mail": {
+      "type": "http",
+      "url": "https://agent365.svc.cloud.microsoft/agents/tenants/${AZURE_TENANT_ID}/servers/mcp_MailTools"
+    },
+    "m365-calendar": {
+      "type": "http",
+      "url": "https://agent365.svc.cloud.microsoft/agents/tenants/${AZURE_TENANT_ID}/servers/mcp_CalendarTools"
+    }
+  }
+}

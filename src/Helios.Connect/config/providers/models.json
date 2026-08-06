@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0",
+  "providers": [
+    {
+      "provider": "openai",
+      "deployment": "approved-by-operator",
+      "brokerEndpoint": "configured-governed-csharp-broker",
+      "regionResidency": "configured-by-policy",
+      "classificationCeiling": "internal",
+      "limits": { "tokens": 0, "costUsd": 0, "seconds": 0 },
+      "allowedStructuredOperations": ["bounded-engineering-task", "structured-review"],
+      "keyVaultReferenceName": "configured-reference-only",
+      "evidencePolicy": "redacted-sanitized-evidence-only"
+    },
+    {
+      "provider": "anthropic",
+      "deployment": "approved-by-operator",
+      "brokerEndpoint": "configured-governed-csharp-broker",
+      "regionResidency": "configured-by-policy",
+      "classificationCeiling": "internal",
+      "limits": { "tokens": 0, "costUsd": 0, "seconds": 0 },
+      "allowedStructuredOperations": ["architecture-review", "bounded-implementation", "independent-review"],
+      "keyVaultReferenceName": "configured-reference-only",
+      "evidencePolicy": "redacted-sanitized-evidence-only"
+    }
+  ]
+}

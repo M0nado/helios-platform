@@ -1,0 +1,39 @@
+{
+  "version": "5.0",
+  "canonicalRepository": "M0nado/helios-platform",
+  "integrityManifest": "artifacts/manifests/helios-github-azure-codex-copilot-fleet-v5.sha256",
+  "azure": {
+    "provisioningMode": "azd+bicep",
+    "cliRequired": true,
+    "authentication": "interactive-or-workload-identity",
+    "subscriptionAuthorizationRequired": true,
+    "productionApprovalRequired": true,
+    "resources": {
+      "resourceGroup": "rg-helios-prod",
+      "keyVault": "kv-helios-core",
+      "cosmos": "cosmos-helios-memory",
+      "artifactStorage": "stheliosartifacts",
+      "containerAppsEnvironment": "cae-helios",
+      "logAnalytics": "log-helios"
+    },
+    "forbidden": [
+      "long-lived-client-secret",
+      "unreviewed-owner-assignment",
+      "unapproved-production-deployment"
+    ]
+  },
+  "huggingFace": {
+    "account": "yolkster1",
+    "repository": "yolkster1/helios-control",
+    "desiredType": "space",
+    "status": "not-created",
+    "purpose": "HELIOS control and model-integration surface",
+    "tokenStorage": "kv-helios-core",
+    "registrationIssue": null
+  },
+  "communications": {
+    "slackChannel": "helios-control-plane",
+    "teamsTeam": "Helios",
+    "teamsChannel": "Helios Ops"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0",
+  "controlPlane": "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
+  "canonicalPlatform": "M0nado/helios-platform",
+  "repositories": [
+    {
+      "name": "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
+      "role": "control-plane",
+      "authority": ["policy", "github-bootstrap", "azure-bootstrap", "fleet-evaluation", "integration-contracts"]
+    },
+    {
+      "name": "M0nado/helios-platform",
+      "role": "canonical-platform",
+      "authority": ["product-architecture", "windows-control-plane", "deployment", "platform-services", "release"]
+    },
+    {
+      "name": "M0nado/Helios-Control-Center",
+      "role": "operator-control-center",
+      "authority": ["operator-gui", "status-dashboard", "approved-command-surface"]
+    },
+    {
+      "name": "M0nado/helios-ai-hub",
+      "role": "ai-orchestration",
+      "authority": ["model-adapters", "agent-runtime", "memory-adapters", "foundry-connectors"]
+    },
+    {
+      "name": "M0nado/helios-monado-blade",
+      "role": "monado-engine",
+      "authority": ["monado-blade", "themed-interaction", "engine-contracts"]
+    },
+    {
+      "name": "M0nado/helios-gui-framework",
+      "role": "gui-framework",
+      "authority": ["shared-ui", "xenoblade-theme", "visual-components"]
+    },
+    {
+      "name": "M0nado/helios-build-agents",
+      "role": "build-agents",
+      "authority": ["build-images", "test-workers", "artifact-production"]
+    },
+    {
+      "name": "M0nado/helios-software-stack",
+      "role": "software-stack",
+      "authority": ["tool-manifests", "developer-bootstrap", "driver-catalog"]
+    },
+    {
+      "name": "M0nado/helios-security-setup",
+      "role": "security-module",
+      "authority": ["security-baselines", "hardening-plans", "compliance-evidence"]
+    },
+    {
+      "name": "Yolkster64/hermes-fleet-platforms",
+      "role": "companion-fleet",
+      "authority": ["hermes-workers", "xcore-workers", "fleet-experiments"]
+    }
+  ],
+  "communication": {
+    "engineeringSource": "github",
+    "identity": "azure-workload-identity-federation",
+    "broker": "azure-integration-broker",
+    "eventTransport": ["github-actions-artifacts", "azure-service-bus", "azure-event-grid"],
+    "secrets": "azure-key-vault",
+    "telemetry": ["application-insights", "log-analytics"],
+    "businessSurfaces": ["microsoft-copilot", "copilot-studio", "teams", "sharepoint", "power-platform", "fabric"]
+  }
+}

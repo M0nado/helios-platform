@@ -1,0 +1,197 @@
+{
+  "schemaVersion": "1.0",
+  "tools": [
+    {
+      "name": "helios.status.read",
+      "title": "Read HELIOS status",
+      "description": "Return broker, connector, fleet, and evidence readiness without changing external state.",
+      "namespace": "helios",
+      "readOnly": true,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "none",
+      "allowedEnvironments": ["local", "development", "test", "staging", "production"],
+      "inputSchema": {"type": "object", "additionalProperties": false, "properties": {}}
+    },
+    {
+      "name": "helios.events.search",
+      "title": "Search HELIOS events",
+      "description": "Search normalized integration events by correlation ID and bounded result count.",
+      "namespace": "helios",
+      "readOnly": true,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "none",
+      "allowedEnvironments": ["local", "development", "test", "staging", "production"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "correlationId": {"type": ["string", "null"], "maxLength": 128},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}
+        }
+      }
+    },
+    {
+      "name": "github.issue.package",
+      "title": "Package a GitHub issue",
+      "description": "Create a bounded implementation packet from a linked GitHub issue without changing the repository.",
+      "namespace": "github",
+      "readOnly": true,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "none",
+      "allowedEnvironments": ["local", "development", "test"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repository", "issueNumber"],
+        "properties": {
+          "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+          "issueNumber": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    {
+      "name": "github.pull_request.evaluate",
+      "title": "Evaluate a GitHub pull request",
+      "description": "Evaluate CI, contract, evidence, and guardrail status for a pull request.",
+      "namespace": "github",
+      "readOnly": true,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "none",
+      "allowedEnvironments": ["local", "development", "test", "staging", "production"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repository", "pullRequestNumber"],
+        "properties": {
+          "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+          "pullRequestNumber": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    {
+      "name": "linear.issue.sync.request",
+      "title": "Request Linear issue synchronization",
+      "description": "Create a reviewable request to mirror or update an approved GitHub issue in Linear.",
+      "namespace": "linear",
+      "readOnly": false,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "review",
+      "allowedEnvironments": ["development", "test", "staging", "production"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["repository", "issueNumber"],
+        "properties": {
+          "repository": {"type": "string"},
+          "issueNumber": {"type": "integer", "minimum": 1},
+          "project": {"type": ["string", "null"]}
+        }
+      }
+    },
+    {
+      "name": "slack.notification.request",
+      "title": "Request a Slack notification",
+      "description": "Create a reviewable request for a bounded HELIOS operational message to an approved Slack channel.",
+      "namespace": "slack",
+      "readOnly": false,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "review",
+      "allowedEnvironments": ["development", "test", "staging", "production"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["channel", "message"],
+        "properties": {
+          "channel": {"type": "string", "maxLength": 128},
+          "message": {"type": "string", "minLength": 1, "maxLength": 3000}
+        }
+      }
+    },
+    {
+      "name": "azure.what_if.request",
+      "title": "Request Azure what-if",
+      "description": "Create a protected-environment request to validate an Azure Bicep deployment without applying it.",
+      "namespace": "azure",
+      "readOnly": false,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "environment",
+      "allowedEnvironments": ["development", "test", "staging", "production"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["environment", "template"],
+        "properties": {
+          "environment": {"type": "string", "enum": ["development", "test", "staging", "production"]},
+          "template": {"type": "string", "maxLength": 512},
+          "parameters": {"type": "object"}
+        }
+      }
+    },
+    {
+      "name": "hermes.task.enqueue.request",
+      "title": "Request Hermes task enqueue",
+      "description": "Create a reviewable bounded task request for the Hermes fleet.",
+      "namespace": "hermes",
+      "readOnly": false,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "review",
+      "allowedEnvironments": ["local", "development", "test"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["objective", "repository"],
+        "properties": {
+          "objective": {"type": "string", "minLength": 10, "maxLength": 2000},
+          "repository": {"type": "string"},
+          "maxCycles": {"type": "integer", "minimum": 1, "maximum": 16, "default": 8}
+        }
+      }
+    },
+    {
+      "name": "xcore.evaluation.run",
+      "title": "Run XCore evaluation",
+      "description": "Evaluate evidence, regression, pruning, and policy state without applying changes.",
+      "namespace": "xcore",
+      "readOnly": true,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "none",
+      "allowedEnvironments": ["local", "development", "test", "staging", "production"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["correlationId"],
+        "properties": {"correlationId": {"type": "string", "minLength": 4, "maxLength": 128}}
+      }
+    },
+    {
+      "name": "evidence.bundle.create.request",
+      "title": "Request evidence bundle creation",
+      "description": "Create a reviewable request to assemble and publish deployment evidence.",
+      "namespace": "evidence",
+      "readOnly": false,
+      "openWorld": false,
+      "destructive": false,
+      "approval": "environment",
+      "allowedEnvironments": ["development", "test", "staging", "production"],
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["correlationId", "environment"],
+        "properties": {
+          "correlationId": {"type": "string"},
+          "environment": {"type": "string", "enum": ["development", "test", "staging", "production"]},
+          "publishToSharePoint": {"type": "boolean", "default": false}
+        }
+      }
+    }
+  ]
+}

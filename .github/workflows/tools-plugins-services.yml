@@ -1,0 +1,49 @@
+name: HELIOS Tools Plugins Services
+
+on:
+  pull_request:
+    paths:
+      - 'config/integrations/**'
+      - 'src/services/HELIOS.IntegrationBroker/**'
+      - 'plugins/openai/**'
+      - 'plugins/copilot-studio/**'
+      - 'scripts/integrations/validate_tools_plugins_services.py'
+      - '.github/workflows/tools-plugins-services.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Validate catalogs and paths
+        run: python scripts/integrations/validate_tools_plugins_services.py
+      - name: Compile validator
+        run: python -m py_compile scripts/integrations/validate_tools_plugins_services.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install MCP dependencies
+        working-directory: plugins/openai/helios-mcp
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Check MCP server syntax
+        working-directory: plugins/openai/helios-mcp
+        run: npm run check
+
+  build-broker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore integration broker
+        run: dotnet restore src/services/HELIOS.IntegrationBroker/HELIOS.IntegrationBroker.csproj
+      - name: Build integration broker
+        run: dotnet build src/services/HELIOS.IntegrationBroker/HELIOS.IntegrationBroker.csproj --configuration Release --no-restore

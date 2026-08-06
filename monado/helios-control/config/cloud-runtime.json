@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "name": "helios-cloud-runtime",
+  "version": "0.4.0",
+  "runtime": {
+    "hosting": "azure",
+    "localRuntimeAllowed": false,
+    "executionMode": "dry-run",
+    "productionMinReplicas": 1,
+    "nonProductionMinReplicas": 0,
+    "immutableImagesRequired": true
+  },
+  "services": {
+    "apiManagement": {
+      "purpose": "Public policy edge for Entra-authenticated APIs and separately signed webhook ingress",
+      "privateBackendRequired": true,
+      "implemented": false,
+      "requiredForCurrentConnector": false,
+      "requiredForTargetArchitecture": true,
+      "gate": "administrator-approved APIM and private-backend design"
+    },
+    "containerRegistry": {
+      "purpose": "Approved immutable Helios images addressed by sha256 digest",
+      "adminCredentialsAllowed": false,
+      "required": true,
+      "provisioning": "external-administrator-owned"
+    },
+    "containerApps": {
+      "purpose": "Public Entra-protected Helios API and remote MCP endpoint",
+      "identity": "user-assigned-managed-identity",
+      "required": true,
+      "implemented": true
+    },
+    "containerAppsJobs": {
+      "purpose": "Bounded asynchronous Hermes/XCore evaluation workers",
+      "trigger": "service-bus",
+      "implemented": false,
+      "requiredForCurrentConnector": false,
+      "requiredForTargetArchitecture": true
+    },
+    "serviceBus": {
+      "purpose": "Durable command and evidence routing with dead-letter isolation",
+      "localAuthenticationAllowed": false,
+      "implemented": false,
+      "requiredForCurrentConnector": false,
+      "requiredForTargetArchitecture": true
+    },
+    "keyVault": {
+      "purpose": "Provider credential references for workloads that cannot use federation",
+      "rbacOnly": true,
+      "secretValuesInDeploymentAllowed": false,
+      "required": true,
+      "implemented": true,
+      "providerBindingsImplemented": false,
+      "state": "empty-vault-only-until-administrator-rbac-and-secret-reference-approval"
+    },
+    "foundryAgentService": {
+      "purpose": "Governed cloud agent execution and evaluation",
+      "modelDeploymentRequired": true,
+      "implemented": false,
+      "requiredForCurrentConnector": false,
+      "requiredForTargetArchitecture": true,
+      "gate": "administrator-selected Foundry project, deployment, identity, and RBAC"
+    },
+    "cosmosDb": {
+      "purpose": "Control-run snapshots, leases, request hashes, plan digests, and connector receipts",
+      "localAuthenticationAllowed": false,
+      "implemented": true,
+      "requiredForCurrentConnector": true,
+      "requiredForTargetArchitecture": true
+    },
+    "dataLake": {
+      "purpose": "Versioned evidence and evaluation artifacts",
+      "hierarchicalNamespace": true,
+      "publicAccessAllowed": false,
+      "implemented": false,
+      "requiredForCurrentConnector": false,
+      "requiredForTargetArchitecture": true
+    },
+    "aiSearch": {
+      "purpose": "Governed retrieval memory over approved and sanitized evidence",
+      "localAuthenticationAllowed": false,
+      "implemented": false,
+      "requiredForCurrentConnector": false,
+      "requiredForTargetArchitecture": true
+    },
+    "applicationInsights": {
+      "purpose": "Distributed traces, health, failures, and cost telemetry",
+      "required": true,
+      "implemented": true
+    }
+  },
+  "integrations": {
+    "github": "implemented:signed-relay-dry-run-until-key-vault-binding-and-host-allowlist",
+    "linear": "implemented:signed-relay-dry-run-until-key-vault-binding-and-host-allowlist",
+    "slack": "implemented:signed-relay-dry-run-until-key-vault-binding-and-host-allowlist",
+    "teams": "disabled-until-entra-jwt-and-validation-challenge",
+    "sharePoint": "implemented:signed-relay-dry-run-until-selected-site-relay-binding-and-host-allowlist"
+  },
+  "providerIsolation": {
+    "enabled": true,
+    "providers": [
+      "azure-foundry",
+      "openai",
+      "anthropic-claude",
+      "microsoft-copilot"
+    ],
+    "providerActivation": {
+      "azure-foundry": "disabled-until-project-deployment-identity-and-rbac-approval",
+      "openai": "disabled-until-key-vault-reference-and-managed-identity-rbac-approval",
+      "anthropic-claude": "disabled",
+      "microsoft-copilot": "disabled-until-tenant-publication-approval"
+    },
+    "credentialBoundary": "one-managed-identity-or-vault-reference-per-provider",
+    "crossProviderCredentialReuseAllowed": false,
+    "rawConversationSharingAllowed": false,
+    "sanitizedEvidenceExchange": "planned:service-bus-and-data-lake"
+  },
+  "gates": {
+    "githubEnvironmentRequired": true,
+    "oidcRequired": true,
+    "whatIfRequired": true,
+    "immutableImageDigestRequired": true,
+    "humanApprovalRequired": true,
+    "entraAdminConsentRequired": true,
+    "rbacReviewRequired": true,
+    "productionMutationDefault": "deny"
+  }
+}

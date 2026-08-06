@@ -5,4 +5,9 @@
     <AnalysisLevel Condition="'$(AnalysisLevel)' == ''">latest</AnalysisLevel>
     <EnableWindowsTargeting Condition="'$(OS)' != 'Windows_NT'">true</EnableWindowsTargeting>
   </PropertyGroup>
+
+  <!-- Test toolchain versions have one repository-wide source of truth. -->
+  <PropertyGroup>
+    <IsTestProjectFile Condition="$([System.String]::Copy('$(MSBuildProjectName)').Contains('Test'))">true</IsTestProjectFile>
+  </PropertyGroup>
 </Project>

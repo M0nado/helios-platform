@@ -8,13 +8,14 @@ using System.Threading.Tasks;
 namespace HELIOS.Platform.Phase10.Vault
 {
     /// <summary>
-    /// Manages automated backups, incremental backups, verification, and disaster recovery.
+    /// Manages full backups, verification, and disaster recovery.
+    /// Incremental backups remain disabled until their manifests can represent
+    /// deletions and retention can preserve complete dependency chains.
     /// </summary>
     public class VaultBackupRestorer
     {
         private readonly string _vaultPath;
         private readonly string _backupPath;
-        private readonly IVaultEncryptionManager _encryptionManager;
         private readonly IVaultLogger _logger;
         private readonly string _backupMetadataPath;
 
@@ -26,7 +27,7 @@ namespace HELIOS.Platform.Phase10.Vault
         {
             _vaultPath = vaultPath ?? throw new ArgumentNullException(nameof(vaultPath));
             _backupPath = backupPath ?? throw new ArgumentNullException(nameof(backupPath));
-            _encryptionManager = encryptionManager ?? throw new ArgumentNullException(nameof(encryptionManager));
+            _ = encryptionManager ?? throw new ArgumentNullException(nameof(encryptionManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _backupMetadataPath = Path.Combine(_backupPath, ".backup-meta.json");
 
@@ -45,6 +46,12 @@ namespace HELIOS.Platform.Phase10.Vault
             {
                 _logger.Log("Starting full vault backup...");
 
+                if (encryptionKey != null)
+                {
+                    _logger.Log(EncryptedBackupsUnavailableMessage);
+                    return BackupResult.Failure(EncryptedBackupsUnavailableMessage);
+                }
+
                 var backupId = GenerateBackupId();
                 var backupDir = Path.Combine(_backupPath, backupId);
                 Directory.CreateDirectory(backupDir);
@@ -57,7 +64,7 @@ namespace HELIOS.Platform.Phase10.Vault
                     IsIncremental = false,
                     FileCount = 0,
                     TotalSize = 0,
-                    IsEncrypted = encryptionKey != null,
+                    IsEncrypted = false,
                     IsVerified = false
                 };
 
@@ -75,16 +82,8 @@ namespace HELIOS.Platform.Phase10.Vault
                     var destFile = Path.Combine(backupDir, relativePath);
                     Directory.CreateDirectory(Path.GetDirectoryName(destFile));
 
-                    if (encryptionKey != null)
-                    {
-                        await _encryptionManager.EncryptFileAsync(file, encryptionKey);
-                    }
-                    else
-                    {
-                        File.Copy(file, destFile, overwrite: true);
-                    }
-
-                    totalSize += new FileInfo(file).Length;
+                    File.Copy(file, destFile, overwrite: true);
+                    totalSize += new FileInfo(destFile).Length;
                     fileCount++;
                 }
 
@@ -106,90 +105,13 @@ namespace HELIOS.Platform.Phase10.Vault
         }
 
         /// <summary>
-        /// Creates an incremental backup (only changed files).
+        /// Incremental backups are intentionally unavailable until deletion
+        /// tombstones and dependency-aware retention are implemented.
         /// </summary>
-        public async Task<BackupResult> CreateIncrementalBackupAsync(string baseBackupId, byte[] encryptionKey = null)
+        public Task<BackupResult> CreateIncrementalBackupAsync(string baseBackupId, byte[] encryptionKey = null)
         {
-            try
-            {
-                _logger.Log("Starting incremental vault backup...");
-
-                var baseBackupDir = Path.Combine(_backupPath, baseBackupId);
-                if (!Directory.Exists(baseBackupDir))
-                {
-                    return BackupResult.Failure("Base backup not found");
-                }
-
-                var backupId = GenerateBackupId();
-                var backupDir = Path.Combine(_backupPath, backupId);
-                Directory.CreateDirectory(backupDir);
-
-                // Get base backup files for comparison
-                var baseFiles = Directory.GetFiles(baseBackupDir, "*", SearchOption.AllDirectories)
-                    .ToDictionary(f => Path.GetRelativePath(baseBackupDir, f));
-
-                var backupInfo = new BackupInfo
-                {
-                    BackupId = backupId,
-                    BackupType = BackupType.Incremental,
-                    CreatedAt = DateTime.UtcNow,
-                    IsIncremental = true,
-                    BaseBackupId = baseBackupId,
-                    FileCount = 0,
-                    TotalSize = 0,
-                    IsEncrypted = encryptionKey != null,
-                    IsVerified = false
-                };
-
-                long totalSize = 0;
-                int fileCount = 0;
-
-                var currentFiles = Directory.GetFiles(_vaultPath, "*", SearchOption.AllDirectories)
-                    .Where(f => !f.Contains(".vault"))
-                    .ToList();
-
-                foreach (var file in currentFiles)
-                {
-                    var relativePath = Path.GetRelativePath(_vaultPath, file);
-                    var fileInfo = new FileInfo(file);
-                    var lastModified = fileInfo.LastWriteTimeUtc;
-
-                    // Only include if file is new or modified
-                    if (!baseFiles.ContainsKey(relativePath) || 
-                        lastModified > Directory.GetCreationTimeUtc(baseBackupDir))
-                    {
-                        var destFile = Path.Combine(backupDir, relativePath);
-                        Directory.CreateDirectory(Path.GetDirectoryName(destFile));
-
-                        if (encryptionKey != null)
-                        {
-                            await _encryptionManager.EncryptFileAsync(file, encryptionKey);
-                        }
-                        else
-                        {
-                            File.Copy(file, destFile, overwrite: true);
-                        }
-
-                        totalSize += fileInfo.Length;
-                        fileCount++;
-                    }
-                }
-
-                backupInfo.FileCount = fileCount;
-                backupInfo.TotalSize = totalSize;
-
-                // Create backup manifest
-                await SaveBackupManifestAsync(backupDir, backupInfo);
-
-                _logger.Log($"Incremental backup created: {backupId} ({totalSize} bytes, {fileCount} files)");
-
-                return BackupResult.Success(backupId, totalSize, fileCount);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Incremental backup failed: {ex.Message}", ex);
-                return BackupResult.Failure(ex.Message);
-            }
+            _logger.Log(IncrementalBackupsUnavailableMessage);
+            return Task.FromResult(BackupResult.Failure(IncrementalBackupsUnavailableMessage));
         }
 
         /// <summary>
@@ -201,52 +123,28 @@ namespace HELIOS.Platform.Phase10.Vault
             {
                 _logger.Log($"Verifying backup {backupId}...");
 
-                var backupDir = Path.Combine(_backupPath, backupId);
-                var manifestPath = Path.Combine(backupDir, "manifest.json");
-
-                if (!File.Exists(manifestPath))
+                var backup = await LoadValidatedBackupAsync(backupId);
+                EnsureFullBackupIsSupported(backup.Manifest);
+                if (backup.Manifest.IsEncrypted)
                 {
-                    return BackupVerificationResult.Failure("Backup manifest not found");
+                    throw new NotSupportedException(EncryptedBackupsUnavailableMessage);
                 }
+                var expectedFileCount = backup.Manifest.FileCount;
+                var expectedSize = backup.Manifest.TotalSize;
+                var actualFileCount = backup.Files.Count;
+                var actualSize = backup.Files.Sum(file => file.Size);
 
-                var json = await File.ReadAllTextAsync(manifestPath);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                var expectedFileCount = root.GetProperty("fileCount").GetInt32();
-                var expectedSize = root.GetProperty("totalSize").GetInt64();
-
-                // Count actual files
-                var actualFiles = Directory.GetFiles(backupDir, "*", SearchOption.AllDirectories)
-                    .Where(f => !f.EndsWith("manifest.json"))
-                    .ToList();
-
-                long actualSize = 0;
-                foreach (var file in actualFiles)
-                {
-                    actualSize += new FileInfo(file).Length;
-                }
-
-                var isValid = actualFiles.Count == expectedFileCount && actualSize == expectedSize;
-
-                if (isValid)
-                {
-                    _logger.Log($"Backup {backupId} verification passed");
-                }
-                else
-                {
-                    _logger.LogError($"Backup {backupId} verification failed", new InvalidOperationException());
-                }
+                _logger.Log($"Backup {backupId} verification passed");
 
                 return new BackupVerificationResult
                 {
-                    IsValid = isValid,
+                    IsValid = true,
                     BackupId = backupId,
                     ExpectedFileCount = expectedFileCount,
-                    ActualFileCount = actualFiles.Count,
+                    ActualFileCount = actualFileCount,
                     ExpectedSize = expectedSize,
                     ActualSize = actualSize,
-                    Message = isValid ? "Verification passed" : "Verification failed"
+                    Message = "Verification passed"
                 };
             }
             catch (Exception ex)
@@ -259,62 +157,22 @@ namespace HELIOS.Platform.Phase10.Vault
         /// <summary>
         /// Restores vault from a backup.
         /// </summary>
-        public async Task<RestoreResult> RestoreFromBackupAsync(string backupId, bool preserveExisting = true)
+        public Task<RestoreResult> RestoreFromBackupAsync(string backupId, bool preserveExisting = true)
         {
-            try
-            {
-                _logger.Log($"Restoring vault from backup {backupId}...");
+            _logger.Log(RestoreUnavailableMessage);
+            return Task.FromResult(RestoreResult.Failure(RestoreUnavailableMessage));
+        }
 
-                var backupDir = Path.Combine(_backupPath, backupId);
-                if (!Directory.Exists(backupDir))
-                {
-                    return RestoreResult.Failure("Backup not found");
-                }
-
-                // Verify backup first
-                var verification = await VerifyBackupAsync(backupId);
-                if (!verification.IsValid)
-                {
-                    return RestoreResult.Failure("Backup verification failed");
-                }
-
-                // Create recovery backup if preserving
-                if (preserveExisting && Directory.GetFiles(_vaultPath, "*", SearchOption.AllDirectories).Length > 0)
-                {
-                    var recoveryBackupId = $"recovery_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
-                    await CreateFullBackupAsync();
-                    _logger.Log("Recovery backup created before restore");
-                }
-
-                // Restore files
-                int filesRestored = 0;
-                long sizeRestored = 0;
-
-                var backupFiles = Directory.GetFiles(backupDir, "*", SearchOption.AllDirectories)
-                    .Where(f => !f.EndsWith("manifest.json"))
-                    .ToList();
-
-                foreach (var file in backupFiles)
-                {
-                    var relativePath = Path.GetRelativePath(backupDir, file);
-                    var destFile = Path.Combine(_vaultPath, relativePath);
-
-                    Directory.CreateDirectory(Path.GetDirectoryName(destFile));
-                    File.Copy(file, destFile, overwrite: true);
-
-                    filesRestored++;
-                    sizeRestored += new FileInfo(file).Length;
-                }
-
-                _logger.Log($"Vault restored from {backupId} ({filesRestored} files, {sizeRestored} bytes)");
-
-                return RestoreResult.Success(backupId, filesRestored, sizeRestored);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Restore failed: {ex.Message}", ex);
-                return RestoreResult.Failure(ex.Message);
-            }
+        /// <summary>
+        /// Restores an encrypted full vault backup using <paramref name="encryptionKey"/>.
+        /// </summary>
+        public Task<RestoreResult> RestoreFromBackupAsync(
+            string backupId,
+            byte[] encryptionKey,
+            bool preserveExisting = true)
+        {
+            _logger.Log(RestoreUnavailableMessage);
+            return Task.FromResult(RestoreResult.Failure(RestoreUnavailableMessage));
         }
 
         /// <summary>
@@ -367,6 +225,12 @@ namespace HELIOS.Platform.Phase10.Vault
         {
             try
             {
+                if (incremental)
+                {
+                    _logger.Log(IncrementalBackupsUnavailableMessage);
+                    return false;
+                }
+
                 var schedule = new
                 {
                     enabled = true,
@@ -422,6 +286,126 @@ namespace HELIOS.Platform.Phase10.Vault
             }
         }
 
+        private async Task<ValidatedBackup> LoadValidatedBackupAsync(string backupId)
+        {
+            ValidateBackupId(backupId);
+            var backupDirectory = GetPathWithinRoot(_backupPath, backupId);
+            var manifestPath = GetPathWithinRoot(backupDirectory, "manifest.json");
+            if (!Directory.Exists(backupDirectory) || !File.Exists(manifestPath))
+            {
+                throw new InvalidDataException($"Backup '{backupId}' or its manifest was not found.");
+            }
+
+            var manifestData = JsonSerializer.Deserialize<BackupManifestData>(
+                await File.ReadAllTextAsync(manifestPath),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (manifestData == null ||
+                string.IsNullOrWhiteSpace(manifestData.BackupId) ||
+                !string.Equals(manifestData.BackupId, backupId, GetPathStringComparison()) ||
+                manifestData.BackupType == null ||
+                manifestData.IsIncremental == null ||
+                manifestData.FileCount == null ||
+                manifestData.TotalSize == null ||
+                manifestData.IsEncrypted == null ||
+                manifestData.FileCount < 0 ||
+                manifestData.TotalSize < 0)
+            {
+                throw new InvalidDataException($"Backup '{backupId}' has an invalid manifest.");
+            }
+
+            var manifest = new ValidatedBackupManifest
+            {
+                BackupId = manifestData.BackupId,
+                BackupType = manifestData.BackupType.Value,
+                IsIncremental = manifestData.IsIncremental.Value,
+                BaseBackupId = manifestData.BaseBackupId,
+                FileCount = manifestData.FileCount.Value,
+                TotalSize = manifestData.TotalSize.Value,
+                IsEncrypted = manifestData.IsEncrypted.Value
+            };
+
+            var files = EnumerateFilesWithoutReparsePoints(backupDirectory)
+                .Where(file => !string.Equals(
+                    Path.GetFullPath(file),
+                    Path.GetFullPath(manifestPath),
+                    GetPathStringComparison()))
+                .Select(file => new ValidatedBackupFile
+                {
+                    SourcePath = file,
+                    RelativePath = GetValidatedRelativePath(backupDirectory, file),
+                    Size = new FileInfo(file).Length
+                })
+                .ToList();
+
+            if (files.Count != manifest.FileCount || files.Sum(file => file.Size) != manifest.TotalSize)
+            {
+                throw new InvalidDataException($"Backup '{backupId}' failed size/count verification.");
+            }
+
+            return new ValidatedBackup { Manifest = manifest, Files = files };
+        }
+
+        private static void EnsureFullBackupIsSupported(ValidatedBackupManifest manifest)
+        {
+            if (manifest.IsIncremental ||
+                manifest.BackupType != BackupType.Full ||
+                !string.IsNullOrWhiteSpace(manifest.BaseBackupId))
+            {
+                throw new NotSupportedException(IncrementalBackupsUnavailableMessage);
+            }
+        }
+
+        private static IEnumerable<string> EnumerateFilesWithoutReparsePoints(string rootDirectory)
+        {
+            return Directory.EnumerateFiles(
+                rootDirectory,
+                "*",
+                new EnumerationOptions
+                {
+                    RecurseSubdirectories = true,
+                    AttributesToSkip = FileAttributes.ReparsePoint,
+                    IgnoreInaccessible = false
+                });
+        }
+
+        private static string GetValidatedRelativePath(string rootDirectory, string path)
+        {
+            var relativePath = Path.GetRelativePath(Path.GetFullPath(rootDirectory), Path.GetFullPath(path));
+            _ = GetPathWithinRoot(rootDirectory, relativePath);
+            return relativePath;
+        }
+
+        private static string GetPathWithinRoot(string rootDirectory, string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
+            {
+                throw new InvalidDataException("Restore path must be relative.");
+            }
+
+            var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(rootDirectory));
+            var candidate = Path.GetFullPath(Path.Combine(root, relativePath));
+            if (!candidate.StartsWith(root + Path.DirectorySeparatorChar, GetPathStringComparison()))
+            {
+                throw new InvalidDataException("Restore path escapes its expected root.");
+            }
+
+            return candidate;
+        }
+
+        private static void ValidateBackupId(string backupId)
+        {
+            if (string.IsNullOrWhiteSpace(backupId) ||
+                Path.IsPathRooted(backupId) ||
+                backupId is "." or ".." ||
+                backupId.IndexOfAny(new[] { '/', '\\', ':' }) >= 0)
+            {
+                throw new InvalidDataException("Backup ID must be a simple directory name.");
+            }
+        }
+
+        private static StringComparison GetPathStringComparison() =>
+            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
         private async Task SaveBackupManifestAsync(string backupDir, BackupInfo backupInfo)
         {
             var manifest = new
@@ -445,6 +429,50 @@ namespace HELIOS.Platform.Phase10.Vault
         private string GenerateBackupId()
         {
             return $"backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString().Substring(0, 8)}";
+        }
+
+        private const string IncrementalBackupsUnavailableMessage =
+            "Incremental vault backups are disabled until deletion tracking and chain-aware retention are implemented; use full backups.";
+
+        private const string EncryptedBackupsUnavailableMessage =
+            "Encrypted vault backups are disabled until backup identity and paths are cryptographically authenticated.";
+
+        private const string RestoreUnavailableMessage =
+            "Vault restore is disabled until backup identity is authenticated and the live-vault commit is transactional.";
+
+        private sealed class BackupManifestData
+        {
+            public string BackupId { get; set; }
+            public BackupType? BackupType { get; set; }
+            public bool? IsIncremental { get; set; }
+            public string BaseBackupId { get; set; }
+            public int? FileCount { get; set; }
+            public long? TotalSize { get; set; }
+            public bool? IsEncrypted { get; set; }
+        }
+
+        private sealed class ValidatedBackupManifest
+        {
+            public string BackupId { get; set; }
+            public BackupType BackupType { get; set; }
+            public bool IsIncremental { get; set; }
+            public string BaseBackupId { get; set; }
+            public int FileCount { get; set; }
+            public long TotalSize { get; set; }
+            public bool IsEncrypted { get; set; }
+        }
+
+        private sealed class ValidatedBackupFile
+        {
+            public string SourcePath { get; set; }
+            public string RelativePath { get; set; }
+            public long Size { get; set; }
+        }
+
+        private sealed class ValidatedBackup
+        {
+            public ValidatedBackupManifest Manifest { get; set; }
+            public List<ValidatedBackupFile> Files { get; set; }
         }
     }
 

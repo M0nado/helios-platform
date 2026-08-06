@@ -1,0 +1,17 @@
+{
+  "name": "HELIOS Control",
+  "short_name": "HELIOS",
+  "id": "/wizard/",
+  "description": "Governed Azure Diagnose, Plan, Save, and Sync control surface.",
+  "start_url": "/wizard/index.html",
+  "scope": "/wizard/",
+  "display": "standalone",
+  "background_color": "#030712",
+  "theme_color": "#07111f",
+  "categories": ["business", "developer", "productivity"],
+  "icons": [
+    { "src": "/wizard/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/wizard/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/wizard/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

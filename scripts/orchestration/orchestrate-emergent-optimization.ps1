@@ -236,7 +236,8 @@ function Invoke-DynamicRoutingMode {
     
     Write-Host "[TOP RECOMMENDATIONS]" -ForegroundColor Green
     
-    foreach ($i, $rec in $recommendations.GetEnumerator()) {
+    for ($i = 0; $i -lt $recommendations.Count; $i++) {
+        $rec = $recommendations[$i]
         $recNum = $i + 1
         Write-Host "`n$recNum. $($rec.AgentID) → Specialization: $($rec.SpecializedDomain)" -ForegroundColor Cyan
         Write-Host "   Effectiveness: $($rec.EffectivenessScore * 100)% | Cost: \$$([Math]::Round($rec.AverageCost, 8))" -ForegroundColor Gray
@@ -247,7 +248,8 @@ function Invoke-DynamicRoutingMode {
     Write-Host "`n[MODEL OPTIONS FOR $TaskType]" -ForegroundColor Green
     $modelOptions = Select-OptimalModel -TaskType $TaskType -Objective $Objective
     
-    foreach ($i, $opt in $modelOptions.GetEnumerator()) {
+    for ($i = 0; $i -lt $modelOptions.Count; $i++) {
+        $opt = $modelOptions[$i]
         $optNum = $i + 1
         $specs = Get-ModelDetails $opt.Model
         Write-Host "$optNum. $($opt.Model)" -ForegroundColor Yellow

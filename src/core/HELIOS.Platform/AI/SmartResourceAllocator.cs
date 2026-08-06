@@ -18,7 +18,7 @@ namespace HELIOS.Platform.AI
         private int _minThreads = 4;
         private int _maxThreads = 64;
         private long _cacheSize = 512 * 1024 * 1024; // 512 MB
-        private long _maxCacheSize = 2 * 1024 * 1024 * 1024; // 2 GB
+        private long _maxCacheSize = 2L * 1024 * 1024 * 1024; // 2 GB
         private bool _isEnabled = true;
         private DateTime _lastAllocationTime = DateTime.UtcNow;
 

@@ -6,6 +6,7 @@ using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
 using HELIOS.Platform.Presentation.Studio.Models;
+using AlertSeverity = HELIOS.Platform.Presentation.Studio.Models.AlertSeverity;
 
 namespace HELIOS.Platform.Presentation.Studio.Services
 {
@@ -56,13 +57,22 @@ namespace HELIOS.Platform.Presentation.Studio.Services
         /// </summary>
         public SystemMetrics CollectMetrics()
         {
+            var processes = Process.GetProcesses();
+            var processCount = processes.Length;
+            foreach (var process in processes)
+            {
+                process.Dispose();
+            }
+            using var currentProcess = Process.GetCurrentProcess();
+            var threadCount = currentProcess.Threads.Count;
+
             var metrics = new SystemMetrics
             {
                 Timestamp = DateTime.UtcNow,
                 CpuUsagePercent = Math.Round(_cpuCounter.NextValue(), 2),
                 MemoryUsagePercent = Math.Round(_memoryCounter.NextValue(), 2),
-                ProcessCount = Process.GetProcessCount(),
-                ThreadCount = Process.GetCurrentProcess().Threads.Count
+                ProcessCount = processCount,
+                ThreadCount = threadCount
             };
 
             // Collect memory info

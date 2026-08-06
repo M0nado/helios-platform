@@ -44,58 +44,6 @@ namespace HELIOS.Platform.Core.Monitoring
         void StopHealthMonitoring();
     }
 
-    // ========== Server Status Models ==========
-
-    public class ServerHealthStatus
-    {
-        public string HostName { get; set; } = Environment.MachineName;
-        public DateTime CheckedAt { get; set; } = DateTime.UtcNow;
-        public string OverallStatus { get; set; } = "Healthy";
-        public double UptimeHours { get; set; }
-        public int ActiveAlerts { get; set; }
-        public Dictionary<string, double> ComponentHealth { get; set; } = new();
-    }
-
-    public class ServiceHealthStatus
-    {
-        public string ServiceName { get; set; } = string.Empty;
-        public string Status { get; set; } = "Unknown";
-        public DateTime LastChecked { get; set; } = DateTime.UtcNow;
-        public long ResponseTimeMs { get; set; }
-        public string HealthIndicator { get; set; } = "✓";
-    }
-
-    public class PerformanceReport
-    {
-        public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
-        public TimeSpan ReportPeriod { get; set; }
-        public double AverageCpuUsage { get; set; }
-        public double PeakCpuUsage { get; set; }
-        public double AverageMemoryUsage { get; set; }
-        public double PeakMemoryUsage { get; set; }
-        public double AverageDiskUsage { get; set; }
-        public List<string> Observations { get; set; } = new();
-        public List<string> Recommendations { get; set; } = new();
-    }
-
-    public class AlertSummary
-    {
-        public int TotalAlerts { get; set; }
-        public int CriticalAlerts { get; set; }
-        public int WarningAlerts { get; set; }
-        public List<AlertDetail> Details { get; set; } = new();
-    }
-
-    public class AlertDetail
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
-        public string Severity { get; set; } = "Warning";
-        public string Message { get; set; } = string.Empty;
-        public string Component { get; set; } = string.Empty;
-        public bool Resolved { get; set; }
-    }
-
     // ========== Health Check Models ==========
 
     public enum HealthStatus

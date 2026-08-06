@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -7,7 +9,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
     /// Data Compression Engine implementation.
     /// Provides intelligent data compression with format selection.
     /// </summary>
-    public class DataCompressionEngine : IDataCompressionEngine
+    public class DataCompressionEngine : Contracts.IDataCompressionEngine
     {
         private readonly ILogger<DataCompressionEngine> _logger;
         private readonly SemaphoreSlim _semaphore;
