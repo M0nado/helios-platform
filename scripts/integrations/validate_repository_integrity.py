@@ -104,10 +104,10 @@ def validate(root: Path = ROOT) -> list[str]:
     for name in duplicate_declared_names:
         errors.append(f"duplicate .gitmodules repository declaration: {name}")
 
-    declared_names = set(declared_names_list)
-    for name in sorted(expected - declared_names):
+    declared_name_set = set(declared_names_list)
+    for name in sorted(expected - declared_name_set):
         errors.append(f"pinned-submodule missing from .gitmodules: {name}")
-    for name in sorted(declared_names - expected):
+    for name in sorted(declared_name_set - expected):
         errors.append(f"unapproved .gitmodules repository: {name}")
 
     links = gitlinks(root)
@@ -117,9 +117,12 @@ def validate(root: Path = ROOT) -> list[str]:
     for path in sorted(links):
         if path not in declared:
             errors.append(f"orphan gitlink not declared in .gitmodules: {path}")
+    for path in sorted(set(declared) & set(links)):
+        sha = links[path]
+        if len(sha) != 40 or any(char not in "0123456789abcdef" for char in sha):
+            errors.append(f"gitlink has invalid commit SHA at {path}: {sha}")
 
     return errors
-
 
 if __name__ == "__main__":
     failures = validate()
