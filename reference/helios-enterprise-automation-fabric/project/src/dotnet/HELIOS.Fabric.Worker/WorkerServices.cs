@@ -183,6 +183,8 @@ public sealed class ConnectorStateStore(BlobServiceClient client)
         }
         catch (RequestFailedException exception) when (exception.Status == 409)
         {
+            // Expected for idempotent "write once" behavior when the state blob already exists.
+            _ = exception;
         }
     }
 }
