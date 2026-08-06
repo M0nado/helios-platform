@@ -71,7 +71,7 @@ def validate(root: Path = ROOT) -> list[str]:
         entry["name"].casefold()
         for entry in entries
         if entry.get("integrationMode") == "pinned-submodule"
-    }
+    }hen a noncanonical entry is mistyped, for example contract-only becomes contrcat-only, this code simply excludes it from the pinned set and still returns success as long as the submodule declarations match. That lets the new repository contract carry a mode no workflow or validator understands, so validate every integrationMode against the supported values before deriving expected.
     parser = configparser.ConfigParser()
     parser.read(root / ".gitmodules")
     declared: dict[str, str] = {}
