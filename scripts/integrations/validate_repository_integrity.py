@@ -54,12 +54,19 @@ def validate(root: Path = ROOT) -> list[str]:
     if len(names) != len(set(names)):
         errors.append("repository registry contains duplicate names")
 
-    # When the canonical platform entry is changed to contract-only, or another
-    # repository is marked canonical, this loop still accepts the registry
-    # because it checks only whether each mode belongs to the allowed set. That
-    # permits the new integration metadata to contradict canonicalPlatform;
-    # require exactly one canonical entry and verify that its name matches the
-    # top-level canonical platform.
+    canonical_platform = registry.get("canonicalPlatform", "").casefold()
+    canonical_entries = [
+        entry["name"].casefold()
+        for entry in entries
+        if entry.get("integrationMode") == "canonical"
+    ]
+    if len(canonical_entries) != 1:
+        errors.append("repository registry must contain exactly one canonical integrationMode")
+    elif canonical_entries[0] != canonical_platform:
+        errors.append(
+            "canonical integrationMode entry does not match canonicalPlatform"
+        )
+
     expected = {
         entry["name"].casefold()
         for entry in entries
@@ -68,12 +75,15 @@ def validate(root: Path = ROOT) -> list[str]:
     parser = configparser.ConfigParser()
     parser.read(root / ".gitmodules")
     declared: dict[str, str] = {}
-    # When a section header is changed from [submodule "name"] to an arbitrary
-    # header such as [foo] while retaining its path, url, and gitlink, this loop
-    # still treats it as a valid declaration and the validator returns success.
-    # Git does not recognize that mapping—git submodule status exits with no
-    # submodule mapping found in .gitmodules—so require the expected submodule
-    # section form or read declarations through Git's config interface.
+    for section in parser.sections():
+        if not section.startswith('submodule "') or not section.endswith('"'):
+            errors.append(f"invalid .gitmodules section: {section}")
+            continue
+        path = parser.get(section, "path", fallback="").strip()
+        url = parser.get(section, "url", fallback="").strip()
+        if not path or not url:
+            errors.append(f"incomplete submodule declaration: {section}")
+            continue
         try:
             name = github_name(url)
         except ValueError as exc:
@@ -83,31 +93,32 @@ def validate(root: Path = ROOT) -> list[str]:
             errors.append(f"duplicate submodule path: {path}")
         declared[path] = name
 
-    # When .gitmodules declares the same approved GitHub repository at two
-    # different paths and both paths have 160000 gitlinks, converting the
-    # declaration values to a set collapses the duplicate, so the
-    # expected/declared-name comparisons are empty and the later path comparison
-    # also succeeds. That lets an extra copy of an approved pinned submodule
-    # enter the index without a distinct registry entry; reject duplicate
-    # declared repository names or URLs before this set conversion.
+    declared_names_list = list(declared.values())
+    duplicate_declared_names = sorted(
+        {
+            name
+            for name in declared_names_list
+            if declared_names_list.count(name) > 1
+        }
+    )
+    for name in duplicate_declared_names:
+        errors.append(f"duplicate .gitmodules repository declaration: {name}")
+
+    declared_names = set(declared_names_list)
     for name in sorted(expected - declared_names):
         errors.append(f"pinned-submodule missing from .gitmodules: {name}")
     for name in sorted(declared_names - expected):
         errors.append(f"unapproved .gitmodules repository: {name}")
 
     links = gitlinks(root)
-    # When a PR changes a modules/... gitlink to an arbitrary 40-character SHA,
-    # git ls-files --stage still reports mode 160000, and this loop only compares
-    # path sets, so the integrity check succeeds even though a later submodule
-    # checkout cannot resolve that recorded commit. Git's submodule docs describe
-    # update/checkout as using the commit recorded in the superproject, so fetch
-    # or otherwise verify each recorded SHA against its declared URL before
-    # accepting the pin: https://git-scm.com/docs/git-submodule.
-    #
-    # Useful? React with 👍 / 👎.
-fter the syntax errors identified elsewhere are repaired, a checkout with missing or undeclared gitlinks can still pass this validator because gitlinks(root) is computed and then discarded before returning. Fresh evidence in this commit is that neither the declared-without-gitlink nor orphan-gitlink comparison remains before this return; restore both checks so the integrity gate validates the index it reads.
+    for path, name in sorted(declared.items()):
+        if name in expected and path not in links:
+            errors.append(f"declared submodule has no 160000 gitlink: {path}")
+    for path in sorted(links):
+        if path not in declared:
+            errors.append(f"orphan gitlink not declared in .gitmodules: {path}")
 
-AGENTS.md reference: [AGENTS.md:L28-L28](https://github.com/M0nado/helios-platform/blob/bdb569357af640c3f121e12cf5e0a50e24f5de5f/AGENTS.md#L28-L28)
+    return errors
 
 
 if __name__ == "__main__":
