@@ -14,3 +14,4 @@ resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 }
 
 output logAnalyticsWorkspaceName string = workspace.name
+output logAnalyticsWorkspaceId string = workspace.id

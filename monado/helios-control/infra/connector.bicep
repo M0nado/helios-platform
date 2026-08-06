@@ -29,6 +29,8 @@ param publicBaseUrl string = ''
 @minLength(40)
 @maxLength(40)
 param sourceCommitSha string
+@description('Delegated infrastructure subnet for a private Container Apps environment. Required by the production entry point.')
+param containerAppsInfrastructureSubnetId string = ''
 @description('Additional organization tags. Reserved HELIOS governance tags cannot be overridden.')
 param commonTags object = {}
 
@@ -164,6 +166,10 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   location: location
   tags: governedTags
   properties: {
+    vnetConfiguration: !empty(containerAppsInfrastructureSubnetId) ? {
+      infrastructureSubnetId: containerAppsInfrastructureSubnetId
+      internal: true
+    } : null
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -187,7 +193,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: true
+        external: empty(containerAppsInfrastructureSubnetId)
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false
@@ -273,7 +279,7 @@ resource apiAuth 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
         enabled: true
         registration: {
           clientId: entraClientId
-          openIdIssuer: 'https://login.microsoftonline.com/${entraTenantId}/v2.0'
+          openIdIssuer: '${az.environment().authentication.loginEndpoint}${entraTenantId}/v2.0'
         }
         validation: {
           allowedAudiences: [ teamsSsoApplicationIdUri ]
