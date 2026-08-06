@@ -49,6 +49,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Generate branch absorption multicloud UI plan
         run: |
           python3 -m py_compile scripts/analysis/branch_absorption_multicloud_plan.py scripts/analysis/simple_build_center.py scripts/analysis/complex_code_grading.py scripts/analysis/module_submodule_organizer.py scripts/analysis/aihub_learning_feedback_loop.py scripts/dashboard/generate-gui.py
