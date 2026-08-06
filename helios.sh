@@ -13,6 +13,7 @@ case "$cmd" in
   gaps) exec python3 scripts/analysis/hybrid_gap_analysis.py "$@" ;;
   prune-generated) exec python3 scripts/analysis/prune_generated_artifacts.py "$@" ;;
   branches) exec python3 scripts/analysis/branch_intelligence.py "$@" ;;
+  remote-priority) exec python3 scripts/analysis/branch_intelligence.py --remote helios-control --remote hermes-fleet-production "$@" ;;
   build) exec python3 scripts/build_graph/build_graph.py "$@" ;;
   codex) exec python3 scripts/codex/generate-codex-tasks.py "$@" ;;
   recommendations) exec python3 scripts/analysis/merge_prune_recommendations.py "$@" ;;
@@ -93,6 +94,7 @@ Commands:
   gaps              Hybrid integration gap analysis
   prune-generated   Delete generated report/dashboard artifacts from the working tree
   branches          Branch intelligence reports
+  remote-priority   Rank helios-control and hermes-fleet-production remote branches
   build             Build graph report or runner
   codex             Generate Codex task packets
   recommendations   Branch merge/prune recommendations
