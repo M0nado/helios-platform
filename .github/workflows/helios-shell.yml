@@ -1,0 +1,55 @@
+name: HELIOS Command Shell
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop, 'integration/**' ]
+
+jobs:
+  helios-status:
+    name: Status and registry validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run HELIOS status
+        shell: pwsh
+        run: ./tools/helios.ps1 status
+      - name: Validate HELIOS agents
+        shell: pwsh
+        run: ./tools/helios.ps1 agents validate
+      - name: Verify deep HELIOS capabilities
+        shell: pwsh
+        run: ./tools/helios.ps1 setup verify
+      - name: Upload HELIOS reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-shell-status-reports
+          path: reports/generated/helios-shell
+          if-no-files-found: warn
+
+  helios-final-gate:
+    name: Final gate dry run
+    runs-on: ubuntu-latest
+    needs: helios-status
+    steps:
+      - uses: actions/checkout@v4
+      - name: Whitespace check
+        run: git diff --check
+      - name: Azure verification report
+        shell: pwsh
+        run: ./tools/helios.ps1 azure verify
+        continue-on-error: true
+      - name: Build contracts
+        shell: pwsh
+        run: ./tools/helios.ps1 build contracts
+        continue-on-error: true
+      - name: Upload HELIOS gate reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: helios-shell-gate-reports
+          path: reports/generated/helios-shell
+          if-no-files-found: warn
