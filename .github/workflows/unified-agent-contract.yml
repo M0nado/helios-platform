@@ -67,13 +67,8 @@ jobs:
           test -s .github/copilot-instructions.md
           test -s .codex/config.toml
           test -s docs/architecture/UNIFIED_AGENT_COMMUNICATION.md
-   P1 Badge Add the pins before enforcing integrity validation
-
-In this commit's tree, .gitmodules declares seven submodules, but the index contains no 160000 gitlinks, so this command exits with seven declared submodule has no 160000 gitlink errors. Consequently, every matching pull-request or main-branch workflow run stops at this newly mandatory step and can never produce a green contract validation; commit the actual pins and update the test that currently expects all seven failures before enforcing the check.
-
-AGENTS.md reference: [AGENTS.md:L28-L28](https://github.com/M0nado/helios-platform/blob/b7844c7897979c9f2a1a2639ff0a0709bf79359f/AGENTS.md#L28-L28)
-
-Useful? React with 👍 / 👎.
+      - name: Validate repository integrity
+        run: python scripts/integrations/validate_repository_integrity.py
       - uses: actions/upload-artifact@v4
         with:
           name: helios-unified-agent-contract
