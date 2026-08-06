@@ -15,11 +15,15 @@ on:
   push:
     branches: [main]
     paths:
+      - "AGENTS.md"
+      - ".codex/**"
+      - ".github/copilot-instructions.md"
       - "config/integrations/**"
       - ".gitmodules"
       - "modules/**"
       - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
+      - ".github/workflows/unified-agent-contract.yml"
   workflow_dispatch:
 
 permissions:
