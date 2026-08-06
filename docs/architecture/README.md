@@ -21,6 +21,7 @@ HELIOS Platform is built on a modular, microservices-based architecture designed
 ## 📚 Documentation Index
 
 ### Architecture Fundamentals
+- **[Monado enterprise experience fabric v2](./MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md)** - Authoritative v2 profile/storage/experience/sync contract map
 - **[System Overview](./SYSTEM_OVERVIEW.md)** - High-level system design
 - **[Components](./COMPONENTS.md)** - Core components and their relationships
 - **[Data Models](./DATA_MODELS.md)** - Data structures and schemas

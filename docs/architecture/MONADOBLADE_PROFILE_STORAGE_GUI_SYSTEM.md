@@ -1,5 +1,7 @@
 # Monadoblade Profile, Storage, GUI, and AIHub System
 
+> v1 baseline reference. The authoritative v2 execution contract for issue #206 lives in `docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md` and `config/monado-enterprise/v2/`.
+
 ## Purpose
 
 Monadoblade is a local-first, Azure-extended Windows platform built around seven isolated operating profiles, strict SSD partitioning, deterministic folder hierarchies, governed cross-partition transfers, and an AIHub control brain. The system must remain useful when cloud services are unavailable and must never make administrator, security, disk, identity, or production changes without an explicit policy gate.

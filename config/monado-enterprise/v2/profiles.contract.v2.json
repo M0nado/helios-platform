@@ -1,0 +1,122 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v2/profiles.contract.v2.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-enterprise-profiles-v2",
+  "defaultProfile": "core",
+  "profiles": [
+    {
+      "id": "core",
+      "displayName": "Core",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "developer",
+      "displayName": "Developer",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "gamer",
+      "displayName": "Gamer",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "studio",
+      "displayName": "Studio",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "personal",
+      "displayName": "Personal",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "sysops",
+      "displayName": "SysOps",
+      "windowsRole": "standard-user-bounded-operator",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "ai-server",
+      "displayName": "AI / Server",
+      "windowsRole": "service-identities",
+      "interactive": false,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true
+    },
+    {
+      "id": "sysadmin",
+      "displayName": "SysAdmin",
+      "windowsRole": "local-administrator",
+      "interactive": true,
+      "administrator": true,
+      "hidden": true,
+      "enabledByDefault": false,
+      "activation": {
+        "physicalPresenceRequired": true,
+        "minimumFactors": 2,
+        "remoteActivationDenied": true,
+        "cloudActivationDenied": true,
+        "aiActivationDenied": true
+      }
+    }
+  ],
+  "states": [
+    {
+      "id": "recovery",
+      "displayName": "Recovery",
+      "kind": "state",
+      "entryRequiresApproval": true
+    },
+    {
+      "id": "quarantine",
+      "displayName": "Quarantine",
+      "kind": "state",
+      "entryRequiresApproval": true
+    }
+  ],
+  "overlays": [
+    {
+      "id": "airgap",
+      "kind": "overlay",
+      "appliesTo": [
+        "core",
+        "developer",
+        "studio",
+        "personal",
+        "sysops",
+        "ai-server"
+      ],
+      "networkEgress": "deny-by-default"
+    }
+  ],
+  "invariants": {
+    "onlySysAdminIsAdministrator": true,
+    "sysAdminHiddenAndDisabledByDefault": true,
+    "recoveryAndQuarantineAreStatesNotProfiles": true,
+    "airgapIsOverlayNotProfile": true
+  }
+}
