@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "packs": [
+    {"modelId": "hermes-local-code", "provider": "hermes-local", "endpointEnv": "HERMES_LOCAL_ENDPOINT", "requiredSecrets": [], "requiredTools": ["python3"], "maxTokens": "local-default", "recommendedAgents": ["csharp-core", "dashboard"], "localSetupCommand": "python3 scripts/automation/hermes_xcore_model_setup.py", "cloudSetupCommand": "", "healthCheckCommand": "python3 scripts/automation/hermes_xcore_model_setup.py", "mode": "local"},
+    {"modelId": "xcore-cloud-planner", "provider": "xcore-cloud", "endpointEnv": "XCORE_CLOUD_ENDPOINT", "requiredSecrets": ["XCORE_API_KEY"], "requiredTools": ["python3"], "maxTokens": "provider-default", "recommendedAgents": ["mass-integration", "azure-infra"], "localSetupCommand": "", "cloudSetupCommand": "python3 scripts/automation/hermes_xcore_model_setup.py", "healthCheckCommand": "python3 scripts/automation/hermes_xcore_model_setup.py", "mode": "cloud"}
+  ]
+}

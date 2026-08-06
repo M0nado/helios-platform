@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "tenant": {"tenantIdEnv": "MICROSOFT_TENANT_ID", "clientIdEnv": "MICROSOFT_CLIENT_ID"},
+  "graph": {"requiredScopes": ["User.Read", "Sites.Read.All"], "blockedScopes": ["Mail.ReadWrite", "Files.ReadWrite.All"]},
+  "connectors": ["teams", "sharepoint", "onedrive", "copilot-studio"],
+  "auditRequired": true
+}

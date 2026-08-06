@@ -1,0 +1,76 @@
+name: HELIOS Autofix
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Plan only or apply narrow automated fixes.
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+  workflow_run:
+    workflows:
+      - HELIOS Shell
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  autofix:
+    name: Gate-aware autofix
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.HELIOS_AUTOMATION_TOKEN || github.token }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Generate report-only final gate context
+        shell: bash
+        run: python3 scripts/automation/final_gate.py --report-only
+
+      - name: Run policy gate
+        shell: bash
+        run: python3 scripts/security/policy_gate.py
+
+      - name: Forecast branch conflicts
+        shell: bash
+        run: python3 scripts/github/conflict_forecast.py
+
+      - name: Plan autofix
+        shell: bash
+        run: python3 scripts/automation/autofix_loop.py plan
+
+      - name: Apply autofix
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'apply' }}
+        shell: bash
+        run: python3 scripts/automation/autofix_loop.py apply
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: helios-autofix-reports
+          path: |
+            reports/autofix
+            reports/policy
+            reports/mass-integration/conflict-forecast.*
+            reports/final-gate

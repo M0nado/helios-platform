@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "models": [
+    {"modelId": "gpt-5.5", "provider": "openai", "endpointType": "responses", "requiredSecrets": ["OPENAI_API_KEY"], "maxTokens": "provider-default", "supportsTools": true, "supportsVision": true, "supportsStructuredOutput": true, "supportsCode": true, "supportsLongContext": true, "costTier": "high", "speedTier": "medium", "qualityTier": "frontier", "recommendedAgents": ["csharp-core", "mass-integration", "security-vault"], "fallbackModels": ["gpt-5.4"], "localCloudMode": "cloud"},
+    {"modelId": "azure-openai-default", "provider": "azure-openai", "endpointType": "responses-compatible", "requiredSecrets": ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY"], "maxTokens": "deployment-default", "supportsTools": true, "supportsVision": true, "supportsStructuredOutput": true, "supportsCode": true, "supportsLongContext": true, "costTier": "medium", "speedTier": "medium", "qualityTier": "high", "recommendedAgents": ["azure-infra"], "fallbackModels": ["gpt-5.4"], "localCloudMode": "cloud"},
+    {"modelId": "local-hermes", "provider": "hermes-local", "endpointType": "openai-compatible", "requiredSecrets": [], "maxTokens": "local-default", "supportsTools": false, "supportsVision": false, "supportsStructuredOutput": false, "supportsCode": true, "supportsLongContext": false, "costTier": "local", "speedTier": "fast", "qualityTier": "local", "recommendedAgents": ["docs", "dashboard"], "fallbackModels": ["offline-stub"], "localCloudMode": "local"},
+    {"modelId": "offline-stub", "provider": "offline", "endpointType": "none", "requiredSecrets": [], "maxTokens": 0, "supportsTools": false, "supportsVision": false, "supportsStructuredOutput": false, "supportsCode": false, "supportsLongContext": false, "costTier": "none", "speedTier": "instant", "qualityTier": "stub", "recommendedAgents": ["reporting"], "fallbackModels": [], "localCloudMode": "local"}
+  ]
+}
