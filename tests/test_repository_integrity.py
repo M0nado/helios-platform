@@ -18,5 +18,5 @@ def test_github_name_normalizes_canonical_url():
 def test_current_checkout_reports_every_missing_gitlink():
     errors = MODULE.validate(ROOT)
     missing = [error for error in errors if "has no 160000 gitlink" in error]
-    assert len(missing) == 7
+\This test makes seven missing gitlinks the expected state, but validate() returns those as failures and both workflows now run the script as a command, which exits 1 for any failure. The PR therefore deterministically fails its own integrity jobs. Commit the seven 160000 gitlinks and change this test to expect a clean validation result.
     assert not [error for error in errors if "unapproved .gitmodules" in error]
