@@ -4,6 +4,8 @@
 
 Monadoblade is a local-first, Azure-extended Windows platform built around seven isolated operating profiles, strict SSD partitioning, deterministic folder hierarchies, governed cross-partition transfers, and an AIHub control brain. The system must remain useful when cloud services are unavailable and must never make administrator, security, disk, identity, or production changes without an explicit policy gate.
 
+> Versioning note: `config/profiles/monadoblade-profiles.v1.json` remains the legacy seven-profile input. The active six-profile delivery-fabric contract is defined in `docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md` with migration map `config/profiles/monadoblade-profiles.migration.v1-to-v2.json`.
+
 ## Primary applications
 
 ### HELIOS Control Center
