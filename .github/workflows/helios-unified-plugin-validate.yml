@@ -1,0 +1,124 @@
+name: HELIOS Unified Plugin
+
+on:
+  pull_request:
+    paths:
+      - "plugins/helios-control-fabric/**"
+      - ".agents/plugins/marketplace.json"
+      - ".github/agents/helios-control.agent.md"
+      - ".github/instructions/helios-control.instructions.md"
+      - "monado/helios-control/appPackage/**"
+      - "monado/helios-control/docs/UNIFIED_PLUGIN_SETUP.md"
+      - "monado/helios-control/src/Helios.Connect.Api/Program.cs"
+      - "monado/helios-control/src/Helios.Connect.Api/wwwroot/mcp/**"
+      - "monado/helios-control/tests/Helios.Connect.Tests/WebhookTests.cs"
+      - ".github/workflows/helios-unified-plugin-validate.yml"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: helios-unified-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Parse manifests and contracts
+        run: |
+          python -m json.tool .agents/plugins/marketplace.json >/dev/null
+          python -m json.tool plugins/helios-control-fabric/.codex-plugin/plugin.json >/dev/null
+          python -m json.tool plugins/helios-control-fabric/.mcp.json >/dev/null
+          for contract in connections oidc devops-sync runner-topology edge-runtime; do
+            python -m json.tool "plugins/helios-control-fabric/assets/${contract}.json" >/dev/null
+          done
+          python -m json.tool plugins/helios-control-fabric/assets/microsoft-mcp.template.json >/dev/null
+          python -m json.tool monado/helios-control/appPackage/manifest.json >/dev/null
+          python -m json.tool monado/helios-control/appPackage/declarativeAgent.json >/dev/null
+          python -m json.tool monado/helios-control/appPackage/ai-plugin.json >/dev/null
+      - name: Test setup helper
+        run: python -m unittest discover -s plugins/helios-control-fabric/scripts -p "test_*.py" -v
+      - name: Enforce plan-first contract
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REPOSITORY_ID: ${{ github.repository_id }}
+          EXPECTED_REPOSITORY_OWNER_ID: ${{ github.repository_owner_id }}
+        run: |
+          python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev --json > /tmp/helios-plan.json
+          python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev --json > /tmp/helios-oidc.json
+          python plugins/helios-control-fabric/scripts/helios.py devops-sync --json > /tmp/helios-devops.json
+          python plugins/helios-control-fabric/scripts/helios.py runners --json > /tmp/helios-runners.json
+          python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev --json > /tmp/helios-edge.json
+          python - <<'PY'
+          import json
+          import os
+          plan=json.load(open("/tmp/helios-plan.json"))
+          oidc=json.load(open("/tmp/helios-oidc.json"))
+          devops=json.load(open("/tmp/helios-devops.json"))
+          runners=json.load(open("/tmp/helios-runners.json"))
+          edge=json.load(open("/tmp/helios-edge.json"))
+          assert plan["executionMode"] == "plan-only"
+          assert "Azure deployment approval" in plan["administratorGates"]
+          assert "federationSubject" not in plan
+          assert isinstance(oidc["useImmutableSubject"], bool)
+          assert oidc["repositoryId"] == os.environ["EXPECTED_REPOSITORY_ID"]
+          assert oidc["ownerId"] == os.environ["EXPECTED_REPOSITORY_OWNER_ID"]
+          owner, repository = os.environ["GITHUB_REPOSITORY"].split("/", 1)
+          if oidc["useImmutableSubject"]:
+              repository_segment = (
+                  f"{owner}@{oidc['ownerId']}/"
+                  f"{repository}@{oidc['repositoryId']}"
+              )
+          else:
+              repository_segment = f"{owner}/{repository}"
+          expected_subject = f"repo:{repository_segment}:environment:azure-dev"
+          assert oidc["selectedSubject"] == expected_subject
+          assert oidc["secretsStoredInGitHub"] is False
+          assert devops["azureDevOps"]["readOnly"] is True
+          assert devops["synchronization"]["automaticWrites"] is False
+          assert runners["selfHosted"]["enabled"] is False
+          assert edge["targetEdge"]["connectivity"] == "Private Link"
+          assert edge["automaticApply"] is False
+          PY
+      - name: Enforce safe MCP widget contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html=Path("monado/helios-control/src/Helios.Connect.Api/wwwroot/mcp/helios-control-v2.html").read_text()
+          program=Path("monado/helios-control/src/Helios.Connect.Api/Program.cs").read_text()
+          manifest=Path("monado/helios-control/appPackage/manifest.json").read_text()
+          assert "innerHTML" not in html
+          assert "textContent" in html
+          assert 'event.source!==window.parent' in html
+          assert "ui/notifications/tool-result" in html
+          assert "openExternal" in html
+          assert "text/html;profile=mcp-app" in program
+          assert "ui://helios/control-center-v2.html" in program
+          assert "securitySchemes" in program
+          assert "outputSchema" in program
+          assert "mcp/www_authenticate" in program
+          assert "openai/widgetDomain" in program
+          assert "redirect_domains" in program
+          assert "/access_as_user" in program
+          assert "user_impersonation" not in program
+          assert "api://${{PUBLIC_HOSTNAME}}/${{ENTRA_APP_ID}}" in manifest
+          PY
+
+  mcp-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build and test HELIOS MCP contract
+        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release

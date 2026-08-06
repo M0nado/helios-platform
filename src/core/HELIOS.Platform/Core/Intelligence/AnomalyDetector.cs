@@ -12,7 +12,7 @@ namespace HELIOS.Platform.Core.Intelligence
     /// <summary>
     /// Detects anomalies in data using statistical methods.
     /// </summary>
-    public class AnomalyDetector : IAnomalyDetector, IDisposable
+    public class AnomalyDetector : Interfaces.IAnomalyDetector, IDisposable
     {
         private readonly Dictionary<string, AnomalyModel> _models = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);

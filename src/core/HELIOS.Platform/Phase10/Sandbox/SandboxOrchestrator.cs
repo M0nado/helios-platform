@@ -84,15 +84,7 @@ namespace HELIOS.Platform.Phase10.Sandbox
                     await InitializeAsync(cancellationToken);
                 }
 
-                var results = await AnalyzeSuspiciousFilesAsync(new[] { filePath }, options, cancellationToken);
-                var resultList = results as List<SandboxAnalysisResult> ?? new List<SandboxAnalysisResult>(results);
-
-                return resultList.Count > 0 ? resultList[0] : new SandboxAnalysisResult
-                {
-                    FilePath = filePath,
-                    IsSafe = false,
-                    AnalysisError = "Analysis failed"
-                };
+                return await AnalyzeSingleFileAsync(filePath, options, cancellationToken);
             }
             catch (Exception ex)
             {

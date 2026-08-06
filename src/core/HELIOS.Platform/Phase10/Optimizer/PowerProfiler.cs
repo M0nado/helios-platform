@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
@@ -264,7 +265,7 @@ namespace HELIOS.Platform.Phase10.Optimizer
 
                 // GPU Temperature (estimated)
                 var gpuQuery = new ManagementObjectSearcher("SELECT * FROM Win32_VideoController");
-                gpuResults = gpuQuery.Get();
+                var gpuResults = gpuQuery.Get();
 
                 if (gpuResults.Count > 0)
                 {
@@ -333,9 +334,12 @@ namespace HELIOS.Platform.Phase10.Optimizer
 
                 if (results.Count > 0)
                 {
-                    var processor = results[0];
-                    var maxSpeed = Convert.ToInt32(processor["MaxClockSpeed"]);
-                    return $"{maxSpeed} MHz";
+                    var processor = results.Cast<ManagementObject>().FirstOrDefault();
+                    if (processor != null)
+                    {
+                        var maxSpeed = Convert.ToInt32(processor["MaxClockSpeed"]);
+                        return $"{maxSpeed} MHz";
+                    }
                 }
             }
             catch

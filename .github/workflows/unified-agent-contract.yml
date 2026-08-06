@@ -1,0 +1,79 @@
+name: HELIOS Unified Agent Contract
+
+on:
+  pull_request:
+    paths:
+      - "AGENTS.md"
+      - ".codex/**"
+      - ".github/copilot-instructions.md"
+      - "config/integrations/**"
+      - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
+      - ".github/workflows/unified-agent-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "config/integrations/**"
+      - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate JSON and canonical ownership
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          map_path = Path("config/integrations/repositories.json")
+          schema_path = Path("config/integrations/event-contract.schema.json")
+          repo_map = json.loads(map_path.read_text(encoding="utf-8"))
+          schema = json.loads(schema_path.read_text(encoding="utf-8"))
+
+          if repo_map.get("canonicalPlatform") != "M0nado/helios-platform":
+              raise SystemExit("Canonical platform must be M0nado/helios-platform")
+          if repo_map.get("controlPlane") != "Heli0s-Dynamics/adaptive-multibrain-bootstrap":
+              raise SystemExit("Control plane mapping is missing or incorrect")
+          names = {entry["name"] for entry in repo_map.get("repositories", [])}
+          required = {
+              "M0nado/helios-platform",
+              "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
+              "M0nado/Helios-Control-Center",
+              "M0nado/helios-ai-hub",
+              "M0nado/helios-monado-blade",
+              "Yolkster64/hermes-fleet-platforms",
+          }
+          missing = sorted(required - names)
+          if missing:
+              raise SystemExit(f"Repository role map is incomplete: {missing}")
+          if schema.get("title") != "HELIOS Integration Event":
+              raise SystemExit("Unexpected integration schema")
+          print(f"Validated communication contract for {len(names)} repositories")
+          PY
+      - name: Verify instruction surfaces
+        shell: bash
+        run: |
+          test -s AGENTS.md
+          test -s .github/copilot-instructions.md
+          test -s .codex/config.toml
+          test -s docs/architecture/UNIFIED_AGENT_COMMUNICATION.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: helios-unified-agent-contract
+          path: |
+            AGENTS.md
+            .github/copilot-instructions.md
+            .codex/config.toml
+            config/integrations/repositories.json
+            config/integrations/event-contract.schema.json
+            docs/architecture/UNIFIED_AGENT_COMMUNICATION.md
+          retention-days: 14

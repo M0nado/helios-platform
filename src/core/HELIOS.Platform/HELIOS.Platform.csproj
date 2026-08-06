@@ -2,13 +2,16 @@
 
   <!-- Framework Configuration -->
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <UseWPF>true</UseWPF>
     <RootNamespace>HELIOS.Platform</RootNamespace>
     <AssemblyName>HELIOS.Platform</AssemblyName>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(ContinuousIntegrationBuild)' == 'true'">true</RestoreLockedMode>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
@@ -100,20 +103,19 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
-    
     <!-- Logging -->
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     
     <!-- System & Windows Dependencies -->
+    <PackageReference Include="TaskScheduler" Version="2.12.2" />
     <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
     <!-- NOTE: System.ServiceProcess.ServiceController 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
     <!-- NOTE: System.Diagnostics.PerformanceCounter 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
     <!-- NOTE: System.Diagnostics.EventLog 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
-    <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.1" />
     <!-- NOTE: System.Management 4.7.0 → 10.0.7 is a major version bump - NOT updated -->
     <PackageReference Include="System.Management" Version="4.7.0" />
     <!-- NOTE: System.Drawing.Common 8.0.0 → 10.0.7 is a major version bump - NOT updated -->
@@ -167,12 +169,6 @@
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     
     <!-- Testing -->
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="Moq" Version="4.20.70" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
   <!-- Exclude broken Phase 10 BootEnvironment files from compilation -->

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "deploymentDefault": "what-if-only",
+  "productionEnabled": false,
+  "identity": {
+    "developerLocal": "azure-cli-developer-login",
+    "githubCi": "oidc-federated-credential",
+    "azureWorkloads": "managed-identity",
+    "secretStorage": "key-vault-references-only",
+    "secretReadbackDenied": true
+  },
+  "environments": [
+    {
+      "id": "local",
+      "cloudRequired": false,
+      "transports": ["local-grpc", "loopback-http", "sqlite-outbox"]
+    },
+    {
+      "id": "azure-dev",
+      "protectedEnvironment": true,
+      "reviewersRequired": true,
+      "deployAllowed": true,
+      "production": false
+    },
+    {
+      "id": "azure-prod",
+      "protectedEnvironment": true,
+      "reviewersRequired": true,
+      "deployAllowed": false,
+      "production": true,
+      "hardGateIssue": 162
+    }
+  ],
+  "resourceGroups": {
+    "platform": "rg-monadoblade-platform-{environment}",
+    "data": "rg-monadoblade-data-{environment}",
+    "security": "rg-monadoblade-security-{environment}",
+    "ai": "rg-monadoblade-ai-{environment}"
+  },
+  "services": [
+    { "id": "key-vault", "purpose": "secret references and certificate control", "privateEndpoint": true, "publicNetworkAccess": "disabled-after-bootstrap" },
+    { "id": "container-registry", "purpose": "signed container images", "privateEndpoint": true },
+    { "id": "container-apps", "purpose": "AIHub, Hermes, integration and worker services", "internalEnvironmentPreferred": true },
+    { "id": "functions", "purpose": "bounded schedules and event adapters", "privateEndpoint": true },
+    { "id": "service-bus", "purpose": "typed command and event fabric", "privateEndpoint": true },
+    { "id": "event-hubs", "purpose": "high-volume sanitized telemetry", "privateEndpoint": true },
+    { "id": "signalr", "purpose": "real-time GUI and operations state", "privateEndpoint": true },
+    { "id": "cosmos-db", "purpose": "approved AIHub metadata and state", "privateEndpoint": true },
+    { "id": "storage-data-lake", "purpose": "approved artifacts, evaluations and evidence", "privateEndpoint": true },
+    { "id": "ai-search", "purpose": "approved indexed knowledge", "privateEndpoint": true },
+    { "id": "azure-ai-foundry", "purpose": "approved model deployment, agents and evaluations", "privateNetworking": true },
+    { "id": "log-analytics", "purpose": "central operational telemetry" },
+    { "id": "application-insights", "purpose": "distributed traces, dependencies and performance" },
+    { "id": "azure-monitor", "purpose": "alerts, workbooks and policy evidence" },
+    { "id": "api-management", "purpose": "optional governed external API edge", "optional": true, "privateEndpoint": true }
+  ],
+  "githubEnvironmentVariables": [
+    "AZURE_CLIENT_ID",
+    "AZURE_TENANT_ID",
+    "AZURE_SUBSCRIPTION_ID",
+    "AZURE_RESOURCE_GROUP"
+  ],
+  "githubPermissions": {
+    "contents": "read",
+    "id-token": "write",
+    "packages": "write-when-building-images",
+    "deployments": "write-only-in-deployment-workflow"
+  },
+  "deploymentFlow": [
+    "compile-bicep",
+    "lint-and-policy",
+    "what-if",
+    "upload-evidence",
+    "protected-environment-approval",
+    "deploy-development",
+    "health-probes",
+    "rollback-readiness",
+    "promotion-pr"
+  ],
+  "denied": [
+    "client-secret-in-github",
+    "plaintext-secret-in-repository",
+    "subscription-owner-for-automation",
+    "unreviewed-tenant-consent",
+    "unapproved-production-deployment",
+    "raw-private-memory-upload",
+    "quarantine-evidence-training"
+  ]
+}

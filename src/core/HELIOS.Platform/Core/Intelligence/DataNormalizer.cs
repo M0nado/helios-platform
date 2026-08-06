@@ -11,7 +11,7 @@ namespace HELIOS.Platform.Core.Intelligence
     /// <summary>
     /// Standardizes metrics for ML processing using normalization techniques.
     /// </summary>
-    public class DataNormalizer : IDataNormalizer, IDisposable
+    public class DataNormalizer : Interfaces.IDataNormalizer, IDisposable
     {
         private readonly Dictionary<string, List<double>> _metricHistory = new();
         private readonly Dictionary<string, (double min, double max)> _metricBounds = new();

@@ -75,14 +75,24 @@ type AIHubKnowledgeFixScore = {
 module AiHubLearningEngine =
     let private clamp value = Math.Max(0.0, Math.Min(1.0, value))
 
+    // Reward signals fail closed when their producer emits NaN. Infinite values
+    // are treated as saturated inputs instead of being allowed to poison a rank.
+    let private boundedReward value =
+        if Double.IsNaN(value) then 0.0 else clamp value
+
+    // An indeterminate risk signal must not make a candidate look safer. Treat
+    // NaN as maximum risk; infinities are saturated by clamp.
+    let private boundedPenalty value =
+        if Double.IsNaN(value) then 1.0 else clamp value
+
     let score signals =
-        (signals.Novelty * 0.18) +
-        (signals.TestConfidence * 0.20) +
-        (signals.CostEfficiency * 0.12) +
-        (signals.Speed * 0.13) +
-        (signals.Quality * 0.20) +
-        (signals.ReusePotential * 0.12) -
-        (signals.RiskPenalty * 0.15)
+        ((boundedReward signals.Novelty) * 0.18) +
+        ((boundedReward signals.TestConfidence) * 0.20) +
+        ((boundedReward signals.CostEfficiency) * 0.12) +
+        ((boundedReward signals.Speed) * 0.13) +
+        ((boundedReward signals.Quality) * 0.20) +
+        ((boundedReward signals.ReusePotential) * 0.12) -
+        ((boundedPenalty signals.RiskPenalty) * 0.15)
         |> clamp
 
     let classify score =

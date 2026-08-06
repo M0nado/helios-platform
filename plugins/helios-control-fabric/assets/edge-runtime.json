@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "currentState": "not-live",
+  "currentValidatedRuntime": "Entra-protected Azure Container Apps",
+  "targetEdge": {
+    "service": "Azure Front Door Premium",
+    "origin": "Azure Container Apps",
+    "connectivity": "Private Link",
+    "directPublicIngress": "disabled-after-private-edge-cutover",
+    "tls": "managed-certificate-or-approved-custom-domain"
+  },
+  "prerequisites": [
+    "Microsoft.CDN and Microsoft.App resource providers registered",
+    "workload-profiles Container Apps environment in a custom VNet",
+    "delegated infrastructure subnet and separate private-endpoint subnet",
+    "Front Door private endpoint connection approved by an administrator",
+    "Entra application, RBAC, OIDC, and digest-pinned image configured"
+  ],
+  "workflow": {
+    "validation": "automatic",
+    "bicepWhatIf": "protected-environment approval",
+    "apply": "separate protected-environment approval",
+    "connectorActivation": "post-deployment health and evidence review"
+  },
+  "automaticApply": false
+}

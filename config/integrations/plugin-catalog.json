@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "plugins": [
+    {
+      "name": "helios-openai-mcp",
+      "platform": "openai-chatgpt-codex",
+      "path": "plugins/openai/helios-mcp",
+      "status": "implemented",
+      "transport": ["streamable-http", "stdio"],
+      "authoritativeBackend": "helios-integration-broker"
+    },
+    {
+      "name": "helios-copilot-studio-connector",
+      "platform": "microsoft-copilot-studio",
+      "path": "plugins/copilot-studio/helios-openapi.yaml",
+      "status": "implemented-contract-authorization-required",
+      "transport": ["https-openapi"],
+      "authoritativeBackend": "helios-integration-broker"
+    },
+    {
+      "name": "github-copilot-repository-instructions",
+      "platform": "github-copilot",
+      "path": ".github/copilot-instructions.md",
+      "status": "implemented"
+    },
+    {
+      "name": "codex-project-policy",
+      "platform": "openai-codex",
+      "path": ".codex/config.toml",
+      "status": "implemented"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ using System.Linq;
 using System.ServiceProcess;
 using System.Threading.Tasks;
 using HELIOS.Platform.Core.Server.Models;
+using ManagedServiceType = HELIOS.Platform.Core.Server.Models.ServiceType;
 
 namespace HELIOS.Platform.Core.Server
 {
@@ -139,7 +140,7 @@ namespace HELIOS.Platform.Core.Server
 
             try
             {
-                if (service.ServiceType != ServiceType.WindowsService)
+                if (service.ServiceType != ManagedServiceType.WindowsService)
                     throw new InvalidOperationException("Only Windows services can be paused");
 
                 using (var sc = new ServiceController(service.ServiceId))
@@ -179,7 +180,7 @@ namespace HELIOS.Platform.Core.Server
 
             try
             {
-                if (service.ServiceType != ServiceType.WindowsService)
+                if (service.ServiceType != ManagedServiceType.WindowsService)
                     throw new InvalidOperationException("Only Windows services can be resumed");
 
                 using (var sc = new ServiceController(service.ServiceId))
@@ -219,7 +220,7 @@ namespace HELIOS.Platform.Core.Server
 
             try
             {
-                if (service.ServiceType == ServiceType.WindowsService)
+                if (service.ServiceType == ManagedServiceType.WindowsService)
                 {
                     using (var sc = new ServiceController(service.ServiceId))
                     {
@@ -318,7 +319,7 @@ namespace HELIOS.Platform.Core.Server
                 if (service.Status == ServiceStatus.Running)
                     return true;
 
-                if (service.ServiceType == ServiceType.WindowsService)
+                if (service.ServiceType == ManagedServiceType.WindowsService)
                 {
                     using (var sc = new ServiceController(service.ServiceId))
                     {
@@ -372,7 +373,7 @@ namespace HELIOS.Platform.Core.Server
                 if (service.Status == ServiceStatus.Stopped)
                     return true;
 
-                if (service.ServiceType == ServiceType.WindowsService)
+                if (service.ServiceType == ManagedServiceType.WindowsService)
                 {
                     using (var sc = new ServiceController(service.ServiceId))
                     {

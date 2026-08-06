@@ -1,0 +1,152 @@
+openapi: 3.0.3
+info:
+  title: HELIOS Integration Broker
+  version: 0.1.0
+  description: Governed HELIOS status, catalog, event, and approval-request operations.
+servers:
+  - url: https://helios-broker.example.invalid
+    description: Replace during approved development connector registration.
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      operationId: getHeliosBrokerHealth
+      summary: Read broker health
+      security: []
+      responses:
+        '200':
+          description: Broker health
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/v1/status:
+    get:
+      operationId: getHeliosStatus
+      summary: Read HELIOS integration status
+      responses:
+        '200':
+          description: Current broker status
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/v1/tools:
+    get:
+      operationId: listHeliosTools
+      summary: List approved HELIOS tools
+      responses:
+        '200':
+          description: Tool catalog
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/v1/connectors:
+    get:
+      operationId: listHeliosConnectors
+      summary: List HELIOS connector services
+      responses:
+        '200':
+          description: Connector catalog
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/v1/events:
+    get:
+      operationId: searchHeliosEvents
+      summary: Search normalized HELIOS events
+      parameters:
+        - in: query
+          name: correlationId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Matching events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /api/v1/tools/preview:
+    post:
+      operationId: previewHeliosAction
+      summary: Preview action policy without recording or executing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolActionRequest'
+      responses:
+        '200':
+          description: Policy preview
+          content:
+            application/json:
+              schema:
+                type: object
+  /api/v1/tools/requests:
+    post:
+      operationId: requestHeliosAction
+      summary: Record an approval-pending HELIOS action request
+      description: This operation records a request only and does not execute a connector action.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolActionRequest'
+      responses:
+        '202':
+          description: Pending request recorded
+          content:
+            application/json:
+              schema:
+                type: object
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    ToolActionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - toolName
+        - correlationId
+        - environment
+        - arguments
+      properties:
+        toolName:
+          type: string
+          maxLength: 128
+        correlationId:
+          type: string
+          minLength: 4
+          maxLength: 128
+        environment:
+          type: string
+          enum: [local, development, test, staging, production]
+        arguments:
+          type: object
+          additionalProperties: true
+        requestedBy:
+          type: string
+          nullable: true
+          maxLength: 256
+        reason:
+          type: string
+          nullable: true
+          maxLength: 1000

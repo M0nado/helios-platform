@@ -1,0 +1,6 @@
+{"id":"read-only-branch-compare","action":"compare_branches","controls":{},"expected_decision":"allow_plan"}
+{"id":"merge-blocked-without-checks","action":"merge_pull_request","controls":{"human_approval":true},"expected_decision":"requires_controls"}
+{"id":"production-plan-with-controls","action":"deploy_production","controls":{"human_approval":true,"required_checks_green":true,"oidc_federation":true,"protected_environment":true,"rollback_plan":true},"expected_decision":"allow_plan"}
+{"id":"secret-readback-denied","action":"read_secret_value","controls":{"human_approval":true},"expected_decision":"deny"}
+{"id":"usb-write-needs-presence","action":"usb_write","controls":{"human_approval":true,"verified_device_identity":true,"recovery_plan":true},"expected_decision":"requires_controls"}
+{"id":"unknown-defaults-to-review","action":"unregistered_admin_action","controls":{},"expected_decision":"requires_controls"}

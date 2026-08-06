@@ -1,9 +1,21 @@
 {
-  "name": "personal",
+  "name": "helios",
   "interface": {
-    "displayName": "Personal"
+    "displayName": "Helios"
   },
   "plugins": [
+    {
+      "name": "helios-control-fabric",
+      "source": {
+        "source": "local",
+        "path": "./plugins/helios-control-fabric"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "DeveloperTools"
+    },
     {
       "name": "helios-azure-cli",
       "source": {

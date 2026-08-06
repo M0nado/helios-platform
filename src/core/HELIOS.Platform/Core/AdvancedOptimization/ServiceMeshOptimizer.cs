@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -7,7 +9,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
     /// Service Mesh Optimizer implementation.
     /// Optimizes service communication and routing.
     /// </summary>
-    public class ServiceMeshOptimizer : IServiceMeshOptimizer
+    public class ServiceMeshOptimizer : Contracts.IServiceMeshOptimizer
     {
         private readonly ILogger<ServiceMeshOptimizer> _logger;
         private readonly SemaphoreSlim _semaphore;

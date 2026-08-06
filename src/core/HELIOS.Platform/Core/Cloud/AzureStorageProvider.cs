@@ -2,6 +2,7 @@ namespace HELIOS.Platform.Core.Cloud;
 
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage;
 using Azure.Identity;
 using HELIOS.Platform.Core.Logging;
 
@@ -12,7 +13,6 @@ public class AzureStorageProvider : ICloudStorageProvider
 {
     private readonly ILogger _logger;
     private BlobContainerClient? _containerClient;
-    private CloudProviderCredentials? _credentials;
 
     public CloudProviderType ProviderType => CloudProviderType.AzureBlob;
 
@@ -25,18 +25,33 @@ public class AzureStorageProvider : ICloudStorageProvider
     {
         try
         {
-            _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+            ArgumentNullException.ThrowIfNull(credentials);
 
-            if (string.IsNullOrEmpty(_credentials.StorageAccountName) ||
-                string.IsNullOrEmpty(_credentials.StorageAccountKey))
+            if (string.IsNullOrWhiteSpace(credentials.StorageAccountName))
             {
-                _logger.Error("Azure: Storage account name and key are required");
+                _logger.Error("Azure: Storage account name is required");
                 return false;
             }
 
-            var connectionString = $"DefaultEndpointsProtocol=https;AccountName={_credentials.StorageAccountName};AccountKey={_credentials.StorageAccountKey};EndpointSuffix=core.windows.net";
-            var blobServiceClient = new BlobServiceClient(new Uri($"https://{_credentials.StorageAccountName}.blob.core.windows.net"), 
-                new StorageSharedKeyCredential(_credentials.StorageAccountName, _credentials.StorageAccountKey));
+            var serviceUri = new Uri($"https://{credentials.StorageAccountName}.blob.core.windows.net");
+            BlobServiceClient blobServiceClient;
+
+            if (!string.IsNullOrWhiteSpace(credentials.StorageAccountKey))
+            {
+                blobServiceClient = new BlobServiceClient(
+                    serviceUri,
+                    new StorageSharedKeyCredential(credentials.StorageAccountName, credentials.StorageAccountKey));
+                _logger.Warning("Azure Storage: using legacy shared-key authentication");
+            }
+            else
+            {
+                var credentialOptions = new DefaultAzureCredentialOptions
+                {
+                    ManagedIdentityClientId = credentials.ClientId
+                };
+                blobServiceClient = new BlobServiceClient(serviceUri, new DefaultAzureCredential(credentialOptions));
+                _logger.Info("Azure Storage: using passwordless Azure identity authentication");
+            }
 
             _containerClient = blobServiceClient.GetBlobContainerClient("helios-sync");
 
@@ -155,7 +170,7 @@ public class AzureStorageProvider : ICloudStorageProvider
             }
 
             var prefix = NormalizeRemotePath(remotePath);
-            await foreach (var blob in _containerClient.GetBlobsAsync(BlobTraitsCopy.None, BlobStatesInner.None, prefix))
+            await foreach (var blob in _containerClient.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, default))
             {
                 var fileInfo = new CloudFileInfo
                 {
