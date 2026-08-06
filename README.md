@@ -1,4 +1,15 @@
-# 🚀 HELIOS Platform v2.0 - Enterprise Windows Management System
+# HELIOS Platform
+
+HELIOS is a C#-first secure Windows development and control platform. Start
+with the **[canonical project setup and repository guide](docs/guides/PROJECT_SETUP.md)**
+for repository ownership, the C#/WinUI 3, C++, F#, and Python boundaries, safe
+branch consolidation, local validation, Hermes/XCore integration, and governed
+Azure CLI onboarding.
+
+> The phase reports below are historical delivery evidence. They are not a
+> substitute for current build, test, security, or deployment validation.
+
+## Historical v2.0 summary
 
 **Status**: Phase 1 Foundation In Progress ⚙️
 **Build**: Clean Release (0 errors, 2908 warnings) ✅
