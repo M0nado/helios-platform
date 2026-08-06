@@ -75,7 +75,14 @@ public sealed class FabricWorker(
                 await WriteReceiptAsync(evidenceContainer, envelope, route, args.CancellationToken);
                 delivered.Add(route.ConnectorId);
             }
-            catch (Exception exception)
+            catch (Exception exception) when (
+                exception is not OutOfMemoryException &&
+                exception is not StackOverflowException &&
+                exception is not AccessViolationException &&
+                exception is not AppDomainUnloadedException &&
+                exception is not BadImageFormatException &&
+                exception is not CannotUnloadAppDomainException &&
+                exception is not InvalidProgramException)
             {
                 logger.LogError(exception, "Delivery failed for {ConnectorId} and event {EventId}", route.ConnectorId, envelope.EventId);
                 failures.Add($"{route.ConnectorId}: {exception.GetType().Name}");
