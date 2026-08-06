@@ -41,7 +41,12 @@ namespace HELIOS.Platform.Core.Server
                     ServiceId = serviceId,
                     Endpoint = endpoint,
                     Weight = weight,
-                    HealthStatus = ServiceHealthStatus.Healthy,
+                    HealthStatus = new ServiceHealthStatus
+                    {
+                        ServiceId = serviceId,
+                        IsHealthy = true,
+                        LastCheckedAt = DateTime.UtcNow
+                    },
                     RegisteredAt = DateTime.UtcNow,
                     RequestsHandled = 0,
                     AverageResponseTimeMs = 0,
@@ -171,9 +176,7 @@ namespace HELIOS.Platform.Core.Server
                 // Update service health reference
                 if (_services.TryGetValue(serviceId, out var service))
                 {
-                    service.HealthStatus = currentHealth.IsHealthy
-                        ? ServiceHealthStatusConstants.Healthy
-                        : ServiceHealthStatusConstants.Unhealthy;
+                    service.HealthStatus = currentHealth;
                     service.AverageResponseTimeMs = currentHealth.ResponseTimeMs;
                 }
 

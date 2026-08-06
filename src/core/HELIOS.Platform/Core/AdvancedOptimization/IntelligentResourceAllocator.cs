@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -7,7 +9,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
     /// Intelligent Resource Allocator implementation.
     /// Provides AI-driven resource allocation with predictive sizing.
     /// </summary>
-    public class IntelligentResourceAllocator : IIntelligentResourceAllocator
+    public class IntelligentResourceAllocator : Contracts.IIntelligentResourceAllocator
     {
         private readonly ILogger<IntelligentResourceAllocator> _logger;
         private readonly SemaphoreSlim _semaphore;

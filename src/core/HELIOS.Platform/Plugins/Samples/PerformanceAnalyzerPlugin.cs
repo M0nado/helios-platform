@@ -53,12 +53,12 @@ namespace HELIOS.Platform.Plugins.Samples
 
         public async Task StopAsync(CancellationToken cancellationToken = default)
         {
-            Status = PluginStatus.Stopped;
+            Status = PluginStatus.Loaded;
             _context.Logger.LogInformation("Performance Analyzer stopped");
             await Task.CompletedTask;
         }
 
-        public IPluginConfiguration GetConfiguration()
+        public HELIOS.Platform.Plugins.Interfaces.IPluginConfiguration GetConfiguration()
         {
             return null;
         }

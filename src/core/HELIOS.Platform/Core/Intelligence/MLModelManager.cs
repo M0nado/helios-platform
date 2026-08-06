@@ -12,7 +12,7 @@ namespace HELIOS.Platform.Core.Intelligence
     /// <summary>
     /// Manages ML model lifecycle including creation, training, evaluation, and retraining.
     /// </summary>
-    public class MLModelManager : IMLModelManager, IDisposable
+    public class MLModelManager : Interfaces.IMLModelManager, IDisposable
     {
         private readonly Dictionary<string, MLModel> _models = new();
         private readonly SemaphoreSlim _semaphore = new(1, 1);

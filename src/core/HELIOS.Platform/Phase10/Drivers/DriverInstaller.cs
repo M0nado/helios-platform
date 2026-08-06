@@ -23,7 +23,7 @@ namespace HELIOS.Platform.Phase10.Drivers
         {
             _repository = repository;
             _semaphore = new SemaphoreSlim(1);
-            _installLogDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramData), "HELIOS", "DriverLogs");
+            _installLogDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "HELIOS", "DriverLogs");
             Directory.CreateDirectory(_installLogDirectory);
             _installationHistory = new List<InstallationResult>();
         }

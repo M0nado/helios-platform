@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "timeoutSeconds": 20,
+  "tools": [
+    { "id": "azure-cli", "command": "az", "arguments": ["version"], "required": true, "networkRequired": false },
+    { "id": "azure-developer-cli", "command": "azd", "arguments": ["version"], "required": true, "networkRequired": false },
+    { "id": "github-cli", "command": "gh", "arguments": ["--version"], "required": true, "networkRequired": false },
+    { "id": "dotnet", "command": "dotnet", "arguments": ["--version"], "required": true, "networkRequired": false },
+    { "id": "powershell", "command": "pwsh", "arguments": ["--version"], "required": true, "networkRequired": false },
+    { "id": "docker", "command": "docker", "arguments": ["--version"], "required": true, "networkRequired": false },
+    { "id": "node", "command": "node", "arguments": ["--version"], "required": true, "networkRequired": false },
+    { "id": "npm", "command": "npm", "arguments": ["--version"], "required": true, "networkRequired": false },
+    { "id": "jq", "command": "jq", "arguments": ["--version"], "required": true, "networkRequired": false },
+    { "id": "functions", "command": "func", "arguments": ["--version"], "required": false, "networkRequired": false },
+    { "id": "power-platform", "command": "pac", "arguments": ["--version"], "required": false, "networkRequired": false },
+    { "id": "m365-agents", "command": "atk", "arguments": ["--version"], "required": false, "networkRequired": false },
+    { "id": "vscode-insiders", "command": "code-insiders", "arguments": ["--version"], "required": false, "networkRequired": false },
+    { "id": "claude-code", "command": "claude", "arguments": ["--version"], "required": false, "networkRequired": false },
+    { "id": "azure-mcp", "command": "npx", "arguments": ["-y", "@azure/mcp@3.0.0-beta.27", "--version"], "required": false, "networkRequired": true }
+  ],
+  "authenticationChecks": [
+    { "id": "azure-cli", "command": "az", "arguments": ["account", "show", "--output", "none"] },
+    { "id": "azure-developer-cli", "command": "azd", "arguments": ["auth", "login", "--check-status"] },
+    { "id": "github-cli", "command": "gh", "arguments": ["auth", "status"] }
+  ]
+}

@@ -1,0 +1,1419 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Helios.Connect.Api;
+using Helios.Connect.Contracts;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddHttpClient<OpenAiResponsesProvider>();
+builder.Services.AddHttpClient<IAzureInventoryService, AzureInventoryService>();
+builder.Services.AddHttpClient("helios-connectors", client => client.Timeout = TimeSpan.FromSeconds(15))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton<IEdgeAutomationPlanner, EdgeAutomationPlanner>();
+builder.Services.AddSingleton<ISetupWizardService, SetupWizardService>();
+builder.Services.AddSingleton<IConnectorDispatcher, ConnectorDispatcher>();
+builder.Services.AddSingleton<IControlRunStore>(services =>
+{
+    var configuration = services.GetRequiredService<IConfiguration>();
+    return string.IsNullOrWhiteSpace(configuration["HELIOS_COSMOS_ENDPOINT"])
+        ? new InMemoryControlRunStore()
+        : new CosmosControlRunStore(configuration);
+});
+builder.Services.AddSingleton<ControlRunCoordinator>();
+builder.Services.AddHostedService<ControlRunCoordinator>(services => services.GetRequiredService<ControlRunCoordinator>());
+var app = builder.Build();
+var deliveries = new ExpiringDeliveryReplayCache(
+    GetBoundedInt(builder.Configuration["HELIOS_WEBHOOK_REPLAY_CACHE_CAPACITY"], 4_096, 1, 100_000),
+    TimeSpan.FromSeconds(GetBoundedInt(builder.Configuration["HELIOS_WEBHOOK_REPLAY_TTL_SECONDS"], 86_400, 1, 604_800)));
+var localMcpEnabled = IsEnabled(builder.Configuration["HELIOS_LOCAL_RUNTIME_ALLOWED"]) &&
+    !IsEnabled(builder.Configuration["HELIOS_CLOUD_RUNTIME_ONLY"]);
+
+var staticContentTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+staticContentTypes.Mappings[".webmanifest"] = "application/manifest+json";
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = staticContentTypes,
+    OnPrepareResponse = static context =>
+    {
+        context.Context.Response.Headers["Content-Security-Policy"] = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' https://res.cdn.office.net; connect-src 'self'; frame-ancestors 'self' https://*.microsoft.com https://*.office.com https://*.cloud.microsoft";
+        context.Context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        context.Context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    }
+});
+
+app.MapGet("/setup", () => Results.Redirect("/wizard/index.html"));
+
+app.MapGet("/health", () => Results.Ok(new { service = "helios-connect", status = "healthy", mode = Environment.GetEnvironmentVariable("HELIOS_EXECUTION_MODE") ?? "dry-run" }));
+
+app.MapGet("/health/live", () => Results.Ok(new
+{
+    service = "helios-connect",
+    status = "live"
+}));
+
+app.MapGet("/health/ready", async (IConfiguration configuration, IControlRunStore store, CancellationToken cancellationToken) =>
+    await BuildReadinessResultAsync(configuration, store, cancellationToken));
+
+app.MapGet("/privacy", () => Results.Text(
+    "Helios processes only administrator-approved integration metadata. The tenant administrator supplies the governing privacy notice.",
+    "text/plain; charset=utf-8"));
+
+app.MapGet("/terms", () => Results.Text(
+    "Use is limited to authorized users and approved read-only or governed workflows under tenant policy.",
+    "text/plain; charset=utf-8"));
+
+app.MapGet("/openapi/v1.json", (HttpRequest request) =>
+{
+    var origin = $"{request.Scheme}://{request.Host}";
+    var runIdParameter = new { name = "runId", @in = "path", required = true, schema = new { type = "string", pattern = "^[0-9a-f]{32}$" } };
+    var paths = new Dictionary<string, object>
+    {
+        ["/connector/context"] = new { get = new { operationId = "GetAzureContext", summary = "Read the configured Helios Azure context.", responses = new Dictionary<string, object> { ["200"] = new { description = "Azure context" }, ["401"] = new { description = "Entra authentication required" } } } },
+        ["/connector/resources"] = new { get = new { operationId = "ListAzureResources", summary = "List read-only resource metadata.", parameters = new[] { new { name = "typePrefix", @in = "query", required = false, schema = new { type = "string" } } }, responses = new Dictionary<string, object> { ["200"] = new { description = "Azure resources" }, ["401"] = new { description = "Entra authentication required" } } } },
+        ["/connector/foundry"] = new { get = new { operationId = "ListFoundryResources", summary = "List Foundry-related resources.", responses = new Dictionary<string, object> { ["200"] = new { description = "Foundry resources" }, ["401"] = new { description = "Entra authentication required" } } } },
+        ["/control/connectors"] = new { get = new { operationId = "ListConnectorBindings", summary = "List safe connector binding state without endpoints or secrets.", responses = new Dictionary<string, object> { ["200"] = new { description = "Connector states" }, ["401"] = new { description = "Entra authentication required" } } } },
+        ["/control/runs"] = new { post = new {
+            operationId = "StartControlRun",
+            summary = "Start an idempotent Diagnose, Plan, Save, and Sync run that cannot apply.",
+            parameters = new[] { new { name = "Idempotency-Key", @in = "header", required = true, schema = new { type = "string", pattern = "^[A-Za-z0-9._:-]{8,128}$" } } },
+            requestBody = new {
+                required = true,
+                content = new Dictionary<string, object> {
+                    ["application/json"] = new { schema = new {
+                        type = "object",
+                        required = new[] { "intent", "environment" },
+                        properties = new {
+                            intent = new { type = "string", @enum = new[] { "provision-resources", "cleanup-owned-resources" } },
+                            environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } },
+                            target = new { type = "string", maxLength = 90 },
+                            connectors = new { type = "array", items = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "teams", "copilot" } }, uniqueItems = true }
+                        },
+                        additionalProperties = false
+                    } }
+                }
+            },
+            responses = new Dictionary<string, object> { ["202"] = new { description = "Saved control run" }, ["400"] = new { description = "Invalid request" }, ["401"] = new { description = "Entra authentication required" }, ["409"] = new { description = "Idempotency conflict" }, ["413"] = new { description = "Request too large" } }
+        } },
+        ["/control/runs/{runId}"] = new { get = new { operationId = "GetControlRun", summary = "Read an owner-scoped saved control run.", parameters = new[] { runIdParameter }, responses = new Dictionary<string, object> { ["200"] = new { description = "Saved control run" }, ["401"] = new { description = "Entra authentication required" }, ["404"] = new { description = "Run not found" } } } },
+        ["/control/runs/{runId}/resume"] = new { post = new { operationId = "ResumeFailedControlRun", summary = "Requeue an owner-scoped failed run; active and terminal runs are unchanged.", parameters = new[] { runIdParameter }, responses = new Dictionary<string, object> { ["202"] = new { description = "Run state" }, ["401"] = new { description = "Entra authentication required" }, ["404"] = new { description = "Run not found" } } } }
+    };
+    return Results.Json(new { openapi = "3.0.1", info = new { title = "Helios Azure Connector", version = HeliosMcpDefaults.Version }, servers = new[] { new { url = origin } }, paths });
+});
+
+// RFC 9728 discovery for OAuth-protected MCP clients. Both the root and the
+// path-specific form are exposed because clients are required to try both.
+app.MapGet("/.well-known/oauth-protected-resource", (HttpContext context) =>
+    BuildProtectedResourceMetadata(context));
+app.MapGet("/.well-known/oauth-protected-resource/mcp", (HttpContext context) =>
+    BuildProtectedResourceMetadata(context));
+
+app.MapGet("/connector/context", (HttpContext context) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
+    return Results.Ok(inventory.GetContext());
+});
+
+app.MapGet("/connector/resources", async (HttpContext context, string? typePrefix, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
+    return await RunInventoryQuery(() => inventory.ListResourcesAsync(typePrefix, cancellationToken));
+});
+
+app.MapGet("/connector/foundry", async (HttpContext context, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    var inventory = context.RequestServices.GetRequiredService<IAzureInventoryService>();
+    return await RunInventoryQuery(() => inventory.ListFoundryResourcesAsync(cancellationToken));
+});
+
+app.MapPost("/automation/plan", async (HttpContext context, IEdgeAutomationPlanner planner, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    const int maxPlanBytes = 16_384;
+    if (!context.Request.HasJsonContentType()) return Results.BadRequest(new { error = "Content-Type must be application/json." });
+    if (!BoundedRequestBody.Prepare(context, maxPlanBytes)) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+
+    try
+    {
+        var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maxPlanBytes, cancellationToken);
+        if (body.IsTooLarge) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        var request = JsonSerializer.Deserialize<EdgeAutomationRequest>(
+            body.Bytes,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (request is null) return Results.BadRequest(new { error = "Automation request is required." });
+        return Results.Ok(planner.CreatePlan(request));
+    }
+    catch (JsonException)
+    {
+        return Results.BadRequest(new { error = "Automation request is invalid JSON." });
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(new { error = exception.Message });
+    }
+});
+
+app.MapPost("/setup/bootstrap", async (HttpContext context, ISetupWizardService wizard, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    if (!context.Request.HasJsonContentType()) return Results.BadRequest(new { error = "Content-Type must be application/json." });
+    const int maximumSetupBytes = 16_384;
+    if (!BoundedRequestBody.Prepare(context, maximumSetupBytes)) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    try
+    {
+        var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maximumSetupBytes, cancellationToken);
+        if (body.IsTooLarge) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        var request = JsonSerializer.Deserialize<SetupBootstrapRequest>(body.Bytes, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return request is null ? Results.BadRequest(new { error = "Setup request is required." }) : Results.Ok(wizard.CreateBootstrap(request));
+    }
+    catch (JsonException) { return Results.BadRequest(new { error = "Setup request is invalid JSON." }); }
+    catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
+});
+
+app.MapPost("/upgrades/propose", async (HttpContext context, ISetupWizardService wizard, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    if (!context.Request.HasJsonContentType()) return Results.BadRequest(new { error = "Content-Type must be application/json." });
+    const int maximumUpgradeBytes = 16_384;
+    if (!BoundedRequestBody.Prepare(context, maximumUpgradeBytes)) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    try
+    {
+        var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maximumUpgradeBytes, cancellationToken);
+        if (body.IsTooLarge) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        var request = JsonSerializer.Deserialize<UpgradeProposalRequest>(body.Bytes, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return request is null ? Results.BadRequest(new { error = "Upgrade proposal is required." }) : Results.Ok(wizard.CreateUpgradeProposal(request));
+    }
+    catch (JsonException) { return Results.BadRequest(new { error = "Upgrade proposal is invalid JSON." }); }
+    catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
+});
+
+app.MapGet("/control/connectors", (HttpContext context, IConnectorDispatcher dispatcher) =>
+{
+    SetControlResponseHeaders(context);
+    if (!IsControlOriginAllowed(context)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    return Results.Ok(new
+    {
+        mode = context.RequestServices.GetRequiredService<IConfiguration>()["HELIOS_CONNECTOR_DELIVERY_MODE"] ?? "dry-run",
+        bindings = dispatcher.GetStatus()
+    });
+});
+
+app.MapPost("/control/runs", async (HttpContext context, ControlRunCoordinator coordinator, CancellationToken cancellationToken) =>
+{
+    SetControlResponseHeaders(context);
+    if (!IsControlOriginAllowed(context)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    if (!context.Request.HasJsonContentType()) return Results.BadRequest(new { error = "Content-Type must be application/json." });
+    const int maximumControlRunBytes = 16_384;
+    if (!BoundedRequestBody.Prepare(context, maximumControlRunBytes)) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    var idempotencyValues = context.Request.Headers["Idempotency-Key"];
+    if (idempotencyValues.Count != 1 || string.IsNullOrWhiteSpace(idempotencyValues[0]))
+        return Results.BadRequest(new { error = "Exactly one Idempotency-Key header is required." });
+    try
+    {
+        var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maximumControlRunBytes, cancellationToken);
+        if (body.IsTooLarge) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        var request = JsonSerializer.Deserialize<ControlRunRequest>(body.Bytes,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (request is null) return Results.BadRequest(new { error = "Control run request is required." });
+        var principal = context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault() ?? "authorized-user";
+        var run = await coordinator.StartAsync(request, idempotencyValues[0]!, principal, cancellationToken);
+        return Results.Accepted($"/control/runs/{run.Id}", run);
+    }
+    catch (JsonException) { return Results.BadRequest(new { error = "Control run request is invalid JSON." }); }
+    catch (ArgumentException exception) { return Results.BadRequest(new { error = exception.Message }); }
+    catch (ControlRunIdempotencyConflictException exception) { return Results.Conflict(new { error = exception.Message }); }
+});
+
+app.MapGet("/control/runs/{runId}", async (string runId, HttpContext context, ControlRunCoordinator coordinator, CancellationToken cancellationToken) =>
+{
+    SetControlResponseHeaders(context);
+    if (!IsControlOriginAllowed(context)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    var principal = context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault() ?? "authorized-user";
+    var run = await coordinator.GetAsync(runId, principal, cancellationToken);
+    return run is null ? Results.NotFound(new { error = "Control run was not found." }) : Results.Ok(run);
+});
+
+app.MapPost("/control/runs/{runId}/resume", async (string runId, HttpContext context, ControlRunCoordinator coordinator, CancellationToken cancellationToken) =>
+{
+    SetControlResponseHeaders(context);
+    if (!IsControlOriginAllowed(context)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    var principal = context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault() ?? "authorized-user";
+    var run = await coordinator.ResumeAsync(runId, principal, cancellationToken);
+    return run is null ? Results.NotFound(new { error = "Control run was not found." }) : Results.Accepted($"/control/runs/{run.Id}", run);
+});
+
+app.MapGet("/mcp", (HttpContext context) =>
+{
+    if (!IsMcpOriginAllowed(context)) return McpError(null, -32000, "Invalid Origin header.", StatusCodes.Status403Forbidden);
+    if (!IsConnectorAuthorized(context)) return McpUnauthorized(context);
+    context.Response.Headers["Allow"] = "POST, GET, DELETE";
+    return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
+});
+
+app.MapDelete("/mcp", (HttpContext context) =>
+{
+    if (!IsMcpOriginAllowed(context)) return McpError(null, -32000, "Invalid Origin header.", StatusCodes.Status403Forbidden);
+    if (!IsConnectorAuthorized(context)) return McpUnauthorized(context);
+    // Helios deliberately runs statelessly so requests can be served by any
+    // Container Apps replica. It never issues Mcp-Session-Id, so there is no
+    // server-side session to terminate.
+    context.Response.Headers["Allow"] = "POST, GET";
+    return Results.StatusCode(StatusCodes.Status405MethodNotAllowed);
+});
+
+app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationToken) =>
+{
+    if (!IsMcpOriginAllowed(context)) return McpError(null, -32000, "Invalid Origin header.", StatusCodes.Status403Forbidden);
+    // MCP hosts must be able to initialize, discover the protected tools, and
+    // load the declared UI resource before the OAuth account-linking flow.
+    // Tool execution remains fail-closed and returns the MCP auth challenge.
+    if (!context.Request.HasJsonContentType())
+        return McpError(null, -32600, "Content-Type must be application/json.", StatusCodes.Status415UnsupportedMediaType);
+    var maxMcpBytes = GetMaxMcpRequestBytes(context);
+    if (!BoundedRequestBody.Prepare(context, maxMcpBytes))
+        return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
+    if (!AcceptsMcpPostResponse(context.Request))
+        return McpError(null, -32600, "Accept must include application/json and text/event-stream.", StatusCodes.Status406NotAcceptable);
+
+    var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maxMcpBytes, cancellationToken);
+    if (body.IsTooLarge)
+        return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
+    JsonDocument document;
+    try { document = JsonDocument.Parse(body.Bytes); }
+    catch (JsonException) { return McpError(null, -32700, "Parse error.", StatusCodes.Status400BadRequest); }
+
+    using (document)
+    {
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object)
+            return McpError(null, -32600, "JSON-RPC body must be one object.", StatusCodes.Status400BadRequest);
+        if (!root.TryGetProperty("jsonrpc", out var jsonRpc) || jsonRpc.ValueKind != JsonValueKind.String || jsonRpc.GetString() != "2.0")
+            return McpError(ReadJsonRpcId(root), -32600, "Invalid JSON-RPC version.", StatusCodes.Status400BadRequest);
+
+        var hasId = root.TryGetProperty("id", out _);
+        var id = ReadJsonRpcId(root);
+        if (hasId && root.GetProperty("id").ValueKind is not (JsonValueKind.String or JsonValueKind.Number or JsonValueKind.Null))
+            return McpError(null, -32600, "JSON-RPC id must be a string, number, or null.", StatusCodes.Status400BadRequest);
+        if (!root.TryGetProperty("method", out var methodValue))
+        {
+            // A client-to-server JSON-RPC response has no method. This server
+            // currently sends no requests, but accepting it follows the HTTP
+            // transport's response/notification semantics.
+            if (hasId && (root.TryGetProperty("result", out _) || root.TryGetProperty("error", out _)))
+                return Results.StatusCode(StatusCodes.Status202Accepted);
+            return McpError(id, -32600, "Invalid JSON-RPC request.", StatusCodes.Status400BadRequest);
+        }
+        if (methodValue.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(methodValue.GetString()))
+            return hasId
+                ? McpError(id, -32600, "JSON-RPC method must be a non-empty string.", StatusCodes.Status400BadRequest)
+                : Results.StatusCode(StatusCodes.Status400BadRequest);
+
+        var method = methodValue.GetString()!;
+        var sessionId = context.Request.Headers["Mcp-Session-Id"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(sessionId))
+            return McpError(id, -32001, "MCP session was not found because this server is stateless.", StatusCodes.Status404NotFound);
+
+        if (method == "initialize")
+        {
+            if (!hasId)
+                return Results.StatusCode(StatusCodes.Status400BadRequest);
+            if (!string.IsNullOrWhiteSpace(sessionId))
+                return McpError(id, -32600, "Initialize must not include Mcp-Session-Id.", StatusCodes.Status400BadRequest);
+            if (!TryReadInitializeVersion(root, out var requestedVersion))
+                return McpError(id, -32602, "Initialize requires params.protocolVersion.");
+
+            var negotiatedVersion = McpProtocolDefaults.SupportedVersions.Contains(requestedVersion, StringComparer.Ordinal)
+                ? requestedVersion
+                : McpProtocolDefaults.CurrentVersion;
+
+            return McpResult(id, new
+            {
+                protocolVersion = negotiatedVersion,
+                capabilities = new
+                {
+                    tools = new { listChanged = false },
+                    resources = new { subscribe = false, listChanged = false }
+                },
+                serverInfo = new { name = "helios-control-fabric", title = "HELIOS Control Fabric", version = HeliosMcpDefaults.Version },
+                instructions = "Read-only HELIOS search, status, Monado control UI, Azure and Foundry inventory, and deterministic automation planning. No deployment, secret-write, merge, or role-assignment tools are exposed."
+            });
+        }
+
+        if (!TryValidateMcpProtocolHeader(context.Request, out var protocolError))
+            return McpError(id, -32600, protocolError, StatusCodes.Status400BadRequest);
+
+        // JSON-RPC notifications never receive a JSON-RPC response. Streamable
+        // HTTP acknowledges an accepted notification with an empty HTTP 202.
+        if (!hasId)
+        {
+            return Results.StatusCode(StatusCodes.Status202Accepted);
+        }
+
+        if (method == "tools/call")
+        {
+            if (!TryValidateAzureToolCall(root, out var validationError))
+                return McpError(id, -32602, validationError);
+            if (!IsConnectorAuthorized(context))
+                return McpResult(id, BuildMcpAuthenticationToolResult(context));
+            var planner = context.RequestServices.GetRequiredService<IEdgeAutomationPlanner>();
+            var wizard = context.RequestServices.GetRequiredService<ISetupWizardService>();
+            var coordinator = context.RequestServices.GetRequiredService<ControlRunCoordinator>();
+            var dispatcher = context.RequestServices.GetRequiredService<IConnectorDispatcher>();
+            var toolName = root.GetProperty("params").GetProperty("name").GetString();
+            var inventory = toolName is "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors" or "search" or "fetch" or "helios_get_control_plane_status" or "helios_render_control_center"
+                ? null!
+                : context.RequestServices.GetRequiredService<IAzureInventoryService>();
+            var principal = context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault() ?? "authorized-user";
+            var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+            return McpResult(id, await BuildAzureToolResultAsync(root, inventory, planner, wizard, coordinator, dispatcher, configuration, principal, cancellationToken));
+        }
+
+        return method switch
+        {
+            "ping" => McpResult(id, new { }),
+            "tools/list" when HasObjectParamsOrNoParams(root) => McpResult(id, new { tools = BuildAzureToolList(context.RequestServices.GetRequiredService<IConfiguration>()) }),
+            "tools/list" => McpError(id, -32602, "tools/list params must be an object when provided."),
+            "resources/list" when HasObjectParamsOrNoParams(root) => McpResult(id, BuildMcpResourceList(context)),
+            "resources/list" => McpError(id, -32602, "resources/list params must be an object when provided."),
+            "resources/read" when HasExpectedMcpResourceUri(root) => McpResult(id, await BuildMcpResourceReadAsync(context, cancellationToken)),
+            "resources/read" => McpError(id, -32602, $"resources/read requires uri '{HeliosMcpDefaults.ControlResourceUri}'."),
+            _ => McpError(id, -32601, $"Method '{method}' was not found.")
+        };
+    }
+});
+
+if (localMcpEnabled)
+{
+    app.MapPost("/runtime/webhooks/mcp", async (HttpContext context, CancellationToken cancellationToken) =>
+    {
+        var mode = Environment.GetEnvironmentVariable("HELIOS_EXECUTION_MODE") ?? "dry-run";
+        if (mode.Equals("live", StringComparison.OrdinalIgnoreCase)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+        var remote = context.Connection.RemoteIpAddress;
+        if (remote is not null && !System.Net.IPAddress.IsLoopback(remote)) return Results.StatusCode(StatusCodes.Status403Forbidden);
+        if (!IsMcpOriginAllowed(context)) return McpError(null, -32000, "Invalid Origin header.", StatusCodes.Status403Forbidden);
+        if (!context.Request.HasJsonContentType()) return McpError(null, -32600, "Content-Type must be application/json.", StatusCodes.Status415UnsupportedMediaType);
+        var maxMcpBytes = GetMaxMcpRequestBytes(context);
+        if (!BoundedRequestBody.Prepare(context, maxMcpBytes)) return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
+        if (!AcceptsMcpPostResponse(context.Request)) return McpError(null, -32600, "Accept must include application/json and text/event-stream.", StatusCodes.Status406NotAcceptable);
+
+        var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maxMcpBytes, cancellationToken);
+        if (body.IsTooLarge) return McpError(null, -32600, "MCP request body is too large.", StatusCodes.Status413PayloadTooLarge);
+        JsonDocument document;
+        try { document = JsonDocument.Parse(body.Bytes); }
+        catch (JsonException) { return McpError(null, -32700, "Parse error.", StatusCodes.Status400BadRequest); }
+        using (document)
+        {
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("jsonrpc", out var jsonRpc) || jsonRpc.ValueKind != JsonValueKind.String || jsonRpc.GetString() != "2.0" ||
+                !root.TryGetProperty("method", out var methodValue) || methodValue.ValueKind != JsonValueKind.String)
+                return McpError(ReadJsonRpcId(root), -32600, "Invalid JSON-RPC request.", StatusCodes.Status400BadRequest);
+
+            var hasId = root.TryGetProperty("id", out _);
+            if (!hasId) return Results.StatusCode(StatusCodes.Status202Accepted);
+            var id = ReadJsonRpcId(root);
+            var method = methodValue.GetString();
+            return method switch
+            {
+                "initialize" => McpResult(id, new { protocolVersion = "2025-03-26", capabilities = new { tools = new { listChanged = false } }, serverInfo = new { name = "helios-local", version = HeliosMcpDefaults.Version } }),
+                "tools/list" => McpResult(id, new { tools = new object[] {
+                    new { name = "hermes_get_status", description = "Read Helios/Hermes local status.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false } },
+                    new { name = "hermes_list_routes", description = "List configured integration route names without secrets.", inputSchema = new { type = "object", properties = new { }, additionalProperties = false } }
+                } }),
+                "tools/call" => McpResult(id, BuildToolResult(root)),
+                _ => McpError(id, -32601, $"Method '{method}' was not found.")
+            };
+        }
+    });
+}
+
+app.MapPost("/webhooks/{provider}", async (string provider, HttpRequest request, CancellationToken cancellationToken) =>
+{
+    var supported = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "github", "linear", "slack", "teams", "sharepoint", "foundry", "copilot" };
+    if (!supported.Contains(provider)) return Results.NotFound();
+
+    var maxBytes = GetBoundedInt(
+        request.HttpContext.RequestServices.GetRequiredService<IConfiguration>()["HELIOS_MAX_WEBHOOK_BYTES"],
+        1_048_576,
+        1_024,
+        10_485_760);
+    if (!BoundedRequestBody.Prepare(request.HttpContext, maxBytes)) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    var body = await BoundedRequestBody.ReadAsync(request.Body, maxBytes, cancellationToken);
+    if (body.IsTooLarge) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+    if (body.Bytes.Length == 0) return Results.BadRequest(new { error = "empty payload" });
+
+    // Dry-run controls downstream side effects; it never weakens ingress
+    // authentication. Unsupported providers remain fail-closed in the verifier.
+    // Verify the provider's signature over the exact raw bytes before parsing
+    // attacker-controlled JSON.
+    if (!WebhookVerifier.Verify(provider, request.Headers, body.Bytes))
+        return Results.Unauthorized();
+    try { using var _ = JsonDocument.Parse(body.Bytes); }
+    catch (JsonException) { return Results.BadRequest(new { error = "invalid JSON" }); }
+
+    var deliveryId = request.Headers["X-GitHub-Delivery"].FirstOrDefault()
+        ?? request.Headers["X-Linear-Delivery"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(deliveryId))
+        deliveryId = Convert.ToHexString(SHA256.HashData(body.Bytes)).ToLowerInvariant();
+    var replayKey = Convert.ToHexString(SHA256.HashData(
+        Encoding.UTF8.GetBytes($"{provider.ToLowerInvariant()}\n{deliveryId}"))).ToLowerInvariant();
+    if (!deliveries.TryRegister(replayKey, DateTimeOffset.UtcNow)) return Results.Ok(new { duplicate = true, deliveryId });
+    var evt = new HeliosEvent(deliveryId, $"{provider}.received", provider, provider,
+        DateTimeOffset.UtcNow, Guid.NewGuid().ToString("n"), request.Headers["traceparent"].FirstOrDefault(),
+        "internal", new Dictionary<string, object?> { ["rawSize"] = body.Bytes.Length });
+    return Results.Accepted(value: evt);
+});
+
+app.Run();
+
+static IResult BuildProtectedResourceMetadata(HttpContext context)
+{
+    var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+    var publicOrigin = GetMcpPublicOrigin(context);
+    var resource = $"{publicOrigin}/mcp";
+    var tenantId = configuration["AZURE_TENANT_ID"];
+    var authorizationTenant = string.IsNullOrWhiteSpace(tenantId) ? "common" : tenantId;
+    var delegatedScope = GetMcpDelegatedScope(configuration);
+    var scopes = delegatedScope is null ? Array.Empty<string>() : new[] { delegatedScope };
+
+    context.Response.Headers["Cache-Control"] = "public, max-age=300";
+    return Results.Json(new Dictionary<string, object?>
+    {
+        ["resource"] = resource,
+        ["resource_name"] = "Helios Azure Connector MCP",
+        ["authorization_servers"] = new[] { $"https://login.microsoftonline.com/{authorizationTenant}/v2.0" },
+        ["scopes_supported"] = scopes,
+        ["bearer_methods_supported"] = new[] { "header" },
+        ["resource_documentation"] = $"{publicOrigin}/openapi/v1.json"
+    });
+}
+
+static IResult McpUnauthorized(HttpContext context)
+{
+    context.Response.Headers["WWW-Authenticate"] = BuildMcpAuthenticationChallenge(context);
+    return McpError(null, -32000, "Authentication required.", StatusCodes.Status401Unauthorized);
+}
+
+static string BuildMcpAuthenticationChallenge(HttpContext context)
+{
+    var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+    var scope = GetMcpDelegatedScope(configuration);
+    var metadataUrl = $"{GetMcpPublicOrigin(context)}/.well-known/oauth-protected-resource/mcp";
+    var challenge = $"Bearer resource_metadata=\"{metadataUrl}\", error=\"invalid_token\", error_description=\"A valid Entra access token is required.\"";
+    if (!string.IsNullOrWhiteSpace(scope)) challenge += $", scope=\"{scope}\"";
+    return challenge;
+}
+
+static object BuildMcpAuthenticationToolResult(HttpContext context) => new
+{
+    content = new[]
+    {
+        new
+        {
+            type = "text",
+            text = "Connect an authorized Microsoft Entra account to use this HELIOS tool."
+        }
+    },
+    isError = true,
+    _meta = new Dictionary<string, object>
+    {
+        ["mcp/www_authenticate"] = new[] { BuildMcpAuthenticationChallenge(context) }
+    }
+};
+
+static string? GetMcpDelegatedScope(IConfiguration configuration)
+{
+    var applicationIdUri = configuration["HELIOS_ENTRA_APPLICATION_ID_URI"]?.Trim().TrimEnd('/');
+    if (!string.IsNullOrWhiteSpace(applicationIdUri))
+    {
+        var expectedApplicationIdUri = GetExpectedApplicationIdUri(configuration);
+        if (expectedApplicationIdUri is null ||
+            !string.Equals(applicationIdUri, expectedApplicationIdUri, StringComparison.OrdinalIgnoreCase))
+            return null;
+    }
+    else
+    {
+        var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"];
+        if (string.IsNullOrWhiteSpace(clientId)) return null;
+        applicationIdUri = $"api://{clientId}";
+    }
+    return $"{applicationIdUri}/access_as_user";
+}
+
+static string? GetExpectedApplicationIdUri(IConfiguration configuration)
+{
+    var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"];
+    var publicBaseUrl = configuration["HELIOS_PUBLIC_BASE_URL"];
+    if (string.IsNullOrWhiteSpace(clientId) ||
+        !Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out var publicUri) ||
+        publicUri.Scheme != Uri.UriSchemeHttps ||
+        publicUri.AbsolutePath.Trim('/') != string.Empty ||
+        !string.IsNullOrEmpty(publicUri.Query) ||
+        !string.IsNullOrEmpty(publicUri.Fragment))
+        return null;
+    return $"api://{publicUri.DnsSafeHost.ToLowerInvariant()}/{clientId}";
+}
+
+static string GetMcpPublicOrigin(HttpContext context)
+{
+    var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+    var configured = configuration["HELIOS_PUBLIC_BASE_URL"];
+    if (!string.IsNullOrWhiteSpace(configured) &&
+        Uri.TryCreate(configured, UriKind.Absolute, out var configuredUri) &&
+        configuredUri.Scheme == Uri.UriSchemeHttps &&
+        configuredUri.AbsolutePath.Trim('/') == string.Empty &&
+        string.IsNullOrEmpty(configuredUri.Query) &&
+        string.IsNullOrEmpty(configuredUri.Fragment))
+    {
+        return configuredUri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+    }
+
+    var requiresEntra = RequiresEntraAuthorization(configuration);
+    var scheme = requiresEntra ? Uri.UriSchemeHttps : context.Request.Scheme;
+    return $"{scheme}://{context.Request.Host}".TrimEnd('/');
+}
+
+static bool IsMcpOriginAllowed(HttpContext context)
+{
+    var originHeaders = context.Request.Headers["Origin"];
+    if (originHeaders.Count == 0) return true; // Non-browser MCP clients normally omit Origin.
+    if (originHeaders.Count != 1 || !TryNormalizeOrigin(originHeaders[0], out var origin)) return false;
+
+    var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+    var configuredOrigins = (configuration["HELIOS_MCP_ALLOWED_ORIGINS"] ?? string.Empty)
+        .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    foreach (var configuredOrigin in configuredOrigins)
+    {
+        if (configuredOrigin == "*") continue; // Wildcards defeat DNS-rebinding protection.
+        if (TryNormalizeOrigin(configuredOrigin, out var allowed) &&
+            string.Equals(origin, allowed, StringComparison.OrdinalIgnoreCase))
+            return true;
+    }
+
+    var requiresEntra = RequiresEntraAuthorization(configuration);
+    if (requiresEntra) return false; // Cloud/browser origins must be explicitly allowlisted.
+    return TryNormalizeOrigin(GetMcpPublicOrigin(context), out var sameOrigin) &&
+        string.Equals(origin, sameOrigin, StringComparison.OrdinalIgnoreCase);
+}
+
+static bool IsControlOriginAllowed(HttpContext context)
+{
+    var originHeaders = context.Request.Headers["Origin"];
+    if (originHeaders.Count == 0) return true;
+    if (originHeaders.Count != 1 || !TryNormalizeOrigin(originHeaders[0], out var origin)) return false;
+    return TryNormalizeOrigin(GetMcpPublicOrigin(context), out var expected) &&
+        string.Equals(origin, expected, StringComparison.OrdinalIgnoreCase);
+}
+
+static bool TryNormalizeOrigin(string? candidate, out string origin)
+{
+    origin = string.Empty;
+    if (string.IsNullOrWhiteSpace(candidate) ||
+        !Uri.TryCreate(candidate, UriKind.Absolute, out var uri) ||
+        (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp) ||
+        !string.IsNullOrEmpty(uri.UserInfo) ||
+        uri.AbsolutePath.Trim('/') != string.Empty ||
+        !string.IsNullOrEmpty(uri.Query) ||
+        !string.IsNullOrEmpty(uri.Fragment))
+        return false;
+
+    origin = uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+    return true;
+}
+
+static bool AcceptsMcpPostResponse(HttpRequest request)
+{
+    // Missing Accept is tolerated only for compatibility with older MCP clients;
+    // when present, the Streamable HTTP contract is enforced exactly.
+    var acceptHeaders = request.Headers["Accept"];
+    if (acceptHeaders.Count == 0) return true;
+    var values = acceptHeaders.SelectMany(value => value?.Split(',') ?? Array.Empty<string>())
+        .Select(value => value.Split(';')[0].Trim())
+        .ToArray();
+    return values.Contains("application/json", StringComparer.OrdinalIgnoreCase) &&
+        values.Contains("text/event-stream", StringComparer.OrdinalIgnoreCase);
+}
+
+static int GetMaxMcpRequestBytes(HttpContext context)
+{
+    var configured = context.RequestServices.GetRequiredService<IConfiguration>()["HELIOS_MAX_MCP_BYTES"];
+    return int.TryParse(configured, out var parsed) && parsed is >= 1_024 and <= 10_485_760
+        ? parsed
+        : 1_048_576;
+}
+
+static object? ReadJsonRpcId(JsonElement root)
+{
+    if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("id", out var id)) return null;
+    return id.ValueKind is JsonValueKind.String or JsonValueKind.Number or JsonValueKind.Null
+        ? id.Clone()
+        : null;
+}
+
+static IResult McpResult(object? id, object result) => Results.Json(new Dictionary<string, object?>
+{
+    ["jsonrpc"] = "2.0",
+    ["id"] = id,
+    ["result"] = result
+});
+
+static IResult McpError(object? id, int code, string message, int statusCode = StatusCodes.Status200OK, object? data = null)
+{
+    var error = new Dictionary<string, object?>
+    {
+        ["code"] = code,
+        ["message"] = message
+    };
+    if (data is not null) error["data"] = data;
+    return Results.Json(new Dictionary<string, object?>
+    {
+        ["jsonrpc"] = "2.0",
+        ["id"] = id,
+        ["error"] = error
+    }, statusCode: statusCode);
+}
+
+static bool TryReadInitializeVersion(JsonElement root, out string requestedVersion)
+{
+    requestedVersion = string.Empty;
+    if (!root.TryGetProperty("params", out var parameters) || parameters.ValueKind != JsonValueKind.Object ||
+        !parameters.TryGetProperty("protocolVersion", out var protocolVersion) || protocolVersion.ValueKind != JsonValueKind.String ||
+        string.IsNullOrWhiteSpace(protocolVersion.GetString()) ||
+        !parameters.TryGetProperty("capabilities", out var capabilities) || capabilities.ValueKind != JsonValueKind.Object ||
+        !parameters.TryGetProperty("clientInfo", out var clientInfo) || clientInfo.ValueKind != JsonValueKind.Object ||
+        !clientInfo.TryGetProperty("name", out var clientName) || clientName.ValueKind != JsonValueKind.String ||
+        !clientInfo.TryGetProperty("version", out var clientVersion) || clientVersion.ValueKind != JsonValueKind.String)
+        return false;
+
+    requestedVersion = protocolVersion.GetString()!;
+    return true;
+}
+
+static bool TryValidateMcpProtocolHeader(HttpRequest request, out string error)
+{
+    error = string.Empty;
+    var headerValues = request.Headers["MCP-Protocol-Version"];
+    if (headerValues.Count == 0) return true; // Required backwards-compatible assumption: 2025-03-26.
+    if (headerValues.Count != 1 || string.IsNullOrWhiteSpace(headerValues[0]))
+    {
+        error = "MCP-Protocol-Version must contain exactly one value.";
+        return false;
+    }
+    if (!McpProtocolDefaults.SupportedVersions.Contains(headerValues[0]!, StringComparer.Ordinal))
+    {
+        error = $"Unsupported MCP-Protocol-Version '{headerValues[0]}'.";
+        return false;
+    }
+    return true;
+}
+
+static bool HasObjectParamsOrNoParams(JsonElement root) =>
+    !root.TryGetProperty("params", out var parameters) || parameters.ValueKind == JsonValueKind.Object;
+
+static bool TryValidateAzureToolCall(JsonElement root, out string error)
+{
+    error = string.Empty;
+    if (!root.TryGetProperty("params", out var parameters) || parameters.ValueKind != JsonValueKind.Object ||
+        !parameters.TryGetProperty("name", out var nameElement) || nameElement.ValueKind != JsonValueKind.String)
+    {
+        error = "tools/call requires params.name and optional object params.arguments.";
+        return false;
+    }
+
+    var name = nameElement.GetString();
+    if (name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors" or "search" or "fetch" or "helios_get_control_plane_status" or "helios_render_control_center"))
+    {
+        error = $"Unknown tool '{name}'.";
+        return false;
+    }
+
+    if (!parameters.TryGetProperty("arguments", out var arguments)) return true;
+    if (arguments.ValueKind != JsonValueKind.Object)
+    {
+        error = "params.arguments must be an object.";
+        return false;
+    }
+
+    foreach (var argument in arguments.EnumerateObject())
+    {
+        var valid = name switch
+        {
+            "azure_list_resources" => argument.Name == "typePrefix" && argument.Value.ValueKind == JsonValueKind.String,
+            "helios_plan_automation" => argument.Name is "intent" or "environment" or "target" or "connector" && argument.Value.ValueKind == JsonValueKind.String,
+            "helios_propose_upgrade" => argument.Name is "capability" or "reason" or "target" && argument.Value.ValueKind == JsonValueKind.String,
+            "helios_get_run" => argument.Name == "runId" && argument.Value.ValueKind == JsonValueKind.String,
+            "search" => argument.Name == "query" && argument.Value.ValueKind == JsonValueKind.String,
+            "fetch" => argument.Name == "id" && argument.Value.ValueKind == JsonValueKind.String,
+            _ => false
+        };
+        if (!valid)
+        {
+            error = $"Argument '{argument.Name}' is not valid for tool '{name}'.";
+            return false;
+        }
+    }
+    return true;
+}
+
+static object BuildToolResult(JsonElement root)
+{
+    var name = root.TryGetProperty("params", out var parameters) && parameters.TryGetProperty("name", out var nameValue)
+        ? nameValue.GetString()
+        : null;
+    var payload = name switch
+    {
+        "hermes_get_status" => JsonSerializer.Serialize(new { status = "dry-run", learning = "candidate-only", writes = "pull-request-only" }),
+        "hermes_list_routes" => JsonSerializer.Serialize(new[] { "github.workflow.failed", "linear.issue.updated", "hermes.training.candidate", "hermes.training.approved", "sharepoint.document.updated" }),
+        _ => JsonSerializer.Serialize(new { error = "unknown tool" })
+    };
+    return new { content = new[] { new { type = "text", text = payload } }, isError = name is not ("hermes_get_status" or "hermes_list_routes") };
+}
+
+static bool IsConnectorAuthorized(HttpContext context)
+{
+    var required = RequiresEntraAuthorization(context.RequestServices.GetRequiredService<IConfiguration>());
+    if (!required) return true;
+    if (string.IsNullOrWhiteSpace(context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault())) return false;
+
+    var encodedPrincipal = context.Request.Headers["X-MS-CLIENT-PRINCIPAL"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(encodedPrincipal) || encodedPrincipal.Length > 32_768) return false;
+    try
+    {
+        var expectedAudience = GetExpectedApplicationIdUri(context.RequestServices.GetRequiredService<IConfiguration>());
+        if (expectedAudience is null) return false;
+        var hasRequiredAudience = false;
+        var hasRequiredScope = false;
+        using var principal = JsonDocument.Parse(Convert.FromBase64String(encodedPrincipal));
+        if (!principal.RootElement.TryGetProperty("claims", out var claims) ||
+            claims.ValueKind != JsonValueKind.Array)
+            return false;
+
+        foreach (var claim in claims.EnumerateArray())
+        {
+            if (!claim.TryGetProperty("typ", out var typeValue) ||
+                !claim.TryGetProperty("val", out var valueValue))
+                continue;
+            var type = typeValue.GetString();
+            var value = valueValue.GetString();
+            if (string.Equals(type, "aud", StringComparison.OrdinalIgnoreCase) ||
+                (type?.EndsWith("/audience", StringComparison.OrdinalIgnoreCase) ?? false))
+                hasRequiredAudience |= string.Equals(value, expectedAudience, StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(type, "scp", StringComparison.OrdinalIgnoreCase) ||
+                (type?.EndsWith("/scope", StringComparison.OrdinalIgnoreCase) ?? false))
+                hasRequiredScope |= value?.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Contains("access_as_user", StringComparer.Ordinal) == true;
+        }
+        return hasRequiredAudience && hasRequiredScope;
+    }
+    catch (FormatException) { }
+    catch (JsonException) { }
+    catch (InvalidOperationException) { }
+    return false;
+}
+
+static void SetControlResponseHeaders(HttpContext context)
+{
+    context.Response.Headers["Cache-Control"] = "private, no-store";
+    context.Response.Headers["Pragma"] = "no-cache";
+}
+
+static async Task<IResult> BuildReadinessResultAsync(
+    IConfiguration configuration,
+    IControlRunStore store,
+    CancellationToken cancellationToken)
+{
+    var requiresAzureConfiguration = RequiresEntraAuthorization(configuration);
+    if (!requiresAzureConfiguration)
+    {
+        return Results.Ok(new { service = "helios-connect", status = "ready", runtime = "development" });
+    }
+
+    var requiredSettings = new[]
+    {
+        "AZURE_TENANT_ID",
+        "AZURE_SUBSCRIPTION_ID",
+        "AZURE_RESOURCE_GROUP",
+        "AZURE_CLIENT_ID",
+        "HELIOS_ENTRA_CLIENT_ID",
+        "HELIOS_ENTRA_APPLICATION_ID_URI",
+        "HELIOS_PUBLIC_BASE_URL",
+        "HELIOS_COSMOS_ENDPOINT"
+    };
+    var missingSettings = requiredSettings
+        .Where(name => string.IsNullOrWhiteSpace(configuration[name]))
+        .ToArray();
+
+    if (missingSettings.Length > 0)
+        return Results.Json(
+            new { service = "helios-connect", status = "not-ready", missingConfiguration = missingSettings },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    var expectedApplicationIdUri = GetExpectedApplicationIdUri(configuration);
+    if (expectedApplicationIdUri is null ||
+        !string.Equals(
+            configuration["HELIOS_ENTRA_APPLICATION_ID_URI"]?.Trim().TrimEnd('/'),
+            expectedApplicationIdUri,
+            StringComparison.OrdinalIgnoreCase))
+        return Results.Json(
+            new { service = "helios-connect", status = "not-ready", invalidConfiguration = "HELIOS_ENTRA_APPLICATION_ID_URI" },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+    timeout.CancelAfter(TimeSpan.FromSeconds(5));
+    try
+    {
+        await store.ProbeAsync(timeout.Token);
+        return Results.Ok(new { service = "helios-connect", status = "ready", runtime = "azure", controlRunStore = "reachable" });
+    }
+    catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+    {
+        return Results.Json(
+            new { service = "helios-connect", status = "not-ready", dependency = "control-run-store" },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}
+
+static bool RequiresEntraAuthorization(IConfiguration configuration) =>
+    IsEnabled(configuration["HELIOS_REQUIRE_ENTRA_AUTH"]) ||
+    IsEnabled(configuration["HELIOS_CLOUD_RUNTIME_ONLY"]);
+
+static async Task<IResult> RunInventoryQuery(Func<Task<IReadOnlyList<AzureInventoryResource>>> query)
+{
+    try { return Results.Ok(await query()); }
+    catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
+    {
+        return Results.Problem(title: "Azure inventory query failed", detail: "Managed identity authentication or Reader access did not succeed.", statusCode: StatusCodes.Status502BadGateway);
+    }
+}
+
+static object[] BuildAzureToolList(IConfiguration configuration)
+{
+    var statusSchema = BuildControlPlaneStatusOutputSchema();
+    return new object[]
+    {
+        BuildMcpToolDescriptor(
+            "search",
+            "Search HELIOS systems",
+            "Use this to find an authoritative HELIOS setup surface, integration, runtime, or next action across GitHub, Azure, SharePoint, Slack, Teams, Linear, Copilot, Hermes, and XCore.",
+            new { type = "object", required = new[] { "query" }, properties = new { query = new { type = "string", minLength = 1, description = "Plain-language HELIOS search query." } }, additionalProperties = false },
+            configuration,
+            BuildSystemSearchOutputSchema()),
+        BuildMcpToolDescriptor(
+            "fetch",
+            "Fetch a HELIOS system",
+            "Use this with an ID returned by search to read that system's purpose, governed state, authoritative link, and next action.",
+            new { type = "object", required = new[] { "id" }, properties = new { id = new { type = "string", minLength = 1 } }, additionalProperties = false },
+            configuration,
+            BuildSystemFetchOutputSchema()),
+        BuildMcpToolDescriptor(
+            "helios_get_control_plane_status",
+            "Get HELIOS control-plane status",
+            "Read the current governed setup state for the HELIOS integration fabric. This is a configuration snapshot, not live Azure telemetry.",
+            new { type = "object", properties = new { }, additionalProperties = false },
+            configuration,
+            statusSchema),
+        BuildMcpToolDescriptor(
+            "helios_render_control_center",
+            "Open Monado Control Center",
+            "Render the interactive HELIOS Monado control center in an MCP Apps-compatible host.",
+            new { type = "object", properties = new { }, additionalProperties = false },
+            configuration,
+            statusSchema,
+            render: true),
+        BuildMcpToolDescriptor(
+            "azure_get_context",
+            "Get Azure context",
+            "Use this when you need the configured Helios Azure tenant, subscription, resource group, and access mode.",
+            new { type = "object", properties = new { }, additionalProperties = false },
+            configuration),
+        BuildMcpToolDescriptor(
+            "azure_list_resources",
+            "List Azure resources",
+            "Use this when you need non-secret Azure resource metadata from the authorized resource group.",
+            new { type = "object", properties = new { typePrefix = new { type = "string", description = "Optional Azure resource type prefix." } }, additionalProperties = false },
+            configuration,
+            openWorld: true),
+        BuildMcpToolDescriptor(
+            "azure_list_foundry_resources",
+            "List Foundry resources",
+            "Use this when you need Foundry-related Cognitive Services, Machine Learning, and AI Search resources from the authorized resource group.",
+            new { type = "object", properties = new { }, additionalProperties = false },
+            configuration,
+            openWorld: true),
+        BuildMcpToolDescriptor(
+            "helios_plan_automation",
+            "Plan HELIOS automation",
+            "Use this when you need a deterministic, non-executing plan for Azure provisioning, Key Vault rotation, issue repair, governed cleanup, or cross-system release synchronization.",
+            new { type = "object", required = new[] { "intent", "environment" }, properties = new { intent = new { type = "string", @enum = new[] { "provision-resources", "rotate-secret", "repair-issue", "sync-release", "cleanup-owned-resources" } }, environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } }, target = new { type = "string", description = "Required for secret, issue, release, and cleanup plans." }, connector = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "copilot", "codex", "all" } } }, additionalProperties = false },
+            configuration),
+        BuildMcpToolDescriptor(
+            "helios_propose_upgrade",
+            "Propose HELIOS upgrade",
+            "Create a deterministic, test-gated upgrade proposal for later execution by an approved repository workflow.",
+            new { type = "object", required = new[] { "capability", "reason" }, properties = new { capability = new { type = "string" }, reason = new { type = "string" }, target = new { type = "string", defaultValue = "helios-control" } }, additionalProperties = false },
+            configuration),
+        BuildMcpToolDescriptor(
+            "helios_get_run",
+            "Get HELIOS control run",
+            "Read the saved progress, evidence digest, approval boundary, and connector receipts for one Edge control run.",
+            new { type = "object", required = new[] { "runId" }, properties = new { runId = new { type = "string", pattern = "^[0-9a-f]{32}$" } }, additionalProperties = false },
+            configuration),
+        BuildMcpToolDescriptor(
+            "helios_list_connectors",
+            "List HELIOS connector bindings",
+            "Read whether governed GitHub, Linear, Slack, SharePoint, Teams, and Copilot relay bindings are configured without returning endpoints or secrets.",
+            new { type = "object", properties = new { }, additionalProperties = false },
+            configuration)
+    };
+}
+
+static Dictionary<string, object> BuildMcpToolDescriptor(
+    string name,
+    string title,
+    string description,
+    object inputSchema,
+    IConfiguration configuration,
+    object? outputSchema = null,
+    bool openWorld = false,
+    bool render = false)
+{
+    var securitySchemes = BuildMcpSecuritySchemes(configuration);
+    var metadata = new Dictionary<string, object>
+    {
+        ["securitySchemes"] = securitySchemes
+    };
+    if (render)
+    {
+        metadata["ui"] = new
+        {
+            resourceUri = HeliosMcpDefaults.ControlResourceUri,
+            visibility = new[] { "model", "app" }
+        };
+        metadata["openai/outputTemplate"] = HeliosMcpDefaults.ControlResourceUri;
+        metadata["openai/widgetAccessible"] = true;
+    }
+
+    var descriptor = new Dictionary<string, object>
+    {
+        ["name"] = name,
+        ["title"] = title,
+        ["description"] = description,
+        ["inputSchema"] = inputSchema,
+        ["securitySchemes"] = securitySchemes,
+        ["annotations"] = new
+        {
+            readOnlyHint = true,
+            destructiveHint = false,
+            idempotentHint = true,
+            openWorldHint = openWorld
+        },
+        ["_meta"] = metadata
+    };
+    if (outputSchema is not null) descriptor["outputSchema"] = outputSchema;
+    return descriptor;
+}
+
+static object[] BuildMcpSecuritySchemes(IConfiguration configuration)
+{
+    if (!RequiresEntraAuthorization(configuration))
+        return new object[] { new { type = "noauth" } };
+
+    var scope = GetMcpDelegatedScope(configuration);
+    return new object[]
+    {
+        new
+        {
+            type = "oauth2",
+            scopes = string.IsNullOrWhiteSpace(scope) ? new[] { "access_as_user" } : new[] { scope }
+        }
+    };
+}
+
+static object BuildSystemSearchOutputSchema() => new
+{
+    type = "object",
+    required = new[] { "results" },
+    properties = new
+    {
+        results = new
+        {
+            type = "array",
+            items = new
+            {
+                type = "object",
+                required = new[] { "id", "title" },
+                properties = new
+                {
+                    id = new { type = "string" },
+                    title = new { type = "string" },
+                    url = new { type = new[] { "string", "null" } }
+                },
+                additionalProperties = false
+            }
+        }
+    },
+    additionalProperties = false
+};
+
+static object BuildSystemFetchOutputSchema() => new
+{
+    type = "object",
+    required = new[] { "id", "title", "text", "metadata" },
+    properties = new
+    {
+        id = new { type = "string" },
+        title = new { type = "string" },
+        text = new { type = "string" },
+        url = new { type = new[] { "string", "null" } },
+        metadata = new
+        {
+            type = "object",
+            required = new[] { "state" },
+            properties = new { state = new { type = "string" } },
+            additionalProperties = false
+        }
+    },
+    additionalProperties = false
+};
+
+static object BuildControlPlaneStatusOutputSchema() => new
+{
+    type = "object",
+    required = new[] { "version", "generatedAt", "source", "systems" },
+    properties = new
+    {
+        version = new { type = "string" },
+        generatedAt = new { type = "string", format = "date-time" },
+        source = new { type = "string" },
+        systems = new
+        {
+            type = "array",
+            items = new
+            {
+                type = "object",
+                required = new[] { "id", "name", "purpose", "state", "nextAction" },
+                properties = new
+                {
+                    id = new { type = "string" },
+                    name = new { type = "string" },
+                    purpose = new { type = "string" },
+                    url = new { type = new[] { "string", "null" } },
+                    state = new { type = "string" },
+                    nextAction = new { type = "string" }
+                },
+                additionalProperties = false
+            }
+        }
+    },
+    additionalProperties = false
+};
+
+static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, ISetupWizardService wizard, ControlRunCoordinator coordinator, IConnectorDispatcher dispatcher, IConfiguration configuration, string requestedBy, CancellationToken cancellationToken)
+{
+    var name = root.TryGetProperty("params", out var parameters) && parameters.TryGetProperty("name", out var nameValue)
+        ? nameValue.GetString()
+        : null;
+    try
+    {
+        if (name == "search") return BuildSystemSearchResult(parameters, configuration);
+        if (name == "fetch") return BuildSystemFetchResult(parameters, configuration);
+        if (name == "helios_get_control_plane_status") return BuildControlPlaneStatusResult(configuration, false);
+        if (name == "helios_render_control_center") return BuildControlPlaneStatusResult(configuration, true);
+
+        object? payload = name switch
+        {
+            "azure_get_context" => inventory.GetContext(),
+            "azure_list_resources" => await inventory.ListResourcesAsync(ReadTypePrefix(parameters), cancellationToken),
+            "azure_list_foundry_resources" => await inventory.ListFoundryResourcesAsync(cancellationToken),
+            "helios_plan_automation" => planner.CreatePlan(ReadAutomationRequest(parameters)),
+            "helios_propose_upgrade" => wizard.CreateUpgradeProposal(ReadUpgradeProposal(parameters)),
+            "helios_get_run" => await coordinator.GetAsync(ReadRunId(parameters), requestedBy, cancellationToken),
+            "helios_list_connectors" => dispatcher.GetStatus(),
+            _ => new { error = "unknown tool" }
+        };
+        var isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors") || payload is null;
+        payload ??= new { error = "Control run was not found." };
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } }, isError };
+    }
+    catch (ArgumentException exception)
+    {
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = exception.Message }) } }, isError = true };
+    }
+    catch (Exception exception) when (exception is InvalidOperationException or HttpRequestException or Azure.Identity.AuthenticationFailedException)
+    {
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = "Managed identity authentication or Reader access did not succeed." }) } }, isError = true };
+    }
+}
+
+
+static bool HasExpectedMcpResourceUri(JsonElement root) =>
+    root.TryGetProperty("params", out var parameters) &&
+    parameters.ValueKind == JsonValueKind.Object &&
+    parameters.TryGetProperty("uri", out var uri) &&
+    uri.ValueKind == JsonValueKind.String &&
+    string.Equals(uri.GetString(), HeliosMcpDefaults.ControlResourceUri, StringComparison.Ordinal);
+
+static object BuildMcpResourceList(HttpContext context) => new
+{
+    resources = new[]
+    {
+        new
+        {
+            uri = HeliosMcpDefaults.ControlResourceUri,
+            name = "monado-control-center",
+            title = "Monado Control Center",
+            description = "Interactive HELIOS integration and release-gate dashboard.",
+            mimeType = HeliosMcpDefaults.ResourceMimeType,
+            _meta = BuildMcpWidgetMetadata(context)
+        }
+    }
+};
+
+static async Task<object> BuildMcpResourceReadAsync(HttpContext context, CancellationToken cancellationToken)
+{
+    var environment = context.RequestServices.GetRequiredService<IWebHostEnvironment>();
+    var webRoot = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+    var widgetPath = Path.Combine(webRoot, "mcp", "helios-control-v2.html");
+    var html = await File.ReadAllTextAsync(widgetPath, cancellationToken);
+    return new
+    {
+        contents = new[]
+        {
+            new
+            {
+                uri = HeliosMcpDefaults.ControlResourceUri,
+                mimeType = HeliosMcpDefaults.ResourceMimeType,
+                text = html,
+                _meta = BuildMcpWidgetMetadata(context)
+            }
+        }
+    };
+}
+
+static Dictionary<string, object> BuildMcpWidgetMetadata(HttpContext context)
+{
+    var domain = GetMcpPublicOrigin(context);
+    var redirectDomains = new[]
+    {
+        "https://github.com",
+        "https://heli0s-my.sharepoint.com",
+        "https://helios-xk97943.slack.com",
+        "https://linear.app",
+        "https://helios-control-center.thepatman64.chatgpt.site"
+    };
+    return new Dictionary<string, object>
+    {
+        ["ui"] = new
+        {
+            prefersBorder = false,
+            domain,
+            csp = new
+            {
+                connectDomains = Array.Empty<string>(),
+                resourceDomains = Array.Empty<string>()
+            }
+        },
+        ["openai/widgetDomain"] = domain,
+        ["openai/widgetCSP"] = new
+        {
+            connect_domains = Array.Empty<string>(),
+            resource_domains = Array.Empty<string>(),
+            redirect_domains = redirectDomains
+        },
+        ["openai/widgetDescription"] = "Monado Control Center shows the governed HELIOS GitHub, Azure, SharePoint, Slack, Teams, Linear, Copilot, Hermes, and XCore state."
+    };
+}
+
+static HeliosSystemRecord[] BuildHeliosSystemRecords(IConfiguration configuration)
+{
+    var azureConfigured = new[]
+    {
+        "AZURE_TENANT_ID",
+        "AZURE_SUBSCRIPTION_ID",
+        "AZURE_RESOURCE_GROUP",
+        "AZURE_CLIENT_ID",
+        "HELIOS_ENTRA_CLIENT_ID"
+    }.All(key => !string.IsNullOrWhiteSpace(configuration[key]));
+    var azureLive = azureConfigured &&
+        IsEnabled(configuration["HELIOS_DEPLOY_ENABLED"]) &&
+        IsEnabled(configuration["HELIOS_CONNECTOR_DELIVERY_ENABLED"]);
+
+    return
+    [
+        new("github", "GitHub", "Canonical source, pull requests, CI, OIDC workflow gates, and immutable release evidence.", "https://github.com/M0nado/helios-platform", "connected", "Land the current reviewable integration line; never write directly to main."),
+        new("azure", "Microsoft Azure Edge", "Entra-protected Container Apps runtime with a governed Front Door private-edge migration path.", null, azureLive ? "configured" : azureConfigured ? "blocked" : "needs_configuration", azureLive ? "Verify health and evidence before activating connectors." : "Complete administrator OIDC/RBAC, publish a digest-pinned image, and approve the exact what-if."),
+        new("control-center", "Monado Control Center", "Human-readable HELIOS setup, architecture, and release-gate surface.", "https://helios-control-center.thepatman64.chatgpt.site", "connected", "Treat the site as an audited configuration snapshot, not live Azure telemetry."),
+        new("sharepoint", "SharePoint", "Governed setup guide, promotion checkpoints, and Microsoft 365 templates.", "https://heli0s-my.sharepoint.com/personal/jmore_heli0s_onmicrosoft_com/Documents/Helios/Governance/Architecture/Integration-Fabric/HELIOS_CHATGPT_COPILOT_MCP_SETUP_V1.md", "connected", "Promote the guide to a team-owned Helios site before it becomes organization-wide authority."),
+        new("slack", "Slack #helios-control-plane", "Authoritative engineering checkpoint and operational handoff thread.", "https://helios-xk97943.slack.com/archives/C0BHWDBHG1W", "connected", "Post verified heads and gates only; no broad mentions."),
+        new("teams", "Microsoft Teams — Helios Ops", "Microsoft operations coordination and Copilot-facing handoff.", null, "configured", "Publish the validated Microsoft package only after tenant administrator review."),
+        new("linear", "Linear — Helios Integration Fabric", "Milestones, blockers, acceptance evidence, and ownership.", "https://linear.app/641974/project/helios-integration-fabric-40e1dd9caa39", "connected", "Keep JOH-35 and JOH-36 synchronized with exact GitHub evidence."),
+        new("copilot", "ChatGPT and Microsoft Copilot", "Shared Remote MCP tools and Monado UI across approved agent hosts.", null, azureLive ? "configured" : "needs_configuration", "Register the same approved HTTPS /mcp endpoint after Entra and runtime activation."),
+        new("hermes-xcore", "Hermes XCore", "Candidate-only agent engine and standby execution boundary behind HELIOS governance.", null, "blocked", "Keep Hermes candidate-only and XCore standby until evaluation, signing, and promotion evidence pass.")
+    ];
+}
+
+static object BuildSystemSearchResult(JsonElement parameters, IConfiguration configuration)
+{
+    var query = ReadRequiredStringArgument(parameters, "query", "search");
+    var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    var serializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    var records = BuildHeliosSystemRecords(configuration)
+        .Where(record => words.Any(word => JsonSerializer.Serialize(record, serializerOptions).Contains(word, StringComparison.OrdinalIgnoreCase)))
+        .ToArray();
+    var result = new
+    {
+        results = records.Select(record => new
+        {
+            id = record.Id,
+            title = record.Name,
+            url = record.Url
+        }).ToArray()
+    };
+    return new
+    {
+        content = new[] { new { type = "text", text = JsonSerializer.Serialize(result, serializerOptions) } },
+        structuredContent = result,
+        isError = false
+    };
+}
+
+static object BuildSystemFetchResult(JsonElement parameters, IConfiguration configuration)
+{
+    var id = ReadRequiredStringArgument(parameters, "id", "fetch");
+    var record = BuildHeliosSystemRecords(configuration)
+        .FirstOrDefault(candidate => string.Equals(candidate.Id, id, StringComparison.OrdinalIgnoreCase));
+    if (record is null)
+    {
+        return new
+        {
+            content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = "HELIOS system was not found.", id }) } },
+            isError = true
+        };
+    }
+    var document = new
+    {
+        id = record.Id,
+        title = record.Name,
+        text = $"{record.Purpose} State: {record.State}. Next action: {record.NextAction}",
+        url = record.Url,
+        metadata = new { state = record.State }
+    };
+    return new
+    {
+        content = new[] { new { type = "text", text = JsonSerializer.Serialize(document, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } },
+        structuredContent = document,
+        isError = false
+    };
+}
+
+static object BuildControlPlaneStatusResult(IConfiguration configuration, bool render)
+{
+    var status = new
+    {
+        version = HeliosMcpDefaults.Version,
+        generatedAt = DateTimeOffset.UtcNow,
+        source = "governed-configuration-snapshot",
+        systems = BuildHeliosSystemRecords(configuration)
+    };
+    var metadata = render
+        ? new Dictionary<string, object> { ["ui"] = new { resourceUri = HeliosMcpDefaults.ControlResourceUri } }
+        : new Dictionary<string, object>();
+    return new
+    {
+        content = new[]
+        {
+            new
+            {
+                type = "text",
+                text = render
+                    ? "The Monado Control Center is ready to display the governed HELIOS configuration snapshot."
+                    : "HELIOS control-plane status loaded. Azure release remains governed by OIDC, immutable-image, what-if, and deployment approvals."
+            }
+        },
+        structuredContent = status,
+        isError = false,
+        _meta = metadata
+    };
+}
+
+static string ReadRequiredStringArgument(JsonElement parameters, string name, string tool)
+{
+    if (!parameters.TryGetProperty("arguments", out var arguments) ||
+        arguments.ValueKind != JsonValueKind.Object ||
+        !arguments.TryGetProperty(name, out var value) ||
+        value.ValueKind != JsonValueKind.String ||
+        string.IsNullOrWhiteSpace(value.GetString()))
+        throw new ArgumentException($"{tool} requires a non-empty {name} argument.");
+    return value.GetString()!;
+}
+
+static EdgeAutomationRequest ReadAutomationRequest(JsonElement parameters)
+{
+    if (!parameters.TryGetProperty("arguments", out var arguments) || arguments.ValueKind != JsonValueKind.Object)
+        throw new ArgumentException("helios_plan_automation requires arguments.");
+
+    string? Read(string name) => arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+        ? value.GetString()
+        : null;
+    return new EdgeAutomationRequest(Read("intent") ?? string.Empty, Read("environment") ?? string.Empty, Read("target"), Read("connector"));
+}
+
+static UpgradeProposalRequest ReadUpgradeProposal(JsonElement parameters)
+{
+    if (!parameters.TryGetProperty("arguments", out var arguments) || arguments.ValueKind != JsonValueKind.Object)
+        throw new ArgumentException("helios_propose_upgrade requires arguments.");
+    string? Read(string name) => arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+    return new UpgradeProposalRequest(Read("capability") ?? string.Empty, Read("reason") ?? string.Empty, Read("target") ?? "helios-control");
+}
+
+static string ReadRunId(JsonElement parameters)
+{
+    if (!parameters.TryGetProperty("arguments", out var arguments) || arguments.ValueKind != JsonValueKind.Object ||
+        !arguments.TryGetProperty("runId", out var runId) || runId.ValueKind != JsonValueKind.String)
+        throw new ArgumentException("helios_get_run requires runId.");
+    return runId.GetString() ?? string.Empty;
+}
+
+static string? ReadTypePrefix(JsonElement parameters)
+{
+    if (!parameters.TryGetProperty("arguments", out var arguments)) return null;
+    return arguments.TryGetProperty("typePrefix", out var prefix) && prefix.ValueKind == JsonValueKind.String
+        ? prefix.GetString()
+        : null;
+}
+
+static bool IsEnabled(string? value) => bool.TryParse(value, out var enabled) && enabled;
+
+static int GetBoundedInt(string? value, int defaultValue, int minimum, int maximum) =>
+    int.TryParse(value, out var parsed) && parsed >= minimum && parsed <= maximum
+        ? parsed
+        : defaultValue;
+
+internal static class HeliosMcpDefaults
+{
+    internal const string Version = "0.6.0";
+    internal const string ControlResourceUri = "ui://helios/control-center-v2.html";
+    internal const string ResourceMimeType = "text/html;profile=mcp-app";
+}
+
+internal sealed record HeliosSystemRecord(
+    string Id,
+    string Name,
+    string Purpose,
+    string? Url,
+    string State,
+    string NextAction);
+
+internal static class McpProtocolDefaults
+{
+    internal const string CurrentVersion = "2025-11-25";
+    internal static readonly string[] SupportedVersions = ["2025-03-26", "2025-06-18", CurrentVersion];
+}
+
+public partial class Program { }

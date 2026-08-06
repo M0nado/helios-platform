@@ -42,7 +42,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 # ============================================================================
-; CONFIGURATION
+# CONFIGURATION
 # ============================================================================
 
 $BuildConfig = @{
@@ -56,7 +56,7 @@ $BuildConfig = @{
 }
 
 # ============================================================================
-; UTILITY FUNCTIONS
+# UTILITY FUNCTIONS
 # ============================================================================
 
 function Write-BuildLog {
@@ -321,7 +321,7 @@ Built: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 }
 
 # ============================================================================
-; MAIN BUILD PROCESS
+# MAIN BUILD PROCESS
 # ============================================================================
 
 function Invoke-BuildProcess {

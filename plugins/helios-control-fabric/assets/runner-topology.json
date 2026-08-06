@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "validation": {
+    "provider": "github-hosted",
+    "labels": [
+      "ubuntu-latest",
+      "windows-latest"
+    ],
+    "permissions": "read-only",
+    "publishArtifacts": true
+  },
+  "release": {
+    "provider": "github-hosted",
+    "labels": [
+      "ubuntu-latest"
+    ],
+    "environment": "azure-dev",
+    "permissions": [
+      "contents:read",
+      "id-token:write"
+    ],
+    "immutableImageRequired": true
+  },
+  "selfHosted": {
+    "enabled": false,
+    "groups": [
+      {
+        "name": "helios-linux",
+        "labels": [
+          "self-hosted",
+          "linux",
+          "helios"
+        ],
+        "ephemeral": true
+      },
+      {
+        "name": "helios-windows",
+        "labels": [
+          "self-hosted",
+          "windows",
+          "helios"
+        ],
+        "ephemeral": true
+      }
+    ],
+    "enablementRequirements": [
+      "dedicated runner group",
+      "ephemeral instances",
+      "no shared developer credentials",
+      "egress allow-list",
+      "protected-environment approval"
+    ]
+  }
+}

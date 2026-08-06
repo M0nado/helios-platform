@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using Contracts = HELIOS.Platform.Core.AdvancedOptimization.Interfaces;
+using CanonicalOptimizationResult = HELIOS.Platform.Core.AdvancedOptimization.Interfaces.OptimizationResult;
 
 namespace HELIOS.Platform.Core.AdvancedOptimization
 {
@@ -7,11 +10,11 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
     /// Advanced Optimization Engine implementation.
     /// Provides system-wide optimization orchestration with multi-metric analysis.
     /// </summary>
-    public class AdvancedOptimizationEngine : IAdvancedOptimizationEngine
+    public class AdvancedOptimizationEngine : Contracts.IAdvancedOptimizationEngine
     {
         private readonly ILogger<AdvancedOptimizationEngine> _logger;
         private readonly SemaphoreSlim _semaphore;
-        private readonly ConcurrentQueue<OptimizationResult> _history;
+        private readonly ConcurrentQueue<CanonicalOptimizationResult> _history;
         private bool _isRunning;
 
         /// <summary>
@@ -21,7 +24,7 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _semaphore = new SemaphoreSlim(1, 1);
-            _history = new ConcurrentQueue<OptimizationResult>();
+            _history = new ConcurrentQueue<CanonicalOptimizationResult>();
             _isRunning = false;
         }
 
@@ -86,12 +89,12 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<OptimizationResult> OptimizeSystemAsync(Dictionary<string, double> systemMetrics, CancellationToken cancellationToken = default)
+        public async Task<CanonicalOptimizationResult> OptimizeSystemAsync(Dictionary<string, double> systemMetrics, CancellationToken cancellationToken = default)
         {
             await _semaphore.WaitAsync(cancellationToken);
             try
             {
-                var result = new OptimizationResult
+                var result = new CanonicalOptimizationResult
                 {
                     Timestamp = DateTime.UtcNow,
                     Success = true
@@ -233,9 +236,9 @@ namespace HELIOS.Platform.Core.AdvancedOptimization
         }
 
         /// <inheritdoc/>
-        public async Task<List<OptimizationResult>> GetHistoryAsync(int limit = 100)
+        public async Task<List<CanonicalOptimizationResult>> GetHistoryAsync(int limit = 100)
         {
-            var results = new List<OptimizationResult>();
+            var results = new List<CanonicalOptimizationResult>();
             int count = 0;
 
             foreach (var item in _history.Reverse())

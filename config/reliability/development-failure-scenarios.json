@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "environment": "development",
+  "enabledByDefault": false,
+  "scenarios": [
+    {"scenario_id": "provider-throttle", "target": "provider", "failure": "429 response", "probability": 1.0, "max_injections": 1},
+    {"scenario_id": "worker-crash", "target": "worker", "failure": "process exit", "probability": 1.0, "max_injections": 1},
+    {"scenario_id": "queue-delay", "target": "queue", "failure": "delivery delay", "probability": 1.0, "max_injections": 1},
+    {"scenario_id": "storage-timeout", "target": "storage", "failure": "write timeout", "probability": 1.0, "max_injections": 1},
+    {"scenario_id": "identity-expired", "target": "identity", "failure": "expired development credential", "probability": 1.0, "max_injections": 1},
+    {"scenario_id": "network-reset", "target": "network", "failure": "connection reset", "probability": 1.0, "max_injections": 1},
+    {"scenario_id": "deployment-health", "target": "deployment", "failure": "development health check failure", "probability": 1.0, "max_injections": 1}
+  ]
+}

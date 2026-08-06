@@ -37,7 +37,7 @@ namespace HELIOS.Platform.AI.Models
 
         public async Task UnloadAsync()
         {
-            return await Task.Run(() =>
+            await Task.Run(() =>
             {
                 IsLoaded = false;
                 _predictionHistory.Clear();
@@ -174,7 +174,7 @@ namespace HELIOS.Platform.AI.Models
 
         public async Task UnloadAsync()
         {
-            return await Task.Run(() =>
+            await Task.Run(() =>
             {
                 IsLoaded = false;
             });

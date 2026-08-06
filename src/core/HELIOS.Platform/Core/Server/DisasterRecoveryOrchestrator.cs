@@ -225,19 +225,27 @@ namespace HELIOS.Platform.Core.Server
                         (r.CompletedAt.Value - r.StartedAt).TotalMinutes);
                 }
 
-                var rpoStatuses = _resourceRpos.Select(kvp => new ResourceRpoStatus
+                var rpoStatuses = _resourceRpos.Select(kvp =>
                 {
-                    ResourceId = kvp.Key,
-                    ConfiguredRpoMinutes = kvp.Value,
-                    ActualRpoMinutes = (int)(DateTime.UtcNow - _backups.Values
+                    var lastBackupAt = _backups.Values
                         .Where(b => b.Targets.Contains(kvp.Key) && b.Status == BackupStatus.Completed)
                         .OrderByDescending(b => b.CompletedAt)
-                        .FirstOrDefault()?.CompletedAt ?? DateTime.UtcNow.AddMinutes(-kvp.Value)).TotalMinutes,
-                    IsCompliant = true,
-                    LastBackupAt = _backups.Values
-                        .Where(b => b.Targets.Contains(kvp.Key) && b.Status == BackupStatus.Completed)
-                        .OrderByDescending(b => b.CompletedAt)
-                        .FirstOrDefault()?.CompletedAt ?? DateTime.UtcNow
+                        .FirstOrDefault()?.CompletedAt;
+                    var elapsedMinutes = lastBackupAt.HasValue
+                        ? Math.Max(0, (DateTime.UtcNow - lastBackupAt.Value).TotalMinutes)
+                        : int.MaxValue;
+                    var actualRpoMinutes = elapsedMinutes >= int.MaxValue
+                        ? int.MaxValue
+                        : (int)Math.Ceiling(elapsedMinutes);
+
+                    return new ResourceRpoStatus
+                    {
+                        ResourceId = kvp.Key,
+                        ConfiguredRpoMinutes = kvp.Value,
+                        ActualRpoMinutes = actualRpoMinutes,
+                        IsCompliant = lastBackupAt.HasValue && actualRpoMinutes <= kvp.Value,
+                        LastBackupAt = lastBackupAt ?? DateTime.MinValue
+                    };
                 }).ToList();
 
                 return Task.FromResult(new DisasterRecoveryMetrics

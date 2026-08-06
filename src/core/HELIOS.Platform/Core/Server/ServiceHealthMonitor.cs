@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using HELIOS.Platform.Core.Server.Models;
+using HealthStatus = HELIOS.Platform.Core.Server.Models.HealthStatus;
 
 namespace HELIOS.Platform.Core.Server
 {
@@ -112,7 +113,7 @@ namespace HELIOS.Platform.Core.Server
                     }
 
                     // Check memory usage
-                    if (service.MemoryLimit.HasValue && processInfo.MemoryUsage > service.MemoryLimit.Value * 0.9)
+                    if (processInfo.MemoryLimit.HasValue && processInfo.MemoryUsage > processInfo.MemoryLimit.Value * 0.9)
                     {
                         result.Status = HealthStatus.Warning;
                         result.Message = $"Memory usage is near limit: {processInfo.MemoryUsage / (1024 * 1024)}MB";

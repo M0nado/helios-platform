@@ -470,7 +470,7 @@ pause
     Write-Host "✓ Windows installer created at: $setupPath\Install.bat" -ForegroundColor Green
     
     # Create PowerShell installer as well
-    $psInstallerContent = @"
+    $psInstallerContent = @'
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
@@ -480,7 +480,7 @@ pause
 #>
 
 param(
-    [string]\$InstallPath = "$env:ProgramFiles\HELIOS.Platform"
+    [string]$InstallPath = "$env:ProgramFiles\HELIOS.Platform"
 )
 
 Write-Host @"
@@ -490,29 +490,29 @@ Write-Host @"
 ╚════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Cyan
 
-Write-Host "Installation Path: \$InstallPath"
-\$confirm = Read-Host "Is this correct? (Y/N)"
-if (\$confirm -eq "N") {
-    \$InstallPath = Read-Host "Enter custom installation path"
+Write-Host "Installation Path: $InstallPath"
+$confirm = Read-Host "Is this correct? (Y/N)"
+if ($confirm -eq "N") {
+    $InstallPath = Read-Host "Enter custom installation path"
 }
 
 Write-Host "Creating installation directory..." -ForegroundColor Yellow
-New-Item -ItemType Directory -Path \$InstallPath -Force | Out-Null
+New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
 
 Write-Host "Copying files..." -ForegroundColor Yellow
-Copy-Item "HELIOS.Platform.exe" -Destination \$InstallPath -Force
-Get-ChildItem "*.dll" | ForEach-Object { Copy-Item \$_ -Destination \$InstallPath -Force }
+Copy-Item "HELIOS.Platform.exe" -Destination $InstallPath -Force
+Get-ChildItem "*.dll" | ForEach-Object { Copy-Item $_ -Destination $InstallPath -Force }
 
 Write-Host "Registering PATH environment variable..." -ForegroundColor Yellow
-\$envPath = [Environment]::GetEnvironmentVariable("PATH", [EnvironmentVariableTarget]::User)
-if (\$envPath -notlike "*\$InstallPath*") {
-    [Environment]::SetEnvironmentVariable("PATH", "\$envPath;\$InstallPath", [EnvironmentVariableTarget]::User)
+$envPath = [Environment]::GetEnvironmentVariable("PATH", [EnvironmentVariableTarget]::User)
+if ($envPath -notlike "*$InstallPath*") {
+    [Environment]::SetEnvironmentVariable("PATH", "$envPath;$InstallPath", [EnvironmentVariableTarget]::User)
 }
 
 Write-Host @"
 ╔════════════════════════════════════════════════════════════════╗
 ║ ✓ HELIOS Platform v1.0.0 installed successfully               ║
-║ ✓ Installation Path: \$InstallPath                              ║
+║ ✓ Installation Path: $InstallPath                              ║
 ║ ✓ PATH environment variable updated                            ║
 ║                                                                ║
 ║ Next Steps:                                                    ║
@@ -521,7 +521,7 @@ Write-Host @"
 ║  3. Select deployment tier (Standard, Professional, Enterprise)║
 ╚════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Green
-"@
+'@
 
     Set-Content -Path "$setupPath\Install.ps1" -Value $psInstallerContent
     Write-Host "✓ PowerShell installer created at: $setupPath\Install.ps1" -ForegroundColor Green
@@ -536,7 +536,7 @@ function Create-DemoApplications {
     }
     
     # Demo 1: Basic Usage
-    $demo1Content = @"
+    $demo1Content = @'
 /*
  * HELIOS Platform - Demo 1: Basic Usage
  * Demonstrates basic deployment and monitoring
@@ -559,7 +559,7 @@ class Demo1_BasicUsage
         // Step 1: Validate
         Console.WriteLine("Step 1: Validating platform...");
         bool isValid = await deployment.ValidateAsync();
-        Console.WriteLine(\$"Result: {\(isValid ? "✓ Valid" : "✗ Invalid"\)}\n");
+        Console.WriteLine($"Result: {(isValid ? "✓ Valid" : "✗ Invalid")}\n");
 
         if (!isValid)
         {
@@ -570,23 +570,23 @@ class Demo1_BasicUsage
         // Step 2: Deploy
         Console.WriteLine("Step 2: Deploying with Professional tier...");
         var result = await deployment.DeployAsync(DeploymentTier.Professional);
-        Console.WriteLine(\$"Result: {\(result.Success ? "✓ Success" : "✗ Failed"\)}\n");
+        Console.WriteLine($"Result: {(result.Success ? "✓ Success" : "✗ Failed")}\n");
 
         // Step 3: Monitor
         Console.WriteLine("Step 3: Getting status...");
         var status = await deployment.GetStatusAsync();
-        Console.WriteLine(\$"State: {status.State}");
-        Console.WriteLine(\$"Phase: {status.CurrentPhase}");
-        Console.WriteLine(\$"Tier: {status.CurrentTier}\n");
+        Console.WriteLine($"State: {status.State}");
+        Console.WriteLine($"Phase: {status.CurrentPhase}");
+        Console.WriteLine($"Tier: {status.CurrentTier}\n");
 
         Console.WriteLine("════════════════════════════════════════════════════");
         Console.WriteLine("Demo 1 Complete!");
     }
 }
-"@
+'@
 
     # Demo 2: Component Integration
-    $demo2Content = @"
+    $demo2Content = @'
 /*
  * HELIOS Platform - Demo 2: Component Integration
  * Demonstrates integration with all 7 components
@@ -612,40 +612,40 @@ class Demo2_ComponentIntegration
 
         Console.WriteLine("1. Monado Engine");
         await deployment.MonadoEngine.InitializeAsync();
-        Console.WriteLine(\$"   Status: {\(deployment.MonadoEngine.IsHealthy ? "✓ Healthy" : "✗ Unhealthy"\)}\n");
+        Console.WriteLine($"   Status: {(deployment.MonadoEngine.IsHealthy ? "✓ Healthy" : "✗ Unhealthy")}\n");
 
         Console.WriteLine("2. Security System");
         await deployment.SecuritySystem.InitializeAsync();
-        Console.WriteLine(\$"   Compliance: {\(deployment.SecuritySystem.IsCompliant ? "✓ Compliant" : "✗ Non-compliant"\)}\n");
+        Console.WriteLine($"   Compliance: {(deployment.SecuritySystem.IsCompliant ? "✓ Compliant" : "✗ Non-compliant")}\n");
 
         Console.WriteLine("3. AI Orchestrator");
         await deployment.AIOrchestrator.InitializeAsync();
-        Console.WriteLine(\$"   Model Ready: {\(deployment.AIOrchestrator.IsModelReady ? "✓ Ready" : "✗ Not Ready"\)}\n");
+        Console.WriteLine($"   Model Ready: {(deployment.AIOrchestrator.IsModelReady ? "✓ Ready" : "✗ Not Ready")}\n");
 
         Console.WriteLine("4. GUI Dashboard");
         await deployment.GUIDashboard.InitializeAsync();
-        Console.WriteLine(\$"   Status: {\(deployment.GUIDashboard.IsHealthy ? "✓ Healthy" : "✗ Unhealthy"\)}\n");
+        Console.WriteLine($"   Status: {(deployment.GUIDashboard.IsHealthy ? "✓ Healthy" : "✗ Unhealthy")}\n");
 
         Console.WriteLine("5. Build Agents");
         await deployment.BuildAgents.InitializeAsync();
-        Console.WriteLine(\$"   Status: {\(deployment.BuildAgents.IsHealthy ? "✓ Healthy" : "✗ Unhealthy"\)}\n");
+        Console.WriteLine($"   Status: {(deployment.BuildAgents.IsHealthy ? "✓ Healthy" : "✗ Unhealthy")}\n");
 
         Console.WriteLine("6. DevAI Hub");
         await deployment.DevAIHub.InitializeAsync();
-        Console.WriteLine(\$"   Status: {\(deployment.DevAIHub.IsHealthy ? "✓ Healthy" : "✗ Unhealthy"\)}\n");
+        Console.WriteLine($"   Status: {(deployment.DevAIHub.IsHealthy ? "✓ Healthy" : "✗ Unhealthy")}\n");
 
         Console.WriteLine("7. Software Stack");
         await deployment.SoftwareStack.InitializeAsync();
-        Console.WriteLine(\$"   Status: {\(deployment.SoftwareStack.IsHealthy ? "✓ Healthy" : "✗ Unhealthy"\)}\n");
+        Console.WriteLine($"   Status: {(deployment.SoftwareStack.IsHealthy ? "✓ Healthy" : "✗ Unhealthy")}\n");
 
         Console.WriteLine("════════════════════════════════════════════════════");
         Console.WriteLine("Demo 2 Complete!");
     }
 }
-"@
+'@
 
     # Demo 3: Multi-Tier Deployment
-    $demo3Content = @"
+    $demo3Content = @'
 /*
  * HELIOS Platform - Demo 3: Multi-Tier Deployment
  * Demonstrates different deployment tiers and rollback
@@ -675,10 +675,10 @@ class Demo3_MultiTierDeployment
 
         foreach (var tier in tiers)
         {
-            Console.WriteLine(\$"Deploying {tier} Tier...");
+            Console.WriteLine($"Deploying {tier} Tier...");
             var result = await deployment.DeployAsync(tier);
-            Console.WriteLine(\$"Result: {\(result.Success ? "✓ Success" : "✗ Failed"\)}");
-            Console.WriteLine(\$"Phase: {result.CurrentPhase}\n");
+            Console.WriteLine($"Result: {(result.Success ? "✓ Success" : "✗ Failed")}");
+            Console.WriteLine($"Phase: {result.CurrentPhase}\n");
 
             await Task.Delay(1000);
         }
@@ -687,7 +687,7 @@ class Demo3_MultiTierDeployment
         Console.WriteLine("Demo 3 Complete!");
     }
 }
-"@
+'@
 
     Set-Content -Path "$demosPath\Demo1_BasicUsage.cs" -Value $demo1Content
     Set-Content -Path "$demosPath\Demo2_ComponentIntegration.cs" -Value $demo2Content

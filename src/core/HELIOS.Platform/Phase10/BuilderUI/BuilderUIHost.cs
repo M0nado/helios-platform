@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Media;
 using System.Linq;
 
 namespace HELIOS.Platform.Phase10.BuilderUI
@@ -12,15 +15,16 @@ namespace HELIOS.Platform.Phase10.BuilderUI
     /// Main WPF host for the builder UI.
     /// Implements the Xenblade theme and responsive window.
     /// </summary>
-    public partial class BuilderUIHost : Window
+    public class BuilderUIHost : Window
     {
         private IBuilderUIService _builderService;
         private BuilderViewModel _viewModel;
         private StepWizardEngine _wizardEngine;
+        private bool _shutdownInProgress;
+        private bool _shutdownCompleted;
 
         public BuilderUIHost()
         {
-            InitializeComponent();
             this.Width = 1280;
             this.Height = 720;
             this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -29,6 +33,93 @@ namespace HELIOS.Platform.Phase10.BuilderUI
             
             _viewModel = new BuilderViewModel();
             this.DataContext = _viewModel;
+            InitializeLayout();
+            Closing += Window_Closing;
+        }
+
+        private void InitializeLayout()
+        {
+            var root = new Grid { Margin = new Thickness(32) };
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var title = new TextBlock
+            {
+                Text = "HELIOS USB Builder",
+                FontSize = 30,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            root.Children.Add(title);
+
+            var status = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
+            Grid.SetRow(status, 1);
+
+            var step = new TextBlock { FontSize = 18, Foreground = Brushes.LightBlue };
+            step.SetBinding(TextBlock.TextProperty, new Binding(nameof(BuilderViewModel.CurrentStep))
+            {
+                StringFormat = "Wizard step {0}"
+            });
+            status.Children.Add(step);
+
+            var operation = new TextBlock { Foreground = Brushes.White, Margin = new Thickness(0, 6, 0, 0) };
+            operation.SetBinding(TextBlock.TextProperty, new Binding(nameof(BuilderViewModel.CurrentOperation))
+            {
+                TargetNullValue = "Waiting for builder service initialization"
+            });
+            status.Children.Add(operation);
+
+            var remaining = new TextBlock { Foreground = Brushes.LightGray, Margin = new Thickness(0, 4, 0, 0) };
+            remaining.SetBinding(TextBlock.TextProperty, new Binding(nameof(BuilderViewModel.TimeRemaining))
+            {
+                StringFormat = "Estimated time remaining: {0}"
+            });
+            status.Children.Add(remaining);
+            root.Children.Add(status);
+
+            var progressPanel = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
+            Grid.SetRow(progressPanel, 2);
+
+            var overallProgress = new ProgressBar { Height = 16, Minimum = 0, Maximum = 100 };
+            overallProgress.SetBinding(ProgressBar.ValueProperty, nameof(BuilderViewModel.OverallProgress));
+            progressPanel.Children.Add(overallProgress);
+
+            var subtaskProgress = new ProgressBar
+            {
+                Height = 8,
+                Minimum = 0,
+                Maximum = 100,
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+            subtaskProgress.SetBinding(ProgressBar.ValueProperty, nameof(BuilderViewModel.SubtaskProgress));
+            progressPanel.Children.Add(subtaskProgress);
+            root.Children.Add(progressPanel);
+
+            var logs = new ListBox
+            {
+                Background = new SolidColorBrush(Color.FromRgb(24, 24, 48)),
+                Foreground = Brushes.White,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(55, 80, 120))
+            };
+            logs.SetBinding(ItemsControl.ItemsSourceProperty, nameof(BuilderViewModel.Logs));
+            Grid.SetRow(logs, 3);
+            root.Children.Add(logs);
+
+            var error = new TextBlock
+            {
+                Foreground = Brushes.OrangeRed,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 12, 0, 0)
+            };
+            error.SetBinding(TextBlock.TextProperty, nameof(BuilderViewModel.LastError));
+            Grid.SetRow(error, 4);
+            root.Children.Add(error);
+
+            Content = root;
         }
 
         /// <summary>
@@ -56,10 +147,10 @@ namespace HELIOS.Platform.Phase10.BuilderUI
                 ApplyXenbladTheme();
 
                 // Subscribe to events
-                _builderService.OnStepChanged += (s, step) => _viewModel.CurrentStep = step;
-                _builderService.OnProgressUpdated += (s, progress) => UpdateProgress(progress);
-                _builderService.OnError += (s, error) => HandleError(error);
-                _builderService.OnDeploymentCompleted += (s, success) => HandleDeploymentCompleted(success);
+                _builderService.OnStepChanged += BuilderService_OnStepChanged;
+                _builderService.OnProgressUpdated += BuilderService_OnProgressUpdated;
+                _builderService.OnError += BuilderService_OnError;
+                _builderService.OnDeploymentCompleted += BuilderService_OnDeploymentCompleted;
 
                 // Load initial step
                 var currentStep = await _builderService.GetCurrentStepAsync();
@@ -118,9 +209,75 @@ namespace HELIOS.Platform.Phase10.BuilderUI
             }
         }
 
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        private void BuilderService_OnStepChanged(object sender, int step)
         {
-            _builderService?.ShutdownAsync().ConfigureAwait(false);
+            _viewModel.CurrentStep = step;
+        }
+
+        private void BuilderService_OnProgressUpdated(object sender, BuilderProgressUpdate progress)
+        {
+            UpdateProgress(progress);
+        }
+
+        private void BuilderService_OnError(object sender, string error)
+        {
+            HandleError(error);
+        }
+
+        private void BuilderService_OnDeploymentCompleted(object sender, bool success)
+        {
+            HandleDeploymentCompleted(success);
+        }
+
+        private async void Window_Closing(object sender, CancelEventArgs e)
+        {
+            if (_shutdownCompleted || _builderService == null)
+            {
+                UnsubscribeBuilderEvents();
+                return;
+            }
+
+            e.Cancel = true;
+            if (_shutdownInProgress)
+            {
+                return;
+            }
+
+            _shutdownInProgress = true;
+            IsEnabled = false;
+
+            try
+            {
+                await _builderService.ShutdownAsync();
+                _shutdownCompleted = true;
+                UnsubscribeBuilderEvents();
+                Closing -= Window_Closing;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                _shutdownInProgress = false;
+                IsEnabled = true;
+                _viewModel.LastError = $"Shutdown failed: {ex.Message}";
+                MessageBox.Show(
+                    _viewModel.LastError,
+                    "Unable to close HELIOS USB Builder",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void UnsubscribeBuilderEvents()
+        {
+            if (_builderService == null)
+            {
+                return;
+            }
+
+            _builderService.OnStepChanged -= BuilderService_OnStepChanged;
+            _builderService.OnProgressUpdated -= BuilderService_OnProgressUpdated;
+            _builderService.OnError -= BuilderService_OnError;
+            _builderService.OnDeploymentCompleted -= BuilderService_OnDeploymentCompleted;
         }
     }
 

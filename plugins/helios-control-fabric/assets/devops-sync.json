@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "sourceOfTruth": "https://github.com/M0nado/helios-platform",
+  "azureDevOps": {
+    "endpointTemplate": "https://mcp.dev.azure.com/${AZURE_DEVOPS_ORGANIZATION}",
+    "toolsets": [
+      "repos",
+      "wit",
+      "pipelines",
+      "wiki"
+    ],
+    "readOnly": true,
+    "projectMapping": "administrator-required"
+  },
+  "synchronization": {
+    "mode": "plan-only",
+    "direction": "github-to-azure-devops",
+    "automaticWrites": false,
+    "bidirectionalMerge": false,
+    "evidence": [
+      "source commit SHA",
+      "workflow run URL",
+      "artifact digest",
+      "work-item mapping"
+    ]
+  },
+  "connectorReceipts": [
+    "linear",
+    "slack",
+    "sharepoint",
+    "teams"
+  ],
+  "activationGate": "approved protected-environment workflow"
+}
