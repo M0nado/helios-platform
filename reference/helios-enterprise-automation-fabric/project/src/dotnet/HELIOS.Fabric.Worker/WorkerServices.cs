@@ -49,9 +49,8 @@ public sealed class ConnectorConfiguration
     public IReadOnlyList<DeliveryRoute> Resolve(EventEnvelope envelope)
     {
         var result = new List<DeliveryRoute>();
-        foreach (var route in _routes)
+        foreach (var route in _routes.Where(route => route.Enabled && route.Matches(envelope, Severity)))
         {
-            if (!route.Enabled || !route.Matches(envelope, Severity)) continue;
             result.AddRange(route.Sinks
                 .Where(sink => _enabled.GetValueOrDefault(sink, false))
                 .Select(sink => new DeliveryRoute(sink, route.Transform, route.ApprovalPolicy, route.Id)));
