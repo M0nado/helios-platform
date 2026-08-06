@@ -91,6 +91,8 @@ jobs:
           python3 scripts/analysis/dual_repo_learning_preflight.py --primary "$PRIMARY_REPO_COPY" --secondary "$LEARNING_REPO_COPY"
           python3 scripts/analysis/knowledge_absorption_engine.py
           python3 scripts/analysis/aihub_learning_feedback_loop.py
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Generate branch absorption multicloud UI plan
         run: |
           python3 -m py_compile scripts/analysis/branch_absorption_multicloud_plan.py scripts/analysis/simple_build_center.py scripts/analysis/complex_code_grading.py scripts/analysis/module_submodule_organizer.py scripts/analysis/aihub_learning_feedback_loop.py scripts/analysis/dual_repo_learning_preflight.py scripts/dashboard/generate-gui.py
