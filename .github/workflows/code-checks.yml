@@ -63,7 +63,8 @@ jobs:
           )
 
           $manifest = Join-Path $env:RUNNER_TEMP 'changed-powershell-files.json'
-          $files | ConvertTo-Json -Compress | Set-Content -LiteralPath $manifest -Encoding utf8NoBOM
+          $filesJson = ConvertTo-Json -InputObject $files -Compress
+          Set-Content -LiteralPath $manifest -Value $filesJson -Encoding utf8NoBOM
           "manifest=$manifest" >> $env:GITHUB_OUTPUT
           "count=$($files.Count)" >> $env:GITHUB_OUTPUT
 
