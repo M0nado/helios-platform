@@ -17,6 +17,12 @@ for rid in win-x64 linux-x64; do
   dotnet publish "$PROJECT" -c "$CONFIGURATION" -r "$rid" --self-contained true \
     -p:PublishSingleFile=true -p:DebugType=embedded -o "$OUT_ROOT/$rid" --nologo
 done
+# Include an immutable source snapshot so the package is immediately usable
+# without a second clone. git archive excludes .git, ignored local state,
+# credentials, caches, databases, build output, and other generated files.
+mkdir -p "$OUT_ROOT/repository"
+git archive --format=tar HEAD | tar -xf - -C "$OUT_ROOT/repository"
+git rev-parse HEAD > "$OUT_ROOT/repository/HELIOS_PACKAGE_COMMIT"
 cat > "$OUT_ROOT/run-helios.cmd" <<'EOF'
 @echo off
 setlocal
@@ -37,8 +43,10 @@ chmod +x "$OUT_ROOT/run-helios.sh" || true
 cat > "$OUT_ROOT/README.md" <<'EOF'
 # HELIOS runnable build
 
-This folder contains self-contained, single-file HELIOS launchers. A separate
-.NET installation is not required.
+This folder contains self-contained, single-file HELIOS launchers and an
+immutable repository snapshot. A separate .NET installation or source clone is
+not required to launch readiness checks. Tool installation may still be needed
+for build, test, GitHub, or Azure capabilities.
 
 ## Windows
 
@@ -91,19 +99,19 @@ If generated, the latest AIHub dashboard bundle path is recorded in:
 .run/latest-aihub-bundle.txt
 ```
 
-The HELIOS source checkout is still required because the launcher executes the
-versioned scripts and configuration from that checkout.
+The bundled `repository/` directory is the exact source snapshot identified by
+`repository/HELIOS_PACKAGE_COMMIT`. Pass `--repo PATH` to use another checkout.
 EOF
 (
   cd "$OUT_ROOT"
   if command -v zip >/dev/null 2>&1; then
-    zip -q -r helios-win-x64.zip win-x64 run-helios.cmd README.md
+    zip -q -r helios-portable-win-x64.zip win-x64 repository run-helios.cmd README.md
   fi
-  tar -czf helios-linux-x64.tar.gz linux-x64 run-helios.sh README.md
+  tar -czf helios-portable-linux-x64.tar.gz linux-x64 repository run-helios.sh README.md
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum win-x64/HELIOS.Platform.exe linux-x64/HELIOS.Platform \
-      helios-linux-x64.tar.gz ${ZIP_CHECKSUM_FILE:-helios-win-x64.zip} 2>/dev/null > SHA256SUMS || \
-      sha256sum win-x64/HELIOS.Platform.exe linux-x64/HELIOS.Platform helios-linux-x64.tar.gz > SHA256SUMS
+      helios-portable-linux-x64.tar.gz helios-portable-win-x64.zip 2>/dev/null > SHA256SUMS || \
+      sha256sum win-x64/HELIOS.Platform.exe linux-x64/HELIOS.Platform helios-portable-linux-x64.tar.gz > SHA256SUMS
   fi
 )
 printf '%s\n' "$OUT_ROOT" > .run/latest-helios-exe.txt

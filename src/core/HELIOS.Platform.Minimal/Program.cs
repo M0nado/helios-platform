@@ -193,6 +193,12 @@ public static class RepositoryLocator
         var executableDirectory = AppContext.BaseDirectory;
         if (!string.Equals(executableDirectory, Environment.CurrentDirectory, StringComparison.Ordinal))
             yield return executableDirectory;
+
+        // Portable packages place the immutable repository snapshot beside the
+        // platform-specific executable directory.
+        var portableRepository = Path.GetFullPath(Path.Combine(executableDirectory, "..", "repository"));
+        if (Directory.Exists(portableRepository))
+            yield return portableRepository;
     }
 
     private static string Validate(string path)
@@ -278,8 +284,17 @@ public static class ProcessRunner
                 exception);
         }
 
-        await process.WaitForExitAsync(cancellationToken);
-        return process.ExitCode;
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken);
+            return process.ExitCode;
+        }
+        catch (OperationCanceledException)
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+            throw;
+        }
     }
 }
 

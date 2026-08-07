@@ -53,6 +53,21 @@ public sealed class LauncherTests
     }
 
     [Fact]
+    public void RepositoryLocator_rejects_a_directory_without_the_contract()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"helios-launcher-invalid-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            Assert.Throws<LauncherException>(() => RepositoryLocator.Find(root));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void CommandBuilder_uses_argument_list_without_shell_interpolation()
     {
         var root = CreateRepository();

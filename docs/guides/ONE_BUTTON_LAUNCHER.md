@@ -24,11 +24,14 @@ The output path is printed at the end and recorded in the ignored local file
 - `linux-x64/HELIOS.Platform`
 - `run-helios.cmd`
 - `run-helios.sh`
-- platform archives and `SHA256SUMS`
+- an immutable `repository/` source snapshot
+- portable platform archives and `SHA256SUMS`
 
 Both executables are self-contained; the target does not need a separate .NET
-runtime. The HELIOS checkout is required because the executable deliberately
-runs the versioned scripts and configuration from that checkout.
+runtime. The portable archives include the exact tracked repository snapshot
+used to create the package. Its SHA is stored in
+`repository/HELIOS_PACKAGE_COMMIT`. Git metadata, credentials, ignored local
+state, caches, databases, model weights, and build output are not included.
 
 ## Start automatically
 
@@ -44,7 +47,8 @@ On Windows with Git for Windows, WSL, or another Bash installation:
 .run\<package>\run-helios.cmd start
 ```
 
-When the package is outside the checkout, point it at the repository:
+The launcher automatically discovers the bundled `repository/` directory. To
+use a different checkout, point it at that repository explicitly:
 
 ```bash
 ./run-helios.sh start --repo /path/to/helios-platform
