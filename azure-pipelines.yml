@@ -1,19 +1,141 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# HELIOS Azure DevOps CI pipeline
+# Safe-by-default: validates source changes and runs scoped build/tests only.
+# No deployment/apply actions are performed from this pipeline.
 
 trigger:
-- main
+  branches:
+    include:
+      - main
+      - develop
+      - copilot/*
+      - codex/*
+  paths:
+    include:
+      - azure-pipelines.yml
+      - global.json
+      - Directory.Build.props
+      - Directory.Packages.props
+      - config/integrations/**
+      - src/**
+      - tests/**
+      - monado/helios-control/src/**
+      - monado/helios-control/tests/**
+    exclude:
+      - docs/**
+      - '**/*.md'
 
-pool:
-  vmImage: ubuntu-latest
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - azure-pipelines.yml
+      - global.json
+      - Directory.Build.props
+      - Directory.Packages.props
+      - config/integrations/**
+      - src/**
+      - tests/**
+      - monado/helios-control/src/**
+      - monado/helios-control/tests/**
+    exclude:
+      - docs/**
+      - '**/*.md'
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+variables:
+  buildConfiguration: Release
+  appProject: src/core/HELIOS.Platform/HELIOS.Platform.csproj
+  usersTestProject: src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj
+  connectTestsProject: monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj
+  testResultsDir: $(Agent.TempDirectory)\test-results
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+stages:
+  - stage: Preflight
+    displayName: Preflight validation
+    jobs:
+      - job: ContractAndOwnershipChecks
+        displayName: Validate integration contract and test ownership
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 0
+
+          - task: UsePythonVersion@0
+            displayName: Use Python 3.12
+            inputs:
+              versionSpec: '3.12'
+
+          - script: |
+              python -m json.tool config/integrations/event-contract.schema.json > /dev/null
+              python eng/test/validate_test_ownership.py
+            displayName: Validate schema and test ownership manifest
+
+  - stage: BuildAndTest
+    displayName: Build and test
+    dependsOn: Preflight
+    condition: succeeded()
+    jobs:
+      - job: WindowsBuild
+        displayName: Build Windows targets and run scoped tests
+        pool:
+          vmImage: windows-latest
+        steps:
+          - checkout: self
+            clean: true
+            fetchDepth: 0
+
+          - task: UseDotNet@2
+            displayName: Use .NET SDK from global.json
+            inputs:
+              packageType: sdk
+              useGlobalJson: true
+
+          - task: Cache@2
+            displayName: Cache NuGet packages
+            inputs:
+              key: 'nuget | "$(Agent.OS)" | global.json | Directory.Packages.props | **/*.csproj'
+              restoreKeys: |
+                nuget | "$(Agent.OS)" | global.json
+                nuget | "$(Agent.OS)"
+              path: $(UserProfile)\.nuget\packages
+
+          - powershell: dotnet --info
+            displayName: Show .NET environment
+
+          - powershell: |
+              dotnet restore "$(appProject)" -p:ContinuousIntegrationBuild=true
+              dotnet restore "$(usersTestProject)" -p:ContinuousIntegrationBuild=true
+              dotnet restore "$(connectTestsProject)" -p:ContinuousIntegrationBuild=true
+            displayName: Restore scoped projects
+
+          - powershell: dotnet build "$(appProject)" --configuration "$(buildConfiguration)" --no-restore -p:ContinuousIntegrationBuild=true
+            displayName: Build HELIOS.Platform
+
+          - powershell: |
+              New-Item -ItemType Directory -Force -Path "$(testResultsDir)" | Out-Null
+              dotnet test "$(usersTestProject)" --configuration "$(buildConfiguration)" --no-restore --logger "trx;LogFileName=phase10-users.trx" --results-directory "$(testResultsDir)" -p:ContinuousIntegrationBuild=true
+              dotnet test "$(connectTestsProject)" --configuration "$(buildConfiguration)" --no-restore --logger "trx;LogFileName=helios-connect.trx" --results-directory "$(testResultsDir)" -p:ContinuousIntegrationBuild=true
+            displayName: Run scoped test suites
+
+          - task: PublishTestResults@2
+            displayName: Publish test results
+            condition: always()
+            inputs:
+              testRunner: VSTest
+              testResultsFiles: '*.trx'
+              searchFolder: '$(testResultsDir)'
+              mergeTestResults: true
+              failTaskOnFailedTests: true
+              testRunTitle: 'HELIOS scoped test suites'
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish test artifacts
+            condition: always()
+            inputs:
+              PathtoPublish: '$(testResultsDir)'
+              ArtifactName: 'test-results'
+              publishLocation: 'Container'
