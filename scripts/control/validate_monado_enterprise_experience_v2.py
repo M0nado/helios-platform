@@ -70,7 +70,9 @@ EXPECTED_REFERENCED_CONTRACT_IDS = {
     "synchronization": "monado-sync-v2",
 }
 EXPECTED_AZURE_DEVOPS_MODE = "read-only-mirror-until-separate-approved-identity"
+EXPECTED_INSTANCE_SCHEMA_REFERENCE = "../../../schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json"
 EXPECTED_ENVELOPE_FIELDS = {
+    "schemaVersion",
     "eventId",
     "source",
     "eventType",
@@ -82,7 +84,10 @@ EXPECTED_ENVELOPE_FIELDS = {
     "links",
     "payload",
 }
-EXPECTED_IDEMPOTENCY_COMPONENTS = {"routeId", "sourceDeliveryId", "targetLogicalId", "operation"}
+EXPECTED_IDEMPOTENCY_INPUT_FIELDS = ["routeId", "source.eventId", "target.system", "operation"]
+EXPECTED_IDEMPOTENCY_NORMALIZATION = "nfc+trim+length-prefixed-utf8"
+EXPECTED_IDEMPOTENCY_KEY_TEMPLATE = "sha256(normalized-length-prefixed:{routeId}:{source.eventId}:{target.system}:{operation})"
+EXPECTED_IDEMPOTENCY_DUPLICATE_OUTCOME = "return-recorded-result-without-repeating-side-effect"
 EXPECTED_OVERLAY_CONTRACT_ID = "monadoblade-experience-fabric-v2-overlay"
 EXPECTED_CANONICAL_CONTRACT_ID = "monado-enterprise-experience-fabric-v2"
 EXPECTED_OPENAI_SCHEMA_ID = "https://helios-platform.dev/schemas/monado-openai-proposal-v2.json"
@@ -102,6 +107,23 @@ EXPECTED_DENIED_OPERATIONS = {
     "direct-production-deployment",
     "physical-usb-write",
     "raw-secret-readback",
+}
+EXPECTED_OWNERSHIP = {
+    "helios-platform": "canonical-contracts-event-routing-policy-docs-pages-wiki-source-validation",
+    "helios-monado-blade": "dedicated-gui-engine-and-themed-interaction",
+    "PHASE-0-USB-Creator": "dedicated-removable-media-builder-and-privileged-device-operations",
+    "helios-ai-hub": "provider-runtime-adapters-and-governed-learning",
+}
+EXPECTED_NON_OWNERSHIP_RULES = {
+    "do-not-duplicate-gui-implementation-in-canonical-platform",
+    "do-not-duplicate-usb-wizard-implementation-in-canonical-platform",
+}
+EXPECTED_CODEOWNERS_PATHS = {
+    "/config/monadoblade/experience-fabric/** @M0nado/platform-architecture",
+    "/docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md @M0nado/platform-architecture",
+    "/scripts/control/validate_monado_enterprise_experience_v2.py @M0nado/security-engineering",
+    "/scripts/control/tests/test_validate_monado_enterprise_experience_v2.py @M0nado/security-engineering",
+    "/.github/workflows/validate-monadoblade-profile-contracts.yml @M0nado/devops",
 }
 
 
@@ -144,6 +166,11 @@ def validate_contracts(base: Path = BASE) -> list[str]:
         return errors
 
     root = _load_json(base / "monado-enterprise-experience-fabric.v2.json")
+    _require(
+        root.get("$schema") == EXPECTED_INSTANCE_SCHEMA_REFERENCE,
+        "root contract must reference the monadoblade v2 instance schema",
+        errors,
+    )
     _require(root.get("contractId") == EXPECTED_OVERLAY_CONTRACT_ID, "root contractId must be monadoblade-experience-fabric-v2-overlay", errors)
     _require(
         root.get("extendsCanonicalContractId") == EXPECTED_CANONICAL_CONTRACT_ID,
@@ -157,6 +184,7 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require(execution.get("runtimeSideEffectsAllowed") is False, "runtime side effects must be disabled", errors)
     contracts = root.get("contracts", {})
     _require(isinstance(contracts, Mapping), "root contracts must be an object", errors)
+    resolved_contract_docs: dict[str, dict] = {}
     if isinstance(contracts, Mapping):
         _require(EXPECTED_CONTRACT_KEYS.issubset(contracts.keys()), "root contracts mapping is incomplete", errors)
         for key in EXPECTED_CONTRACT_KEYS:
@@ -180,10 +208,16 @@ def validate_contracts(base: Path = BASE) -> list[str]:
                     except (OSError, json.JSONDecodeError, ValueError) as exc:
                         errors.append(f"root contracts.{key} must resolve to a JSON object contract: {exc}")
                         continue
+                    resolved_contract_docs[key] = referenced
                     expected_contract_id = EXPECTED_REFERENCED_CONTRACT_IDS[key]
                     _require(
                         referenced.get("contractId") == expected_contract_id,
                         f"root contracts.{key} must reference contractId {expected_contract_id}",
+                        errors,
+                    )
+                    _require(
+                        referenced.get("$schema") == EXPECTED_INSTANCE_SCHEMA_REFERENCE,
+                        f"root contracts.{key} must reference the monadoblade v2 instance schema",
                         errors,
                     )
                 elif key == "openAiProposalSchema":
@@ -192,13 +226,19 @@ def validate_contracts(base: Path = BASE) -> list[str]:
                     except (OSError, json.JSONDecodeError, ValueError) as exc:
                         errors.append(f"root contracts.{key} must resolve to a JSON object schema: {exc}")
                         continue
+                    resolved_contract_docs[key] = referenced
                     _require(
                         referenced.get("$id") == EXPECTED_OPENAI_SCHEMA_ID,
                         "root contracts.openAiProposalSchema must reference the canonical OpenAI proposal schema",
                         errors,
                     )
+                    _require(
+                        referenced.get("$schema") == "https://json-schema.org/draft/2020-12/schema",
+                        "OpenAI proposal schema must declare draft/2020-12 meta-schema",
+                        errors,
+                    )
 
-    storage = _load_json(base / "storage.contract.v2.json")
+    storage = resolved_contract_docs.get("storage", _load_json(base / "storage.contract.v2.json"))
     _require(storage.get("destructiveApplyDefault") is False, "storage destructiveApplyDefault must be false", errors)
     _require(storage.get("requireWhatIf") is True, "storage requireWhatIf must be true", errors)
     _require(storage.get("executionMode") == "proposal-only", "storage executionMode must be proposal-only", errors)
@@ -255,7 +295,7 @@ def validate_contracts(base: Path = BASE) -> list[str]:
         errors,
     )
 
-    catalog = _load_json(base / "profile-catalog.v2.json")
+    catalog = resolved_contract_docs.get("profileCatalog", _load_json(base / "profile-catalog.v2.json"))
     profiles = catalog.get("profiles", [])
     _require(len(profiles) == len(EXPECTED_PROFILES), "profile catalog must contain exactly eight entries", errors)
     ids = {entry.get("id") for entry in profiles if isinstance(entry, Mapping)}
@@ -299,7 +339,7 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require({"recovery", "quarantine"}.issubset(states), "recovery and quarantine must be states", errors)
     _require("airgap" in overlays, "airgap must be an overlay", errors)
 
-    experience = _load_json(base / "profile-experience.contract.v2.json")
+    experience = resolved_contract_docs.get("profileExperience", _load_json(base / "profile-experience.contract.v2.json"))
     profile_experience = experience.get("profiles", {})
     _require(isinstance(profile_experience, Mapping), "profile experience profiles must be an object", errors)
     _require(set(profile_experience.keys()) == EXPECTED_PROFILES, "profile experience must define every expected profile", errors)
@@ -307,7 +347,7 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require(common_core.get("singleInstallAuthority") is True, "common core must be single install authority", errors)
     _require(common_core.get("profileLinksOnly") is True, "common core must use profile links only", errors)
 
-    chroma = _load_json(base / "chroma-wyvern.contract.v2.json")
+    chroma = resolved_contract_docs.get("chromaWyvern", _load_json(base / "chroma-wyvern.contract.v2.json"))
     safe_default = chroma.get("safeDefault", {})
     _require(isinstance(safe_default, Mapping), "chroma safeDefault must be an object", errors)
     _require(
@@ -324,7 +364,7 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require(isinstance(chroma_profiles, Mapping), "chroma profiles must be an object", errors)
     _require(set(chroma_profiles.keys()) == EXPECTED_PROFILES, "chroma contract must define every expected profile", errors)
 
-    alvis = _load_json(base / "alvis-tool-budgets.v2.json")
+    alvis = resolved_contract_docs.get("alvisBudget", _load_json(base / "alvis-tool-budgets.v2.json"))
     _require(alvis.get("administratorDenied") is True, "ALVIS administratorDenied must be true", errors)
     _require(alvis.get("externalWriteRequiresApproval") is True, "ALVIS externalWriteRequiresApproval must be true", errors)
     denied_operations = alvis.get("deniedOperations", [])
@@ -363,21 +403,31 @@ def validate_contracts(base: Path = BASE) -> list[str]:
                     errors,
                 )
 
-    sync = _load_json(base / "synchronization.contract.v2.json")
+    sync = resolved_contract_docs.get("synchronization", _load_json(base / "synchronization.contract.v2.json"))
     _require(sync.get("defaultMode") == "propose-and-validate-only", "synchronization defaultMode must remain propose-and-validate-only", errors)
     idempotency = sync.get("idempotency", {})
     _require(isinstance(idempotency, Mapping), "synchronization idempotency must be an object", errors)
     if isinstance(idempotency, Mapping):
         _require(idempotency.get("algorithm") == "sha256", "synchronization idempotency algorithm must be sha256", errors)
-        components = set(idempotency.get("components", []))
+        input_fields = idempotency.get("inputFields", [])
         _require(
-            components == EXPECTED_IDEMPOTENCY_COMPONENTS,
-            "synchronization idempotency components must match the approved component set",
+            isinstance(input_fields, list) and input_fields == EXPECTED_IDEMPOTENCY_INPUT_FIELDS,
+            "synchronization idempotency inputFields must match canonical field order",
             errors,
         )
         _require(
-            idempotency.get("normalization") == "nfc-trim-casefold-registered-identifiers",
-            "synchronization idempotency normalization must remain nfc-trim-casefold-registered-identifiers",
+            idempotency.get("normalization") == EXPECTED_IDEMPOTENCY_NORMALIZATION,
+            "synchronization idempotency normalization must remain canonical",
+            errors,
+        )
+        _require(
+            idempotency.get("keyTemplate") == EXPECTED_IDEMPOTENCY_KEY_TEMPLATE,
+            "synchronization idempotency keyTemplate must remain canonical",
+            errors,
+        )
+        _require(
+            idempotency.get("duplicateOutcome") == EXPECTED_IDEMPOTENCY_DUPLICATE_OUTCOME,
+            "synchronization idempotency duplicateOutcome must remain canonical",
             errors,
         )
     systems = sync.get("systems", {})
@@ -390,6 +440,13 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     )
     envelope_fields = set(sync.get("envelope", {}).get("requiredFields", []))
     _require(EXPECTED_ENVELOPE_FIELDS.issubset(envelope_fields), "synchronization envelope is missing required normalized fields", errors)
+    canonical_event_schema = _load_json(REPOSITORY_ROOT / "config" / "integrations" / "event-contract.schema.json")
+    canonical_required_fields = set(canonical_event_schema.get("required", []))
+    _require(
+        canonical_required_fields.issubset(envelope_fields),
+        "synchronization envelope requiredFields must include canonical integration-event required fields",
+        errors,
+    )
     sync_prohibitions = sync.get("prohibitions", [])
     _require(isinstance(sync_prohibitions, list), "synchronization prohibitions must be a list", errors)
     if isinstance(sync_prohibitions, list):
@@ -400,12 +457,42 @@ def validate_contracts(base: Path = BASE) -> list[str]:
             errors,
         )
 
-    ownership = _load_json(base / "repository-ownership.contract.v2.json")
+    ownership = resolved_contract_docs.get("repositoryOwnership", _load_json(base / "repository-ownership.contract.v2.json"))
     _require(ownership.get("canonicalPlatform") == "M0nado/helios-platform", "repository ownership canonicalPlatform mismatch", errors)
+    ownership_map = ownership.get("ownership", {})
+    _require(isinstance(ownership_map, Mapping), "repository ownership.ownership must be an object", errors)
+    if isinstance(ownership_map, Mapping):
+        _require(
+            set(ownership_map.keys()) == set(EXPECTED_OWNERSHIP.keys()),
+            "repository ownership must define the canonical repository ownership boundary set",
+            errors,
+        )
+        for repository, expected_role in EXPECTED_OWNERSHIP.items():
+            _require(
+                ownership_map.get(repository) == expected_role,
+                f"repository ownership for {repository} must remain '{expected_role}'",
+                errors,
+            )
     codeowners_paths = ownership.get("codeownersReadyPaths", [])
     _require(isinstance(codeowners_paths, list) and len(codeowners_paths) >= 3, "repository ownership must define CODEOWNERS-ready paths", errors)
+    if isinstance(codeowners_paths, list):
+        codeowners_path_set = {entry for entry in codeowners_paths if isinstance(entry, str)}
+        _require(
+            EXPECTED_CODEOWNERS_PATHS.issubset(codeowners_path_set),
+            "repository ownership must include required CODEOWNERS-ready path boundaries",
+            errors,
+        )
+    non_ownership_rules = ownership.get("nonOwnershipRules", [])
+    _require(isinstance(non_ownership_rules, list), "repository ownership nonOwnershipRules must be a list", errors)
+    if isinstance(non_ownership_rules, list):
+        non_ownership_rule_set = {rule for rule in non_ownership_rules if isinstance(rule, str)}
+        _require(
+            EXPECTED_NON_OWNERSHIP_RULES.issubset(non_ownership_rule_set),
+            "repository ownership nonOwnershipRules must include canonical anti-duplication boundaries",
+            errors,
+        )
 
-    openai_schema = _load_json(base / "openai-proposal.schema.v2.json")
+    openai_schema = resolved_contract_docs.get("openAiProposalSchema", _load_json(base / "openai-proposal.schema.v2.json"))
     _require(openai_schema.get("type") == "object", "OpenAI proposal schema must define object root", errors)
     _require(openai_schema.get("additionalProperties") is False, "OpenAI proposal schema must fail closed on additional properties", errors)
     required = set(openai_schema.get("required", []))
@@ -460,6 +547,13 @@ def validate_profile_xml(base: Path = BASE) -> list[str]:
     xsd_text = xsd_path.read_text(encoding="utf-8")
     if "<xs:element name=\"ProfileManifest\"" not in xsd_text:
         errors.append("XSD must define ProfileManifest root element")
+    if "<xs:attribute name=\"schemaVersion\"" not in xsd_text or "fixed=\"2.0.0\"" not in xsd_text:
+        errors.append("XSD must constrain schemaVersion to fixed value 2.0.0")
+    if "<xs:attribute name=\"profileId\"" not in xsd_text:
+        errors.append("XSD must define profileId attribute")
+    for profile_id in sorted(EXPECTED_PROFILES):
+        if f"<xs:enumeration value=\"{profile_id}\"/>" not in xsd_text:
+            errors.append(f"XSD must enumerate profileId value '{profile_id}'")
 
     xml_files = sorted(xml_root.glob("*.profile.v2.xml"))
     if len(xml_files) != 8:

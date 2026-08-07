@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "../../../schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json",
   "schemaVersion": "2.0.0",
   "contractId": "alvis-tool-budgets-v2",
   "alvisRole": "reactive-assistant",

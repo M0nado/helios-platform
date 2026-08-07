@@ -39,6 +39,9 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         self.alvis_budget = json.loads(
             (BASE / "alvis-tool-budgets.v2.json").read_text(encoding="utf-8")
         )
+        self.ownership_contract = json.loads(
+            (BASE / "repository-ownership.contract.v2.json").read_text(encoding="utf-8")
+        )
         self.openai_schema = json.loads(
             (BASE / "openai-proposal.schema.v2.json").read_text(encoding="utf-8")
         )
@@ -94,6 +97,29 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         errors = self._validate_with_override("monado-enterprise-experience-fabric.v2.json", candidate)
         self.assertTrue(any("root contracts.storage must target storage.contract.v2.json" in error for error in errors))
 
+    def test_root_contract_referenced_storage_payload_is_validated(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "experience-fabric"
+            shutil.copytree(BASE, target)
+
+            candidate_root = json.loads((target / "monado-enterprise-experience-fabric.v2.json").read_text(encoding="utf-8"))
+            candidate_root["contracts"]["storage"] = "alt/storage.contract.v2.json"
+            (target / "alt").mkdir(parents=True, exist_ok=True)
+
+            dangerous_storage = json.loads((target / "storage.contract.v2.json").read_text(encoding="utf-8"))
+            dangerous_storage["destructiveApplyDefault"] = True
+            (target / "alt" / "storage.contract.v2.json").write_text(
+                json.dumps(dangerous_storage, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            (target / "monado-enterprise-experience-fabric.v2.json").write_text(
+                json.dumps(candidate_root, indent=2) + "\n",
+                encoding="utf-8",
+            )
+
+            errors = validate_contracts(target)
+        self.assertTrue(any("storage destructiveApplyDefault must be false" in error for error in errors))
+
     def test_profile_catalog_default_profile_must_remain_personal(self) -> None:
         candidate = copy.deepcopy(self.profile_catalog)
         candidate["defaultProfile"] = "sysadmin"
@@ -107,11 +133,24 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         errors = self._validate_with_override("synchronization.contract.v2.json", candidate)
         self.assertTrue(any("missing required normalized fields" in error for error in errors))
 
+    def test_sync_envelope_requires_schema_version_field(self) -> None:
+        candidate = copy.deepcopy(self.sync_contract)
+        required_fields = candidate["envelope"]["requiredFields"]
+        candidate["envelope"]["requiredFields"] = [field for field in required_fields if field != "schemaVersion"]
+        errors = self._validate_with_override("synchronization.contract.v2.json", candidate)
+        self.assertTrue(any("canonical integration-event required fields" in error for error in errors))
+
     def test_sync_requires_strict_idempotency_definition(self) -> None:
         candidate = copy.deepcopy(self.sync_contract)
         candidate["idempotency"]["algorithm"] = "sha1"
         errors = self._validate_with_override("synchronization.contract.v2.json", candidate)
         self.assertTrue(any("idempotency algorithm must be sha256" in error for error in errors))
+
+    def test_sync_requires_canonical_idempotency_field_order(self) -> None:
+        candidate = copy.deepcopy(self.sync_contract)
+        candidate["idempotency"]["inputFields"] = ["routeId", "operation", "source.eventId", "target.system"]
+        errors = self._validate_with_override("synchronization.contract.v2.json", candidate)
+        self.assertTrue(any("inputFields must match canonical field order" in error for error in errors))
 
     def test_sync_requires_complete_prohibition_set(self) -> None:
         candidate = copy.deepcopy(self.sync_contract)
@@ -163,6 +202,14 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         errors = self._validate_with_override("openai-proposal.schema.v2.json", candidate)
         self.assertTrue(any("must enforce approval.required=true" in error for error in errors))
 
+    def test_repository_ownership_must_preserve_boundary_maps(self) -> None:
+        candidate = copy.deepcopy(self.ownership_contract)
+        candidate["ownership"] = {}
+        candidate["nonOwnershipRules"] = []
+        errors = self._validate_with_override("repository-ownership.contract.v2.json", candidate)
+        self.assertTrue(any("canonical repository ownership boundary set" in error for error in errors))
+        self.assertTrue(any("nonOwnershipRules must include canonical anti-duplication boundaries" in error for error in errors))
+
     def test_profile_xml_requires_positive_integer_tool_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             target = Path(temp_dir) / "experience-fabric"
@@ -204,6 +251,19 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
             tree.write(xml_path, encoding="utf-8", xml_declaration=True)
             errors = validate_profile_xml(target)
         self.assertTrue(any("must match ALVIS profile budget" in error for error in errors))
+
+    def test_profile_xsd_must_constrain_manifest_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "experience-fabric"
+            shutil.copytree(BASE, target)
+            xsd_path = target / "xml" / "profile-manifest.v2.xsd"
+            xsd_text = xsd_path.read_text(encoding="utf-8")
+            xsd_text = xsd_text.replace(' fixed="2.0.0"', "")
+            xsd_text = xsd_text.replace('<xs:enumeration value="sysadmin"/>', "")
+            xsd_path.write_text(xsd_text, encoding="utf-8")
+            errors = validate_profile_xml(target)
+        self.assertTrue(any("XSD must constrain schemaVersion" in error for error in errors))
+        self.assertTrue(any("enumerate profileId value 'sysadmin'" in error for error in errors))
 
     def test_profile_xml_semantics_must_match_profile_experience_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

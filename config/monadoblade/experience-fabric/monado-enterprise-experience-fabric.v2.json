@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "../../../schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json",
   "schemaVersion": "2.0.0",
   "contractId": "monadoblade-experience-fabric-v2-overlay",
   "extendsCanonicalContractId": "monado-enterprise-experience-fabric-v2",

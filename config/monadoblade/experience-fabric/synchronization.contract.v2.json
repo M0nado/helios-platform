@@ -1,16 +1,20 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "../../../schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json",
   "schemaVersion": "2.0.0",
   "contractId": "monado-sync-v2",
   "defaultMode": "propose-and-validate-only",
   "idempotency": {
     "algorithm": "sha256",
-    "components": ["routeId", "sourceDeliveryId", "targetLogicalId", "operation"],
-    "normalization": "nfc-trim-casefold-registered-identifiers"
+    "inputFields": ["routeId", "source.eventId", "target.system", "operation"],
+    "normalization": "nfc+trim+length-prefixed-utf8",
+    "keyTemplate": "sha256(normalized-length-prefixed:{routeId}:{source.eventId}:{target.system}:{operation})",
+    "retention": "P30D",
+    "duplicateOutcome": "return-recorded-result-without-repeating-side-effect"
   },
   "envelope": {
     "schemaVersion": "1.0",
     "requiredFields": [
+      "schemaVersion",
       "eventId",
       "source",
       "eventType",
