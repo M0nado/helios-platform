@@ -355,6 +355,7 @@ jobs:
           for schema_path, document_path in pairs:
               schema = json.loads(Path(schema_path).read_text(encoding='utf-8'))
               document = json.loads(Path(document_path).read_text(encoding='utf-8'))
+              document.pop('$schema', None)
               Draft202012Validator.check_schema(schema)
               Draft202012Validator(schema).validate(document)
               print(f'schema ok: {document_path}')
