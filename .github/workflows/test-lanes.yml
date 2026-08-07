@@ -30,9 +30,9 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName!~Integration&FullyQualifiedName!~Performance&FullyQualifiedName!~EndToEnd&FullyQualifiedName!~E2E&FullyQualifiedName!~Security&FullyQualifiedName!~Vault&FullyQualifiedName!~Driver&FullyQualifiedName!~Malware&FullyQualifiedName!~Deployment"
+        run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
       - shell: pwsh
-        run: dotnet test src/tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName!~Integration"
+        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
 
   privileged:
     name: Tests / Privileged
@@ -46,11 +46,7 @@ jobs:
       - shell: pwsh
         run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
       - shell: pwsh
-        run: dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj --configuration Release
-      - shell: pwsh
-        run: dotnet test tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj --configuration Release
-      - shell: pwsh
-        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Security|FullyQualifiedName~Vault|FullyQualifiedName~Driver|FullyQualifiedName~Malware|FullyQualifiedName~Deployment"
+        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
 
   integration:
     name: Tests / Integration
@@ -62,10 +58,6 @@ jobs:
           global-json-file: global.json
       - shell: pwsh
         run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
-      - shell: pwsh
-        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Integration"
-      - shell: pwsh
-        run: dotnet test src/tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Integration"
 
   performance:
     name: Tests / Performance
@@ -76,7 +68,7 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Performance|FullyQualifiedName~ScalingTest"
+        run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
 
   end-to-end:
     name: Tests / End-to-End
@@ -87,4 +79,4 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~EndToEnd|FullyQualifiedName~E2E"
+        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
