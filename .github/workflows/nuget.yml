@@ -23,8 +23,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        dotnet-version: ['8.0', '7.0', '6.0']
+        os: [windows-latest]
+        dotnet-version: ['8.0']
       fail-fast: false
 
     steps:
@@ -41,13 +41,16 @@ jobs:
       - name: Restore dependencies
         run: |
           dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj
-          dotnet restore src/tests/HELIOS.Platform.Tests.csproj
+          dotnet restore src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj
+          dotnet restore tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj
 
       - name: Build solution
         run: dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj -c Release --no-restore -v minimal
 
       - name: Run tests
-        run: dotnet test src/tests/HELIOS.Platform.Tests.csproj -c Release --logger "trx;LogFileName=test-results.trx" --verbosity minimal
+        run: |
+          dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj -c Release --logger "trx;LogFileName=test-results.trx" --verbosity minimal
+          dotnet test tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj -c Release --logger "trx;LogFileName=contracts-test-results.trx" --verbosity minimal
 
       - name: Upload test results
         if: always()

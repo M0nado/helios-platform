@@ -22,6 +22,21 @@
       "layer": "integration"
     },
     {
+      "path": "monado/helios-control/tests/Helios.Connect.Tests/obj/Release/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
+      "layer": "integration"
+    },
+    {
+      "path": "monado/helios-control/tests/Helios.Connect.Tests/obj/Release/net8.0/Helios.Connect.Tests.AssemblyInfo.cs",
+      "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
+      "layer": "integration"
+    },
+    {
+      "path": "monado/helios-control/tests/Helios.Connect.Tests/obj/Release/net8.0/Helios.Connect.Tests.GlobalUsings.g.cs",
+      "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
+      "layer": "integration"
+    },
+    {
       "path": "src/core/HELIOS.Platform/Core/AdvancedOptimization/AdvancedOptimizationServicesTests.cs",
       "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "windows"
@@ -63,6 +78,16 @@
     },
     {
       "path": "src/core/HELIOS.Platform/Phase10/Users/Tests/UserAccountManagementTests.cs",
+      "project": "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj",
+      "layer": "privileged"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/Users/Tests/obj/Release/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "project": "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj",
+      "layer": "privileged"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/Users/Tests/obj/Release/net8.0/HELIOS.Platform.Phase10.Users.Tests.AssemblyInfo.cs",
       "project": "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj",
       "layer": "privileged"
     },
@@ -143,6 +168,16 @@
     },
     {
       "path": "src/tests/Themes/DarkModeThemeTests.cs",
+      "project": "src/tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "src/tests/obj/Release/net8.0-windows10.0.19041.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "project": "src/tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "src/tests/obj/Release/net8.0-windows10.0.19041.0/HELIOS.Platform.Tests.AssemblyInfo.cs",
       "project": "src/tests/HELIOS.Platform.Tests.csproj",
       "layer": "windows"
     },
@@ -278,6 +313,16 @@
     },
     {
       "path": "tests/HELIOS.Platform.Tests/Phase10/Quarantine/QuarantineSystemTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj",
+      "layer": "privileged"
+    },
+    {
+      "path": "tests/HELIOS.Platform.Tests/Phase10/Quarantine/obj/Release/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "project": "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj",
+      "layer": "privileged"
+    },
+    {
+      "path": "tests/HELIOS.Platform.Tests/Phase10/Quarantine/obj/Release/net8.0/HELIOS.Platform.Tests.Phase10.Quarantine.AssemblyInfo.cs",
       "project": "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj",
       "layer": "privileged"
     },
@@ -467,6 +512,16 @@
       "layer": "privileged"
     },
     {
+      "path": "tests/HELIOS.Platform.Tests/obj/Release/net8.0-windows10.0.19041.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/HELIOS.Platform.Tests/obj/Release/net8.0-windows10.0.19041.0/HELIOS.Platform.Tests.AssemblyInfo.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
       "path": "tests/Phase3Phase5IntegrationTests.cs",
       "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "integration"
@@ -495,6 +550,51 @@
       "path": "tests/analytics/HELIOS.Analytics.FSharp.Tests/AnalyticsEngineTests.fs",
       "project": "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
       "layer": "portable"
+    },
+    {
+      "path": "tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs",
+      "project": "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+      "layer": "portable"
+    },
+    {
+      "path": "tests/analytics/HELIOS.Analytics.FSharp.Tests/obj/Release/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.fs",
+      "project": "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+      "layer": "portable"
+    },
+    {
+      "path": "tests/analytics/HELIOS.Analytics.FSharp.Tests/obj/Release/net8.0/HELIOS.Analytics.FSharp.Tests.AssemblyInfo.fs",
+      "project": "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+      "layer": "portable"
+    },
+    {
+      "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoEnterpriseExperienceV2ContractsTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/obj/Release/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/obj/Release/net8.0/HELIOS.Platform.Contracts.Tests.AssemblyInfo.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/obj/Release/net8.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/obj/Release/net8.0/SecurityValidationTests.AssemblyInfo.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "privileged"
+    },
+    {
+      "path": "tests/obj/Release/net8.0/SecurityValidationTests.GlobalUsings.g.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "privileged"
     },
     {
       "path": "tests/unit/CloudSync/CloudSyncIntegrationTests.cs",
