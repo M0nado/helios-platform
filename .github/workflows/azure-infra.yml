@@ -70,6 +70,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Restrict production apply to main branch
+        if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "Production deploy requests are restricted to refs/heads/main." >&2
+            exit 1
+          fi
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -133,8 +141,52 @@ jobs:
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
             --parameters "${params[@]}"
-      - name: Deploy
-        if: ${{ github.event.inputs.deploy == 'true' }}
+      - name: Deploy non-production
+        if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name != 'prod' }}
+        run: |
+          set -euo pipefail
+          params=(
+            "infra/azure/parameters/dev.json"
+            "location=${{ github.event.inputs.location }}"
+            "environmentName=${{ github.event.inputs.environment_name }}"
+            "namePrefix=${{ github.event.inputs.name_prefix }}"
+            "publisherEmail=${{ github.event.inputs.publisher_email }}"
+            "networkOnly=${{ github.event.inputs.network_only }}"
+            "egressMode=${{ github.event.inputs.egress_mode }}"
+          )
+          if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
+            params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
+          fi
+          if [[ -n "${{ github.event.inputs.azure_firewall_private_ip }}" ]]; then
+            params+=("azureFirewallPrivateIp=${{ github.event.inputs.azure_firewall_private_ip }}")
+          fi
+          if [[ -n "${{ github.event.inputs.hub_virtual_network_id }}" ]]; then
+            params+=("hubVirtualNetworkId=${{ github.event.inputs.hub_virtual_network_id }}")
+          fi
+          if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
+            params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
+          fi
+          az deployment group create \
+            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --template-file infra/azure/main.bicep \
+            --parameters "${params[@]}"
+
+  deploy-prod:
+    if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' && github.ref == 'refs/heads/main' }}
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: azure-prod
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy production after protected approval
         run: |
           set -euo pipefail
           params=(

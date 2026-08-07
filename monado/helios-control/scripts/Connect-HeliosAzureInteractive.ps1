@@ -1311,6 +1311,38 @@ function Set-GitHubEnvironmentVariables {
         -DeploymentBranch $GitHubDeploymentBranch
 }
 
+function Get-GitHubEnvironmentVariableValue {
+    param(
+        [Parameter(Mandatory)] [string] $Owner,
+        [Parameter(Mandatory)] [string] $Repository,
+        [Parameter(Mandatory)] [string] $Environment,
+        [Parameter(Mandatory)] [string] $Name
+    )
+
+    $repositoryName = "$Owner/$Repository"
+    $escapedEnvironment = [uri]::EscapeDataString($Environment)
+    $variablesResponse = Invoke-GhJson `
+        -Arguments @(
+            'api', '--method', 'GET',
+            "repos/$repositoryName/environments/$escapedEnvironment/variables?per_page=100"
+        ) `
+        -Operation "Reading GitHub environment variables for '$Environment'"
+
+    $variables = @()
+    $variablesProperty = $variablesResponse.PSObject.Properties['variables']
+    if ($variablesProperty) {
+        $variables = @($variablesProperty.Value)
+    }
+    $matches = @($variables | Where-Object { $_.name -eq $Name })
+    if ($matches.Count -gt 1) {
+        throw "GitHub environment variable '$Name' is ambiguous in '$Environment'."
+    }
+    if ($matches.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string] $matches[0].value)) {
+        return ''
+    }
+    return ([string] $matches[0].value).Trim()
+}
+
 function Assert-GitHubEnvironmentProtection {
     param(
         [Parameter(Mandatory)] [string] $Owner,
@@ -1827,6 +1859,17 @@ try {
             -Environment $GitHubEnvironment `
             -ReviewerId ([int64] $RequiredReviewerId) `
             -DeploymentBranch $GitHubDeploymentBranch
+        $protectedSubnetBinding = Get-GitHubEnvironmentVariableValue `
+            -Owner $GitHubOwner `
+            -Repository $GitHubRepository `
+            -Environment $GitHubEnvironment `
+            -Name 'HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID'
+        if ([string]::IsNullOrWhiteSpace($protectedSubnetBinding)) {
+            throw "GitHub environment variable HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID is not configured for '$GitHubEnvironment'. Run -Mode Configure before Publish."
+        }
+        if (-not [string]::Equals($protectedSubnetBinding, $ContainerAppsInfrastructureSubnetId, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Publish requires -ContainerAppsInfrastructureSubnetId to match protected environment binding HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID. Run -Mode Configure to persist the reviewed subnet before dispatch.'
+        }
         Assert-GitHubFederationPresent `
             -Application $publishGitHubApplication `
             -Subject $githubOidcTrust.Subject `

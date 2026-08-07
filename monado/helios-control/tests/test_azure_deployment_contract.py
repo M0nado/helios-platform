@@ -6,6 +6,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = PROJECT_ROOT.parents[1]
 WORKFLOW = REPOSITORY_ROOT / ".github/workflows/helios-cloud-deploy.yml"
+AZURE_INFRA_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/azure-infra.yml"
 SUBNET_PARAMETER = "containerAppsInfrastructureSubnetId"
 
 
@@ -59,6 +60,10 @@ class AzureDeploymentContractTests(unittest.TestCase):
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('Require self-hosted runner for private production boundary verification', workflow)
         self.assertIn('RUNNER_ENVIRONMENT: ${{ runner.environment }}', workflow)
+        self.assertGreaterEqual(
+            workflow.count('fromJSON(\'["self-hosted","linux","x64","helios-azure"]\')'),
+            2,
+        )
         self.assertIn(
             "Production private-network validation requires a self-hosted runner with VNet and private DNS reachability to the internal Container Apps ingress.",
             workflow,
@@ -113,6 +118,30 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIsNotNone(preview_call)
         self.assertIsNotNone(persist_call)
         self.assertLess(preview_call.start(), persist_call.start())
+
+    def test_publish_requires_subnet_argument_to_match_protected_environment_binding(self) -> None:
+        interactive = (PROJECT_ROOT / "scripts" / "Connect-HeliosAzureInteractive.ps1").read_text(encoding="utf-8")
+        self.assertIn("Get-GitHubEnvironmentVariableValue", interactive)
+        self.assertIn("HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID", interactive)
+        self.assertIn(
+            "Publish requires -ContainerAppsInfrastructureSubnetId to match protected environment binding HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID.",
+            interactive,
+        )
+
+    def test_azure_infra_routes_prod_apply_through_protected_environment(self) -> None:
+        workflow = AZURE_INFRA_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("Restrict production apply to main branch", workflow)
+        self.assertIn("Production deploy requests are restricted to refs/heads/main.", workflow)
+        self.assertIn("Deploy production after protected approval", workflow)
+        self.assertIn("environment: azure-prod", workflow)
+        self.assertIn(
+            "if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' && github.ref == 'refs/heads/main' }}",
+            workflow,
+        )
+        self.assertIn(
+            "if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name != 'prod' }}",
+            workflow,
+        )
 
 
 if __name__ == "__main__":
