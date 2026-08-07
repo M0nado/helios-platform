@@ -116,8 +116,14 @@ namespace HELIOS.Platform.Phase10.Users.Tests
         public async Task GetUserPermissionsAsync_ContainsGroups()
         {
             var permissions = await _manager.GetUserPermissionsAsync(Environment.UserName);
-            
+
             Assert.NotNull(permissions.Groups);
+            if (permissions.Groups.Count == 0)
+            {
+                Assert.False(await _manager.IsAdministratorAsync(Environment.UserName));
+                return;
+            }
+            Assert.NotEmpty(permissions.Groups);
             Assert.All(permissions.Groups, group => Assert.False(string.IsNullOrWhiteSpace(group)));
         }
 

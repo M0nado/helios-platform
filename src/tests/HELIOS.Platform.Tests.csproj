@@ -5,7 +5,6 @@
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,8 +20,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="SmokeTests.cs" />
-    <Compile Include="IntegrationSmokeTests.cs" />
+    <Compile Remove="**/obj/**/*.cs" />
+    <Compile Remove="**/bin/**/*.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/AI/AIInfrastructureTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Cloud/CloudSyncTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/FileManagement/FileManagementTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Software/SoftwareAutomationTests.cs" />
+    <Compile Remove="Phase3Phase5IntegrationTests.cs" />
+    <Compile Remove="Phase8Stream8OptimizationTests.cs" />
+    <Compile Remove="Themes/DarkModeThemeTests.cs" />
+    <Compile Remove="ThemeSystemTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/MonitoringTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Phase2ServiceTests.cs" />
+    <Compile Remove="SandboxTests.cs" />
+    <Compile Remove="Phase5/Global/Phase5GlobalTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
