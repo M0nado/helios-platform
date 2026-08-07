@@ -431,6 +431,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
             "helios_get_run",
             "helios_list_connectors",
             "helios_plan_automation",
+            "helios_plan_specialization_run",
             "helios_propose_upgrade",
             "helios_render_control_center",
             "search"
@@ -633,6 +634,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("helios_plan_automation", body);
+        Assert.Contains("helios_plan_specialization_run", body);
         Assert.Contains("readOnlyHint", body);
         Assert.DoesNotContain("helios_apply", body, StringComparison.OrdinalIgnoreCase);
     }
@@ -651,6 +653,28 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("canApplyFromMcp", body);
         Assert.Contains("open-draft-pull-request", body);
         Assert.DoesNotContain("automaticMerge\\\":true", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Azure_mcp_returns_specialization_plan_with_multimodal_metadata()
+    {
+        const string payload = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_plan_specialization_run\",\"arguments\":{\"specializationId\":\"hermes-xcore9-orchestrator\",\"requestedParallelism\":3,\"requestedFanOut\":3,\"requestedFanIn\":3,\"timeoutSeconds\":180,\"idempotencyKey\":\"mcp-specialization-0001\",\"correlationId\":\"corr-mcp-241\",\"requestedTools\":[\"search\",\"fetch\",\"helios_plan_specialization_run\"],\"requestedSkills\":[\"helios-control-skill\"],\"requestedModalities\":[\"text\",\"code\"],\"evidenceLinks\":[{\"rel\":\"issue\",\"href\":\"https://github.com/M0nado/helios-platform/issues/241\"}]}}}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        using var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(body);
+        var payloadText = document.RootElement.GetProperty("result")
+            .GetProperty("content")[0]
+            .GetProperty("text")
+            .GetString();
+        Assert.NotNull(payloadText);
+        Assert.Contains("\"allowed\":true", payloadText);
+        Assert.Contains("modality", payloadText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("corr-mcp-241", payloadText);
     }
 
     [Fact]

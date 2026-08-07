@@ -74,6 +74,7 @@
       "azure_list_foundry_resources",
       "helios_plan_automation",
       "helios_propose_upgrade",
+      "helios_plan_specialization_run",
       "helios_get_run",
       "helios_list_connectors"
     ],

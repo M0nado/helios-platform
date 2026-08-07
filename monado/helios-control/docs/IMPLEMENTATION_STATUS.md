@@ -45,6 +45,10 @@
   and Copilot. The runtime stores per-destination receipts, uses stable
   idempotency keys, retries three times, and never returns relay URLs or HMAC
   values to Edge or MCP.
+- Hermes/XCore9 specialization-pack contract with a versioned schema and examples,
+  fail-closed capability enforcement, bounded parallelism/fan-in/fan-out limits,
+  undeclared skill/tool rejection, and normalized multimodal provenance metadata
+  from `helios_plan_specialization_run`.
 
 ## Intentionally not enabled
 

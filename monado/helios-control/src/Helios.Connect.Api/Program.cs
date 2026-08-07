@@ -12,6 +12,12 @@ builder.Services.AddHttpClient("helios-connectors", client => client.Timeout = T
 builder.Services.AddSingleton<IEdgeAutomationPlanner, EdgeAutomationPlanner>();
 builder.Services.AddSingleton<ISetupWizardService, SetupWizardService>();
 builder.Services.AddSingleton<IConnectorDispatcher, ConnectorDispatcher>();
+builder.Services.AddSingleton<ISpecializationPolicyEvaluator>(services =>
+{
+    var configuration = services.GetRequiredService<IConfiguration>();
+    var environment = services.GetRequiredService<IWebHostEnvironment>();
+    return SpecializationPolicyEvaluator.CreateFromConfiguration(configuration, environment);
+});
 builder.Services.AddSingleton<IControlRunStore>(services =>
 {
     var configuration = services.GetRequiredService<IConfiguration>();
@@ -95,7 +101,56 @@ app.MapGet("/openapi/v1.json", (HttpRequest request) =>
             responses = new Dictionary<string, object> { ["202"] = new { description = "Saved control run" }, ["400"] = new { description = "Invalid request" }, ["401"] = new { description = "Entra authentication required" }, ["409"] = new { description = "Idempotency conflict" }, ["413"] = new { description = "Request too large" } }
         } },
         ["/control/runs/{runId}"] = new { get = new { operationId = "GetControlRun", summary = "Read an owner-scoped saved control run.", parameters = new[] { runIdParameter }, responses = new Dictionary<string, object> { ["200"] = new { description = "Saved control run" }, ["401"] = new { description = "Entra authentication required" }, ["404"] = new { description = "Run not found" } } } },
-        ["/control/runs/{runId}/resume"] = new { post = new { operationId = "ResumeFailedControlRun", summary = "Requeue an owner-scoped failed run; active and terminal runs are unchanged.", parameters = new[] { runIdParameter }, responses = new Dictionary<string, object> { ["202"] = new { description = "Run state" }, ["401"] = new { description = "Entra authentication required" }, ["404"] = new { description = "Run not found" } } } }
+        ["/control/runs/{runId}/resume"] = new { post = new { operationId = "ResumeFailedControlRun", summary = "Requeue an owner-scoped failed run; active and terminal runs are unchanged.", parameters = new[] { runIdParameter }, responses = new Dictionary<string, object> { ["202"] = new { description = "Run state" }, ["401"] = new { description = "Entra authentication required" }, ["404"] = new { description = "Run not found" } } } },
+        ["/automation/specializations/plan"] = new { post = new
+        {
+            operationId = "PlanSpecializationRun",
+            summary = "Evaluate Hermes/XCore9 specialization policy for a bounded parallel run without execution.",
+            requestBody = new
+            {
+                required = true,
+                content = new Dictionary<string, object>
+                {
+                    ["application/json"] = new
+                    {
+                        schema = new
+                        {
+                            type = "object",
+                            required = new[] { "specializationId" },
+                            properties = new
+                            {
+                                specializationId = new { type = "string" },
+                                requestedParallelism = new { type = "integer", minimum = 1, maximum = 64 },
+                                requestedFanOut = new { type = "integer", minimum = 1, maximum = 64 },
+                                requestedFanIn = new { type = "integer", minimum = 1, maximum = 64 },
+                                timeoutSeconds = new { type = "integer", minimum = 1, maximum = 3600 },
+                                idempotencyKey = new { type = "string" },
+                                correlationId = new { type = "string" },
+                                requestedTools = new { type = "array", items = new { type = "string" } },
+                                requestedSkills = new { type = "array", items = new { type = "string" } },
+                                requestedModalities = new { type = "array", items = new { type = "string" } },
+                                evidenceLinks = new
+                                {
+                                    type = "array",
+                                    items = new
+                                    {
+                                        type = "object",
+                                        required = new[] { "rel", "href" },
+                                        properties = new
+                                        {
+                                            rel = new { type = "string" },
+                                            href = new { type = "string", format = "uri" }
+                                        }
+                                    }
+                                }
+                            },
+                            additionalProperties = false
+                        }
+                    }
+                }
+            },
+            responses = new Dictionary<string, object> { ["200"] = new { description = "Specialization policy evaluation" }, ["400"] = new { description = "Invalid request" }, ["401"] = new { description = "Entra authentication required" }, ["413"] = new { description = "Request too large" } }
+        } }
     };
     return Results.Json(new { openapi = "3.0.1", info = new { title = "Helios Azure Connector", version = HeliosMcpDefaults.Version }, servers = new[] { new { url = origin } }, paths });
 });
@@ -148,6 +203,33 @@ app.MapPost("/automation/plan", async (HttpContext context, IEdgeAutomationPlann
     catch (JsonException)
     {
         return Results.BadRequest(new { error = "Automation request is invalid JSON." });
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(new { error = exception.Message });
+    }
+});
+
+app.MapPost("/automation/specializations/plan", async (HttpContext context, ISpecializationPolicyEvaluator evaluator, CancellationToken cancellationToken) =>
+{
+    if (!IsConnectorAuthorized(context)) return Results.Unauthorized();
+    const int maximumSpecializationPlanBytes = 16_384;
+    if (!context.Request.HasJsonContentType()) return Results.BadRequest(new { error = "Content-Type must be application/json." });
+    if (!BoundedRequestBody.Prepare(context, maximumSpecializationPlanBytes)) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+
+    try
+    {
+        var body = await BoundedRequestBody.ReadAsync(context.Request.Body, maximumSpecializationPlanBytes, cancellationToken);
+        if (body.IsTooLarge) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+        var request = JsonSerializer.Deserialize<SpecializationExecutionRequest>(
+            body.Bytes,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (request is null) return Results.BadRequest(new { error = "Specialization request is required." });
+        return Results.Ok(evaluator.Evaluate(request));
+    }
+    catch (JsonException)
+    {
+        return Results.BadRequest(new { error = "Specialization request is invalid JSON." });
     }
     catch (ArgumentException exception)
     {
@@ -365,13 +447,14 @@ app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationTo
             var wizard = context.RequestServices.GetRequiredService<ISetupWizardService>();
             var coordinator = context.RequestServices.GetRequiredService<ControlRunCoordinator>();
             var dispatcher = context.RequestServices.GetRequiredService<IConnectorDispatcher>();
+            var specializationEvaluator = context.RequestServices.GetRequiredService<ISpecializationPolicyEvaluator>();
             var toolName = root.GetProperty("params").GetProperty("name").GetString();
-            var inventory = toolName is "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors" or "search" or "fetch" or "helios_get_control_plane_status" or "helios_render_control_center"
+            var inventory = toolName is "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors" or "helios_plan_specialization_run" or "search" or "fetch" or "helios_get_control_plane_status" or "helios_render_control_center"
                 ? null!
                 : context.RequestServices.GetRequiredService<IAzureInventoryService>();
             var principal = context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault() ?? "authorized-user";
             var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
-            return McpResult(id, await BuildAzureToolResultAsync(root, inventory, planner, wizard, coordinator, dispatcher, configuration, principal, cancellationToken));
+            return McpResult(id, await BuildAzureToolResultAsync(root, inventory, planner, wizard, coordinator, dispatcher, specializationEvaluator, configuration, principal, cancellationToken));
         }
 
         return method switch
@@ -727,7 +810,7 @@ static bool TryValidateAzureToolCall(JsonElement root, out string error)
     }
 
     var name = nameElement.GetString();
-    if (name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors" or "search" or "fetch" or "helios_get_control_plane_status" or "helios_render_control_center"))
+    if (name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors" or "helios_plan_specialization_run" or "search" or "fetch" or "helios_get_control_plane_status" or "helios_render_control_center"))
     {
         error = $"Unknown tool '{name}'.";
         return false;
@@ -748,6 +831,14 @@ static bool TryValidateAzureToolCall(JsonElement root, out string error)
             "helios_plan_automation" => argument.Name is "intent" or "environment" or "target" or "connector" && argument.Value.ValueKind == JsonValueKind.String,
             "helios_propose_upgrade" => argument.Name is "capability" or "reason" or "target" && argument.Value.ValueKind == JsonValueKind.String,
             "helios_get_run" => argument.Name == "runId" && argument.Value.ValueKind == JsonValueKind.String,
+            "helios_plan_specialization_run" => argument.Name switch
+            {
+                "specializationId" or "idempotencyKey" or "correlationId" => argument.Value.ValueKind == JsonValueKind.String,
+                "requestedParallelism" or "requestedFanOut" or "requestedFanIn" or "timeoutSeconds" => argument.Value.ValueKind == JsonValueKind.Number,
+                "requestedTools" or "requestedSkills" or "requestedModalities" => IsStringArray(argument.Value),
+                "evidenceLinks" => IsEvidenceLinkArray(argument.Value),
+                _ => false
+            },
             "search" => argument.Name == "query" && argument.Value.ValueKind == JsonValueKind.String,
             "fetch" => argument.Name == "id" && argument.Value.ValueKind == JsonValueKind.String,
             _ => false
@@ -757,6 +848,23 @@ static bool TryValidateAzureToolCall(JsonElement root, out string error)
             error = $"Argument '{argument.Name}' is not valid for tool '{name}'.";
             return false;
         }
+    }
+    return true;
+}
+
+static bool IsStringArray(JsonElement value) =>
+    value.ValueKind == JsonValueKind.Array &&
+    value.EnumerateArray().All(item => item.ValueKind == JsonValueKind.String);
+
+static bool IsEvidenceLinkArray(JsonElement value)
+{
+    if (value.ValueKind != JsonValueKind.Array) return false;
+    foreach (var item in value.EnumerateArray())
+    {
+        if (item.ValueKind != JsonValueKind.Object ||
+            !item.TryGetProperty("rel", out var rel) || rel.ValueKind != JsonValueKind.String ||
+            !item.TryGetProperty("href", out var href) || href.ValueKind != JsonValueKind.String)
+            return false;
     }
     return true;
 }
@@ -895,6 +1003,7 @@ static async Task<IResult> RunInventoryQuery(Func<Task<IReadOnlyList<AzureInvent
 static object[] BuildAzureToolList(IConfiguration configuration)
 {
     var statusSchema = BuildControlPlaneStatusOutputSchema();
+    var specializationSchema = BuildSpecializationPlannerOutputSchema();
     return new object[]
     {
         BuildMcpToolDescriptor(
@@ -958,6 +1067,46 @@ static object[] BuildAzureToolList(IConfiguration configuration)
             "Create a deterministic, test-gated upgrade proposal for later execution by an approved repository workflow.",
             new { type = "object", required = new[] { "capability", "reason" }, properties = new { capability = new { type = "string" }, reason = new { type = "string" }, target = new { type = "string", defaultValue = "helios-control" } }, additionalProperties = false },
             configuration),
+        BuildMcpToolDescriptor(
+            "helios_plan_specialization_run",
+            "Plan Hermes/XCore9 specialization run",
+            "Evaluate bounded specialization, plugin/skill contracts, and multimodal provenance requirements without executing agents or applying changes.",
+            new
+            {
+                type = "object",
+                required = new[] { "specializationId" },
+                properties = new
+                {
+                    specializationId = new { type = "string" },
+                    requestedParallelism = new { type = "integer", minimum = 1, maximum = 64 },
+                    requestedFanOut = new { type = "integer", minimum = 1, maximum = 64 },
+                    requestedFanIn = new { type = "integer", minimum = 1, maximum = 64 },
+                    timeoutSeconds = new { type = "integer", minimum = 1, maximum = 3600 },
+                    idempotencyKey = new { type = "string" },
+                    correlationId = new { type = "string" },
+                    requestedTools = new { type = "array", items = new { type = "string" } },
+                    requestedSkills = new { type = "array", items = new { type = "string" } },
+                    requestedModalities = new { type = "array", items = new { type = "string" } },
+                    evidenceLinks = new
+                    {
+                        type = "array",
+                        items = new
+                        {
+                            type = "object",
+                            required = new[] { "rel", "href" },
+                            properties = new
+                            {
+                                rel = new { type = "string" },
+                                href = new { type = "string", format = "uri" }
+                            },
+                            additionalProperties = false
+                        }
+                    }
+                },
+                additionalProperties = false
+            },
+            configuration,
+            specializationSchema),
         BuildMcpToolDescriptor(
             "helios_get_run",
             "Get HELIOS control run",
@@ -1114,7 +1263,88 @@ static object BuildControlPlaneStatusOutputSchema() => new
     additionalProperties = false
 };
 
-static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, ISetupWizardService wizard, ControlRunCoordinator coordinator, IConnectorDispatcher dispatcher, IConfiguration configuration, string requestedBy, CancellationToken cancellationToken)
+static object BuildSpecializationPlannerOutputSchema() => new
+{
+    type = "object",
+    required = new[] { "allowed", "schemaVersion", "registryVersion", "violations", "evidenceMetadata" },
+    properties = new
+    {
+        allowed = new { type = "boolean" },
+        schemaVersion = new { type = "string" },
+        registryVersion = new { type = "string" },
+        policy = new
+        {
+            type = new[] { "object", "null" },
+            properties = new
+            {
+                specializationId = new { type = "string" },
+                effectiveParallelism = new { type = "integer" },
+                effectiveFanOut = new { type = "integer" },
+                effectiveFanIn = new { type = "integer" },
+                effectiveTimeoutSeconds = new { type = "integer" },
+                timeoutBehavior = new { type = "string" },
+                partialFailurePolicy = new { type = "string" },
+                cancelRunningChildrenOnTimeout = new { type = "boolean" },
+                enforcedSkills = new { type = "array", items = new { type = "string" } },
+                enforcedTools = new { type = "array", items = new { type = "string" } }
+            },
+            additionalProperties = false
+        },
+        violations = new
+        {
+            type = "array",
+            items = new
+            {
+                type = "object",
+                required = new[] { "code", "message" },
+                properties = new
+                {
+                    code = new { type = "string" },
+                    message = new { type = "string" }
+                },
+                additionalProperties = false
+            }
+        },
+        evidenceMetadata = new
+        {
+            type = "array",
+            items = new
+            {
+                type = "object",
+                required = new[] { "modality", "correlationId", "idempotencyKey", "specializationId", "skillIds", "evidenceLinks", "provenance" },
+                properties = new
+                {
+                    modality = new { type = "string" },
+                    allowedContentTypes = new { type = "array", items = new { type = "string" } },
+                    correlationId = new { type = "string" },
+                    idempotencyKey = new { type = "string" },
+                    specializationId = new { type = "string" },
+                    skillIds = new { type = "array", items = new { type = "string" } },
+                    evidenceLinks = new
+                    {
+                        type = "array",
+                        items = new
+                        {
+                            type = "object",
+                            required = new[] { "rel", "href" },
+                            properties = new
+                            {
+                                rel = new { type = "string" },
+                                href = new { type = "string", format = "uri" }
+                            },
+                            additionalProperties = false
+                        }
+                    },
+                    provenance = new { type = "object", additionalProperties = new { type = "string" } }
+                },
+                additionalProperties = false
+            }
+        }
+    },
+    additionalProperties = false
+};
+
+static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, ISetupWizardService wizard, ControlRunCoordinator coordinator, IConnectorDispatcher dispatcher, ISpecializationPolicyEvaluator specializationEvaluator, IConfiguration configuration, string requestedBy, CancellationToken cancellationToken)
 {
     var name = root.TryGetProperty("params", out var parameters) && parameters.TryGetProperty("name", out var nameValue)
         ? nameValue.GetString()
@@ -1133,15 +1363,20 @@ static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInve
             "azure_list_foundry_resources" => await inventory.ListFoundryResourcesAsync(cancellationToken),
             "helios_plan_automation" => planner.CreatePlan(ReadAutomationRequest(parameters)),
             "helios_propose_upgrade" => wizard.CreateUpgradeProposal(ReadUpgradeProposal(parameters)),
+            "helios_plan_specialization_run" => specializationEvaluator.Evaluate(ReadSpecializationExecutionRequest(parameters)),
             "helios_get_run" => await coordinator.GetAsync(ReadRunId(parameters), requestedBy, cancellationToken),
             "helios_list_connectors" => dispatcher.GetStatus(),
             _ => new { error = "unknown tool" }
         };
-        var isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors") || payload is null;
+        var isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade" or "helios_plan_specialization_run" or "helios_get_run" or "helios_list_connectors") || payload is null;
         payload ??= new { error = "Control run was not found." };
         return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } }, isError };
     }
     catch (ArgumentException exception)
+    {
+        return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = exception.Message }) } }, isError = true };
+    }
+    catch (InvalidOperationException exception) when (name == "helios_plan_specialization_run")
     {
         return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(new { error = exception.Message }) } }, isError = true };
     }
@@ -1370,6 +1605,70 @@ static UpgradeProposalRequest ReadUpgradeProposal(JsonElement parameters)
         throw new ArgumentException("helios_propose_upgrade requires arguments.");
     string? Read(string name) => arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     return new UpgradeProposalRequest(Read("capability") ?? string.Empty, Read("reason") ?? string.Empty, Read("target") ?? "helios-control");
+}
+
+static SpecializationExecutionRequest ReadSpecializationExecutionRequest(JsonElement parameters)
+{
+    if (!parameters.TryGetProperty("arguments", out var arguments) || arguments.ValueKind != JsonValueKind.Object)
+        throw new ArgumentException("helios_plan_specialization_run requires arguments.");
+
+    string? ReadString(string name) =>
+        arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    int ReadInt(string name)
+    {
+        if (!arguments.TryGetProperty(name, out var value)) return 0;
+        if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var parsed))
+            throw new ArgumentException($"helios_plan_specialization_run argument '{name}' must be an integer.");
+        return parsed;
+    }
+
+    IReadOnlyList<string>? ReadStringArray(string name)
+    {
+        if (!arguments.TryGetProperty(name, out var value)) return null;
+        if (value.ValueKind != JsonValueKind.Array)
+            throw new ArgumentException($"helios_plan_specialization_run argument '{name}' must be an array of strings.");
+        var list = new List<string>();
+        foreach (var item in value.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+                throw new ArgumentException($"helios_plan_specialization_run argument '{name}' must be an array of strings.");
+            list.Add(item.GetString() ?? string.Empty);
+        }
+        return list;
+    }
+
+    IReadOnlyList<EvidenceLink>? ReadEvidenceLinks(string name)
+    {
+        if (!arguments.TryGetProperty(name, out var value)) return null;
+        if (value.ValueKind != JsonValueKind.Array)
+            throw new ArgumentException("helios_plan_specialization_run argument 'evidenceLinks' must be an array.");
+        var links = new List<EvidenceLink>();
+        foreach (var item in value.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object ||
+                !item.TryGetProperty("rel", out var rel) || rel.ValueKind != JsonValueKind.String ||
+                !item.TryGetProperty("href", out var href) || href.ValueKind != JsonValueKind.String)
+                throw new ArgumentException("Each evidenceLinks item must be an object with rel and href string fields.");
+            links.Add(new EvidenceLink(rel.GetString() ?? string.Empty, href.GetString() ?? string.Empty));
+        }
+        return links;
+    }
+
+    return new SpecializationExecutionRequest(
+        SpecializationId: ReadString("specializationId") ?? string.Empty,
+        RequestedParallelism: ReadInt("requestedParallelism"),
+        RequestedFanOut: ReadInt("requestedFanOut"),
+        RequestedFanIn: ReadInt("requestedFanIn"),
+        TimeoutSeconds: ReadInt("timeoutSeconds"),
+        IdempotencyKey: ReadString("idempotencyKey"),
+        CorrelationId: ReadString("correlationId"),
+        RequestedTools: ReadStringArray("requestedTools"),
+        RequestedSkills: ReadStringArray("requestedSkills"),
+        RequestedModalities: ReadStringArray("requestedModalities"),
+        EvidenceLinks: ReadEvidenceLinks("evidenceLinks"));
 }
 
 static string ReadRunId(JsonElement parameters)
