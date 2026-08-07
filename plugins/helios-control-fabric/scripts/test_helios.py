@@ -170,6 +170,17 @@ class HeliosCliTests(unittest.TestCase):
         self.assertFalse(plan["productionProvisioningAllowed"])
         self.assertEqual(plan["blockingIssue"], 162)
 
+    def test_enterprise_fleet_contract_supports_explicit_repository_root(self) -> None:
+        repository_root = Path(__file__).resolve().parents[3]
+        with patch.dict(
+            os.environ,
+            {"HELIOS_REPOSITORY_ROOT": str(repository_root)},
+            clear=False,
+        ):
+            plan = HELIOS.enterprise_fleet_plan()
+        self.assertEqual(plan["defaultExecutionMode"], "what-if-only")
+        self.assertEqual(plan["agentCount"], 20)
+
     def test_all_assets_are_json(self) -> None:
         for name in (
             "connections.json",

@@ -37,14 +37,14 @@
       "mode": "read-only",
       "writeToolsAllowed": false,
       "allowedToolContracts": [
-        "subscription/*",
-        "group/*",
-        "containerapps/*",
-        "applicationinsights/*",
-        "monitor/*",
-        "foundryextensions/*",
-        "quota/*",
-        "pricing/*"
+        "subscription.read",
+        "group.read",
+        "containerapps.read",
+        "applicationinsights.read",
+        "monitor.read",
+        "foundryextensions.read",
+        "quota.read",
+        "pricing.read"
       ],
       "deniedToolContracts": [
         "*write*",
@@ -59,10 +59,10 @@
       "mode": "read-only",
       "writeToolsAllowed": false,
       "allowedToolContracts": [
-        "repos/*",
-        "wit/*",
-        "pipelines/*",
-        "wiki/*"
+        "repos.read",
+        "wit.read",
+        "pipelines.read",
+        "wiki.read"
       ],
       "deniedToolContracts": [
         "*create*",
@@ -77,9 +77,8 @@
       "mode": "read-only",
       "writeToolsAllowed": false,
       "allowedToolContracts": [
-        "search",
-        "fetch",
-        "github/*"
+        "github.search",
+        "github.fetch"
       ],
       "deniedToolContracts": [
         "*merge*",
@@ -93,9 +92,8 @@
       "mode": "read-only",
       "writeToolsAllowed": false,
       "allowedToolContracts": [
-        "search",
-        "fetch",
-        "linear/*"
+        "linear.search",
+        "linear.fetch"
       ],
       "deniedToolContracts": [
         "*archive*",
@@ -109,9 +107,8 @@
       "mode": "read-only",
       "writeToolsAllowed": false,
       "allowedToolContracts": [
-        "search",
-        "fetch",
-        "slack/*"
+        "slack.search",
+        "slack.fetch"
       ],
       "deniedToolContracts": [
         "*delete*",
@@ -125,9 +122,8 @@
       "mode": "read-only",
       "writeToolsAllowed": false,
       "allowedToolContracts": [
-        "search",
-        "fetch",
-        "foundry/*"
+        "foundry.search",
+        "foundry.fetch"
       ],
       "deniedToolContracts": [
         "*deploy*",

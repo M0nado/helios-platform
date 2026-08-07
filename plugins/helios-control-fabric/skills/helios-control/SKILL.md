@@ -74,6 +74,9 @@ guide into Entra.
 
 The `fleet` command reads the enterprise sub-agent registry and keeps production
 provisioning blocked while issue #162 remains unresolved.
+If the plugin is installed outside a repository checkout, set
+`HELIOS_REPOSITORY_ROOT` or `HELIOS_ENTERPRISE_FLEET_REGISTRY` before running
+`fleet`.
 
 Continue with the repository wizard:
 

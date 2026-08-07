@@ -367,7 +367,7 @@
         "type": "managed-identity-and-key-vault-rbac",
         "scope": "selected-key-vault-secret-references",
         "leastPrivilegeRoles": [
-          "Key Vault Secrets User"
+          "Key Vault Secrets Officer (approved secret scope only)"
         ],
         "credentialSource": "managed-identity"
       },
@@ -474,7 +474,7 @@
         "scope": "selected-site-and-team",
         "leastPrivilegeRoles": [
           "Sites.Selected",
-          "Teamwork.Migrate.All equivalent approved scope"
+          "TeamsActivity.Send (delegated, approved team only)"
         ],
         "credentialSource": "interactive-admin-consent"
       },

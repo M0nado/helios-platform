@@ -48,6 +48,10 @@ reads the repository metadata and effective OIDC subject policy. It mirrors the
 Azure onboarding wizard: immutable owner/repository IDs are used when GitHub
 enables them, custom subject templates are rejected, and missing policy fields
 fail closed rather than falling back to a guessed subject.
+The `fleet` command resolves the registry from the repository checkout. If the
+plugin is installed outside the repository tree, set `HELIOS_REPOSITORY_ROOT`
+or `HELIOS_ENTERPRISE_FLEET_REGISTRY` to an explicit local source-controlled
+registry path.
 
 ## Environment
 

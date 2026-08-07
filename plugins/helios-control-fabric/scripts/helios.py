@@ -20,12 +20,8 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 TARGETS_FILE = ASSETS / "connections.json"
-ENTERPRISE_FLEET_REGISTRY_FILE = (
-    ROOT.parent.parent
-    / "monado"
-    / "helios-control"
-    / "config"
-    / "enterprise-sub-agent-fleet.json"
+ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH = Path(
+    "monado/helios-control/config/enterprise-sub-agent-fleet.json"
 )
 
 TOOLS: tuple[tuple[str, tuple[str, ...], bool], ...] = (
@@ -334,21 +330,55 @@ def edge_plan(environment: str) -> dict[str, Any]:
     }
 
 
-def enterprise_fleet_plan() -> dict[str, Any]:
-    if not ENTERPRISE_FLEET_REGISTRY_FILE.exists():
-        raise RuntimeError(
-            "Enterprise sub-agent fleet registry is missing at "
-            f"{ENTERPRISE_FLEET_REGISTRY_FILE}."
+def resolve_enterprise_fleet_registry_file() -> Path:
+    candidates: list[Path] = []
+
+    explicit_file = os.environ.get("HELIOS_ENTERPRISE_FLEET_REGISTRY", "").strip()
+    if explicit_file:
+        candidates.append(Path(explicit_file).expanduser())
+
+    explicit_root = os.environ.get("HELIOS_REPOSITORY_ROOT", "").strip()
+    if explicit_root:
+        candidates.append(
+            Path(explicit_root).expanduser() / ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH
         )
-    payload = json.loads(
-        ENTERPRISE_FLEET_REGISTRY_FILE.read_text(encoding="utf-8")
+
+    search_roots = [Path.cwd(), ROOT, *Path.cwd().parents, *ROOT.parents]
+    for base in search_roots:
+        candidates.append(base / ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH)
+
+    seen: set[str] = set()
+    ordered_candidates: list[Path] = []
+    for candidate in candidates:
+        normalized = candidate.resolve(strict=False)
+        key = str(normalized)
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered_candidates.append(normalized)
+
+    for candidate in ordered_candidates:
+        if candidate.is_file():
+            return candidate
+
+    searched = "\n  - ".join(str(candidate) for candidate in ordered_candidates)
+    raise RuntimeError(
+        "Enterprise sub-agent fleet registry was not found. "
+        "Set HELIOS_REPOSITORY_ROOT or HELIOS_ENTERPRISE_FLEET_REGISTRY.\n"
+        f"Searched:\n  - {searched}"
     )
+
+
+def enterprise_fleet_plan() -> dict[str, Any]:
+    registry_path = resolve_enterprise_fleet_registry_file()
+    payload = json.loads(registry_path.read_text(encoding="utf-8"))
     agents = payload.get("agents", [])
     connectors = payload.get("connectors", [])
     return {
         "registryId": payload.get("registryId", ""),
         "sourceIssue": payload.get("sourceIssue", ""),
         "defaultExecutionMode": payload.get("defaultExecutionMode", ""),
+        "registrySource": str(registry_path),
         "blockingIssue": payload.get("integrityGate", {}).get("blockingIssue"),
         "productionProvisioningAllowed": payload.get("integrityGate", {}).get(
             "productionProvisioningAllowed"
