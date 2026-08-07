@@ -4,7 +4,7 @@ open HELIOS.Analytics.FSharp.Optimization
 open Xunit
 
 module MonadoEnterpriseProfileScoringV2Tests =
-    let private telemetry profileRisk vmPressure audioXruns frameTime networkLatency storageLatency =
+    let private telemetry profileRisk vmPressure audioXruns frameTime networkLatency storageLatency : MonadoEnterpriseTelemetry =
         {
             CpuUtilization = 62.0
             GpuUtilization = 55.0
