@@ -167,6 +167,29 @@ public sealed class SpecializationPolicyTests
     }
 
     [Fact]
+    public void Allowed_tools_are_emitted_using_canonical_registry_names()
+    {
+        var evaluator = new SpecializationPolicyEvaluator(LoadRegistry("hermes-xcore9-specialization-packs.json"));
+        var decision = evaluator.Evaluate(new SpecializationExecutionRequest(
+            SpecializationId: "hermes-xcore9-orchestrator",
+            RequestedParallelism: 1,
+            RequestedFanOut: 1,
+            RequestedFanIn: 1,
+            TimeoutSeconds: 60,
+            IdempotencyKey: "specialization-canonical-tool-0001",
+            CorrelationId: "corr-241-canonical",
+            RequestedTools: ["SEARCH"],
+            RequestedSkills: ["helios-control-skill"],
+            RequestedModalities: ["text"],
+            EvidenceLinks: [new EvidenceLink("issue", "https://github.com/M0nado/helios-platform/issues/241")]));
+
+        Assert.True(decision.Allowed);
+        Assert.NotNull(decision.Policy);
+        Assert.Contains("search", decision.Policy!.EnforcedTools);
+        Assert.DoesNotContain("SEARCH", decision.Policy.EnforcedTools);
+    }
+
+    [Fact]
     public void Multimodal_routing_emits_normalized_evidence_metadata()
     {
         var evaluator = new SpecializationPolicyEvaluator(LoadRegistry("hermes-xcore9-specialization-packs.json"));

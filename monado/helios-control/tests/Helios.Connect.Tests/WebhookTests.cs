@@ -688,6 +688,10 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = JsonDocument.Parse(body);
+        var structuredContent = document.RootElement.GetProperty("result")
+            .GetProperty("structuredContent");
+        Assert.True(structuredContent.GetProperty("allowed").GetBoolean());
+        Assert.True(structuredContent.TryGetProperty("evidenceMetadata", out _));
         var payloadText = document.RootElement.GetProperty("result")
             .GetProperty("content")[0]
             .GetProperty("text")

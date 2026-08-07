@@ -1372,6 +1372,18 @@ static async Task<object> BuildAzureToolResultAsync(JsonElement root, IServicePr
         };
         var isError = name is not ("azure_get_context" or "azure_list_resources" or "azure_list_foundry_resources" or "helios_plan_automation" or "helios_propose_upgrade" or "helios_plan_specialization_run" or "helios_get_run" or "helios_list_connectors") || payload is null;
         payload ??= new { error = "Control run was not found." };
+        if (name == "helios_plan_specialization_run" && payload is SpecializationExecutionDecision specializationDecision)
+        {
+            var serializedDecision = JsonSerializer.Serialize(
+                specializationDecision,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            return new
+            {
+                content = new[] { new { type = "text", text = serializedDecision } },
+                structuredContent = specializationDecision,
+                isError = false
+            };
+        }
         return new { content = new[] { new { type = "text", text = JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)) } }, isError };
     }
     catch (ArgumentException exception)

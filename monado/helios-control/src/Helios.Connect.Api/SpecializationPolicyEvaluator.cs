@@ -94,15 +94,9 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         }
         var candidates = new[]
         {
-            Path.GetFullPath(
-                Path.Combine("config", "hermes-xcore9-specialization-packs.json"),
-                environment.ContentRootPath),
-            Path.GetFullPath(
-                Path.Combine("..", "..", "config", "hermes-xcore9-specialization-packs.json"),
-                environment.ContentRootPath),
-            Path.GetFullPath(
-                Path.Combine("..", "..", "..", "config", "hermes-xcore9-specialization-packs.json"),
-                environment.ContentRootPath)
+            Path.GetFullPath("config/hermes-xcore9-specialization-packs.json", environment.ContentRootPath),
+            Path.GetFullPath("../../config/hermes-xcore9-specialization-packs.json", environment.ContentRootPath),
+            Path.GetFullPath("../../../config/hermes-xcore9-specialization-packs.json", environment.ContentRootPath)
         };
 
         return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
@@ -268,6 +262,7 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         var normalizedTools = requestedToolsSpecified
             ? NormalizeRequestValues(request.RequestedTools)
             : BuildDefaultToolSet(packAllowedTools, packDeniedTools, selectedSkills);
+        normalizedTools = CanonicalizeToolNames(normalizedTools, packAllowedTools, packDeniedTools, selectedSkills);
         if (requestedToolsSpecified && normalizedTools.Count == 0)
         {
             violations.Add(new("invalid-requested-tools",
@@ -629,6 +624,33 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
             result.ExceptWith(denied);
         }
         return result.OrderBy(value => value, Comparer).ToList();
+    }
+
+    private static List<string> CanonicalizeToolNames(
+        IReadOnlyList<string> toolNames,
+        HashSet<string> packAllowedTools,
+        HashSet<string> packDeniedTools,
+        IReadOnlyList<SpecializationSkillContract> selectedSkills)
+    {
+        var canonicalNames = new Dictionary<string, string>(Comparer);
+        foreach (var tool in packAllowedTools)
+            canonicalNames[tool] = tool;
+        foreach (var tool in packDeniedTools)
+            canonicalNames.TryAdd(tool, tool);
+
+        foreach (var skill in selectedSkills)
+        {
+            foreach (var tool in ToSet(skill.AllowedTools, $"skill {skill.Id} allowedTools"))
+                canonicalNames.TryAdd(tool, tool);
+            foreach (var tool in ToSet(skill.DeniedTools, $"skill {skill.Id} deniedTools"))
+                canonicalNames.TryAdd(tool, tool);
+        }
+
+        return toolNames
+            .Select(tool => canonicalNames.TryGetValue(tool, out var canonical) ? canonical : tool)
+            .Distinct(Comparer)
+            .OrderBy(value => value, Comparer)
+            .ToList();
     }
 
     private static IReadOnlyList<EvidenceLink> NormalizeEvidenceLinks(
