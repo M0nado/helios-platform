@@ -39,6 +39,26 @@ class AzureDeploymentContractTests(unittest.TestCase):
             workflow,
         )
 
+    def test_workflow_blocks_in_place_subnet_migration(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertGreaterEqual(
+            workflow.count(' --resource-type "Microsoft.App/managedEnvironments"'),
+            2,
+        )
+        self.assertGreaterEqual(
+            workflow.count('deploy a replacement environment and migrate with reviewed rollback evidence.'),
+            4,
+        )
+
+    def test_private_ingress_verification_is_control_plane_aware(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('if [[ "${ingress_external}" != "true" ]]; then', workflow)
+        self.assertIn(' --resource-type "Microsoft.App/containerApps/authConfigs"', workflow)
+        self.assertIn(
+            "Private ingress prevents direct runner probes; validated readiness and fail-closed auth policy from ARM state.",
+            workflow,
+        )
+
     def test_connector_entry_point_cannot_be_external_in_production(self) -> None:
         connector = (PROJECT_ROOT / "infra/connector.bicep").read_text(encoding="utf-8")
         self.assertIn(
@@ -64,6 +84,17 @@ class AzureDeploymentContractTests(unittest.TestCase):
             source = (PROJECT_ROOT / "scripts" / caller).read_text(encoding="utf-8")
             self.assertIn(SUBNET_PARAMETER, source, caller)
             self.assertRegex(source, r"prod.*(?:IsNullOrWhiteSpace|-z)", caller)
+
+    def test_configure_validates_preview_before_persisting_subnet_binding(self) -> None:
+        interactive = (PROJECT_ROOT / "scripts" / "Connect-HeliosAzureInteractive.ps1").read_text(encoding="utf-8")
+        preview_call = re.search(r"\[void\] \(Invoke-BicepPreview", interactive)
+        persist_call = re.search(
+            r"Set-GitHubEnvironmentVariables\s*`\s*\n\s*-Values \$pendingGitHubEnvironmentValues",
+            interactive,
+        )
+        self.assertIsNotNone(preview_call)
+        self.assertIsNotNone(persist_call)
+        self.assertLess(preview_call.start(), persist_call.start())
 
 
 if __name__ == "__main__":

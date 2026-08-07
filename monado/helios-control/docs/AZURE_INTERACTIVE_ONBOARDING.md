@@ -116,6 +116,18 @@ its registry digest, produces and hashes canonical ARM what-if evidence, then
 waits at the separate deploy approval before rechecking drift and applying that
 same revision.
 
+When `HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID` is supplied, the workflow
+enforces immutable Container Apps networking behavior: if a deterministically
+named managed environment already exists without subnet integration (or with a
+different subnet), the run fails before deployment and requires a reviewed
+replacement-environment migration with rollback evidence rather than an
+in-place subnet retrofit.
+
+For private-ingress deployments, the GitHub-hosted runner cannot probe the
+internal FQDN directly. The workflow therefore validates readiness and
+fail-closed auth policy from ARM control-plane state instead of requiring
+public endpoint curls.
+
 After the deployment returns the connector hostname, re-run `-Mode Configure`
 with the same reviewed inputs and confirmation. This idempotent pass discovers
 the deployed FQDN and finalizes the domain-qualified Teams SSO Application ID

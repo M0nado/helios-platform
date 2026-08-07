@@ -1905,6 +1905,7 @@ try {
     }
 
     $entraContext = Get-ExistingEntraContext
+    $pendingGitHubEnvironmentValues = $null
     if ($Mode -eq 'Configure') {
         $deployedApiHostname = Resolve-DeployedApiHostname -Context $azureContext -ResourceGroupName $selectedResourceGroup
         $connectorApplication = Ensure-EntraApplication -DisplayName $ConnectorAppName -ApiHostname $deployedApiHostname -ExposeDelegatedScope
@@ -1920,7 +1921,7 @@ try {
         $resourceGroupScope = "/subscriptions/$($azureContext.SubscriptionId)/resourceGroups/$selectedResourceGroup"
         Ensure-RoleAssignment -ApplicationId $githubApplication.appId -Scope $resourceGroupScope
 
-        $githubValues = @{
+        $pendingGitHubEnvironmentValues = @{
             AZURE_CLIENT_ID = [string] $githubApplication.appId
             AZURE_TENANT_ID = [string] $azureContext.TenantId
             AZURE_SUBSCRIPTION_ID = [string] $azureContext.SubscriptionId
@@ -1932,15 +1933,6 @@ try {
             HELIOS_REQUIRED_REVIEWER_ID = $RequiredReviewerId
             HELIOS_OIDC_SUBJECT = $githubOidcTrust.Subject
         }
-        Set-GitHubEnvironmentVariables `
-            -Values $githubValues `
-            -Owner $GitHubOwner `
-            -Repository $GitHubRepository `
-            -Environment $GitHubEnvironment
-        Ensure-GitHubFederation `
-            -Application $githubApplication `
-            -Subject $githubOidcTrust.Subject `
-            -Environment $GitHubEnvironment
     }
     else {
         $connectorApplication = $entraContext.Connector
@@ -1993,6 +1985,19 @@ try {
             -RegistryName $resolvedRegistryName `
             -ContainerAppsInfrastructureSubnetId $ContainerAppsInfrastructureSubnetId `
             -TemplatePath $template)
+    }
+
+    if ($Mode -eq 'Configure') {
+        # Persist protected workflow bindings only after preview validation succeeds.
+        Set-GitHubEnvironmentVariables `
+            -Values $pendingGitHubEnvironmentValues `
+            -Owner $GitHubOwner `
+            -Repository $GitHubRepository `
+            -Environment $GitHubEnvironment
+        Ensure-GitHubFederation `
+            -Application $githubApplication `
+            -Subject $githubOidcTrust.Subject `
+            -Environment $GitHubEnvironment
     }
 
     if ($Mode -eq 'Configure') {
