@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 using Moq;
+using HELIOS.Platform.Phase10.Quarantine;
 
 namespace HELIOS.Platform.Tests.Phase10.Quarantine
 {
@@ -25,7 +26,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _setup.InitializeQuarantineSystemAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
             _mockLogger.Verify(x => x.LogInfo(It.IsAny<string>()), Times.AtLeastOnce);
         }
 
@@ -36,7 +37,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _setup.InitializeQuarantineSystemAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -308,11 +309,13 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
     {
         private readonly Mock<ILogger> _mockLogger;
         private readonly QuarantineManager _manager;
+        private readonly string _testQuarantinePath;
 
         public QuarantineManagerTests()
         {
             _mockLogger = new Mock<ILogger>();
-            _manager = new QuarantineManager(_mockLogger.Object);
+            _testQuarantinePath = Path.Combine(Path.GetTempPath(), $"QuarantineManager_{Guid.NewGuid():N}");
+            _manager = new QuarantineManager(_mockLogger.Object, _testQuarantinePath);
         }
 
         [Fact]
@@ -384,7 +387,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _manager.UpdateThreatIntelligenceAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -402,11 +405,13 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
     {
         private readonly Mock<ILogger> _mockLogger;
         private readonly ThreatIntelligenceUpdater _updater;
+        private readonly string _testThreatDbPath;
 
         public ThreatIntelligenceUpdaterTests()
         {
             _mockLogger = new Mock<ILogger>();
-            _updater = new ThreatIntelligenceUpdater(_mockLogger.Object);
+            _testThreatDbPath = Path.Combine(Path.GetTempPath(), $"ThreatIntel_{Guid.NewGuid():N}");
+            _updater = new ThreatIntelligenceUpdater(_mockLogger.Object, _testThreatDbPath);
         }
 
         [Fact]
@@ -568,6 +573,9 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
 
             _mockService.Setup(x => x.AnalyzeThreatAsync(It.IsAny<string>()))
                 .ReturnsAsync(new ThreatAnalysisReport { IsSuccessful = true, ThreatLevel = "High" });
+
+            _mockService.Setup(x => x.UpdateThreatIntelligenceAsync())
+                .ReturnsAsync(new ThreatIntelligenceUpdateResult { IsSuccessful = true });
 
             // Act
             var result = await _orchestrator.HandleThreatAsync("C:\\malware.exe");

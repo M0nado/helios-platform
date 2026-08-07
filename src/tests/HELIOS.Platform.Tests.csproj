@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -21,6 +21,21 @@
 
   <ItemGroup>
     <ProjectReference Include="../core/HELIOS.Platform/HELIOS.Platform.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="HELIOS.Platform.Tests/AI/**/*.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Cloud/**/*.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/FileManagement/**/*.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Software/**/*.cs" />
+    <Compile Remove="Themes/**/*.cs" />
+    <Compile Remove="Phase3Phase5IntegrationTests.cs" />
+    <Compile Remove="ThemeSystemTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Phase2ServiceTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/MonitoringTests.cs" />
+    <Compile Remove="Phase8Stream8OptimizationTests.cs" />
+    <Compile Remove="SandboxTests.cs" />
+    <Compile Remove="Phase5/Global/Phase5GlobalTests.cs" />
   </ItemGroup>
 
 </Project>

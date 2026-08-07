@@ -3,7 +3,7 @@ import io
 import json
 import os
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -150,10 +150,158 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(plan["executionMode"], "plan-only")
 
     def test_runner_topology_keeps_self_hosted_disabled(self) -> None:
-        topology = HELIOS.runner_plan()
+        topology = HELIOS.runner_plan("azure-dev")
         self.assertEqual(topology["validation"]["provider"], "github-hosted")
         self.assertFalse(topology["selfHosted"]["enabled"])
         self.assertTrue(topology["release"]["immutableImageRequired"])
+
+    def test_runner_topology_blocks_environment_mismatch(self) -> None:
+        topology = HELIOS.runner_plan("azure-test")
+        self.assertEqual(topology["executionMode"], "blocked")
+        self.assertIn("Runner release environment mismatch", topology["reason"])
+
+    def test_all_blocks_doctor_failures_with_reasons(self) -> None:
+        doctor_result = {
+            "mode": "read-only",
+            "tools": [
+                {"command": "az", "required": True, "available": False},
+                {"command": "gh", "required": True, "available": True, "healthy": True},
+            ],
+            "environment": {},
+            "requiredToolsReady": False,
+            "cloudAuthenticated": "not-checked",
+            "azureDeployed": False,
+        }
+        with patch.object(HELIOS, "doctor", return_value=doctor_result):
+            result = HELIOS.full_setup("azure-dev", skip_oidc=True)
+        self.assertFalse(result["ready"])
+        self.assertTrue(
+            any(
+                blocked["step"] == "doctor" and "az (not found on PATH)" in blocked["reason"]
+                for blocked in result["blocked"]
+            )
+        )
+
+    def test_all_blocks_runner_mismatch_for_non_dev_environment(self) -> None:
+        healthy_doctor = {
+            "mode": "read-only",
+            "tools": [
+                {"command": "az", "required": True, "available": True, "healthy": True},
+            ],
+            "environment": {},
+            "requiredToolsReady": True,
+            "cloudAuthenticated": "not-checked",
+            "azureDeployed": False,
+        }
+        with patch.object(HELIOS, "doctor", return_value=healthy_doctor):
+            result = HELIOS.full_setup("azure-test", skip_oidc=True)
+        self.assertFalse(result["ready"])
+        self.assertTrue(
+            any(blocked["step"] == "runners" for blocked in result["blocked"])
+        )
+
+    def test_all_skip_oidc_keeps_setup_not_ready(self) -> None:
+        healthy_doctor = {
+            "mode": "read-only",
+            "tools": [
+                {"command": "az", "required": True, "available": True, "healthy": True},
+            ],
+            "environment": {},
+            "requiredToolsReady": True,
+            "cloudAuthenticated": "not-checked",
+            "azureDeployed": False,
+        }
+        with patch.object(HELIOS, "doctor", return_value=healthy_doctor):
+            result = HELIOS.full_setup("azure-dev", skip_oidc=True)
+        self.assertFalse(result["ready"])
+        self.assertFalse(result["oidcReady"])
+        self.assertTrue(
+            any(blocked["step"] == "oidc" for blocked in result["blocked"])
+        )
+
+    def test_all_blocks_when_oidc_variables_are_missing(self) -> None:
+        healthy_doctor = {
+            "mode": "read-only",
+            "tools": [
+                {"command": "az", "required": True, "available": True, "healthy": True},
+            ],
+            "environment": {},
+            "requiredToolsReady": True,
+            "cloudAuthenticated": "not-checked",
+            "azureDeployed": False,
+        }
+        oidc_result = {
+            "selectedSubject": "repo:M0nado/helios-platform:environment:azure-dev",
+            "useImmutableSubject": False,
+            "configuredVariables": {
+                "AZURE_CLIENT_ID": True,
+                "AZURE_TENANT_ID": False,
+                "AZURE_SUBSCRIPTION_ID": True,
+                "AZURE_RESOURCE_GROUP": False,
+            },
+        }
+        with patch.object(HELIOS, "doctor", return_value=healthy_doctor):
+            with patch.object(HELIOS, "oidc_contract", return_value=oidc_result):
+                result = HELIOS.full_setup("azure-dev", skip_oidc=False)
+        self.assertFalse(result["ready"])
+        self.assertFalse(result["oidcReady"])
+        self.assertTrue(
+            any(
+                blocked["step"] == "oidc"
+                and "AZURE_TENANT_ID" in blocked["reason"]
+                and "AZURE_RESOURCE_GROUP" in blocked["reason"]
+                for blocked in result["blocked"]
+            )
+        )
+
+    def test_all_human_output_exposes_step_details(self) -> None:
+        healthy_doctor = {
+            "mode": "read-only",
+            "tools": [
+                {"command": "az", "required": True, "available": True, "healthy": True},
+                {"command": "gh", "required": True, "available": True, "healthy": True},
+            ],
+            "environment": {},
+            "requiredToolsReady": True,
+            "cloudAuthenticated": "not-checked",
+            "azureDeployed": False,
+        }
+        oidc_result = {
+            "executionMode": "plan-only",
+            "selectedSubject": (
+                "repo:M0nado@274244942/"
+                "helios-platform@1207349837:environment:azure-dev"
+            ),
+            "useImmutableSubject": True,
+            "configuredVariables": {
+                "AZURE_CLIENT_ID": True,
+                "AZURE_TENANT_ID": True,
+                "AZURE_SUBSCRIPTION_ID": True,
+                "AZURE_RESOURCE_GROUP": True,
+            },
+        }
+        with patch.object(HELIOS, "doctor", return_value=healthy_doctor):
+            with patch.object(HELIOS, "oidc_contract", return_value=oidc_result):
+                payload = HELIOS.full_setup("azure-dev", skip_oidc=False)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            HELIOS.print_human(payload)
+        text = output.getvalue()
+
+        self.assertIn("doctor: required tools ready", text)
+        self.assertIn("targets github:", text)
+        self.assertIn("plan gates (", text)
+        self.assertIn("oidc subject:", text)
+        self.assertIn("edge target:", text)
+        self.assertIn("devops sync:", text)
+        self.assertIn("runners release environment:", text)
+
+    def test_runners_cli_returns_nonzero_when_blocked(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            result = HELIOS.main(["runners", "--environment", "azure-test", "--json"])
+        self.assertEqual(result, 2)
 
     def test_edge_plan_requires_private_link_and_separate_approval(self) -> None:
         plan = HELIOS.edge_plan("azure-dev")
@@ -174,7 +322,12 @@ class HeliosCliTests(unittest.TestCase):
             json.loads((HELIOS.ASSETS / name).read_text(encoding="utf-8"))
 
     def test_invalid_environment_fails(self) -> None:
-        for function in (HELIOS.release_plan, HELIOS.oidc_contract, HELIOS.edge_plan):
+        for function in (
+            HELIOS.release_plan,
+            HELIOS.oidc_contract,
+            HELIOS.edge_plan,
+            HELIOS.runner_plan,
+        ):
             with self.subTest(function=function.__name__):
                 with self.assertRaises(ValueError):
                     function("production-now")

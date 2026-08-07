@@ -246,7 +246,7 @@ namespace HELIOS.Platform.Core.Server
             }
 
             // Check for SELECT *
-            if (Regex.IsMatch(query, @"\bSELECT\s+\*\b", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(query, @"\bSELECT\s+\*", RegexOptions.IgnoreCase))
             {
                 suggestions.Add(new OptimizationSuggestion
                 {

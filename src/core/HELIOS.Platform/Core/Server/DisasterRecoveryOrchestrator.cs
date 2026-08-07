@@ -275,7 +275,7 @@ namespace HELIOS.Platform.Core.Server
                 // Check if it's a backup
                 if (_backups.TryGetValue(operationId, out var backup))
                 {
-                    if (backup.Status == BackupStatus.InProgress)
+                    if (backup.Status == BackupStatus.Pending || backup.Status == BackupStatus.InProgress)
                     {
                         backup.Status = BackupStatus.Cancelled;
                         return Task.FromResult(true);
@@ -285,7 +285,7 @@ namespace HELIOS.Platform.Core.Server
                 // Check if it's a recovery
                 if (_recoveries.TryGetValue(operationId, out var recovery))
                 {
-                    if (recovery.Status == RecoveryStatus.InProgress)
+                    if (recovery.Status == RecoveryStatus.Pending || recovery.Status == RecoveryStatus.InProgress)
                     {
                         recovery.Status = RecoveryStatus.Cancelled;
                         return Task.FromResult(true);

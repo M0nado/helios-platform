@@ -4,7 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HELIOS.Platform.Tests.System
+namespace HELIOS.Platform.Tests.SystemScenarios
 {
     /// <summary>
     /// System/E2E Tests: Threat Detection → Analysis → Quarantine → Notification

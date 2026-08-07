@@ -175,6 +175,8 @@
   <!-- These files contain embedded PowerShell scripts with syntax errors that prevent compilation -->
   <!-- They will be refactored in a future phase to properly handle embedded scripts -->
   <ItemGroup>
+    <Compile Remove="**/obj/**/*.cs" />
+    <Compile Remove="**/bin/**/*.cs" />
     <Compile Remove="Phase10/BootEnvironment/Channel3USBBootInstallation.cs" />
     <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
     <Compile Remove="**/Tests/**/*.cs" />
