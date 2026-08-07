@@ -39,6 +39,33 @@ verifier remain fail-closed.
 See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`, and
 `config/integrations.json`.
 
+## Full setup (modules, workflows, Azure, tooling, config)
+
+Use the full setup orchestrator to configure and validate the HELIOS control
+plane surfaces in one pass.
+
+```powershell
+# Non-mutating inventory and readiness report
+pwsh ./scripts/Invoke-HeliosFullSetup.ps1 -Mode Plan
+
+# Create .env.local from .env.example, run restore, compile Bicep, and report
+pwsh ./scripts/Invoke-HeliosFullSetup.ps1 -Mode Apply -CreateLocalEnv -RunRestore -BuildBicep
+
+# Optional: run Azure what-if preview (no deployment)
+pwsh ./scripts/Invoke-HeliosFullSetup.ps1 -Mode Apply -RunAzureWhatIf `
+  -EnvironmentName preview `
+  -ResourceGroup <rg> `
+  -ContainerRegistryName <acrName> `
+  -EntraClientId <client-guid> `
+  -EntraTenantId <tenant-guid> `
+  -AllowedPrincipalObjectId <principal-guid> `
+  -SourceCommitSha <40-char-commit-sha>
+```
+
+`Invoke-HeliosFullSetup.ps1` validates HELIOS module project discovery, GitHub
+workflow structure, required configuration files, the CLI toolchain matrix, and
+Azure Bicep templates. Azure deployment is not performed by this script.
+
 ## Edge and Copilot setup wizard
 
 Open `/setup` on the hosted HELIOS service, or install the Microsoft 365 app
