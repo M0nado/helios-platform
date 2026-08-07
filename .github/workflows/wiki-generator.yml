@@ -417,7 +417,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add wiki.db wiki_html/ *.md
+          git add wiki.db wiki_html/
+          git add ./*.md 2>/dev/null || true
           git commit -m "docs: generate wiki from source code
           
           - Scanned all documentation files
