@@ -11,7 +11,7 @@
       "environment",
       "dataClassification",
       "actor",
-      "evidenceLinks",
+      "links",
       "occurredAt"
     ],
     "classifications": [
@@ -20,7 +20,7 @@
       "restricted"
     ],
     "correlationIdRequired": true,
-    "evidenceLinksRequired": true
+    "linksRequired": true
   },
   "delivery": {
     "semantics": "at-least-once",

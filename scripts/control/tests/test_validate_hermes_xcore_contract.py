@@ -70,6 +70,17 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             "canonical environments must be exactly",
         )
 
+    def test_environment_tier_binding_mismatch_fails_closed(self) -> None:
+        candidate = copy.deepcopy(self.environment)
+        candidate["environments"][0]["tier"] = "production"
+        self.assert_has_error(
+            candidate,
+            self.capability,
+            self.event,
+            self.approval,
+            "must bind x-tier-dev to tier development",
+        )
+
     def test_non_authoritative_surface_deploy_permission_fails_closed(self) -> None:
         candidate = copy.deepcopy(self.capability)
         teams_surface = next(
@@ -82,6 +93,26 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             self.event,
             self.approval,
             "teams must not deploy",
+        )
+
+    def test_undeclared_surface_authority_fails_closed(self) -> None:
+        candidate = copy.deepcopy(self.capability)
+        candidate["surfaces"].append(
+            {
+                "name": "rogue-surface",
+                "canRequest": True,
+                "canApprove": False,
+                "canDeploy": True,
+                "canExecuteApprovalWorkflow": True,
+                "notes": "Unexpected deployment surface.",
+            }
+        )
+        self.assert_has_error(
+            self.environment,
+            candidate,
+            self.event,
+            self.approval,
+            "rogue-surface deployment authority is not declared",
         )
 
     def test_hotfix_auto_deploy_fails_closed(self) -> None:
@@ -115,6 +146,19 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             candidate,
             self.approval,
             "idempotency.required must be true",
+        )
+
+    def test_event_profile_rejects_legacy_evidence_links_field(self) -> None:
+        candidate = copy.deepcopy(self.event)
+        required_fields = candidate["eventEnvelope"]["requiredFields"]
+        required_fields.remove("links")
+        required_fields.append("evidenceLinks")
+        self.assert_has_error(
+            self.environment,
+            self.capability,
+            candidate,
+            self.approval,
+            "use links instead of evidenceLinks",
         )
 
 

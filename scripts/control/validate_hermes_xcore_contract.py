@@ -25,6 +25,20 @@ DEFAULT_APPROVAL_CONTRACT = (
 )
 
 EXPECTED_ENVIRONMENTS = {"x-tier-dev", "x-tier-xcore", "x-tier-prod"}
+EXPECTED_ENVIRONMENT_BINDINGS = {
+    "x-tier-dev": {
+        "tier": "development",
+        "deploymentWorkflow": "helios-cloud-deploy.yml",
+    },
+    "x-tier-xcore": {
+        "tier": "evaluation",
+        "deploymentWorkflow": "helios-cloud-deploy.yml",
+    },
+    "x-tier-prod": {
+        "tier": "production",
+        "deploymentWorkflow": "helios-cloud-deploy.yml",
+    },
+}
 EXPECTED_TRANSITIONS = {
     ("x-tier-dev", "x-tier-xcore"),
     ("x-tier-xcore", "x-tier-prod"),
@@ -43,6 +57,15 @@ NON_AUTHORITATIVE_SURFACES = {
     "copilot-studio",
 }
 ADVISORY_ONLY_SURFACES = {"hermes-router", "xcore-evaluator"}
+EXPECTED_EVENT_REQUIRED_FIELDS = {
+    "eventId",
+    "correlationId",
+    "source",
+    "eventType",
+    "environment",
+    "actor",
+    "links",
+}
 
 
 def _name_set(value: object) -> set[str]:
@@ -85,6 +108,20 @@ def validate_environment_contract(contract: object) -> list[str]:
             errors.append(f"environment contract: environments[{index}].name must be a string")
             continue
         names.add(name)
+        expected_binding = EXPECTED_ENVIRONMENT_BINDINGS.get(name)
+        if expected_binding is not None:
+            if environment.get("tier") != expected_binding["tier"]:
+                errors.append(
+                    "environment contract: "
+                    f"environments[{index}] must bind {name} to tier "
+                    f"{expected_binding['tier']}"
+                )
+            if environment.get("deploymentWorkflow") != expected_binding["deploymentWorkflow"]:
+                errors.append(
+                    "environment contract: "
+                    f"environments[{index}] must bind {name} to deployment workflow "
+                    f"{expected_binding['deploymentWorkflow']}"
+                )
         if environment.get("approvalRequired") is not True:
             errors.append(
                 f"environment contract: environments[{index}] must require approval"
@@ -194,9 +231,10 @@ def validate_capability_contract(contract: object) -> list[str]:
         )
 
     approval_surfaces = _name_set(document.get("authoritativeApprovalSurfaces"))
-    if not EXPECTED_APPROVAL_SURFACES.issubset(approval_surfaces):
+    if approval_surfaces != EXPECTED_APPROVAL_SURFACES:
         errors.append(
-            "capability contract: authoritativeApprovalSurfaces missing required authorities"
+            "capability contract: authoritativeApprovalSurfaces must be exactly "
+            "github-protected-environment-reviewers and azure-change-control"
         )
 
     non_authoritative = _name_set(document.get("nonAuthoritativeSurfaces"))
@@ -208,6 +246,25 @@ def validate_capability_contract(contract: object) -> list[str]:
     advisory = _name_set(document.get("advisoryOnlySurfaces"))
     if not ADVISORY_ONLY_SURFACES.issubset(advisory):
         errors.append("capability contract: advisoryOnlySurfaces must include Hermes and XCore")
+
+    for name in deployment_surfaces.union(approval_surfaces):
+        if name not in surfaces:
+            errors.append(f"capability contract: missing surface definition for {name}")
+
+    for name, surface in surfaces.items():
+        can_approve = surface.get("canApprove") is True
+        can_deploy = surface.get("canDeploy") is True
+        can_execute = surface.get("canExecuteApprovalWorkflow") is True
+        if can_approve and name not in approval_surfaces:
+            errors.append(
+                "capability contract: "
+                f"{name} approval authority is not declared in authoritativeApprovalSurfaces"
+            )
+        if (can_deploy or can_execute) and name not in deployment_surfaces:
+            errors.append(
+                "capability contract: "
+                f"{name} deployment authority is not declared in authoritativeDeploymentSurfaces"
+            )
 
     for name in NON_AUTHORITATIVE_SURFACES:
         surface = surfaces.get(name)
@@ -226,7 +283,11 @@ def validate_capability_contract(contract: object) -> list[str]:
         if surface is None:
             errors.append(f"capability contract: missing advisory surface {name}")
             continue
-        if surface.get("canApprove") is True or surface.get("canDeploy") is True:
+        if (
+            surface.get("canApprove") is True
+            or surface.get("canDeploy") is True
+            or surface.get("canExecuteApprovalWorkflow") is True
+        ):
             errors.append(f"capability contract: advisory surface {name} gained authority")
 
     return errors
@@ -249,20 +310,16 @@ def validate_event_contract(contract: object) -> list[str]:
     else:
         if envelope.get("correlationIdRequired") is not True:
             errors.append("event profile contract: correlationIdRequired must be true")
-        if envelope.get("evidenceLinksRequired") is not True:
-            errors.append("event profile contract: evidenceLinksRequired must be true")
+        if envelope.get("linksRequired") is not True:
+            errors.append("event profile contract: linksRequired must be true")
         required_fields = _name_set(envelope.get("requiredFields"))
-        for required in {
-            "eventId",
-            "correlationId",
-            "source",
-            "eventType",
-            "environment",
-            "actor",
-            "evidenceLinks",
-        }:
+        for required in EXPECTED_EVENT_REQUIRED_FIELDS:
             if required not in required_fields:
                 errors.append(f"event profile contract: requiredFields missing {required}")
+        if "evidenceLinks" in required_fields:
+            errors.append(
+                "event profile contract: requiredFields must use links instead of evidenceLinks"
+            )
 
     delivery = _mapping(document.get("delivery"))
     if delivery is None:
@@ -335,9 +392,10 @@ def validate_approval_contract(contract: object) -> list[str]:
                 "approval governance contract: deploymentSurfaces must be exactly github-actions-workflow"
             )
         approval_surfaces = _name_set(authorities.get("approvalSurfaces"))
-        if not EXPECTED_APPROVAL_SURFACES.issubset(approval_surfaces):
+        if approval_surfaces != EXPECTED_APPROVAL_SURFACES:
             errors.append(
-                "approval governance contract: approvalSurfaces missing required authorities"
+                "approval governance contract: approvalSurfaces must be exactly "
+                "github-protected-environment-reviewers and azure-change-control"
             )
         disallowed = _name_set(authorities.get("disallowedApprovalAndDeploymentSurfaces"))
         if not NON_AUTHORITATIVE_SURFACES.issubset(disallowed):

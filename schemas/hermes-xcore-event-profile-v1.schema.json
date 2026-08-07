@@ -28,7 +28,7 @@
         "requiredFields",
         "classifications",
         "correlationIdRequired",
-        "evidenceLinksRequired"
+        "linksRequired"
       ],
       "properties": {
         "requiredFields": {
@@ -52,7 +52,7 @@
         "correlationIdRequired": {
           "const": true
         },
-        "evidenceLinksRequired": {
+        "linksRequired": {
           "const": true
         }
       }

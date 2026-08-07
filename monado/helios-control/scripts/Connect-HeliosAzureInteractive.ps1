@@ -995,6 +995,23 @@ function Assert-PrincipalRoleAssignment {
     }
 }
 
+function Resolve-LegacyEnvironmentAlias {
+    param([AllowEmptyString()] [string] $TagValue)
+
+    if ([string]::IsNullOrWhiteSpace($TagValue)) {
+        return ''
+    }
+
+    $normalized = $TagValue.Trim().ToLowerInvariant()
+    switch ($normalized) {
+        'dev' { return 'x-tier-dev' }
+        'test' { return 'x-tier-xcore' }
+        'preview' { return 'x-tier-xcore' }
+        'prod' { return 'x-tier-prod' }
+        default { return '' }
+    }
+}
+
 function Get-ResourceGroupEnvironmentTag {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Context,
@@ -1014,7 +1031,8 @@ function Ensure-GovernedResourceGroupEnvironmentTag {
     )
 
     $current = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
-    if ($current -and $current -cne $EnvironmentName) {
+    $legacyMapped = Resolve-LegacyEnvironmentAlias -TagValue $current
+    if ($current -and $current -cne $EnvironmentName -and $legacyMapped -ne $EnvironmentName) {
         throw "Resource group '$ResourceGroupName' is already governed as environment '$current'; refusing to reclassify it as '$EnvironmentName'."
     }
     if ($current -ceq $EnvironmentName) { return }
@@ -1041,7 +1059,11 @@ function Assert-GovernedResourceGroupEnvironmentTag {
     )
 
     $current = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
+    $legacyMapped = Resolve-LegacyEnvironmentAlias -TagValue $current
     if ($current -cne $EnvironmentName) {
+        if ($legacyMapped -ceq $EnvironmentName) {
+            throw "Resource group '$ResourceGroupName' is still tagged with legacy environment '$current'. Run -Mode Configure once to migrate the tag to '$EnvironmentName' before publish."
+        }
         throw "Resource group '$ResourceGroupName' must have helios-environment=$EnvironmentName. Run -Mode Configure first."
     }
 }

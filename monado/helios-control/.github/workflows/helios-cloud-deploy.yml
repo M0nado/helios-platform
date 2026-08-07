@@ -102,6 +102,8 @@ jobs:
           fi
           if [[ "${DEPLOYMENT_MODE}" == "deploy" ]]; then
             if [[ "${DEPLOYMENT_HOTFIX}" == "true" ]]; then
+              hotfix_incident_trimmed="$(printf '%s' "${HOTFIX_INCIDENT_ID}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+              hotfix_reason_trimmed="$(printf '%s' "${HOTFIX_REASON}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
               if [[ "${TARGET_ENVIRONMENT}" != "x-tier-prod" ]]; then
                 echo "hotfix=true requires targetEnvironment=x-tier-prod." >&2
                 exit 1
@@ -110,8 +112,12 @@ jobs:
                 echo "A hotfix deploy requires confirmDeployment=HOTFIX." >&2
                 exit 1
               fi
-              if [[ -z "${HOTFIX_INCIDENT_ID}" || -z "${HOTFIX_REASON}" ]]; then
+              if [[ -z "${hotfix_incident_trimmed}" || -z "${hotfix_reason_trimmed}" ]]; then
                 echo "A hotfix deploy requires both hotfixIncidentId and hotfixReason." >&2
+                exit 1
+              fi
+              if [[ "${HOTFIX_INCIDENT_ID}" != "${hotfix_incident_trimmed}" || "${HOTFIX_REASON}" != "${hotfix_reason_trimmed}" ]]; then
+                echo "hotfixIncidentId and hotfixReason must not have leading or trailing whitespace." >&2
                 exit 1
               fi
             elif [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
