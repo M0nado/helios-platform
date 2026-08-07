@@ -1,6 +1,7 @@
 using HELIOS.Analytics.FSharp;
 using HELIOS.Platform.Contracts.XCore9;
 using HELIOS.XCore9;
+using System.Reflection;
 using Xunit;
 
 namespace HELIOS.XCore9.Tests;
@@ -21,6 +22,26 @@ public sealed class XCore9ServiceTests
             service.SelectWorkerAsync("reviewer", "safe", "corr-2", "operator", default).AsTask());
 
         await service.ReleaseWorkerAsync(lease, "corr-1", "operator", default);
+    }
+
+    [Fact]
+    public async Task Selection_prevents_integer_overflow_from_bypassing_resource_limits()
+    {
+        const int heavyUnits = 1_500_000_000;
+        var options = new XCore9Options(MaxTotalInstances: 3, MaxCpuUnits: int.MaxValue, MaxMemoryMiB: int.MaxValue);
+        var template = new WorkerTemplate(
+            TemplateId: "reviewer",
+            MaxInstances: 3,
+            CpuUnits: heavyUnits,
+            MemoryMiB: heavyUnits,
+            AllowedToolchainIds: new HashSet<string> { "safe" },
+            PromptDigest: "sha256:fixed");
+        var (service, _) = Create(options: options, template: template);
+
+        _ = await service.SelectWorkerAsync("reviewer", "safe", "corr-overflow-1", "operator", default);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SelectWorkerAsync("reviewer", "safe", "corr-overflow-2", "operator", default).AsTask());
     }
 
     [Fact]
@@ -121,6 +142,37 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public async Task Selection_reapplies_only_unaudited_expired_leases_after_audit_failure()
+    {
+        var audit = new RecordingAuditSink(failEventType: "xcore9.worker.expired", failOnOccurrence: 2);
+        var options = new XCore9Options(MaxTotalInstances: 4, LeaseDuration: TimeSpan.FromMilliseconds(20));
+        var template = new WorkerTemplate(
+            TemplateId: "reviewer",
+            MaxInstances: 4,
+            CpuUnits: 2,
+            MemoryMiB: 512,
+            AllowedToolchainIds: new HashSet<string> { "safe" },
+            PromptDigest: "sha256:fixed");
+        var (service, _) = Create(options: options, audit: audit, template: template);
+
+        _ = await service.SelectWorkerAsync("reviewer", "safe", "corr-exp-a", "operator", default);
+        _ = await service.SelectWorkerAsync("reviewer", "safe", "corr-exp-b", "operator", default);
+
+        await Task.Delay(80);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SelectWorkerAsync("reviewer", "safe", "corr-exp-c", "operator", default).AsTask());
+
+        _ = await service.SelectWorkerAsync("reviewer", "safe", "corr-exp-d", "operator", default);
+
+        var expiredEvents = audit.Events
+            .Where(evt => evt.EventType == "xcore9.worker.expired")
+            .Select(evt => evt.CorrelationId)
+            .ToArray();
+        Assert.Equal(new[] { "corr-exp-a", "corr-exp-b" }, expiredEvents.OrderBy(static value => value, StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void Scoring_rejects_template_toolchain_pair_outside_allowlist()
     {
         var (service, _) = Create();
@@ -171,6 +223,62 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public void Feature_extraction_deduplicates_allowed_features_before_bounding()
+    {
+        var (service, _) = Create(options: new XCore9Options(MaxFeaturesPerRun: 2));
+        var entry = new RunHistoryEntry(
+            Guid.NewGuid(),
+            "corr-features",
+            "reviewer",
+            true,
+            TimeSpan.Zero,
+            0,
+            [
+                new SanitizedRunFeature("success_rate", 0.9),
+                new SanitizedRunFeature("success_rate", 0.1),
+                new SanitizedRunFeature("route_accuracy", 0.7)
+            ],
+            []);
+
+        var features = service.ExtractFeatures(entry);
+        Assert.Equal(2, features.Count);
+        Assert.Equal("success_rate", features[0].Name);
+        Assert.Equal("route_accuracy", features[1].Name);
+    }
+
+    [Fact]
+    public async Task Run_history_rejects_evidence_links_above_configured_bounds()
+    {
+        var options = new XCore9Options(MaxEvidenceLinks: 2, MaxEvidenceLinkLength: 32);
+        var (service, _) = Create(options: options);
+        var oversizedCount = new RunHistoryEntry(
+            Guid.NewGuid(),
+            "corr-links-1",
+            "reviewer",
+            true,
+            TimeSpan.FromMilliseconds(20),
+            0,
+            [new SanitizedRunFeature("success_rate", 0.8)],
+            [
+                new Uri("https://evidence.test/1"),
+                new Uri("https://evidence.test/2"),
+                new Uri("https://evidence.test/3")
+            ]);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.IngestRunHistoryAsync(oversizedCount, "operator", default).AsTask());
+
+        var oversizedLength = oversizedCount with
+        {
+            CorrelationId = "corr-links-2",
+            EvidenceLinks = [new Uri("https://evidence.test/path-that-exceeds-the-configured-boundary")]
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.IngestRunHistoryAsync(oversizedLength, "operator", default).AsTask());
+    }
+
+    [Fact]
     public async Task Run_history_rejects_non_catalog_templates()
     {
         var (service, _) = Create();
@@ -186,6 +294,37 @@ public sealed class XCore9ServiceTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.IngestRunHistoryAsync(entry, "operator", default).AsTask());
+    }
+
+    [Fact]
+    public async Task Run_history_rolls_back_state_when_audit_fails()
+    {
+        var audit = new RecordingAuditSink(failEventType: "xcore9.run.ingested", failOnOccurrence: 1);
+        var (service, _) = Create(options: new XCore9Options(MaxRunHistoryEntries: 1), audit: audit);
+        var failing = new RunHistoryEntry(
+            Guid.NewGuid(),
+            "corr-history-1",
+            "reviewer",
+            true,
+            TimeSpan.FromMilliseconds(10),
+            0,
+            [new SanitizedRunFeature("success_rate", 0.8)],
+            [new Uri("https://evidence.test/1")]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.IngestRunHistoryAsync(failing, "operator", default).AsTask());
+        Assert.Empty(HistorySnapshot(service));
+
+        var succeeding = failing with
+        {
+            RunId = Guid.NewGuid(),
+            CorrelationId = "corr-history-2"
+        };
+
+        await service.IngestRunHistoryAsync(succeeding, "operator", default);
+        var history = HistorySnapshot(service);
+        Assert.Single(history);
+        Assert.Equal(succeeding.RunId, history[0].RunId);
     }
 
     [Fact]
@@ -238,6 +377,25 @@ public sealed class XCore9ServiceTests
         Assert.Equal("initial", decision.ActivePolicy.PolicyId);
     }
 
+    [Theory]
+    [InlineData(-0.1)]
+    [InlineData(1.1)]
+    public async Task Promotion_rejects_out_of_range_holdout_confidence(double confidence)
+    {
+        var (service, _) = Create();
+        var candidate = new RoutingPolicy("candidate", 2, new Dictionary<string, string>(), null);
+        var holdout = new HoldoutEvaluation(100, .4, .2, confidence, true);
+
+        var decision = await service.EvaluatePromotionAsync(
+            new PromotionRequest("corr-p3b", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]),
+            "guardian",
+            default);
+
+        Assert.False(decision.Approved);
+        Assert.Equal("holdout-values-not-finite", decision.ReasonCode);
+        Assert.Equal("initial", decision.ActivePolicy.PolicyId);
+    }
+
     [Fact]
     public async Task Promotion_is_idempotent_for_already_active_candidate()
     {
@@ -259,6 +417,40 @@ public sealed class XCore9ServiceTests
         Assert.True(second.Approved);
         Assert.Equal("already-active", second.ReasonCode);
         Assert.Equal("initial", second.RollbackPolicy!.PolicyId);
+    }
+
+    [Fact]
+    public async Task Promotion_rejects_policy_identity_reuse_with_different_rules()
+    {
+        var (service, _) = Create();
+        var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
+
+        var promoted = await service.EvaluatePromotionAsync(
+            new PromotionRequest(
+                "corr-p5a",
+                new RoutingPolicy("candidate", 2, new Dictionary<string, string> { ["route"] = "safe" }, null),
+                holdout,
+                "guardian",
+                [new Uri("https://evidence.test/1")]),
+            "guardian",
+            default);
+        Assert.True(promoted.Approved);
+
+        var reusedIdentity = await service.EvaluatePromotionAsync(
+            new PromotionRequest(
+                "corr-p5b",
+                new RoutingPolicy("candidate", 2, new Dictionary<string, string> { ["route"] = "unsafe" }, null),
+                holdout,
+                "guardian",
+                [new Uri("https://evidence.test/2")]),
+            "guardian",
+            default);
+
+        Assert.False(reusedIdentity.Approved);
+        Assert.Equal("candidate-policy-identity-collision", reusedIdentity.ReasonCode);
+        Assert.Equal("candidate", reusedIdentity.ActivePolicy.PolicyId);
+        Assert.Equal(2, reusedIdentity.ActivePolicy.Version);
+        Assert.Equal("initial", reusedIdentity.RollbackPolicy!.PolicyId);
     }
 
     [Fact]
@@ -315,6 +507,11 @@ public sealed class XCore9ServiceTests
             [double.NaN, 1],
             [0, 1],
             [.8, .9]));
+
+        Assert.Throws<ArgumentException>(() => analytics.EvaluatePredictions(
+            [double.MaxValue],
+            [-double.MaxValue],
+            [.9]));
     }
 
     [Fact]
@@ -358,15 +555,29 @@ public sealed class XCore9ServiceTests
 
         Assert.Throws<ArgumentException>(() =>
             Create(options: new XCore9Options(AuditEnvironment: "qa")));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(MaxEvidenceLinks: 0)));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(MaxEvidenceLinkLength: 0)));
     }
 
     private static (XCore9Service Service, RecordingAuditSink Audit) Create(
         XCore9Options? options = null,
         IXCoreAuthorization? authorization = null,
-        RecordingAuditSink? audit = null)
+        RecordingAuditSink? audit = null,
+        WorkerTemplate? template = null)
     {
         audit ??= new RecordingAuditSink();
         authorization ??= new CapabilityAuthorization();
+        template ??= new WorkerTemplate(
+            TemplateId: "reviewer",
+            MaxInstances: 1,
+            CpuUnits: 2,
+            MemoryMiB: 512,
+            AllowedToolchainIds: new HashSet<string> { "safe" },
+            PromptDigest: "sha256:fixed");
 
         var service = new XCore9Service(
             analytics: new XCoreAnalytics(),
@@ -374,13 +585,7 @@ public sealed class XCore9ServiceTests
             audit: audit,
             templates:
             [
-                new WorkerTemplate(
-                    TemplateId: "reviewer",
-                    MaxInstances: 1,
-                    CpuUnits: 2,
-                    MemoryMiB: 512,
-                    AllowedToolchainIds: new HashSet<string> { "safe" },
-                    PromptDigest: "sha256:fixed")
+                template
             ],
             toolchains:
             [
@@ -399,6 +604,14 @@ public sealed class XCore9ServiceTests
         return (service, audit);
     }
 
+    private static IReadOnlyList<RunHistoryEntry> HistorySnapshot(XCore9Service service)
+    {
+        var historyField = typeof(XCore9Service).GetField("_history", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(historyField);
+        var history = Assert.IsType<List<RunHistoryEntry>>(historyField!.GetValue(service));
+        return history.ToArray();
+    }
+
     private sealed class CapabilityAuthorization : IXCoreAuthorization
     {
         public ValueTask<bool> AuthorizeAsync(string actor, string capability, CancellationToken cancellationToken)
@@ -413,15 +626,21 @@ public sealed class XCore9ServiceTests
         }
     }
 
-    private sealed class RecordingAuditSink(string? failEventType = null) : IXCoreAuditSink
+    private sealed class RecordingAuditSink(string? failEventType = null, int? failOnOccurrence = null) : IXCoreAuditSink
     {
+        private int _matchingWrites;
+
         public List<XCoreAuditEvent> Events { get; } = [];
 
         public ValueTask WriteAsync(XCoreAuditEvent auditEvent, CancellationToken cancellationToken)
         {
             if (string.Equals(failEventType, auditEvent.EventType, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException("audit-sink-failure");
+                _matchingWrites++;
+                if (failOnOccurrence is null || _matchingWrites == failOnOccurrence.Value)
+                {
+                    throw new InvalidOperationException("audit-sink-failure");
+                }
             }
 
             Events.Add(auditEvent);

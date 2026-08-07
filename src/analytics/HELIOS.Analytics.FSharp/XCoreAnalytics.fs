@@ -57,7 +57,14 @@ type XCoreAnalytics() =
                Seq.exists (fun value -> not (Double.IsFinite value)) actual ||
                Seq.exists (fun value -> not (Double.IsFinite value)) confidence then
                 invalidArg "predicted" "Prediction, actual, and confidence values must be finite."
-            let errors = Seq.map2 (fun p a -> p - a) predicted actual |> Seq.toArray
+            let errors =
+                Seq.map2 (fun p a ->
+                    let error = p - a
+                    if not (Double.IsFinite error) then invalidArg "predicted" "Prediction and actual differences must be finite."
+                    error)
+                    predicted
+                    actual
+                |> Seq.toArray
             let mae = errors |> Array.averageBy abs
             let rmse = errors |> Array.averageBy (fun error -> error * error) |> sqrt
             let calibration = Seq.map2 (fun error c -> abs(Math.Clamp(c, 0.0, 1.0) - (if abs error <= 0.1 then 1.0 else 0.0))) errors confidence |> Seq.average

@@ -44,6 +44,7 @@ public sealed class XCore9Service : IXCore9Service
     private readonly List<RunHistoryEntry> _history = [];
     private readonly List<NegotiationRecord> _negotiations = [];
     private readonly object _gate = new();
+    private readonly SemaphoreSlim _historyGate = new(1, 1);
     private readonly SemaphoreSlim _promotionGate = new(1, 1);
     private readonly SemaphoreSlim _leaseGate = new(1, 1);
 
@@ -107,32 +108,77 @@ public sealed class XCore9Service : IXCore9Service
             throw new InvalidOperationException("Run history references a non-approved template.");
         }
 
-        var sanitized = entry with { Features = ExtractFeatures(entry) };
-        lock (_gate)
+        var sanitized = entry with
         {
-            AppendBounded(_history, sanitized, _options.MaxRunHistoryEntries);
-        }
+            Features = ExtractFeatures(entry),
+            EvidenceLinks = entry.EvidenceLinks.ToArray()
+        };
 
-        await WriteAuditAsync(
-            eventType: "xcore9.run.ingested",
-            actor: actor,
-            correlationId: entry.CorrelationId,
-            evidenceLinks: entry.EvidenceLinks,
-            payload: new Dictionary<string, object?>(IdentifierComparer)
+        await _historyGate.WaitAsync(cancellationToken);
+        try
+        {
+            RunHistoryEntry? evicted = null;
+            int insertedIndex;
+            lock (_gate)
             {
-                ["runId"] = entry.RunId.ToString("N"),
-                ["templateId"] = entry.TemplateId,
-                ["succeeded"] = entry.Succeeded,
-                ["featureCount"] = sanitized.Features.Count
-            },
-            cancellationToken);
+                if (_history.Count >= _options.MaxRunHistoryEntries)
+                {
+                    evicted = _history[0];
+                    _history.RemoveAt(0);
+                }
+
+                _history.Add(sanitized);
+                insertedIndex = _history.Count - 1;
+            }
+
+            try
+            {
+                await WriteAuditAsync(
+                    eventType: "xcore9.run.ingested",
+                    actor: actor,
+                    correlationId: entry.CorrelationId,
+                    evidenceLinks: sanitized.EvidenceLinks,
+                    payload: new Dictionary<string, object?>(IdentifierComparer)
+                    {
+                        ["runId"] = entry.RunId.ToString("N"),
+                        ["templateId"] = entry.TemplateId,
+                        ["succeeded"] = entry.Succeeded,
+                        ["featureCount"] = sanitized.Features.Count
+                    },
+                    cancellationToken);
+            }
+            catch
+            {
+                lock (_gate)
+                {
+                    if (_history.Count > insertedIndex)
+                    {
+                        _history.RemoveAt(insertedIndex);
+                    }
+
+                    if (evicted is not null)
+                    {
+                        _history.Insert(0, evicted);
+                    }
+                }
+
+                throw;
+            }
+        }
+        finally
+        {
+            _historyGate.Release();
+        }
     }
 
     public IReadOnlyList<SanitizedRunFeature> ExtractFeatures(RunHistoryEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        var seen = new HashSet<string>(IdentifierComparer);
         return entry.Features
-            .Where(feature => AllowedFeatures.Contains(feature.Name) && double.IsFinite(feature.Value))
+            .Where(feature => AllowedFeatures.Contains(feature.Name) &&
+                              double.IsFinite(feature.Value) &&
+                              seen.Add(feature.Name))
             .Take(_options.MaxFeaturesPerRun)
             .Select(feature => feature with { Value = Math.Clamp(feature.Value, 0d, 1d) })
             .ToArray();
@@ -185,6 +231,7 @@ public sealed class XCore9Service : IXCore9Service
 
             if (expiredLeases.Length > 0)
             {
+                var auditedExpirationCount = 0;
                 try
                 {
                     foreach (var expiredLease in expiredLeases)
@@ -201,14 +248,16 @@ public sealed class XCore9Service : IXCore9Service
                                 ["expiresAt"] = expiredLease.ExpiresAt
                             },
                             cancellationToken);
+                        auditedExpirationCount++;
                     }
                 }
                 catch
                 {
                     lock (_gate)
                     {
-                        foreach (var expiredLease in expiredLeases)
+                        for (var index = auditedExpirationCount; index < expiredLeases.Length; index++)
                         {
+                            var expiredLease = expiredLeases[index];
                             _leases[expiredLease.LeaseId] = expiredLease;
                         }
                     }
@@ -221,10 +270,12 @@ public sealed class XCore9Service : IXCore9Service
             lock (_gate)
             {
                 var activeLeases = _leases.Values.ToArray();
+                var cpuInUse = activeLeases.Sum(lease => (long)_templates[lease.TemplateId].CpuUnits);
+                var memoryInUse = activeLeases.Sum(lease => (long)_templates[lease.TemplateId].MemoryMiB);
                 if (activeLeases.Length >= _options.MaxTotalInstances ||
                     activeLeases.Count(lease => lease.TemplateId == templateId) >= template.MaxInstances ||
-                    activeLeases.Sum(lease => _templates[lease.TemplateId].CpuUnits) + template.CpuUnits > _options.MaxCpuUnits ||
-                    activeLeases.Sum(lease => _templates[lease.TemplateId].MemoryMiB) + template.MemoryMiB > _options.MaxMemoryMiB)
+                    cpuInUse + template.CpuUnits > _options.MaxCpuUnits ||
+                    memoryInUse + template.MemoryMiB > _options.MaxMemoryMiB)
                 {
                     throw new InvalidOperationException("Worker instance or resource limit reached.");
                 }
@@ -378,7 +429,7 @@ public sealed class XCore9Service : IXCore9Service
             return CurrentDecision(false, "self-promotion-prohibited");
         }
 
-        if (!HoldoutIsFinite(request.Holdout))
+        if (!HoldoutIsValid(request.Holdout))
         {
             return CurrentDecision(false, "holdout-values-not-finite");
         }
@@ -401,8 +452,14 @@ public sealed class XCore9Service : IXCore9Service
                 rollbackSnapshot = _rollbackPolicy;
             }
 
-            if (PoliciesMatch(activeSnapshot, request.Candidate))
+            if (string.Equals(activeSnapshot.PolicyId, request.Candidate.PolicyId, StringComparison.Ordinal) &&
+                activeSnapshot.Version == request.Candidate.Version)
             {
+                if (!PoliciesMatch(activeSnapshot, request.Candidate))
+                {
+                    return new PolicyDecision(false, "candidate-policy-identity-collision", activeSnapshot, rollbackSnapshot);
+                }
+
                 return new PolicyDecision(true, "already-active", activeSnapshot, rollbackSnapshot);
             }
 
@@ -506,6 +563,8 @@ public sealed class XCore9Service : IXCore9Service
             options.MaxRoutesPerScoringRequest < 1 ||
             options.MaxRunHistoryEntries < 1 ||
             options.MaxNegotiationEntries < 1 ||
+            options.MaxEvidenceLinks < 1 ||
+            options.MaxEvidenceLinkLength < 1 ||
             options.MinimumHoldoutSamples < 1)
         {
             throw new ArgumentException("All XCore-9 bounded limits must be positive.");
@@ -606,10 +665,11 @@ public sealed class XCore9Service : IXCore9Service
         }
     }
 
-    private static bool HoldoutIsFinite(HoldoutEvaluation holdout) =>
+    private static bool HoldoutIsValid(HoldoutEvaluation holdout) =>
         double.IsFinite(holdout.BaselineLoss) &&
         double.IsFinite(holdout.CandidateLoss) &&
-        double.IsFinite(holdout.Confidence);
+        double.IsFinite(holdout.Confidence) &&
+        holdout.Confidence is >= 0d and <= 1d;
 
     private void ValidateCandidate(CandidateRoute candidate)
     {
@@ -656,7 +716,7 @@ public sealed class XCore9Service : IXCore9Service
         }
     }
 
-    private static void ValidateEnvelope(string correlationId, IReadOnlyList<Uri> evidenceLinks)
+    private void ValidateEnvelope(string correlationId, IReadOnlyList<Uri> evidenceLinks)
     {
         if (string.IsNullOrWhiteSpace(correlationId))
         {
@@ -673,9 +733,19 @@ public sealed class XCore9Service : IXCore9Service
             throw new ArgumentNullException(nameof(evidenceLinks));
         }
 
+        if (evidenceLinks.Count > _options.MaxEvidenceLinks)
+        {
+            throw new ArgumentException("Evidence links exceed the configured bound.");
+        }
+
         if (evidenceLinks.Any(link => link is null || link.Scheme is not ("https" or "urn")))
         {
             throw new ArgumentException("Evidence links must use https or urn.");
+        }
+
+        if (evidenceLinks.Any(link => link.OriginalString.Length > _options.MaxEvidenceLinkLength))
+        {
+            throw new ArgumentException("Evidence links exceed the configured length bound.");
         }
     }
 
