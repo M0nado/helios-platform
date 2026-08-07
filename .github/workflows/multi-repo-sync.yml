@@ -14,13 +14,6 @@ on:
       - 'tests/test_repository_integrity.py'
       - '.github/workflows/multi-repo-sync.yml'
   pull_request:
-    paths:
-      - '.gitmodules'
-      - 'modules/**'
-      - 'config/integrations/repositories.json'
-      - 'scripts/integrations/validate_repository_integrity.py'
-      - 'tests/test_repository_integrity.py'
-      - '.github/workflows/multi-repo-sync.yml'
 
 permissions:
   contents: read

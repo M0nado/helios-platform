@@ -14,7 +14,7 @@ IGNORED_PATH_PARTS = {"obj", "bin"}
 
 
 def _is_generated(path: Path) -> bool:
-    return any(part in IGNORED_PATH_PARTS for part in path.parts)
+    return any(part in IGNORED_PATH_PARTS for part in path.relative_to(ROOT).parts)
 
 
 def sources():
