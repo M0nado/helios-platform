@@ -8,6 +8,9 @@ on:
       - ".github/copilot-instructions.md"
       - ".github/pull_request_template.md"
       - "config/integrations/**"
+      - ".gitmodules"
+      - "modules/**"
+      - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
       - "docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md"
       - "scripts/control/validate_ai_collaboration_pr.py"
@@ -18,6 +21,9 @@ on:
     branches: [main]
     paths:
       - "config/integrations/**"
+      - ".gitmodules"
+      - "modules/**"
+      - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
       - "docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md"
       - ".github/pull_request_template.md"
@@ -78,9 +84,12 @@ jobs:
           test -s .codex/config.toml
           test -s docs/architecture/UNIFIED_AGENT_COMMUNICATION.md
           test -s docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md
+          test -s scripts/integrations/validate_repository_integrity.py
           test -s scripts/control/validate_ai_collaboration_pr.py
           test -s tests/scripts/test_validate_ai_collaboration_pr.py
           test -s .github/workflows/ai-collaboration-governance.yml
+      - name: Validate repository integrity
+        run: python scripts/integrations/validate_repository_integrity.py
       - name: Validate governed PR checker
         shell: bash
         run: |
@@ -98,6 +107,7 @@ jobs:
             config/integrations/event-contract.schema.json
             docs/architecture/UNIFIED_AGENT_COMMUNICATION.md
             docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md
+            scripts/integrations/validate_repository_integrity.py
             scripts/control/validate_ai_collaboration_pr.py
             tests/scripts/test_validate_ai_collaboration_pr.py
             .github/workflows/ai-collaboration-governance.yml
