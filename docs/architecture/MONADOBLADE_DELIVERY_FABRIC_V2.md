@@ -33,4 +33,5 @@ This document defines the governed six-profile Monadoblade delivery fabric contr
 ## Pages/wiki path
 
 - Architecture entry: `/docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md`
+- Companion system architecture: `/docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md`
 - Wiki index entry: `/docs/WIKI/README.md`
