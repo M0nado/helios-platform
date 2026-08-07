@@ -352,7 +352,7 @@
           "const": "state"
         },
         "entryRequiresApproval": {
-          "type": "boolean"
+          "const": true
         }
       }
     },

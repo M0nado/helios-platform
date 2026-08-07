@@ -55,6 +55,12 @@ class MonadoEnterpriseV2ValidationTests(unittest.TestCase):
         errors = validate_profiles_contract(candidate)
         self.assertTrue(any("states must be recovery and quarantine" in error for error in errors))
 
+    def test_profiles_fail_when_state_entry_skips_approval(self) -> None:
+        candidate = copy.deepcopy(self.bundle["profiles"])
+        candidate["states"][0]["entryRequiresApproval"] = False
+        errors = validate_profiles_contract(candidate)
+        self.assertTrue(any("must require approval for entry" in error for error in errors))
+
     def test_storage_fails_when_core_cross_is_missing(self) -> None:
         candidate = copy.deepcopy(self.bundle["storage"])
         disk0 = next(disk for disk in candidate["disks"] if disk["id"] == "disk0")

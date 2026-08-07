@@ -173,6 +173,14 @@ def validate_profiles_contract(profiles_contract: dict) -> list[str]:
     states = profiles_contract.get("states", [])
     state_ids = {s.get("id") for s in states if isinstance(s, dict)}
     _append(errors, state_ids == EXPECTED_STATE_IDS, "states must be recovery and quarantine")
+    _append(
+        errors,
+        all(
+            isinstance(state, dict) and state.get("entryRequiresApproval") is True
+            for state in states
+        ),
+        "recovery and quarantine states must require approval for entry",
+    )
     overlays = profiles_contract.get("overlays", [])
     overlay_ids = {o.get("id") for o in overlays if isinstance(o, dict)}
     _append(errors, overlay_ids == EXPECTED_OVERLAY_IDS, "overlays must include only airgap")

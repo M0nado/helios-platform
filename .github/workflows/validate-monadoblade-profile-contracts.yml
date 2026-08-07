@@ -22,6 +22,7 @@ on:
       - 'scripts/contracts/validate_monado_enterprise_v2.py'
       - 'scripts/contracts/tests/test_validate_monado_enterprise_v2.py'
       - 'tests/contracts/HELIOS.Platform.Contracts.Tests/**'
+      - 'src/core/HELIOS.Platform.Contracts.Tests/**'
       - 'tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs'
       - 'src/analytics/HELIOS.Analytics.FSharp/Optimization/MonadoEnterpriseProfileScoringV2.fs'
       - 'src/core/HELIOS.Platform.Contracts/MonadoEnterpriseExperienceV2Contracts.cs'
@@ -55,6 +56,7 @@ on:
       - 'scripts/contracts/validate_monado_enterprise_v2.py'
       - 'scripts/contracts/tests/test_validate_monado_enterprise_v2.py'
       - 'tests/contracts/HELIOS.Platform.Contracts.Tests/**'
+      - 'src/core/HELIOS.Platform.Contracts.Tests/**'
       - 'tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs'
       - 'src/analytics/HELIOS.Analytics.FSharp/Optimization/MonadoEnterpriseProfileScoringV2.fs'
       - 'src/core/HELIOS.Platform.Contracts/MonadoEnterpriseExperienceV2Contracts.cs'
@@ -185,6 +187,11 @@ jobs:
                   raise SystemExit(f'v2 kanji mismatch for {profile_id}')
 
           admin = by_id['sysadmin-offline']
+          admin_ids = [p['id'] for p in profiles if p.get('admin') is True]
+          if admin_ids != ['sysadmin-offline']:
+              raise SystemExit(f'Only sysadmin-offline may be admin in v2 profiles: {admin_ids}')
+          if admin.get('windowsRole') != 'local-administrator':
+              raise SystemExit('sysadmin-offline must retain local-administrator role')
           activation = admin.get('activation', {})
           required = ['physicalPresenceRequired', 'remoteActivationDenied', 'cloudActivationDenied', 'aiActivationDenied', 'offlineOnly']
           if not all(activation.get(key) is True for key in required):
@@ -218,6 +225,10 @@ jobs:
               raise SystemExit('USB wizard must default to dry-run')
           if usb['routes'].get('inventory') != 'read-only':
               raise SystemExit('USB wizard inventory route must be read-only')
+          if usb['routes'].get('apply') != 'approval-gated':
+              raise SystemExit('USB wizard apply route must stay approval-gated')
+          if usb['boundaries'].get('allowPhysicalDiskWriteWithoutApproval') is not False:
+              raise SystemExit('USB wizard must deny physical disk writes without approval')
           if usb['boundaries'].get('recoveryWorkflowProfile') != 'sysadmin-offline':
               raise SystemExit('Recovery workflow must remain sysadmin-offline')
           if usb['boundaries'].get('quarantineWorkflowProfile') != 'sysadmin-offline':
@@ -338,6 +349,10 @@ jobs:
       - name: Run C# v2 contract tests
         shell: bash
         run: dotnet test tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release -p:ContinuousIntegrationBuild=true
+
+      - name: Run C# profile contract guard tests
+        shell: bash
+        run: dotnet test src/core/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release -p:ContinuousIntegrationBuild=true
 
       - name: Run F# bounded scoring tests
         shell: bash
