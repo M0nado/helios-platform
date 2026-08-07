@@ -431,7 +431,11 @@ jobs:
               ('sysadmin-offline', 'sysadmin'),
           }
           projection_rules = typed_adapter.get('projectionRules', [])
+          if len(projection_rules) != len(expected_projection_pairs):
+              raise SystemExit(f'Typed adapter projectionRules must contain exactly {len(expected_projection_pairs)} deterministic rules; found {len(projection_rules)}')
           projection_pairs = {(rule.get('sourceProfile'), rule.get('targetTypedProfile')) for rule in projection_rules}
+          if len(projection_pairs) != len(projection_rules):
+              raise SystemExit('Typed adapter projectionRules contains duplicate source/target mappings')
           if projection_pairs != expected_projection_pairs:
               raise SystemExit(f'Typed adapter projection map mismatch: {projection_pairs}')
           required_adapter_fields = ['glyph', 'soundCue', 'background', 'aihubMode', 'dashboardWidgets']

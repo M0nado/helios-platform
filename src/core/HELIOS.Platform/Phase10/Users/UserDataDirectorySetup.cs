@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Principal;
 using System.Threading.Tasks;
 
 namespace HELIOS.Platform.Phase10.Users
@@ -68,7 +69,7 @@ namespace HELIOS.Platform.Phase10.Users
         /// </summary>
         public string GetUserProfilePath(string username)
         {
-            if (string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+            if (IsCurrentLocalIdentity(username))
             {
                 string currentUserProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 if (!string.IsNullOrWhiteSpace(currentUserProfile))
@@ -307,7 +308,7 @@ namespace HELIOS.Platform.Phase10.Users
 
         private string GetFolderPathForUser(string username, Environment.SpecialFolder specialFolder, string fallbackLeaf)
         {
-            if (string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+            if (IsCurrentLocalIdentity(username))
             {
                 string knownFolderPath = Environment.GetFolderPath(specialFolder);
                 if (!string.IsNullOrWhiteSpace(knownFolderPath))
@@ -317,6 +318,51 @@ namespace HELIOS.Platform.Phase10.Users
             }
 
             return Path.Combine(GetUserProfilePath(username), fallbackLeaf);
+        }
+
+        private bool IsCurrentLocalIdentity(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return false;
+            }
+
+            try
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                if (identity.User is null)
+                {
+                    return false;
+                }
+
+                if (TryResolveLocalUserSid(username, out var candidateSid))
+                {
+                    return string.Equals(identity.User.Value, candidateSid, StringComparison.OrdinalIgnoreCase);
+                }
+
+                var expectedLocalName = $@"{Environment.MachineName}\{username}";
+                return string.Equals(identity.Name, expectedLocalName, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error checking current local identity for profile path resolution: {ex.Message}", LogLevel.Warning);
+                return false;
+            }
+        }
+
+        private static bool TryResolveLocalUserSid(string username, out string sid)
+        {
+            sid = string.Empty;
+            try
+            {
+                var account = new NTAccount(Environment.MachineName, username);
+                sid = account.Translate(typeof(SecurityIdentifier)).Value;
+                return !string.IsNullOrWhiteSpace(sid);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private string ResolveWritableUserFolder(string username, Environment.SpecialFolder specialFolder, string fallbackLeaf)
