@@ -214,12 +214,17 @@ Open the evidence link when making an approval decision.
   the reviewed runbook. It does not erase evidence or roll database/storage changes
   backward unless their separately approved recovery plan says so. Verify health and
   record the outcome.
-- **Emergency-stop** revokes active automation leases/tokens, disables dispatch and
-  deployment progression, cancels queued mutations, and alerts operators. It should
-  be available independently of the agent fleet. Use it for suspected credential
-  exposure, unexpected production mutation, runaway retries/cost, or safety-control
-  failure. Emergency-stop is containment, not recovery; rotate/revoke affected
-  credentials and follow incident/disaster-recovery procedures before restart.
+- **Emergency-stop** revokes automation leases or sessions only where the provider
+  supports revocation, disables dispatch and new token issuance, blocks deployment
+  progression, cancels queued mutations, and alerts operators. Already-issued access
+  tokens, especially self-contained tokens, may remain usable until they expire. It
+  should be available independently of the agent fleet. Use it for suspected
+  credential exposure, unexpected production mutation, runaway retries/cost, or
+  safety-control failure. Emergency-stop begins containment; it does not complete it
+  or perform recovery. Follow the provider-specific procedure to revoke tokens and
+  sessions, rotate affected credentials, deny the principal at each target resource,
+  and confirm that access is denied (or wait for every token to expire) before
+  restart. Then follow the incident/disaster-recovery procedure.
 
 Never delete logs, branches, or evidence during recovery. Preserve the correlation
 ID and record who paused/stopped/resumed the quest and why.
