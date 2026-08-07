@@ -46,7 +46,7 @@ Issue -> Copilot/Codex/Hermes task -> branch -> tests -> pull request
 
 ## Contract
 
-The canonical repository map is `config/integrations/repositories.json`. The event envelope is `config/integrations/event-contract.schema.json`. Any platform service, workflow, connector, or agent producing integration traffic must include:
+The canonical repository map is `config/integrations/repositories.json`. The event envelope is `config/integrations/event-contract.schema.json`. The governed Codex and Claude Code collaboration policy is `docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md`. Any platform service, workflow, connector, or agent producing integration traffic must include:
 
 - event and correlation IDs;
 - source, event type, and environment;

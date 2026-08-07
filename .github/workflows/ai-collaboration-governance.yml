@@ -1,0 +1,48 @@
+name: AI Collaboration Governance
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Resolve changed files
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${BASE_REF}" ]]; then
+            echo "github.base_ref is unavailable for this pull request event." >&2
+            exit 1
+          fi
+          git fetch origin "${BASE_REF}" --depth=1
+          git diff --name-only --diff-filter=ACMR "origin/${BASE_REF}...HEAD" > changed-files.txt
+
+      - name: Validate governed PR metadata and proposal-only boundary
+        run: |
+          python3 scripts/control/validate_ai_collaboration_pr.py \
+            --changed-files changed-files.txt
+
+      - name: Write governance summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## AI collaboration governance check"
+            echo ""
+            echo "- Changed files scanned: $(wc -l < changed-files.txt)"
+          } >> "$GITHUB_STEP_SUMMARY"
