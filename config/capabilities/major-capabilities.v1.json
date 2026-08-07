@@ -1,0 +1,710 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "Consolidated implementation backlog: the requested 30 upgrades plus 20 missing major capabilities.",
+  "policy": {
+    "defaultStatus": "proposed",
+    "execution": "Each capability requires a scoped issue, feature branch, tests, evidence, and pull request; proposed entries are not claims of implementation."
+  },
+  "capabilities": [
+    {
+      "id": "CAP-0101",
+      "slug": "solution-graph",
+      "category": "foundation",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Unify solution/project dependency discovery and reject cycles.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0102",
+      "slug": "configuration-registry",
+      "category": "foundation",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Expose one typed, versioned configuration registry with provenance.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0103",
+      "slug": "feature-lifecycle",
+      "category": "foundation",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Standardize feature flags, migrations, rollback, and retirement.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0104",
+      "slug": "module-boundaries",
+      "category": "foundation",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Detect duplicate ownership and overlapping platform modules.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0105",
+      "slug": "developer-doctor",
+      "category": "foundation",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Produce one actionable local toolchain and dependency diagnosis.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0201",
+      "slug": "mcr-wireframe",
+      "category": "control-plane",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Deliver an accessible MCR operator shell and status wireframe.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0202",
+      "slug": "command-catalog",
+      "category": "control-plane",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Route approved commands through typed, idempotent handlers.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0203",
+      "slug": "correlation-timeline",
+      "category": "control-plane",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Join GitHub, Azure, fleet, and desktop evidence by correlation ID.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0204",
+      "slug": "approval-inbox",
+      "category": "control-plane",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Centralize approval, expiry, rationale, and rollback evidence.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0205",
+      "slug": "realtime-health",
+      "category": "control-plane",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Stream bounded service health without polling storms.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0301",
+      "slug": "native-kernel-abi",
+      "category": "polyglot",
+      "owner": "cpp",
+      "gate": "standard",
+      "outcome": "Version a memory-safe native performance ABI with benchmarks.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0302",
+      "slug": "fsharp-scoring-sdk",
+      "category": "polyglot",
+      "owner": "fsharp",
+      "gate": "standard",
+      "outcome": "Publish explainable ranking and prediction contracts.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0303",
+      "slug": "python-adapter-sdk",
+      "category": "polyglot",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Standardize isolated AI and automation adapters.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0304",
+      "slug": "cross-engine-envelope",
+      "category": "polyglot",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Use one serialization, cancellation, error, and telemetry envelope.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0305",
+      "slug": "engine-router",
+      "category": "polyglot",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Select engines by policy, latency budget, and capability.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0401",
+      "slug": "provider-neutral-ai",
+      "category": "aihub",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Unify OpenAI, Codex, Claude, and local provider request contracts.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0402",
+      "slug": "structured-output-guard",
+      "category": "aihub",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Validate model output before tools or platform code consume it.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0403",
+      "slug": "prompt-registry",
+      "category": "aihub",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Version prompts, tools, models, owners, and evaluation evidence.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0404",
+      "slug": "agent-sandbox",
+      "category": "aihub",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Bound agent filesystem, network, time, cost, and tool permissions.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0405",
+      "slug": "model-fallback",
+      "category": "aihub",
+      "owner": "fsharp",
+      "gate": "standard",
+      "outcome": "Rank provider fallback using quality, cost, privacy, and latency.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0501",
+      "slug": "evaluation-harness",
+      "category": "learning",
+      "owner": "fsharp",
+      "gate": "standard",
+      "outcome": "Score coding and agent outcomes against stable datasets.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0502",
+      "slug": "regression-pruner",
+      "category": "learning",
+      "owner": "fsharp",
+      "gate": "standard",
+      "outcome": "Reject learned state that degrades safety or benchmark quality.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0503",
+      "slug": "knowledge-provenance",
+      "category": "learning",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Attach source, freshness, classification, and evidence to knowledge.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0504",
+      "slug": "retrieval-quality",
+      "category": "learning",
+      "owner": "fsharp",
+      "gate": "standard",
+      "outcome": "Measure retrieval relevance, coverage, grounding, and staleness.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0505",
+      "slug": "experiment-ledger",
+      "category": "learning",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Record reproducible bounded experiments and promotion decisions.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0601",
+      "slug": "benchmark-baselines",
+      "category": "performance",
+      "owner": "cpp",
+      "gate": "standard",
+      "outcome": "Create repeatable CPU, memory, startup, rendering, and throughput baselines.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0602",
+      "slug": "profile-guided-routing",
+      "category": "performance",
+      "owner": "fsharp",
+      "gate": "standard",
+      "outcome": "Use measured workload data to select execution engines.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0603",
+      "slug": "incremental-build-cache",
+      "category": "performance",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Cache deterministic build graph nodes with provenance.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0604",
+      "slug": "telemetry-budget",
+      "category": "performance",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Enforce cardinality, sampling, retention, and performance budgets.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0605",
+      "slug": "load-shedder",
+      "category": "performance",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Apply backpressure, quotas, cancellation, and graceful degradation.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0701",
+      "slug": "secret-reference-linter",
+      "category": "security",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Reject embedded secrets and require approved secret references.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0702",
+      "slug": "supply-chain-attestation",
+      "category": "security",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Generate SBOM, signatures, provenance, and dependency policy evidence.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0703",
+      "slug": "windows-change-planner",
+      "category": "security",
+      "owner": "csharp",
+      "gate": "what-if-and-approval",
+      "outcome": "Render dry-run, approval, rollback, and impact for privileged changes.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0704",
+      "slug": "plugin-trust-policy",
+      "category": "security",
+      "owner": "csharp",
+      "gate": "approval",
+      "outcome": "Verify plugin identity, permissions, isolation, and revocation.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0705",
+      "slug": "data-classification-gate",
+      "category": "security",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Prevent sensitive payloads from entering unsafe providers or logs.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0801",
+      "slug": "federated-bootstrap",
+      "category": "azure",
+      "owner": "python",
+      "gate": "what-if-and-approval",
+      "outcome": "Configure repeatable workload identity without stored cloud credentials.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0802",
+      "slug": "bicep-what-if-gate",
+      "category": "azure",
+      "owner": "platform",
+      "gate": "what-if-and-approval",
+      "outcome": "Require validation and reviewed what-if evidence before deployment.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0803",
+      "slug": "keyvault-contract",
+      "category": "azure",
+      "owner": "csharp",
+      "gate": "what-if-and-approval",
+      "outcome": "Use managed identity and typed Key Vault reference resolution.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0804",
+      "slug": "broker-resilience",
+      "category": "azure",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Add deduplication, retries, dead-letter evidence, and replay controls.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0805",
+      "slug": "cost-guardrails",
+      "category": "azure",
+      "owner": "fsharp",
+      "gate": "standard",
+      "outcome": "Forecast and enforce Azure and model budget thresholds.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0901",
+      "slug": "branch-intelligence",
+      "category": "delivery",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Inventory branches and recommend reviewable cherry-pick, supersede, or prune actions.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0902",
+      "slug": "issue-plan-generator",
+      "category": "delivery",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Convert capability gaps into scoped dependency-aware issue plans.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0903",
+      "slug": "pr-evidence-bundle",
+      "category": "delivery",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Attach test, benchmark, security, rollback, and contract evidence to PRs.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0904",
+      "slug": "release-readiness",
+      "category": "delivery",
+      "owner": "csharp",
+      "gate": "approval",
+      "outcome": "Compute release readiness from signed policy and test evidence.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-0905",
+      "slug": "artifact-retention",
+      "category": "delivery",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Keep generated artifacts out of Git and apply governed retention.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-1001",
+      "slug": "fleet-heartbeats",
+      "category": "operations",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Normalize Hermes and XCore worker readiness and lease state.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-1002",
+      "slug": "incident-replay",
+      "category": "operations",
+      "owner": "python",
+      "gate": "standard",
+      "outcome": "Reconstruct redacted correlated incidents from immutable evidence.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-1003",
+      "slug": "self-healing-plans",
+      "category": "operations",
+      "owner": "fsharp",
+      "gate": "what-if-and-approval",
+      "outcome": "Rank reversible remediation plans without autonomous privileged apply.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-1004",
+      "slug": "offline-mode",
+      "category": "operations",
+      "owner": "csharp",
+      "gate": "standard",
+      "outcome": "Keep essential Windows control safe when cloud services are unavailable.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    },
+    {
+      "id": "CAP-1005",
+      "slug": "contract-compatibility",
+      "category": "operations",
+      "owner": "platform",
+      "gate": "standard",
+      "outcome": "Continuously test event, provider, plugin, and engine compatibility.",
+      "checks": [
+        "contract",
+        "unit",
+        "integration"
+      ],
+      "status": "proposed"
+    }
+  ]
+}
