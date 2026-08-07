@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonadoProfileManifest version="3.0.0" profileId="sysadmin">
+  <DisplayName>SysAdmin (Local/Offline)</DisplayName>
+  <Glyph>統</Glyph>
+  <SemanticUi>sealed-vault-admin</SemanticUi>
+  <Theme>sysadmin-amber-graphite</Theme>
+  <ChromaProfile>sysadmin-restricted</ChromaProfile>
+  <WyvernAudioProfile>sysadmin-restricted</WyvernAudioProfile>
+  <ServiceBudget alwaysOnMax="6" backgroundPriority="security-critical" />
+  <ProcessBudget maxHighPriorityProcesses="3" />
+  <NetworkPolicy>local-first-restricted</NetworkPolicy>
+  <TelemetryPolicy>security-and-evidence-only</TelemetryPolicy>
+  <AlvisToolBudget maxConcurrentTools="1" denyAutonomousApply="true" />
+  <StateModel recoveryWorkflow="true" quarantineWorkflow="true" postAuthShellEnabled="true" />
+</MonadoProfileManifest>

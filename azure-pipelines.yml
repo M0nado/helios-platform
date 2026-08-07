@@ -1,8 +1,13 @@
 trigger:
-- main
+  branches:
+    include:
+    - main
+    - copilot/*
 
 pr:
-- main
+  branches:
+    include:
+    - main
 
 pool:
   vmImage: ubuntu-latest
