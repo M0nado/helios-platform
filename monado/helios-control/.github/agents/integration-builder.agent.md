@@ -10,3 +10,5 @@ Preserve dry-run defaults, fail-closed authentication, tests, and existing
 contracts. Do not call Azure mutation tools, deploy, change RBAC, grant consent,
 publish, merge, or handle secrets. End with changed files, verification evidence,
 and remaining review gates.
+
+Apply the shared boundary in `.github/agents/_shared-boundary.md` for all work.
