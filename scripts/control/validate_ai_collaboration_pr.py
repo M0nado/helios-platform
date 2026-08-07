@@ -22,6 +22,8 @@ ISSUE_DECLARATION_PATTERN = re.compile(
 )
 SECTION_PATTERN = re.compile(r"^#{2,3}\s+(.+?)\s*$")
 URL_OR_REF_PATTERN = re.compile(r"https?://|#\d+|/actions/runs/\d+")
+HTML_COMMENT_PATTERN = re.compile(r"<!--.*?(?:-->|$)", re.DOTALL)
+FENCED_CODE_BLOCK_PATTERN = re.compile(r"(?s)```.*?```|~~~.*?~~~")
 APPROVAL_GATE_PATTERN = re.compile(
     r"(?:#\d+|https?://github\.com/\S+/(?:issues|pull)/\d+|https?://dev\.azure\.com/\S+/_workitems/edit/\d+)"
 )
@@ -50,6 +52,7 @@ PRIVILEGED_PATH_PREFIXES = (
     "scripts/azure/",
     "scripts/security/",
     "scripts/microsoft-enterprise/",
+    "microsoft-ecosystem/scripts/",
     "scripts/entra/",
     "scripts/purview/",
     "monado/helios-control/scripts/",
@@ -87,6 +90,11 @@ def parse_h3_sections(body: str) -> dict[str, str]:
     if current is not None:
         sections[current] = "\n".join(buffer).strip()
     return sections
+
+
+def strip_non_visible_markdown(text: str) -> str:
+    without_comments = HTML_COMMENT_PATTERN.sub("", text)
+    return FENCED_CODE_BLOCK_PATTERN.sub("", without_comments)
 
 
 def is_checked(section: str, label: str) -> bool:
@@ -187,7 +195,7 @@ def validate_event_payload(payload: dict[str, object], changed_files: list[str])
     if not body.strip():
         return ["Pull request body is empty. Use the governed pull request template."], notes
 
-    sections = parse_h3_sections(body)
+    sections = parse_h3_sections(strip_non_visible_markdown(body))
     required_sections = (
         "Issue Link",
         "Branch Naming",

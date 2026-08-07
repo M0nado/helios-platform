@@ -126,6 +126,14 @@ jobs:
           echo "Module: ${{ matrix.module }}"
           echo "Clean build: ${{ github.event.inputs.clean_build }}"
 
+      - name: Compute artifact slug
+        id: artifact-slug
+        run: |
+          module='${{ matrix.module }}'
+          slug="${module//\//-}"
+          slug="${slug//[^A-Za-z0-9._-]/-}"
+          echo "value=$slug" >> "$GITHUB_OUTPUT"
+
       - name: Install Dependencies
         run: |
           cd ${{ matrix.module }}
@@ -176,7 +184,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-${{ replace(matrix.module, '/', '-') }}
+          name: build-artifacts-${{ steps.artifact-slug.outputs.value }}
           path: |
             ${{ matrix.module }}/dist/
             ${{ matrix.module }}/build/
@@ -187,7 +195,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ replace(matrix.module, '/', '-') }}
+          name: coverage-${{ steps.artifact-slug.outputs.value }}
           path: ${{ matrix.module }}/coverage/
           if-no-files-found: warn
           retention-days: 7

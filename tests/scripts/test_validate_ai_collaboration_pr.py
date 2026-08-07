@@ -349,6 +349,41 @@ class ValidateAiCollaborationPrTests(unittest.TestCase):
         errors, _ = validator.validate_event_payload(payload, changed_files=[])
         self.assertEqual(errors, [])
 
+    def test_hidden_governance_sections_inside_html_comment_are_rejected(self):
+        hidden_body = f"<!--\n{build_body()}\n-->"
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            hidden_body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertTrue(
+            any('Missing required PR section: "### Issue Link"' in item for item in errors)
+        )
+
+    def test_microsoft_ecosystem_deploy_script_is_classified_as_privileged(self):
+        body = build_body(
+            human_only=True,
+            declare_privileged=False,
+            safeguard_direct_apply=True,
+            safeguard_what_if=True,
+            safeguard_approval=True,
+            approval_link="#231",
+            rollback_plan="Revert privileged deployment script changes to the prior reviewed commit.",
+        )
+        payload = build_event_payload(
+            "ci(governance): classify deployment surfaces | Fixes #231",
+            body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(
+            payload,
+            changed_files=["microsoft-ecosystem/scripts/deploy-to-azure.ps1"],
+        )
+        self.assertTrue(
+            any("Privileged files were detected in this PR" in item for item in errors)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
