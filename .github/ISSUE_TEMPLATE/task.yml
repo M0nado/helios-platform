@@ -1,0 +1,52 @@
+name: HELIOS work item
+description: One form for bugs, features, maintenance, security, and documentation.
+title: "[area] concise outcome"
+labels: ["needs-triage"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Work type
+      options: [Bug, Feature, Maintenance, Security, Documentation]
+    validations: { required: true }
+  - type: dropdown
+    id: lane
+    attributes:
+      label: Delivery lane
+      description: The long-lived integration branch that owns this work.
+      options:
+        - integration/product
+        - integration/platform
+        - integration/intelligence
+        - integration/security
+        - integration/operations
+    validations: { required: true }
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome and current problem
+      description: State one outcome, current evidence, and why it belongs in this repository.
+    validations: { required: true }
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] Implementation or documentation is complete.
+        - [ ] Affected builds and tests pass.
+        - [ ] Security, rollback, and integration-contract effects are recorded.
+    validations: { required: true }
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reproduction, dependencies, and evidence
+      description: Include commands, correlation IDs, links, blockers, and related issues. Redact secrets.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety gate
+      options:
+        - label: I searched for an existing work item and this is not a duplicate.
+          required: true
+        - label: This issue contains no credentials, private endpoint data, or raw fleet evidence.
+          required: true
