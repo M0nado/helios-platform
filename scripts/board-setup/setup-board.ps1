@@ -35,12 +35,11 @@ param(
     [string]$BoardName = 'HELIOS Platform',
     
     [switch]$DryRun,
-    [string[]]$SkipSteps = @(),
-    [switch]$Verbose
+    [string[]]$SkipSteps = @()
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/board-setup_$timestamp.log"
@@ -54,7 +53,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 function Invoke-SetupStep {
@@ -89,7 +88,7 @@ function Invoke-SetupStep {
         }
         
         if ($DryRun) { $params['DryRun'] = $true }
-        if ($Verbose) { $params['Verbose'] = $true }
+        if ($isVerbose) { $params['Verbose'] = $true }
         
         # Execute script
         $result = & $ScriptPath @params
@@ -107,7 +106,7 @@ function Invoke-SetupStep {
         return @{
             name = $StepName
             status = 'failed'
-            error = $_
+            error = $_.ToString()
         }
     }
 }
@@ -190,9 +189,9 @@ function Display-Summary {
     param([hashtable]$Report)
     
     Write-Host "`n" -ForegroundColor Cyan
-    Write-Host "╔════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║         HELIOS PLATFORM - BOARD SETUP SUMMARY          ║" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "+--------------------------------------------------------+" -ForegroundColor Cyan
+    Write-Host "|         HELIOS PLATFORM - BOARD SETUP SUMMARY         |" -ForegroundColor Cyan
+    Write-Host "+--------------------------------------------------------+" -ForegroundColor Cyan
     
     Write-Host "`nProject Configuration:" -ForegroundColor Green
     Write-Host "  Organization: $($Report.organization)"
@@ -209,9 +208,9 @@ function Display-Summary {
     Write-Host "`nStep Details:" -ForegroundColor Green
     foreach ($step in $Report.steps) {
         $status = switch ($step.status) {
-            'completed' { '✓ COMPLETED' }
-            'failed' { '✗ FAILED' }
-            'skipped' { '⊘ SKIPPED' }
+            'completed' { 'COMPLETED' }
+            'failed' { 'FAILED' }
+            'skipped' { 'SKIPPED' }
             default { $step.status }
         }
         Write-Host "  $($step.name): $status"
@@ -224,7 +223,7 @@ function Display-Summary {
     Write-Host "  4. Review report: logs/board-setup-report_$timestamp.json"
     
     if ($DryRun) {
-        Write-Host "`n⚠️  DRY RUN MODE - No changes were actually applied" -ForegroundColor Yellow
+        Write-Host "`nWARNING: DRY RUN MODE - No changes were actually applied" -ForegroundColor Yellow
     }
     
     Write-Host "`n"
@@ -232,9 +231,9 @@ function Display-Summary {
 
 # Main execution
 try {
-    Write-Log '╔═══════════════════════════════════════════════════════╗'
-    Write-Log '║    HELIOS PLATFORM - MASTER BOARD SETUP SCRIPT       ║'
-    Write-Log '╚═══════════════════════════════════════════════════════╝'
+    Write-Log '========================================================'
+    Write-Log 'HELIOS PLATFORM - MASTER BOARD SETUP SCRIPT'
+    Write-Log '========================================================'
     Write-Log "Started: $timestamp"
     Write-Log "Organization: $OrganizationName, Project: $ProjectNumber"
     Write-Log "DryRun: $DryRun"
@@ -267,7 +266,7 @@ try {
     $report = Generate-Report -StepResults $steps
     Display-Summary -Report $report
     
-    Write-Log '═══════════════════════════════════════════════════════'
+    Write-Log '========================================================'
     Write-Log "Completed: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 'SUCCESS'
     
     # Return report for integration

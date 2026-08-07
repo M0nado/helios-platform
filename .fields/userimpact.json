@@ -1,0 +1,15 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhZ5ZWQ",
+    "tier":  5,
+    "name":  "UserImpact",
+    "type":  "SingleSelect",
+    "description":  "Level of end-user impact",
+    "options":  [
+                    "High",
+                    "Medium",
+                    "Low",
+                    "Internal Only"
+                ],
+    "createdAt":  "2026-08-06T18:06:37.8944744-05:00",
+    "default":  "Medium"
+}

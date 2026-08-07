@@ -1,0 +1,76 @@
+{
+    "notificationChannels":  [
+                                 "slack",
+                                 "email",
+                                 "teams",
+                                 "pagerduty"
+                             ],
+    "createdAt":  "2026-08-06T18:06:39.9206940-05:00",
+    "rules":  [
+                  {
+                      "escalation":  "After 2 occurrences",
+                      "condition":  "Workflow Duration \u003e Threshold",
+                      "notification":  [
+                                           "slack",
+                                           "email"
+                                       ],
+                      "severity":  "Warning"
+                  },
+                  {
+                      "escalation":  "Immediate",
+                      "condition":  "Deployment Success Rate \u003c Threshold",
+                      "notification":  [
+                                           "slack",
+                                           "email",
+                                           "pagerduty"
+                                       ],
+                      "severity":  "Critical"
+                  },
+                  {
+                      "escalation":  "After 5 minutes",
+                      "condition":  "Health Check Failed",
+                      "notification":  [
+                                           "slack",
+                                           "teams"
+                                       ],
+                      "severity":  "High"
+                  },
+                  {
+                      "escalation":  "After 3 occurrences",
+                      "condition":  "Error Rate \u003e Threshold",
+                      "notification":  [
+                                           "slack",
+                                           "email"
+                                       ],
+                      "severity":  "High"
+                  },
+                  {
+                      "escalation":  "Daily summary",
+                      "condition":  "Resource Utilization \u003e Threshold",
+                      "notification":  [
+                                           "email"
+                                       ],
+                      "severity":  "Medium"
+                  }
+              ],
+    "escalationPolicy":  {
+                             "severity":  {
+                                              "Critical":  {
+                                                               "initial":  0,
+                                                               "escalate":  0
+                                                           },
+                                              "Medium":  {
+                                                             "initial":  600,
+                                                             "escalate":  1800
+                                                         },
+                                              "Warning":  {
+                                                              "initial":  1800,
+                                                              "escalate":  3600
+                                                          },
+                                              "High":  {
+                                                           "initial":  300,
+                                                           "escalate":  600
+                                                       }
+                                          }
+                         }
+}

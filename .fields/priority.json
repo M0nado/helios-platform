@@ -1,0 +1,15 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhBkna0",
+    "tier":  1,
+    "name":  "Priority",
+    "type":  "SingleSelect",
+    "description":  "Task priority level",
+    "options":  [
+                    "Critical",
+                    "High",
+                    "Medium",
+                    "Low"
+                ],
+    "createdAt":  "2026-08-06T18:06:25.1452495-05:00",
+    "default":  "Medium"
+}

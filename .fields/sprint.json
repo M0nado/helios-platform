@@ -1,0 +1,16 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhZ5ZT0",
+    "tier":  1,
+    "name":  "Sprint",
+    "type":  "SingleSelect",
+    "description":  "Sprint assignment",
+    "options":  [
+                    "Sprint 1",
+                    "Sprint 2",
+                    "Sprint 3",
+                    "Sprint 4",
+                    "Backlog"
+                ],
+    "createdAt":  "2026-08-06T18:06:25.7840950-05:00",
+    "default":  "Backlog"
+}

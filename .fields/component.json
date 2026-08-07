@@ -1,0 +1,19 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhBknaw",
+    "tier":  1,
+    "name":  "Component",
+    "type":  "SingleSelect",
+    "description":  "Component this item belongs to",
+    "options":  [
+                    "API",
+                    "Frontend",
+                    "Backend",
+                    "DevOps",
+                    "Database",
+                    "Security",
+                    "Performance",
+                    "Documentation"
+                ],
+    "createdAt":  "2026-08-06T18:06:26.9885235-05:00",
+    "default":  "API"
+}

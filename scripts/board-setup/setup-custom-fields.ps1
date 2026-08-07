@@ -28,12 +28,11 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$OrganizationName,
     
-    [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 # Configuration
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
@@ -51,7 +50,7 @@ function Write-Log {
     $timestamp = Get-Date -Format 'HH:mm:ss'
     $logMessage = "[$timestamp] [$Level] $Message"
     Add-Content -Path $logFile -Value $logMessage
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') {
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') {
         Write-Host $logMessage
     }
 }
@@ -332,6 +331,133 @@ query ($org: String!, $projectNum: Int!) {
     }
 }
 
+function Write-LocalFieldRecord {
+    param(
+        [hashtable]$FieldDef,
+        [string]$FieldId
+    )
+
+    if (-not (Test-Path '.fields')) { New-Item -ItemType Directory -Path '.fields' -Force | Out-Null }
+    $fieldFileName = ($FieldDef.name -replace '[^a-zA-Z0-9_-]', '_').ToLowerInvariant()
+    $fieldRecord = @{
+        id = $FieldId
+        name = $FieldDef.name
+        type = $FieldDef.type
+        tier = $FieldDef.tier
+        description = $FieldDef.description
+        options = if ($FieldDef.options) { $FieldDef.options } else { @() }
+        default = if ($FieldDef.ContainsKey('default')) { $FieldDef.default } else { $null }
+        createdAt = Get-Date -Format 'o'
+    }
+    $fieldRecord | ConvertTo-Json -Depth 10 | Set-Content -Path ".fields/$fieldFileName.json"
+}
+
+function Get-DesiredGraphQlDataType {
+    param([string]$FieldType)
+
+    $dataTypeMap = @{
+        'SingleSelect' = 'SINGLE_SELECT'
+        'Text' = 'TEXT'
+        'Date' = 'DATE'
+    }
+
+    return $dataTypeMap[$FieldType]
+}
+
+function Get-ExistingProjectField {
+    param([string]$FieldName)
+
+    $fieldQuery = @'
+query ($org: String!, $projectNum: Int!) {
+  organization(login: $org) {
+    projectV2(number: $projectNum) {
+      fields(first: 100) {
+        nodes {
+          __typename
+          ... on ProjectV2Field {
+            id
+            name
+            dataType
+          }
+          ... on ProjectV2SingleSelectField {
+            id
+            name
+            options {
+              name
+            }
+          }
+          ... on ProjectV2IterationField {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+'@
+
+    $result = Invoke-GitHubGraphQL -Query $fieldQuery -Variables @{
+        org = $OrganizationName
+        projectNum = $ProjectNumber
+    }
+
+    $matchingField = $result.organization.projectV2.fields.nodes | Where-Object { $_.name -eq $FieldName } | Select-Object -First 1
+    return $matchingField
+}
+
+function Test-ExistingFieldCompatibility {
+    param(
+        [hashtable]$FieldDef,
+        [object]$ExistingField
+    )
+
+    $desiredDataType = Get-DesiredGraphQlDataType -FieldType $FieldDef.type
+    if (-not $desiredDataType) {
+        return @{ isCompatible = $false; reason = "Unsupported desired field type '$($FieldDef.type)'" }
+    }
+
+    if ($desiredDataType -eq 'SINGLE_SELECT') {
+        if ($ExistingField.__typename -ne 'ProjectV2SingleSelectField') {
+            return @{
+                isCompatible = $false
+                reason = "existing field type '$($ExistingField.__typename)' does not match required single-select type"
+            }
+        }
+
+        $existingOptions = @()
+        if ($ExistingField.options) {
+            $existingOptions = @($ExistingField.options | ForEach-Object { $_.name })
+        }
+
+        $missingOptions = @($FieldDef.options | Where-Object { $_ -notin $existingOptions })
+        if ($missingOptions.Count -gt 0) {
+            return @{
+                isCompatible = $false
+                reason = "existing single-select field is missing options: $(($missingOptions) -join ', ')"
+            }
+        }
+
+        return @{ isCompatible = $true; reason = '' }
+    }
+
+    if ($ExistingField.__typename -ne 'ProjectV2Field') {
+        return @{
+            isCompatible = $false
+            reason = "existing field type '$($ExistingField.__typename)' does not match required scalar type '$desiredDataType'"
+        }
+    }
+
+    if (($ExistingField.PSObject.Properties.Name -contains 'dataType') -and $ExistingField.dataType -and $ExistingField.dataType -ne $desiredDataType) {
+        return @{
+            isCompatible = $false
+            reason = "existing scalar dataType '$($ExistingField.dataType)' does not match required '$desiredDataType'"
+        }
+    }
+
+    return @{ isCompatible = $true; reason = '' }
+}
+
 function Create-CustomField {
     param(
         [string]$ProjectId,
@@ -357,34 +483,59 @@ function Create-CustomField {
 mutation CreateProjectField($input: CreateProjectV2FieldInput!) {
   createProjectV2Field(input: $input) {
     projectV2Field {
-      id
-      name
-      dataType
+      __typename
+      ... on ProjectV2Field {
+        id
+        name
+      }
+      ... on ProjectV2SingleSelectField {
+        id
+        name
+      }
+      ... on ProjectV2IterationField {
+        id
+        name
+      }
     }
   }
 }
 '@
-        
-        # Build field configuration
-        $fieldConfig = @{
+ 
+        $graphQlDataType = Get-DesiredGraphQlDataType -FieldType $FieldDef.type
+        if (-not $graphQlDataType) {
+            throw "Unsupported field type: $($FieldDef.type)"
+        }
+ 
+        $fieldInput = @{
+            projectId = $ProjectId
             name = $FieldDef.name
-            dataType = $FieldDef.type
+            dataType = $graphQlDataType
         }
-        
+ 
         if ($FieldDef.type -eq 'SingleSelect' -and $FieldDef.options) {
-            $fieldConfig['singleSelectOptions'] = $FieldDef.options | ForEach-Object { @{ name = $_ } }
-        }
-        
-        $result = Invoke-GitHubGraphQL -Query $createFieldQuery -Variables @{
-            input = @{
-                projectId = $ProjectId
-                name = $FieldDef.name
-                dataType = $FieldDef.type
+            $optionColors = @('GRAY', 'BLUE', 'GREEN', 'YELLOW', 'ORANGE', 'RED', 'PINK', 'PURPLE')
+            $singleSelectOptions = @()
+            for ($index = 0; $index -lt $FieldDef.options.Count; $index++) {
+                $optionName = [string]$FieldDef.options[$index]
+                $singleSelectOptions += @{
+                    name = $optionName
+                    color = $optionColors[$index % $optionColors.Count]
+                    description = "$($FieldDef.name): $optionName"
+                }
             }
+            $fieldInput['singleSelectOptions'] = $singleSelectOptions
         }
-        
-        if ($result.createProjectV2Field.projectV2Field) {
-            $fieldId = $result.createProjectV2Field.projectV2Field.id
+ 
+        $result = Invoke-GitHubGraphQL -Query $createFieldQuery -Variables @{ input = $fieldInput }
+        $createdField = $result.createProjectV2Field.projectV2Field
+ 
+        if ($createdField) {
+            $fieldId = $createdField.id
+            if (-not $fieldId) {
+                throw 'Field created but no field ID was returned by GitHub GraphQL.'
+            }
+            Write-LocalFieldRecord -FieldDef $FieldDef -FieldId $fieldId
+
             Write-Log "  Field created successfully (ID: $fieldId)" 'SUCCESS'
             
             $CreatedFields.Value += @{
@@ -397,13 +548,40 @@ mutation CreateProjectField($input: CreateProjectV2FieldInput!) {
         }
     }
     catch {
-        Write-Log "  Failed to create field: $_" 'ERROR'
+        $errorText = $_.ToString()
+        if ($errorText -like '*Name has already been taken*') {
+            try {
+                $existingField = Get-ExistingProjectField -FieldName $FieldDef.name
+                if ($existingField) {
+                    $compatibility = Test-ExistingFieldCompatibility -FieldDef $FieldDef -ExistingField $existingField
+                    if (-not $compatibility.isCompatible) {
+                        throw "existing field '$($FieldDef.name)' is incompatible: $($compatibility.reason)"
+                    }
+
+                    Write-LocalFieldRecord -FieldDef $FieldDef -FieldId $existingField.id
+                    Write-Log "  Field already exists, linked to existing ID: $($existingField.id)" 'INFO'
+                    $CreatedFields.Value += @{
+                        name = $FieldDef.name
+                        fieldId = $existingField.id
+                        type = $FieldDef.type
+                        tier = $FieldDef.tier
+                        status = 'existing'
+                    }
+                    return
+                }
+            }
+            catch {
+                Write-Log "  Existing-field lookup failed: $_" 'ERROR'
+            }
+        }
+
+        Write-Log "  Failed to create field: $errorText" 'ERROR'
         $CreatedFields.Value += @{
             name = $FieldDef.name
             type = $FieldDef.type
             status = 'failed'
             tier = $FieldDef.tier
-            error = $_
+            error = $errorText
         }
     }
 }

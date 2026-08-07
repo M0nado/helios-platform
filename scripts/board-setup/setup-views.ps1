@@ -25,12 +25,11 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$OrganizationName,
     
-    [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/views-setup_$timestamp.log"
@@ -43,7 +42,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # 6 Board Views Definition
@@ -91,7 +90,7 @@ $views = @(
         id = 'view-deployment'
         description = 'Items in deployment workflow'
         filters = @(
-            @{ field = 'DeploymentEnvironment'; operator = 'notEquals'; value = 'null' }
+            @{ field = 'DeploymentEnvironment'; operator = 'notEquals'; value = $null }
             @{ field = 'Status'; operator = 'notIn'; value = @('Backlog', 'Done') }
         )
         groupBy = 'DeploymentStatus'
@@ -235,7 +234,7 @@ function Create-View {
             name = $View.name
             id = $View.id
             status = 'failed'
-            error = $_
+            error = $_.ToString()
         }
     }
 }

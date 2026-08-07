@@ -1,0 +1,16 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhZ5ZVw",
+    "tier":  3,
+    "name":  "ReviewStatus",
+    "type":  "SingleSelect",
+    "description":  "Code or design review status",
+    "options":  [
+                    "Not Reviewed",
+                    "In Review",
+                    "Changes Requested",
+                    "Approved",
+                    "Rejected"
+                ],
+    "createdAt":  "2026-08-06T18:06:31.3170454-05:00",
+    "default":  "Not Reviewed"
+}

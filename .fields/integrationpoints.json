@@ -1,0 +1,12 @@
+{
+    "id":  "PVTF_lADOEFilTs4BUclNzhZ5ZR4",
+    "tier":  4,
+    "name":  "IntegrationPoints",
+    "type":  "Text",
+    "description":  "Systems or services this integrates with",
+    "options":  {
+
+                },
+    "createdAt":  "2026-08-06T18:06:35.5011157-05:00",
+    "default":  null
+}

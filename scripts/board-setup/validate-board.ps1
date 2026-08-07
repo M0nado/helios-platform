@@ -26,11 +26,11 @@ param(
     [string]$OrganizationName,
     
     [switch]$GenerateReport,
-    [switch]$Verbose
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/validation_$timestamp.log"
@@ -43,7 +43,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 function Validate-CustomFields {
@@ -305,9 +305,9 @@ function Display-ValidationSummary {
     param([hashtable]$Report)
     
     Write-Host "`n" -ForegroundColor Cyan
-    Write-Host "╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║          BOARD VALIDATION SUMMARY                     ║" -ForegroundColor Cyan
-    Write-Host "╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
+    Write-Host "|          BOARD VALIDATION SUMMARY                     |" -ForegroundColor Cyan
+    Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
     
     Write-Host "`nValidation Results:" -ForegroundColor Green
     Write-Host "  Custom Fields: " -NoNewline
@@ -328,19 +328,19 @@ function Display-ValidationSummary {
     
     Write-Host "`nOverall Status: " -NoNewline
     if ($Report.summary.allValid) {
-        Write-Host "✓ VALID" -ForegroundColor Green
+        Write-Host "VALID" -ForegroundColor Green
     }
     else {
-        Write-Host "✗ INVALID" -ForegroundColor Red
+        Write-Host "INVALID" -ForegroundColor Red
     }
     
     Write-Host "`n"
 }
 
 try {
-    Write-Log '╔═══════════════════════════════════════════════════════╗'
-    Write-Log '║         BOARD VALIDATION SCRIPT                      ║'
-    Write-Log '╚═══════════════════════════════════════════════════════╝'
+    Write-Log '======================================================='
+    Write-Log 'BOARD VALIDATION SCRIPT'
+    Write-Log '======================================================='
     
     Write-Log "Validating board configuration..."
     

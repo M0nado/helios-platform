@@ -1,0 +1,15 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhZ5ZV4",
+    "tier":  3,
+    "name":  "RiskLevel",
+    "type":  "SingleSelect",
+    "description":  "Risk assessment for this change",
+    "options":  [
+                    "Low",
+                    "Medium",
+                    "High",
+                    "Critical"
+                ],
+    "createdAt":  "2026-08-06T18:06:33.1292769-05:00",
+    "default":  "Medium"
+}

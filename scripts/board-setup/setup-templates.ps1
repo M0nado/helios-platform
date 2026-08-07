@@ -25,12 +25,11 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$OrganizationName,
     
-    [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/templates-setup_$timestamp.log"
@@ -43,7 +42,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # 8 Phase Templates Definition
@@ -175,7 +174,7 @@ $templates = @(
             DeploymentEnvironment = 'Staging'
             DeploymentStatus = 'Deployed to Staging'
             DataMigration = 'In Progress'
-            DocumentationStatus = 'Complete'
+            Documentation = 'Complete'
         }
         acceptanceCriteria = @(
             'Deployed to staging successfully',
@@ -313,7 +312,7 @@ function Create-Template {
     }
     catch {
         Write-Log "  Failed to create template: $_" 'ERROR'
-        return @{ name = $Template.name; status = 'failed'; error = $_ }
+        return @{ name = $Template.name; status = 'failed'; error = $_.ToString() }
     }
 }
 

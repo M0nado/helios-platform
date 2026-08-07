@@ -35,12 +35,11 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$OrganizationName,
     
-    [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/github-ecosystem-integration_$timestamp.log"
@@ -53,7 +52,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # Integration Configuration
@@ -66,7 +65,7 @@ $integrations = @(
         config = @{
             autoLink = $true
             linkPattern = 'all'
-            fields = @{ Status = 'New' }
+            fields = @{ Status = 'Backlog' }
         }
     },
     @{
@@ -75,7 +74,7 @@ $integrations = @(
         type = 'WorkflowTrigger'
         description = 'Trigger CI/CD workflows when PRs are created'
         config = @{
-            workflows = @('build.yml', 'test.yml', 'lint.yml')
+            workflows = @('build-all-modules.yml', 'test-lanes.yml', 'code-checks.yml')
             triggerOn = 'opened'
         }
     },
@@ -86,7 +85,7 @@ $integrations = @(
         description = 'Update board status based on workflow results'
         config = @{
             mapping = @{
-                'workflow_run.concluded' = @{ field = 'ProgressStatus'; value = '100% Complete' }
+                'workflow_run.concluded' = @{ field = 'ProgressStatus'; value = 'Complete' }
                 'workflow_run.failed' = @{ field = 'QAStatus'; value = 'QA Failed' }
                 'workflow_run.success' = @{ field = 'QAStatus'; value = 'QA Approved' }
             }
@@ -115,7 +114,7 @@ $integrations = @(
             source = 'docs/'
             target = 'gh-pages'
             autoUpdate = $true
-            buildCommand = 'npm run docs:build'
+            buildCommand = 'bash verify-documentation-testing.sh'
         }
     }
 )
@@ -152,7 +151,7 @@ function Configure-IssueLink {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'IssueLink'; status = 'failed'; error = $_ }
+        return @{ name = 'IssueLink'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -188,7 +187,7 @@ function Configure-PRWorkflow {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'PRWorkflow'; status = 'failed'; error = $_ }
+        return @{ name = 'PRWorkflow'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -221,7 +220,7 @@ function Configure-WorkflowStatus {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'WorkflowStatus'; status = 'failed'; error = $_ }
+        return @{ name = 'WorkflowStatus'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -254,7 +253,7 @@ function Configure-Notifications {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'Notifications'; status = 'failed'; error = $_ }
+        return @{ name = 'Notifications'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -288,7 +287,7 @@ function Configure-PagesSync {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'PagesSync'; status = 'failed'; error = $_ }
+        return @{ name = 'PagesSync'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -308,7 +307,7 @@ Project: #$ProjectNumber
 ### 1. Issues to Project Board
 Automatically links GitHub issues to the project board.
 - Auto-linking: Enabled
-- All new issues will appear on board with Status: New
+- All new issues will appear on board with Status: Backlog
 
 ### 2. PR to Workflow Triggers
 Starts CI/CD workflows when pull requests are opened.
@@ -336,7 +335,7 @@ Automatically syncs documentation to GitHub Pages.
 ### Test Issue Linking
 1. Create a new GitHub issue
 2. Check if it appears on the project board
-3. Verify Status is set to "New"
+3. Verify Status is set to "Backlog"
 
 ### Test PR Workflows
 1. Create a pull request

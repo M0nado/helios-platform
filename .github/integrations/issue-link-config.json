@@ -1,0 +1,11 @@
+{
+    "autoLink":  true,
+    "repositoryOwner":  "M0nado",
+    "repositoryName":  "helios-platform",
+    "createdAt":  "2026-08-06T18:06:39.8590952-05:00",
+    "linkPattern":  "all",
+    "projectNumber":  3,
+    "fieldDefaults":  {
+                          "Status":  "Backlog"
+                      }
+}

@@ -1,0 +1,44 @@
+{
+    "conditions":  [
+
+                   ],
+    "actionDetails":  {
+                          "value":  "Medium",
+                          "field":  "Priority"
+                      },
+    "id":  "rule-priority-assign",
+    "enabled":  true,
+    "trigger":  "ItemAdded",
+    "createdAt":  "2026-08-06T18:06:39.6834930-05:00",
+    "triggerCondition":  "Any item added to project",
+    "description":  "Automatically assign Medium priority to new items",
+    "name":  "Auto-assign Priority on Creation",
+    "errorHandling":  "Continue",
+    "action":  "SetField",
+    "testResults":  {
+                        "action":  "SetField",
+                        "ruleName":  "Auto-assign Priority on Creation",
+                        "ruleId":  "rule-priority-assign",
+                        "trigger":  "ItemAdded",
+                        "enabled":  true,
+                        "tests":  [
+                                      {
+                                          "details":  "Valid trigger type",
+                                          "name":  "Trigger Configuration",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "Valid action type",
+                                          "name":  "Action Configuration",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "Valid error handling strategy",
+                                          "name":  "Error Handling",
+                                          "passed":  true
+                                      }
+                                  ],
+                        "allPassed":  true,
+                        "conditions":  0
+                    }
+}

@@ -1,0 +1,51 @@
+{
+    "conditions":  [
+                       "PR must be merged (not closed)",
+                       "Issue must be linked to PR",
+                       "Current status != Complete"
+                   ],
+    "actionDetails":  {
+                          "value":  "Complete",
+                          "field":  "ProgressStatus"
+                      },
+    "id":  "rule-pr-merge",
+    "enabled":  true,
+    "trigger":  "PullRequestMerged",
+    "createdAt":  "2026-08-06T18:06:39.6904933-05:00",
+    "triggerCondition":  "When PR linked to issue is merged",
+    "description":  "Mark items as complete when linked PRs merge",
+    "name":  "Update Status on PR Merge",
+    "errorHandling":  "Notify",
+    "action":  "SetField",
+    "testResults":  {
+                        "action":  "SetField",
+                        "ruleName":  "Update Status on PR Merge",
+                        "ruleId":  "rule-pr-merge",
+                        "trigger":  "PullRequestMerged",
+                        "enabled":  true,
+                        "tests":  [
+                                      {
+                                          "details":  "Valid trigger type",
+                                          "name":  "Trigger Configuration",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "Valid action type",
+                                          "name":  "Action Configuration",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "3 conditions configured (max 5)",
+                                          "name":  "Condition Count",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "Valid error handling strategy",
+                                          "name":  "Error Handling",
+                                          "passed":  true
+                                      }
+                                  ],
+                        "allPassed":  true,
+                        "conditions":  3
+                    }
+}

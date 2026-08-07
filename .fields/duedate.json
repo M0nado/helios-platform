@@ -1,0 +1,12 @@
+{
+    "id":  "PVTF_lADOEFilTs4BUclNzhZ5ZRQ",
+    "tier":  1,
+    "name":  "DueDate",
+    "type":  "Date",
+    "description":  "Target completion date",
+    "options":  {
+
+                },
+    "createdAt":  "2026-08-06T18:06:27.5868651-05:00",
+    "default":  null
+}

@@ -1,0 +1,26 @@
+{
+    "channels":  [
+                     "slack",
+                     "email",
+                     "teams"
+                 ],
+    "routes":  [
+                   {
+                       "channel":  "slack",
+                       "action":  "deployment_started"
+                   },
+                   {
+                       "channel":  [
+                                       "email",
+                                       "slack"
+                                   ],
+                       "action":  "deployment_failed"
+                   },
+                   {
+                       "channel":  "slack",
+                       "action":  "deployment_success"
+                   }
+               ],
+    "retryPolicy":  "exponential",
+    "createdAt":  "2026-08-06T18:06:39.8751902-05:00"
+}

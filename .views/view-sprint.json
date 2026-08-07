@@ -1,0 +1,29 @@
+{
+    "id":  "view-sprint",
+    "filters":  [
+                    {
+                        "field":  "Sprint",
+                        "operator":  "equals",
+                        "value":  "Sprint 1"
+                    }
+                ],
+    "purpose":  "Sprint tracking and coordination",
+    "description":  "Items assigned to current sprint",
+    "fieldVisibility":  [
+                            "Status",
+                            "Priority",
+                            "AssignedTo",
+                            "Effort",
+                            "ProgressStatus",
+                            "ReviewStatus"
+                        ],
+    "layout":  "board",
+    "name":  "Sprint View - Current Sprint",
+    "groupBy":  "Component",
+    "sortBy":  {
+                   "field":  "Priority",
+                   "order":  "descending"
+               },
+    "createdAt":  "2026-08-06T18:06:39.7517338-05:00",
+    "isActive":  true
+}

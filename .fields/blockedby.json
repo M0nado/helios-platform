@@ -1,0 +1,12 @@
+{
+    "id":  "PVTF_lADOEFilTs4BUclNzhZ5ZRY",
+    "tier":  2,
+    "name":  "BlockedBy",
+    "type":  "Text",
+    "description":  "Issue or task blocking this work",
+    "options":  {
+
+                },
+    "createdAt":  "2026-08-06T18:06:30.0207283-05:00",
+    "default":  null
+}

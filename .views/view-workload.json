@@ -1,0 +1,25 @@
+{
+    "id":  "view-workload",
+    "filters":  [
+
+                ],
+    "purpose":  "Team capacity and workload tracking",
+    "description":  "Items by assignee and progress",
+    "fieldVisibility":  [
+                            "AssignedTo",
+                            "Priority",
+                            "ProgressStatus",
+                            "Effort",
+                            "TimeEstimate",
+                            "BlockedBy"
+                        ],
+    "layout":  "table",
+    "name":  "Team Workload",
+    "groupBy":  "AssignedTo",
+    "sortBy":  {
+                   "field":  "ProgressStatus",
+                   "order":  "descending"
+               },
+    "createdAt":  "2026-08-06T18:06:39.7669916-05:00",
+    "isActive":  true
+}

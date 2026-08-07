@@ -1,0 +1,12 @@
+{
+    "id":  "PVTF_lADOEFilTs4BUclNzhZ5ZRc",
+    "tier":  2,
+    "name":  "TimeEstimate",
+    "type":  "Text",
+    "description":  "Estimated hours for completion",
+    "options":  {
+
+                },
+    "createdAt":  "2026-08-06T18:06:30.7137644-05:00",
+    "default":  null
+}
