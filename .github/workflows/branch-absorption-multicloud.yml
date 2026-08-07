@@ -47,11 +47,13 @@ concurrency:
 
 jobs:
   pinned-submodule-integrity:
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/pinned-submodule-integrity.yml
     secrets: inherit
 
   branch-absorption-plan:
     needs: pinned-submodule-integrity
+    if: ${{ github.event_name == 'pull_request' || needs.pinned-submodule-integrity.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       AIHUB_MODE: ${{ inputs.mode || 'github-runner' }}
