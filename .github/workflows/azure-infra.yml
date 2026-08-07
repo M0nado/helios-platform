@@ -688,7 +688,7 @@ jobs:
             echo "Validated edge route state output is invalid." >&2
             exit 1
           fi
-          if [[ "${INPUT_NETWORK_ONLY}" == "true" || "${EDGE_ROUTE_CUTOVER_APPROVED}" != "true" || "${EDGE_ROUTE_WAS_ALREADY_ENABLED}" == "true" ]]; then
+          if [[ "${INPUT_NETWORK_ONLY}" == "true" || "${EDGE_ROUTE_CUTOVER_APPROVED}" != "true" ]]; then
             exit 0
           fi
 

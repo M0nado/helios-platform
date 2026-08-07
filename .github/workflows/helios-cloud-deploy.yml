@@ -170,6 +170,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_ENTRA_APPLICATION_ID_URI: ${{ vars.HELIOS_ENTRA_APPLICATION_ID_URI }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_AZURE_FIREWALL_PRIVATE_IP: ${{ vars.HELIOS_AZURE_FIREWALL_PRIVATE_IP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
           HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
         run: |
@@ -206,6 +207,16 @@ jobs:
               exit 1
             fi
           fi
+          if [[ "${{ inputs.targetEnvironment }}" == "azure-prod" && -n "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:-}" ]]; then
+            if [[ -z "${HELIOS_AZURE_FIREWALL_PRIVATE_IP:-}" ]]; then
+              echo "Production requires protected environment variable HELIOS_AZURE_FIREWALL_PRIVATE_IP to bind reviewed subnet egress to the approved firewall." >&2
+              exit 1
+            fi
+            if [[ ! "${HELIOS_AZURE_FIREWALL_PRIVATE_IP}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+              echo "HELIOS_AZURE_FIREWALL_PRIVATE_IP must be an IPv4 address." >&2
+              exit 1
+            fi
+          fi
           if [[ ! "${HELIOS_CONTAINER_REGISTRY_NAME}" =~ ^[a-z0-9]{5,50}$ ]]; then
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
             exit 1
@@ -233,7 +244,9 @@ jobs:
         shell: bash
         env:
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_AZURE_FIREWALL_PRIVATE_IP: ${{ vars.HELIOS_AZURE_FIREWALL_PRIVATE_IP }}
         run: |
           set -euo pipefail
           if [[ "${TARGET_ENVIRONMENT}" != "azure-prod" || -z "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:-}" ]]; then
@@ -246,6 +259,11 @@ jobs:
           subnet_name="${BASH_REMATCH[1]}"
           if [[ "${subnet_name}" != "container-apps" ]]; then
             echo "Production requires HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID to bind the canonical container-apps subnet." >&2
+            exit 1
+          fi
+          subnet_delegation_count="$(az network vnet subnet show --ids "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" --query \"length(delegations[?properties.serviceName=='Microsoft.App/environments'])\" --output tsv)"
+          if [[ ! "${subnet_delegation_count}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Production subnet '${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}' must keep delegation Microsoft.App/environments." >&2
             exit 1
           fi
           subnet_route_table_id="$(az network vnet subnet show --ids "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" --query routeTable.id --output tsv)"
@@ -272,6 +290,25 @@ jobs:
           firewall_default_route_hop="$(jq -r '.[0].nextHopIpAddress // empty' <<<"${firewall_default_routes_json}")"
           if [[ ! "${firewall_default_route_hop}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
             echo "Production subnet route table '${subnet_route_table_name}' must set an explicit VirtualAppliance next-hop IP." >&2
+            exit 1
+          fi
+          if [[ -z "${HELIOS_AZURE_FIREWALL_PRIVATE_IP:-}" ]]; then
+            echo "Production requires protected environment variable HELIOS_AZURE_FIREWALL_PRIVATE_IP to bind reviewed subnet egress to the approved firewall." >&2
+            exit 1
+          fi
+          if [[ "${firewall_default_route_hop}" != "${HELIOS_AZURE_FIREWALL_PRIVATE_IP}" ]]; then
+            echo "Production subnet route table '${subnet_route_table_name}' must set next-hop IP '${HELIOS_AZURE_FIREWALL_PRIVATE_IP}' from protected reviewed firewall binding." >&2
+            exit 1
+          fi
+          firewall_matches_json="$(az network firewall list --subscription "${AZURE_SUBSCRIPTION_ID}" --query \"[?contains(join(',', ipConfigurations[].privateIPAddress), '${HELIOS_AZURE_FIREWALL_PRIVATE_IP}')]\" --output json)"
+          firewall_match_count="$(jq 'length' <<<"${firewall_matches_json}")"
+          if [[ "${firewall_match_count}" != "1" ]]; then
+            echo "HELIOS_AZURE_FIREWALL_PRIVATE_IP must match exactly one Azure Firewall private IP in subscription '${AZURE_SUBSCRIPTION_ID}'." >&2
+            exit 1
+          fi
+          firewall_policy_id="$(jq -r '.[0].firewallPolicy.id // empty' <<<"${firewall_matches_json}")"
+          if [[ -z "${firewall_policy_id}" ]]; then
+            echo "The Azure Firewall bound to HELIOS_AZURE_FIREWALL_PRIVATE_IP must keep a reviewed firewall policy attachment." >&2
             exit 1
           fi
 
@@ -491,6 +528,7 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_AZURE_FIREWALL_PRIVATE_IP: ${{ vars.HELIOS_AZURE_FIREWALL_PRIVATE_IP }}
           HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
           COMMON_TAGS_SHA256: ${{ needs.validate.outputs.common_tags_sha256 }}
@@ -561,12 +599,13 @@ jobs:
             --arg entraTenantId "${AZURE_TENANT_ID}" \
             --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg containerAppsInfrastructureSubnetId "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" \
+            --arg azureFirewallPrivateIp "${HELIOS_AZURE_FIREWALL_PRIVATE_IP}" \
             --arg publicBaseUrl "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, containerAppsInfrastructureSubnetId: $containerAppsInfrastructureSubnetId, publicBaseUrl: $publicBaseUrl, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, containerAppsInfrastructureSubnetId: $containerAppsInfrastructureSubnetId, azureFirewallPrivateIp: $azureFirewallPrivateIp, publicBaseUrl: $publicBaseUrl, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -631,6 +670,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_ENTRA_APPLICATION_ID_URI: ${{ vars.HELIOS_ENTRA_APPLICATION_ID_URI }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_AZURE_FIREWALL_PRIVATE_IP: ${{ vars.HELIOS_AZURE_FIREWALL_PRIVATE_IP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
           HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
         run: |
@@ -664,6 +704,16 @@ jobs:
             fi
             if [[ "${subnet_subscription_id,,}" != "${AZURE_SUBSCRIPTION_ID,,}" || "${subnet_resource_group,,}" != "${AZURE_RESOURCE_GROUP,,}" ]]; then
               echo "HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must target the protected deployment subscription/resource-group scope." >&2
+              exit 1
+            fi
+          fi
+          if [[ "${{ inputs.targetEnvironment }}" == "azure-prod" && -n "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:-}" ]]; then
+            if [[ -z "${HELIOS_AZURE_FIREWALL_PRIVATE_IP:-}" ]]; then
+              echo "Production requires protected environment variable HELIOS_AZURE_FIREWALL_PRIVATE_IP to bind reviewed subnet egress to the approved firewall." >&2
+              exit 1
+            fi
+            if [[ ! "${HELIOS_AZURE_FIREWALL_PRIVATE_IP}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+              echo "HELIOS_AZURE_FIREWALL_PRIVATE_IP must be an IPv4 address." >&2
               exit 1
             fi
           fi
@@ -707,7 +757,9 @@ jobs:
         shell: bash
         env:
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_AZURE_FIREWALL_PRIVATE_IP: ${{ vars.HELIOS_AZURE_FIREWALL_PRIVATE_IP }}
         run: |
           set -euo pipefail
           if [[ "${TARGET_ENVIRONMENT}" != "azure-prod" || -z "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:-}" ]]; then
@@ -720,6 +772,11 @@ jobs:
           subnet_name="${BASH_REMATCH[1]}"
           if [[ "${subnet_name}" != "container-apps" ]]; then
             echo "Production requires HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID to bind the canonical container-apps subnet." >&2
+            exit 1
+          fi
+          subnet_delegation_count="$(az network vnet subnet show --ids "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" --query \"length(delegations[?properties.serviceName=='Microsoft.App/environments'])\" --output tsv)"
+          if [[ ! "${subnet_delegation_count}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Production subnet '${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}' must keep delegation Microsoft.App/environments." >&2
             exit 1
           fi
           subnet_route_table_id="$(az network vnet subnet show --ids "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" --query routeTable.id --output tsv)"
@@ -746,6 +803,25 @@ jobs:
           firewall_default_route_hop="$(jq -r '.[0].nextHopIpAddress // empty' <<<"${firewall_default_routes_json}")"
           if [[ ! "${firewall_default_route_hop}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
             echo "Production subnet route table '${subnet_route_table_name}' must set an explicit VirtualAppliance next-hop IP." >&2
+            exit 1
+          fi
+          if [[ -z "${HELIOS_AZURE_FIREWALL_PRIVATE_IP:-}" ]]; then
+            echo "Production requires protected environment variable HELIOS_AZURE_FIREWALL_PRIVATE_IP to bind reviewed subnet egress to the approved firewall." >&2
+            exit 1
+          fi
+          if [[ "${firewall_default_route_hop}" != "${HELIOS_AZURE_FIREWALL_PRIVATE_IP}" ]]; then
+            echo "Production subnet route table '${subnet_route_table_name}' must set next-hop IP '${HELIOS_AZURE_FIREWALL_PRIVATE_IP}' from protected reviewed firewall binding." >&2
+            exit 1
+          fi
+          firewall_matches_json="$(az network firewall list --subscription "${AZURE_SUBSCRIPTION_ID}" --query \"[?contains(join(',', ipConfigurations[].privateIPAddress), '${HELIOS_AZURE_FIREWALL_PRIVATE_IP}')]\" --output json)"
+          firewall_match_count="$(jq 'length' <<<"${firewall_matches_json}")"
+          if [[ "${firewall_match_count}" != "1" ]]; then
+            echo "HELIOS_AZURE_FIREWALL_PRIVATE_IP must match exactly one Azure Firewall private IP in subscription '${AZURE_SUBSCRIPTION_ID}'." >&2
+            exit 1
+          fi
+          firewall_policy_id="$(jq -r '.[0].firewallPolicy.id // empty' <<<"${firewall_matches_json}")"
+          if [[ -z "${firewall_policy_id}" ]]; then
+            echo "The Azure Firewall bound to HELIOS_AZURE_FIREWALL_PRIVATE_IP must keep a reviewed firewall policy attachment." >&2
             exit 1
           fi
 
@@ -809,6 +885,7 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_AZURE_FIREWALL_PRIVATE_IP: ${{ vars.HELIOS_AZURE_FIREWALL_PRIVATE_IP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
           HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
@@ -847,12 +924,13 @@ jobs:
             --arg entraTenantId "${AZURE_TENANT_ID}" \
             --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg containerAppsInfrastructureSubnetId "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" \
+            --arg azureFirewallPrivateIp "${HELIOS_AZURE_FIREWALL_PRIVATE_IP}" \
             --arg publicBaseUrl "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, containerAppsInfrastructureSubnetId: $containerAppsInfrastructureSubnetId, publicBaseUrl: $publicBaseUrl, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, containerAppsInfrastructureSubnetId: $containerAppsInfrastructureSubnetId, azureFirewallPrivateIp: $azureFirewallPrivateIp, publicBaseUrl: $publicBaseUrl, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${evidence_dir}/request.json" > /dev/null
 
       - name: Re-verify configured registry and published digest

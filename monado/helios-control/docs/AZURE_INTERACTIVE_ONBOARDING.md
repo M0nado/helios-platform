@@ -131,7 +131,10 @@ replacement-environment migration with rollback evidence rather than an
 in-place subnet retrofit.
 For `azure-prod`, the reviewed subnet binding must target the canonical
 `container-apps` subnet and keep the reviewed
-`approved-egress-via-firewall` 0.0.0.0/0 VirtualAppliance route-table path.
+`approved-egress-via-firewall` 0.0.0.0/0 VirtualAppliance route-table path,
+retain `Microsoft.App/environments` delegation, and point to protected
+environment variable `HELIOS_AZURE_FIREWALL_PRIVATE_IP` (which must resolve to
+exactly one policy-attached Azure Firewall private IP in the subscription).
 
 When `HELIOS_CONNECTOR_PUBLIC_BASE_URL` is set, the reviewed workflow carries it
 into what-if evidence and deployment as `publicBaseUrl`, which rebases

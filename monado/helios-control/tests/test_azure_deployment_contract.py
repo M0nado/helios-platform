@@ -42,6 +42,10 @@ class AzureDeploymentContractTests(unittest.TestCase):
             workflow,
         )
         self.assertIn(
+            "azureFirewallPrivateIp: $azureFirewallPrivateIp",
+            workflow,
+        )
+        self.assertIn(
             ".parameters == {location: $location, environmentName: $environmentName",
             workflow,
         )
@@ -191,6 +195,8 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("edge_route_was_already_enabled: ${{ steps.params.outputs.edge_route_was_already_enabled }}", workflow)
         self.assertIn("echo \"edge_route_was_already_enabled=${edge_route_was_already_enabled}\" >> \"${GITHUB_OUTPUT}\"", workflow)
         self.assertIn("EDGE_ROUTE_WAS_ALREADY_ENABLED: ${{ needs.validate.outputs.edge_route_was_already_enabled }}", workflow)
+        self.assertIn('if [[ "${INPUT_NETWORK_ONLY}" == "true" || "${EDGE_ROUTE_CUTOVER_APPROVED}" != "true" ]]; then', workflow)
+        self.assertNotIn('if [[ "${INPUT_NETWORK_ONLY}" == "true" || "${EDGE_ROUTE_CUTOVER_APPROVED}" != "true" || "${EDGE_ROUTE_WAS_ALREADY_ENABLED}" == "true" ]]; then', workflow)
         self.assertIn("tags.\"helios-environment\"", workflow)
         self.assertIn("must declare tag 'helios-environment' before deploy=true requests.", workflow)
         self.assertIn("does not match requested environment_name", workflow)
@@ -273,8 +279,12 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("Require reviewed production subnet firewall route", workflow)
         self.assertIn("Revalidate reviewed production subnet firewall route", workflow)
         self.assertIn("Production requires HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID to bind the canonical container-apps subnet.", workflow)
+        self.assertIn("HELIOS_AZURE_FIREWALL_PRIVATE_IP", workflow)
+        self.assertIn("must keep delegation Microsoft.App/environments", workflow)
         self.assertIn("must contain exactly one 0.0.0.0/0 VirtualAppliance route.", workflow)
         self.assertIn("approved-egress-via-firewall", workflow)
+        self.assertIn("must set next-hop IP", workflow)
+        self.assertIn("must keep a reviewed firewall policy attachment", workflow)
         self.assertIn("HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must be a full subnet resource ID.", workflow)
         self.assertIn(
             "HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must target the protected deployment subscription/resource-group scope.",
