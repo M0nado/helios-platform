@@ -54,15 +54,24 @@ evidence.
 
 ## Easy setup
 
-Run the plugin doctor, then generate a plan:
+Run the plugin doctor, then generate a full bundle or individual contracts:
 
 ```bash
 python plugins/helios-control-fabric/scripts/helios.py doctor
+python plugins/helios-control-fabric/scripts/helios.py setup-all --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py devops-sync
 python plugins/helios-control-fabric/scripts/helios.py runners
+python plugins/helios-control-fabric/scripts/helios.py integration
+python plugins/helios-control-fabric/scripts/helios.py fleet
+python plugins/helios-control-fabric/scripts/helios.py hermes
+python plugins/helios-control-fabric/scripts/helios.py xcore9
+python plugins/helios-control-fabric/scripts/helios.py aihub --language csharp
+python plugins/helios-control-fabric/scripts/helios.py code-engine
+python plugins/helios-control-fabric/scripts/helios.py benchmark
+python plugins/helios-control-fabric/scripts/helios.py setup-all --environment azure-dev --auto-local
 ```
 
 The `oidc` command is a read-only live resolution and therefore requires an
@@ -70,6 +79,13 @@ authenticated GitHub CLI. It must use GitHub's effective default/immutable
 subject policy and fail closed for custom templates, missing policy signals, or
 missing canonical repository IDs. Never copy a static name-based subject from a
 guide into Entra.
+
+`--auto-local` enables automatic local fleet/agent orchestration artifacts and
+bounded autoscaling targets. It does not allow unreviewed cloud, RBAC, consent,
+deployment, or publication mutation.
+`aihub --language <csharp|fsharp|cpp|python>` provides language-specific engine,
+parallelism, and benchmarking guidance across Codex API, OpenAI Responses,
+Claude Code/API, and Foundry.
 
 Continue with the repository wizard:
 

@@ -33,14 +33,34 @@ install 'helios-control-fabric'.
 Run:
 
     python plugins/helios-control-fabric/scripts/helios.py doctor
+    python plugins/helios-control-fabric/scripts/helios.py setup-all --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py targets
     python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py devops-sync
     python plugins/helios-control-fabric/scripts/helios.py runners
+    python plugins/helios-control-fabric/scripts/helios.py integration
+    python plugins/helios-control-fabric/scripts/helios.py fleet
+    python plugins/helios-control-fabric/scripts/helios.py hermes
+    python plugins/helios-control-fabric/scripts/helios.py xcore9
+    python plugins/helios-control-fabric/scripts/helios.py aihub --language csharp
+    python plugins/helios-control-fabric/scripts/helios.py code-engine
+    python plugins/helios-control-fabric/scripts/helios.py benchmark
 
-These commands inspect files and local prerequisites only.
+These commands inspect files and local prerequisites by default. `setup-all` emits a
+single read-only bundle that contains every setup contract for the selected
+environment, including Hermes, XCore9, AIHub, fleet, integration, code-engine,
+and benchmarking slices.
+Use `integration`, `fleet`, `hermes`, `xcore9`, `aihub`, `code-engine`, and
+`benchmark` when only one slice is needed.
+Use `--auto-local --environment <azure-dev|azure-test|azure-prod>` on those
+commands (or `setup-all`) to automatically write local fleet/agent orchestration
+artifacts and bounded autoscaling targets under
+`monado/helios-control/runtime/fleet/automation/<environment>/`.
+Auto-local mode does not bypass cloud approval boundaries.
+Use `aihub --language <csharp|fsharp|cpp|python>` for language-specific model
+and engine routing guidance with explicit provider and benchmarking contracts.
 
 ## Shared MCP app
 

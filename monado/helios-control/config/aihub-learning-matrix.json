@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "name": "helios-aihub-learning-matrix",
+  "state": "candidate-only",
+  "executionMode": "plan-first",
+  "internetPolicy": {
+    "default": "deny",
+    "allowOutboundInternet": "tool-and-policy-scoped",
+    "allowedUseCases": [
+      "approved-package-and-advisory-lookup",
+      "documented-api-reference-lookups",
+      "reproducible-benchmark-baseline-downloads"
+    ],
+    "prohibitedUseCases": [
+      "unreviewed-secret-exfiltration",
+      "raw-conversation-training-ingest",
+      "unsandboxed-code-execution-fetch-and-run"
+    ]
+  },
+  "providerEngines": [
+    {
+      "id": "github-copilot-vscode",
+      "surface": "interactive",
+      "endpoint": "vscode-insiders-session",
+      "bestFor": [
+        "csharp",
+        "fsharp",
+        "cpp",
+        "python"
+      ],
+      "caveats": [
+        "human-review-required-for-privileged-or-cross-tenant-actions"
+      ],
+      "internetCapability": "host-managed"
+    },
+    {
+      "id": "codex-api",
+      "surface": "api",
+      "endpoint": "openai-codex-api",
+      "bestFor": [
+        "csharp",
+        "cpp",
+        "python"
+      ],
+      "caveats": [
+        "requires-approved-api-binding-and-token-governance"
+      ],
+      "internetCapability": "none-by-default"
+    },
+    {
+      "id": "openai-responses",
+      "surface": "api",
+      "endpoint": "openai-responses-api",
+      "bestFor": [
+        "csharp",
+        "fsharp",
+        "cpp",
+        "python"
+      ],
+      "caveats": [
+        "use-sanitized-context-only",
+        "no-plaintext-provider-keys-in-repository"
+      ],
+      "internetCapability": "none-by-default"
+    },
+    {
+      "id": "claude-code",
+      "surface": "local-cli",
+      "endpoint": "anthropic-claude-code",
+      "bestFor": [
+        "csharp",
+        "fsharp",
+        "cpp",
+        "python"
+      ],
+      "caveats": [
+        "bounded-local-worktree-only",
+        "no-unreviewed-mutation-of-main-or-tenant-state"
+      ],
+      "internetCapability": "tool-allowlist-only"
+    },
+    {
+      "id": "claude-api",
+      "surface": "api",
+      "endpoint": "anthropic-messages-api",
+      "bestFor": [
+        "cpp",
+        "python",
+        "fsharp"
+      ],
+      "caveats": [
+        "requires-approved-api-binding-and-token-governance"
+      ],
+      "internetCapability": "none-by-default"
+    },
+    {
+      "id": "microsoft-foundry",
+      "surface": "cloud",
+      "endpoint": "entra-protected-foundry",
+      "bestFor": [
+        "governed-cloud-evaluation",
+        "agent-release-candidates"
+      ],
+      "caveats": [
+        "not-published-without-approval-gates"
+      ],
+      "internetCapability": "managed-by-azure-policy"
+    }
+  ],
+  "languagePlaybooks": {
+    "csharp": {
+      "primaryEngines": [
+        "github-copilot-vscode",
+        "codex-api",
+        "openai-responses"
+      ],
+      "secondaryEngines": [
+        "claude-code",
+        "microsoft-foundry"
+      ],
+      "bestFor": {
+        "architecture": "domain-service-boundaries-and-contract-typing",
+        "implementation": "aspnet-and-sdk-integration-work",
+        "debugging": "nullability-and-async-flow-analysis",
+        "performance": "allocation-hotpath-and-telemetry-checks"
+      },
+      "benchmarks": [
+        "build-time",
+        "test-pass-rate",
+        "allocation-rate",
+        "api-latency-p95"
+      ]
+    },
+    "fsharp": {
+      "primaryEngines": [
+        "openai-responses",
+        "claude-code",
+        "codex-api"
+      ],
+      "secondaryEngines": [
+        "github-copilot-vscode",
+        "claude-api"
+      ],
+      "bestFor": {
+        "architecture": "functional-domain-modeling-and-pipeline-composition",
+        "implementation": "type-safe-workflow-modeling",
+        "debugging": "pattern-match-and-state-transition-tracing",
+        "performance": "allocation-and-tail-recursion-guardrails"
+      },
+      "benchmarks": [
+        "compile-time",
+        "property-test-pass-rate",
+        "pipeline-latency-p95"
+      ]
+    },
+    "cpp": {
+      "primaryEngines": [
+        "claude-code",
+        "codex-api",
+        "claude-api"
+      ],
+      "secondaryEngines": [
+        "openai-responses",
+        "github-copilot-vscode"
+      ],
+      "bestFor": {
+        "architecture": "module-and-abi-boundary-design",
+        "implementation": "memory-safety-and-raii-correctness",
+        "debugging": "undefined-behavior-and-race-condition-triage",
+        "performance": "cpu-cache-and-vectorization-sensitive-tuning"
+      },
+      "benchmarks": [
+        "throughput",
+        "latency-p99",
+        "memory-footprint",
+        "binary-size"
+      ]
+    },
+    "python": {
+      "primaryEngines": [
+        "openai-responses",
+        "claude-code",
+        "codex-api"
+      ],
+      "secondaryEngines": [
+        "github-copilot-vscode",
+        "claude-api"
+      ],
+      "bestFor": {
+        "architecture": "service-and-data-pipeline-composition",
+        "implementation": "automation-and-integration-workflows",
+        "debugging": "traceback-and-data-shape-analysis",
+        "performance": "vectorized-and-concurrency-aware-optimization"
+      },
+      "benchmarks": [
+        "runtime-duration",
+        "memory-peak",
+        "error-rate",
+        "batch-throughput"
+      ]
+    }
+  },
+  "xcoreProfiles": [
+    {
+      "id": "xcore9-inference",
+      "runnerType": "xcore9",
+      "lane": "inference",
+      "maxParallelJobs": 4,
+      "purpose": "low-latency-scoring-and-ranking"
+    },
+    {
+      "id": "xcore9-feature-engineering",
+      "runnerType": "xcore9",
+      "lane": "feature-engineering",
+      "maxParallelJobs": 2,
+      "purpose": "candidate-feature-building-and-validation"
+    },
+    {
+      "id": "xcore9-training",
+      "runnerType": "xcore9",
+      "lane": "training",
+      "maxParallelJobs": 1,
+      "purpose": "sandboxed-candidate-model-improvement"
+    },
+    {
+      "id": "xcore9-evaluation",
+      "runnerType": "xcore9",
+      "lane": "evaluation",
+      "maxParallelJobs": 2,
+      "purpose": "regression-and-safety-scoring"
+    }
+  ],
+  "crossModelParallelism": {
+    "enabled": true,
+    "maxConcurrentLanguageLanes": 4,
+    "maxConcurrentModelCalls": 8,
+    "maxConcurrentCloudCalls": 2,
+    "scheduler": "priority-weighted-round-robin",
+    "backpressure": "queue-depth-and-latency-guardrails"
+  },
+  "benchmarkLearning": {
+    "owner": "xcore-evaluator",
+    "metrics": [
+      "quality",
+      "latency",
+      "safety",
+      "regression",
+      "evidence-completeness",
+      "cost-per-task"
+    ],
+    "gates": [
+      "benchmark-pass-threshold",
+      "regression-budget",
+      "human-approval",
+      "versioned-pull-request"
+    ],
+    "languageCoverage": [
+      "csharp",
+      "fsharp",
+      "cpp",
+      "python"
+    ],
+    "evidenceRetention": "artifact-hash-correlation-id-and-lineage-links"
+  },
+  "safety": {
+    "rawConversationTrainingAllowed": false,
+    "automaticProductionMutation": false,
+    "cloudMutationRequiresApproval": true
+  }
+}

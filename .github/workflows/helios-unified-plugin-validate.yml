@@ -8,6 +8,10 @@ on:
       - ".github/agents/helios-control.agent.md"
       - ".github/instructions/helios-control.instructions.md"
       - "monado/helios-control/appPackage/**"
+      - "monado/helios-control/config/agent-fleet.json"
+      - "monado/helios-control/config/aihub-learning-matrix.json"
+      - "monado/helios-control/config/integrations.json"
+      - "monado/helios-control/config/microsoft-agents.json"
       - "monado/helios-control/docs/UNIFIED_PLUGIN_SETUP.md"
       - "monado/helios-control/src/Helios.Connect.Api/Program.cs"
       - "monado/helios-control/src/Helios.Connect.Api/wwwroot/mcp/**"
@@ -41,6 +45,10 @@ jobs:
             python -m json.tool "plugins/helios-control-fabric/assets/${contract}.json" >/dev/null
           done
           python -m json.tool plugins/helios-control-fabric/assets/microsoft-mcp.template.json >/dev/null
+          python -m json.tool monado/helios-control/config/integrations.json >/dev/null
+          python -m json.tool monado/helios-control/config/agent-fleet.json >/dev/null
+          python -m json.tool monado/helios-control/config/microsoft-agents.json >/dev/null
+          python -m json.tool monado/helios-control/config/aihub-learning-matrix.json >/dev/null
           python -m json.tool monado/helios-control/appPackage/manifest.json >/dev/null
           python -m json.tool monado/helios-control/appPackage/declarativeAgent.json >/dev/null
           python -m json.tool monado/helios-control/appPackage/ai-plugin.json >/dev/null
@@ -57,6 +65,18 @@ jobs:
           python plugins/helios-control-fabric/scripts/helios.py devops-sync --json > /tmp/helios-devops.json
           python plugins/helios-control-fabric/scripts/helios.py runners --json > /tmp/helios-runners.json
           python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev --json > /tmp/helios-edge.json
+          python plugins/helios-control-fabric/scripts/helios.py integration --json > /tmp/helios-integration.json
+          python plugins/helios-control-fabric/scripts/helios.py fleet --json > /tmp/helios-fleet.json
+          python plugins/helios-control-fabric/scripts/helios.py hermes --json > /tmp/helios-hermes.json
+          python plugins/helios-control-fabric/scripts/helios.py xcore9 --json > /tmp/helios-xcore9.json
+          python plugins/helios-control-fabric/scripts/helios.py aihub --json > /tmp/helios-aihub.json
+          python plugins/helios-control-fabric/scripts/helios.py aihub --language csharp --json > /tmp/helios-aihub-csharp.json
+          python plugins/helios-control-fabric/scripts/helios.py code-engine --json > /tmp/helios-code-engine.json
+          python plugins/helios-control-fabric/scripts/helios.py benchmark --json > /tmp/helios-benchmark.json
+          python plugins/helios-control-fabric/scripts/helios.py setup-all --environment azure-dev --json > /tmp/helios-setup-all.json
+          python plugins/helios-control-fabric/scripts/helios.py integration --environment azure-dev --auto-local --json > /tmp/helios-integration-auto.json
+          python plugins/helios-control-fabric/scripts/helios.py aihub --environment azure-dev --auto-local --json > /tmp/helios-aihub-auto.json
+          python plugins/helios-control-fabric/scripts/helios.py setup-all --environment azure-dev --auto-local --json > /tmp/helios-setup-all-auto.json
           python - <<'PY'
           import json
           import os
@@ -65,6 +85,18 @@ jobs:
           devops=json.load(open("/tmp/helios-devops.json"))
           runners=json.load(open("/tmp/helios-runners.json"))
           edge=json.load(open("/tmp/helios-edge.json"))
+          integration=json.load(open("/tmp/helios-integration.json"))
+          fleet=json.load(open("/tmp/helios-fleet.json"))
+          hermes=json.load(open("/tmp/helios-hermes.json"))
+          xcore9=json.load(open("/tmp/helios-xcore9.json"))
+          aihub=json.load(open("/tmp/helios-aihub.json"))
+          aihub_csharp=json.load(open("/tmp/helios-aihub-csharp.json"))
+          code_engine=json.load(open("/tmp/helios-code-engine.json"))
+          benchmark=json.load(open("/tmp/helios-benchmark.json"))
+          setup_all=json.load(open("/tmp/helios-setup-all.json"))
+          integration_auto=json.load(open("/tmp/helios-integration-auto.json"))
+          aihub_auto=json.load(open("/tmp/helios-aihub-auto.json"))
+          setup_all_auto=json.load(open("/tmp/helios-setup-all-auto.json"))
           assert plan["executionMode"] == "plan-only"
           assert "Azure deployment approval" in plan["administratorGates"]
           assert "federationSubject" not in plan
@@ -81,6 +113,33 @@ jobs:
               repository_segment = f"{owner}/{repository}"
           expected_subject = f"repo:{repository_segment}:environment:azure-dev"
           assert oidc["selectedSubject"] == expected_subject
+          assert setup_all["executionMode"] == "plan-only"
+          assert setup_all["environment"] == "azure-dev"
+          assert setup_all["plan"]["executionMode"] == "plan-only"
+          assert setup_all["oidc"]["selectedSubject"] == expected_subject
+          assert setup_all["devopsSync"]["executionMode"] == "plan-only"
+          assert setup_all["runners"]["selfHosted"]["enabled"] is True
+          assert setup_all["edge"]["targetEdge"]["connectivity"] == "Private Link"
+          assert setup_all["integration"]["executionMode"] == "plan-only"
+          assert setup_all["fleet"]["executionMode"] == "plan-only"
+          assert setup_all["hermes"]["executionMode"] == "plan-only"
+          assert setup_all["xcore9"]["executionMode"] == "plan-only"
+          assert setup_all["aihub"]["executionMode"] == "plan-only"
+          assert setup_all["codeEngine"]["executionMode"] == "plan-only"
+          assert setup_all["benchmarking"]["executionMode"] == "plan-only"
+          assert integration_auto["executionMode"] == "automatic-local"
+          assert integration_auto["automation"]["mode"] == "automatic-local"
+          assert aihub_auto["executionMode"] == "automatic-local"
+          assert aihub_auto["automation"]["mode"] == "automatic-local"
+          assert setup_all_auto["executionMode"] == "automatic-local"
+          assert setup_all_auto["integration"]["executionMode"] == "automatic-local"
+          assert setup_all_auto["fleet"]["executionMode"] == "automatic-local"
+          assert setup_all_auto["hermes"]["executionMode"] == "automatic-local"
+          assert setup_all_auto["xcore9"]["executionMode"] == "automatic-local"
+          assert setup_all_auto["aihub"]["executionMode"] == "automatic-local"
+          assert setup_all_auto["codeEngine"]["executionMode"] == "automatic-local"
+          assert setup_all_auto["benchmarking"]["executionMode"] == "automatic-local"
+          assert setup_all_auto["automation"]["mode"] == "automatic-local"
           assert oidc["secretsStoredInGitHub"] is False
           assert devops["azureDevOps"]["readOnly"] is True
           assert devops["synchronization"]["automaticWrites"] is False
@@ -95,6 +154,29 @@ jobs:
           assert len(xcore_group["runners"]) == 4
           assert edge["targetEdge"]["connectivity"] == "Private Link"
           assert edge["automaticApply"] is False
+          assert integration["integrationExecutionMode"] == "dry-run"
+          assert integration["routes"]["enabled"] == 0
+          assert "hermes.training.candidate" in integration["routes"]["hermesEvents"]
+          assert fleet["fleetExecutionMode"] == "dry-run"
+          assert fleet["automaticProviderRuns"] is False
+          assert len(fleet["providers"]) == 4
+          assert hermes["orchestrator"]["id"] == "hermes-orchestrator"
+          assert hermes["learningPolicy"]["automaticProductionMutation"] is False
+          assert xcore9["runnerGroup"]["name"] == "hermes-xcore9-local"
+          assert len(xcore9["runnerGroup"]["runners"]) == 4
+          assert aihub["contract"] == "aihub-learning-matrix"
+          assert set(aihub["languageCoverage"]) == {"csharp", "fsharp", "cpp", "python"}
+          assert "codex-api" in [engine["id"] for engine in aihub["providerEngines"]]
+          assert aihub_csharp["selectedLanguage"] == "csharp"
+          assert "codex-api" in aihub_csharp["playbook"]["primaryEngines"]
+          assert code_engine["model"] == "provider-neutral-mcp-boundary"
+          assert len(code_engine["engines"]) >= 6
+          assert len(code_engine["localFleetEngines"]) == 4
+          assert "codex-api" in [engine["id"] for engine in code_engine["engines"]]
+          assert benchmark["owner"] == "xcore-evaluator"
+          assert "quality" in benchmark["metrics"]
+          assert "benchmark-pass-threshold" in benchmark["gates"]["promotion"]
+          assert benchmark["gates"]["automaticProductionMutation"] is False
           PY
       - name: Enforce safe MCP widget contract
         run: |

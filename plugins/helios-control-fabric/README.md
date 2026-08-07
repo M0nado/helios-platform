@@ -24,19 +24,44 @@ DevOps mirror, or activate external connector delivery.
 ## Start
 
     python plugins/helios-control-fabric/scripts/helios.py doctor
+    python plugins/helios-control-fabric/scripts/helios.py setup-all --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py targets
     python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py devops-sync
     python plugins/helios-control-fabric/scripts/helios.py runners
+    python plugins/helios-control-fabric/scripts/helios.py integration
+    python plugins/helios-control-fabric/scripts/helios.py fleet
+    python plugins/helios-control-fabric/scripts/helios.py hermes
+    python plugins/helios-control-fabric/scripts/helios.py xcore9
+    python plugins/helios-control-fabric/scripts/helios.py aihub --language csharp
+    python plugins/helios-control-fabric/scripts/helios.py code-engine
+    python plugins/helios-control-fabric/scripts/helios.py benchmark
 
 PowerShell:
 
     ./plugins/helios-control-fabric/scripts/helios.ps1 doctor
+    ./plugins/helios-control-fabric/scripts/helios.ps1 setup-all --environment azure-dev
     ./plugins/helios-control-fabric/scripts/helios.ps1 oidc --environment azure-dev
+    ./plugins/helios-control-fabric/scripts/helios.ps1 hermes --json
 
-Every command above is read-only. Add '--json' for machine-readable output.
+Commands above are read-only by default. Add '--json' for machine-readable output.
+`setup-all` returns the full doctor/targets/plan/OIDC/DevOps/runners/edge,
+integration/fleet/Hermes/XCore9/AIHub, code-engine, and benchmarking bundle
+for the selected environment.
+Use the scoped commands for focused contract output:
+`integration`, `fleet`, `hermes`, `xcore9`, `aihub`, `code-engine`, and
+`benchmark`.
+Use '--auto-local --environment <azure-dev|azure-test|azure-prod>' with those
+commands (or `setup-all`) to enable automatic local fleet/agent orchestration
+artifacts and bounded autoscaling targets under
+'monado/helios-control/runtime/fleet/automation/<environment>/'.
+This mode performs local writes only; cloud, tenant, RBAC, deployment, and
+publication mutations remain protected-gate actions.
+Use `aihub --language <csharp|fsharp|cpp|python>` for language-specific
+engine/model guidance across GitHub Copilot, Codex API, OpenAI Responses,
+Claude Code, Claude API, and Foundry.
 The `oidc` command requires an authenticated GitHub CLI session because it
 reads the repository metadata and effective OIDC subject policy. It mirrors the
 Azure onboarding wizard: immutable owner/repository IDs are used when GitHub
