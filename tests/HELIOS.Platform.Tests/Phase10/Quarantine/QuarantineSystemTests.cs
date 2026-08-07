@@ -4,9 +4,49 @@ using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 using Moq;
+using HELIOS.Platform.Phase10.Quarantine;
 
 namespace HELIOS.Platform.Tests.Phase10.Quarantine
 {
+    internal static class QuarantineTestPrerequisites
+    {
+        private const string DestructiveOptInVariable = "HELIOS_ENABLE_DESTRUCTIVE_QUARANTINE_TESTS";
+
+        public static string? GetInitializationSkipReason()
+        {
+            string? optInValue = Environment.GetEnvironmentVariable(DestructiveOptInVariable);
+            if (!string.Equals(optInValue, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Set {DestructiveOptInVariable}=true to run quarantine initialization tests.";
+            }
+
+            if (!Directory.Exists(@"I:\"))
+            {
+                return "Mounted I: drive is required for quarantine initialization tests.";
+            }
+
+            return null;
+        }
+
+        public static bool CanInitializeQuarantineSystem()
+        {
+            return GetInitializationSkipReason() is null;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    internal sealed class RequiresQuarantinePrerequisitesFactAttribute : FactAttribute
+    {
+        public RequiresQuarantinePrerequisitesFactAttribute()
+        {
+            string? skipReason = QuarantineTestPrerequisites.GetInitializationSkipReason();
+            if (skipReason is not null)
+            {
+                Skip = skipReason;
+            }
+        }
+    }
+
     public class QuarantineSystemSetupTests
     {
         private readonly Mock<ILogger> _mockLogger;
@@ -18,7 +58,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             _setup = new QuarantineSystemSetup(_mockLogger.Object);
         }
 
-        [Fact]
+        [RequiresQuarantinePrerequisitesFact]
         public async Task InitializeQuarantineSystemAsync_ShouldCreateFolderStructure()
         {
             // Act
@@ -29,7 +69,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             _mockLogger.Verify(x => x.LogInfo(It.IsAny<string>()), Times.AtLeastOnce);
         }
 
-        [Fact]
+        [RequiresQuarantinePrerequisitesFact]
         public async Task InitializeQuarantineSystemAsync_ShouldGenerateMasterKey()
         {
             // Act
@@ -312,7 +352,8 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
         public QuarantineManagerTests()
         {
             _mockLogger = new Mock<ILogger>();
-            _manager = new QuarantineManager(_mockLogger.Object);
+            string quarantineRootPath = Path.Combine(Path.GetTempPath(), "helios-quarantine-tests", Guid.NewGuid().ToString("N"));
+            _manager = new QuarantineManager(_mockLogger.Object, quarantineRootPath);
         }
 
         [Fact]
@@ -406,7 +447,8 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
         public ThreatIntelligenceUpdaterTests()
         {
             _mockLogger = new Mock<ILogger>();
-            _updater = new ThreatIntelligenceUpdater(_mockLogger.Object);
+            string threatDatabasePath = Path.Combine(Path.GetTempPath(), "helios-threat-intel-tests", Guid.NewGuid().ToString("N"));
+            _updater = new ThreatIntelligenceUpdater(_mockLogger.Object, threatDatabasePath);
         }
 
         [Fact]
@@ -568,6 +610,9 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
 
             _mockService.Setup(x => x.AnalyzeThreatAsync(It.IsAny<string>()))
                 .ReturnsAsync(new ThreatAnalysisReport { IsSuccessful = true, ThreatLevel = "High" });
+
+            _mockService.Setup(x => x.UpdateThreatIntelligenceAsync())
+                .ReturnsAsync(new ThreatIntelligenceUpdateResult { IsSuccessful = true });
 
             // Act
             var result = await _orchestrator.HandleThreatAsync("C:\\malware.exe");

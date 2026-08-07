@@ -36,7 +36,7 @@ namespace HELIOS.Platform.Phase10.Users
             public int ResetCounterMinutes { get; set; } = 30;
         }
 
-        public UserSecurityInitializer(string logPath = null)
+        public UserSecurityInitializer(string? logPath = null)
         {
             _logPath = logPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HELIOS", "Logs", "SecurityInitializer.log");
             EnsureLogDirectory();
@@ -45,7 +45,7 @@ namespace HELIOS.Platform.Phase10.Users
         /// <summary>
         /// Initializes complete security setup for user account.
         /// </summary>
-        public async Task<bool> InitializeUserSecurityAsync(string username, PasswordRequirements requirements = null)
+        public async Task<bool> InitializeUserSecurityAsync(string username, PasswordRequirements? requirements = null)
         {
             try
             {
@@ -161,7 +161,11 @@ namespace HELIOS.Platform.Phase10.Users
                         "PasswordHistory",
                         username + ".json");
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(historyPath));
+                    var historyDirectory = Path.GetDirectoryName(historyPath);
+                    if (!string.IsNullOrWhiteSpace(historyDirectory))
+                    {
+                        Directory.CreateDirectory(historyDirectory);
+                    }
 
                     // Initialize empty password history
                     var history = new List<PasswordHistoryEntry>();
@@ -286,7 +290,11 @@ namespace HELIOS.Platform.Phase10.Users
                         "RecoveryCodes",
                         username + ".txt");
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(recoveryPath));
+                    var recoveryDirectory = Path.GetDirectoryName(recoveryPath);
+                    if (!string.IsNullOrWhiteSpace(recoveryDirectory))
+                    {
+                        Directory.CreateDirectory(recoveryDirectory);
+                    }
 
                     // Generate 10 recovery codes
                     var codes = new List<string>();
@@ -356,12 +364,9 @@ namespace HELIOS.Platform.Phase10.Users
         /// </summary>
         private string GenerateRecoveryCode()
         {
-            using (var rng = new RNGCryptoServiceProvider())
-            {
-                byte[] data = new byte[6];
-                rng.GetBytes(data);
-                return BitConverter.ToString(data).Replace("-", "").ToUpperInvariant();
-            }
+            byte[] data = new byte[6];
+            RandomNumberGenerator.Fill(data);
+            return Convert.ToHexString(data);
         }
 
         /// <summary>
@@ -412,8 +417,8 @@ namespace HELIOS.Platform.Phase10.Users
         {
             try
             {
-                string logDir = Path.GetDirectoryName(_logPath);
-                if (!Directory.Exists(logDir))
+                string? logDir = Path.GetDirectoryName(_logPath);
+                if (!string.IsNullOrWhiteSpace(logDir) && !Directory.Exists(logDir))
                 {
                     Directory.CreateDirectory(logDir);
                 }
@@ -445,13 +450,13 @@ namespace HELIOS.Platform.Phase10.Users
 
         public class PasswordHistoryEntry
         {
-            public string Hash { get; set; }
+            public string Hash { get; set; } = string.Empty;
             public DateTime SetDate { get; set; }
         }
 
         public class SecurityStatus
         {
-            public string Username { get; set; }
+            public string Username { get; set; } = string.Empty;
             public bool HasPasswordRequirements { get; set; }
             public bool Has2FAEnabled { get; set; }
             public bool HasAuditLogging { get; set; }

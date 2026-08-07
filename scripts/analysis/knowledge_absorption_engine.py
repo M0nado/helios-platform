@@ -25,7 +25,7 @@ COMMANDS={
  'merge-prune-branches':['python3 scripts/analysis/recover_missing_branch_work.py --fetch','python3 scripts/analysis/super_branch_unification.py','python3 scripts/analysis/merge_prune_recommendations.py'],
  'learning-atlas':['python3 scripts/analysis/code_learning_atlas.py','python3 scripts/analysis/language_role_optimizer.py','python3 scripts/analysis/module_submodule_test_matrix.py'],
  'super-cloud':['python3 scripts/azure/azure_connection_pipeline.py --stage all','python3 scripts/azure/azure_what_if.py'],
- 'csharp-orchestrator':['dotnet build HELIOS.Platform.slnx'],
+ 'csharp-orchestrator':['dotnet build HELIOS.Platform.sln'],
  'fsharp-analytics':['dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj'],
  'python-aihub':['python3 scripts/integrations/full_integration_matrix.py','python3 scripts/integrations/super_stack_readiness.py']
 }

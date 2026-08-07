@@ -26,7 +26,7 @@ IDE_MESH=[
  {'id':'github-copilot-ide','role':'GitHub Copilot IDE / CLI assistant','bestFor':'inline coding help, PR explanations, command suggestions, paired review with Codex and Azure IDE lanes','safeCommand':'gh extension list | rg copilot || gh extension install github/gh-copilot'},
  {'id':'azure-ide','role':'Azure Portal / Cloud Shell / what-if lane','bestFor':'Key Vault, Bicep, Foundry, Fabric, Purview planning','safeCommand':'python3 scripts/azure/azure_what_if.py'},
  {'id':'chatgpt-api','role':'OpenAI / ChatGPT API bridge','bestFor':'LLM scoring, summaries, tool routing, prompt packs','safeCommand':'python3 scripts/integrations/aihub_connectivity_guide.py'},
- {'id':'visual-studio-winui','role':'C# / WinUI / MAUI IDE lane','bestFor':'typed contracts, GUI shell, Windows app work','safeCommand':'dotnet build HELIOS.Platform.slnx'},
+ {'id':'visual-studio-winui','role':'C# / WinUI / MAUI IDE lane','bestFor':'typed contracts, GUI shell, Windows app work','safeCommand':'dotnet build HELIOS.Platform.sln'},
  {'id':'local-native-ide','role':'C++ native performance lane','bestFor':'hot paths, memory, graph kernels, CMake checks','safeCommand':'cmake -S src/native/HELIOS.Native.Performance -B .build/native'}
 ]
 
@@ -102,7 +102,7 @@ def plan_units(scores,tools,catalog,agents,mode):
   if domain=='github-control': req=['gh','git']; cmds=['gh auth status','gh workflow list','gh codespace list','python3 scripts/agents/branch_fix_agents.py --max-branches 88']
   elif domain=='azure-hybrid': req=['az']; cmds=['az account show','python3 scripts/azure/azure_connection_pipeline.py --stage all','python3 scripts/azure/azure_what_if.py']
   elif domain=='local-compute': req=['cmake','python3']; cmds=['cmake -S src/native/HELIOS.Native.Performance -B .build/native','python3 scripts/agents/agent_fleet_control_catalog.py --mode local-first']
-  elif domain=='csharp-gui': req=['dotnet']; cmds=['dotnet build HELIOS.Platform.slnx','python3 scripts/dashboard/generate-gui.py']
+  elif domain=='csharp-gui': req=['dotnet']; cmds=['dotnet build HELIOS.Platform.sln','python3 scripts/dashboard/generate-gui.py']
   elif domain=='fsharp-learning': req=['dotnet']; cmds=['dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj','python3 scripts/analysis/language_decision_matrix.py']
   elif domain=='python-aihub': req=['python3']; cmds=['python3 scripts/agents/hermes_fleet_readiness.py','python3 scripts/agents/agent_fleet_control_catalog.py']
   else: req=['python3']; cmds=['python3 scripts/analysis/document_code_absorption_ranker.py','python3 scripts/analysis/code_learning_atlas.py']

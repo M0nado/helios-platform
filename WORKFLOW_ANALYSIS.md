@@ -152,7 +152,7 @@ The repository contains C# / .NET 8.0 projects but **NO build or test workflow f
 **Key Projects**:
 - `src/core/HELIOS.Platform/HELIOS.Platform.csproj` (main)
 - `src/tests/HELIOS.Platform.Tests.csproj` (tests)
-- `HELIOS.Platform.slnx` (solution file)
+- `HELIOS.Platform.sln` (solution file)
 
 **Recommended New Workflow**: `dotnet-build.yml`
 
@@ -356,4 +356,3 @@ dotnet build src/core/HELIOS.Platform/ \
 3. Update existing workflows
 4. Test on feature branch
 5. Commit and push to main
-

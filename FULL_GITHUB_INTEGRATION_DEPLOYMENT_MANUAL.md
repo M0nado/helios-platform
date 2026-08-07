@@ -55,7 +55,7 @@ helios-platform/
 │   └── templates/             [Issue, PR templates]
 │
 ├── HELIOS.Platform.csproj     [Project configuration]
-├── HELIOS.Platform.slnx       [Solution file]
+├── HELIOS.Platform.sln        [Solution file]
 ├── nuget.config               [NuGet source configuration]
 ├── README.md                  [Main project documentation]
 └── LICENSE                    [MIT License]

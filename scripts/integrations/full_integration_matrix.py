@@ -12,9 +12,9 @@ DOMAINS = [
     {
         'id': 'csharp-core-gui-server-vault',
         'title': 'C# core + full GUI + server/vault framework',
-        'paths': ['HELIOS.Platform.slnx', 'src/core/HELIOS.Platform', 'src/gui/MonadoBlade.GUI', 'src/Security', 'src/core/HELIOS.Platform/wwwroot'],
+        'paths': ['HELIOS.Platform.sln', 'HELIOS.Platform.slnx', 'src/core/HELIOS.Platform', 'src/gui/MonadoBlade.GUI', 'src/Security', 'src/core/HELIOS.Platform/wwwroot'],
         'tools': ['dotnet'],
-        'commands': ['dotnet build HELIOS.Platform.slnx'],
+        'commands': ['dotnet build HELIOS.Platform.sln'],
         'next': './finish.sh --full',
     },
     {

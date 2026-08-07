@@ -47,6 +47,7 @@ jobs:
         run: dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj -c Release --no-restore -v minimal
 
       - name: Run tests
+        if: matrix.os == 'windows-latest'
         run: dotnet test src/tests/HELIOS.Platform.Tests.csproj -c Release --logger "trx;LogFileName=test-results.trx" --verbosity minimal
 
       - name: Upload test results

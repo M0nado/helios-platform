@@ -22,16 +22,16 @@ namespace HELIOS.Platform.Phase10.Users
         public class ActivityEntry
         {
             public DateTime Timestamp { get; set; }
-            public string EventType { get; set; }
-            public string Description { get; set; }
-            public string IpAddress { get; set; }
+            public string EventType { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public string? IpAddress { get; set; }
             public bool IsAnomalous { get; set; }
-            public string Severity { get; set; } // Low, Medium, High, Critical
+            public string Severity { get; set; } = string.Empty; // Low, Medium, High, Critical
         }
 
         public class UserActivityLog
         {
-            public string Username { get; set; }
+            public string Username { get; set; } = string.Empty;
             public DateTime CreatedDate { get; set; }
             public List<ActivityEntry> Entries { get; set; } = new();
             public int FailedLoginAttempts { get; set; }
@@ -40,7 +40,7 @@ namespace HELIOS.Platform.Phase10.Users
             public int PrivilegeEscalationCount { get; set; }
         }
 
-        public AccountActivityMonitor(string logPath = null, string auditPath = null)
+        public AccountActivityMonitor(string? logPath = null, string? auditPath = null)
         {
             _logPath = logPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HELIOS", "Logs", "ActivityMonitor.log");
             _auditPath = auditPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HELIOS", "Audit");
@@ -83,7 +83,7 @@ namespace HELIOS.Platform.Phase10.Users
         /// <summary>
         /// Logs login attempt.
         /// </summary>
-        public async Task<bool> LogLoginAttemptAsync(string username, bool successful, string ipAddress = null)
+        public async Task<bool> LogLoginAttemptAsync(string username, bool successful, string? ipAddress = null)
         {
             return await Task.Run(() =>
             {
@@ -409,7 +409,7 @@ namespace HELIOS.Platform.Phase10.Users
         /// <summary>
         /// Gets activity log for user.
         /// </summary>
-        public UserActivityLog GetActivityLog(string username)
+        public UserActivityLog? GetActivityLog(string username)
         {
             _activityLogs.TryGetValue(username, out var log);
             return log;
@@ -478,7 +478,7 @@ namespace HELIOS.Platform.Phase10.Users
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        string username = mo["Name"]?.ToString();
+                        string? username = mo["Name"]?.ToString();
                         if (!string.IsNullOrEmpty(username))
                         {
                             GetOrCreateActivityLog(username);
@@ -493,7 +493,11 @@ namespace HELIOS.Platform.Phase10.Users
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(_logPath));
+                var logDirectory = Path.GetDirectoryName(_logPath);
+                if (!string.IsNullOrWhiteSpace(logDirectory))
+                {
+                    Directory.CreateDirectory(logDirectory);
+                }
                 Directory.CreateDirectory(_auditPath);
                 Directory.CreateDirectory(Path.Combine(_auditPath, "Archive"));
             }
@@ -524,7 +528,7 @@ namespace HELIOS.Platform.Phase10.Users
 
         public class ActivityReport
         {
-            public string Username { get; set; }
+            public string Username { get; set; } = string.Empty;
             public DateTime ReportDate { get; set; }
             public DateTime StartDate { get; set; }
             public DateTime EndDate { get; set; }
@@ -534,7 +538,7 @@ namespace HELIOS.Platform.Phase10.Users
             public int PrivilegeEscalationCount { get; set; }
             public int AnomalousActivityCount { get; set; }
             public List<ActivityEntry> Activities { get; set; } = new();
-            public string RiskLevel { get; set; }
+            public string RiskLevel { get; set; } = string.Empty;
         }
     }
 }

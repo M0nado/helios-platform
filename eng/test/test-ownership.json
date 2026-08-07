@@ -112,6 +112,11 @@
       "layer": "windows"
     },
     {
+      "path": "src/tests/IntegrationSmokeTests.cs",
+      "project": "src/tests/HELIOS.Platform.Tests.csproj",
+      "layer": "integration"
+    },
+    {
       "path": "src/tests/Phase3Phase5IntegrationTests.cs",
       "project": "src/tests/HELIOS.Platform.Tests.csproj",
       "layer": "integration"
@@ -133,6 +138,11 @@
     },
     {
       "path": "src/tests/SandboxTests.cs",
+      "project": "src/tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "src/tests/SmokeTests.cs",
       "project": "src/tests/HELIOS.Platform.Tests.csproj",
       "layer": "windows"
     },
@@ -213,6 +223,11 @@
     },
     {
       "path": "tests/HELIOS.Platform.Tests/GlobalIntelligenceServicesTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/HELIOS.Platform.Tests/GlobalUsings.cs",
       "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "windows"
     },

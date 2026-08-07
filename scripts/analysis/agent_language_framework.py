@@ -101,7 +101,7 @@ def engine_records():
  for key,(title,shape) in ENGINE_BLUEPRINTS.items():
   capabilities=(DETAIL_CAPABILITIES.get(key, []) + [f'{v} optimized for {title}' for v in VARIABLES])
   tests={
-   'csharp-core':['dotnet build HELIOS.Platform.slnx','dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj'],
+   'csharp-core':['dotnet build HELIOS.Platform.sln','dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj'],
    'cpp-native':['cmake -S src/native/HELIOS.Native.Performance -B .build/native','cmake --build .build/native'],
    'xcore-agent':['python3 scripts/agents/agent_specialization_matrix.py','python3 scripts/integrations/deep_agent_readiness.py'],
    'fsharp-learning':['dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj'],

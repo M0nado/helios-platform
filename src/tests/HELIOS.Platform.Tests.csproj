@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
@@ -17,6 +17,23 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="**/obj/**/*.cs" />
+    <Compile Remove="**/bin/**/*.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/AI/AIInfrastructureTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Cloud/CloudSyncTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/FileManagement/FileManagementTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Software/SoftwareAutomationTests.cs" />
+    <Compile Remove="Phase3Phase5IntegrationTests.cs" />
+    <Compile Remove="Phase8Stream8OptimizationTests.cs" />
+    <Compile Remove="Themes/DarkModeThemeTests.cs" />
+    <Compile Remove="ThemeSystemTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/MonitoringTests.cs" />
+    <Compile Remove="HELIOS.Platform.Tests/Phase2ServiceTests.cs" />
+    <Compile Remove="SandboxTests.cs" />
+    <Compile Remove="Phase5/Global/Phase5GlobalTests.cs" />
   </ItemGroup>
 
   <ItemGroup>

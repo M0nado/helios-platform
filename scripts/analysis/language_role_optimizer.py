@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / 'config/language-role-strategy.json'
 OUT = ROOT / 'reports/learning/language-role-optimizer.json'
 MD = ROOT / 'reports/learning/language-role-optimizer.md'
-EXT_LANG = {'.cs':'csharp','.csproj':'csharp','.slnx':'csharp','.cpp':'cpp','.c':'cpp','.hpp':'cpp','.h':'cpp','.fs':'fsharp','.fsproj':'fsharp','.py':'python'}
+EXT_LANG = {'.cs':'csharp','.csproj':'csharp','.sln':'csharp','.slnx':'csharp','.cpp':'cpp','.c':'cpp','.hpp':'cpp','.h':'cpp','.fs':'fsharp','.fsproj':'fsharp','.py':'python'}
 TEST_HINTS = ['test', 'tests', 'spec', 'validation']
 MODULE_ROOTS = ['src/core', 'src/gui', 'src/native', 'src/analytics', 'scripts', 'ai-integration', 'infra/azure', '.github/workflows']
 

@@ -22,7 +22,7 @@ namespace HELIOS.Platform.Phase10.Users
 
         public class ProfileState
         {
-            public string Username { get; set; }
+            public string Username { get; set; } = string.Empty;
             public DateTime LastSwitchTime { get; set; }
             public List<ProcessInfo> ActiveProcesses { get; set; } = new();
             public Dictionary<string, string> Settings { get; set; } = new();
@@ -32,11 +32,11 @@ namespace HELIOS.Platform.Phase10.Users
         public class ProcessInfo
         {
             public int ProcessId { get; set; }
-            public string ProcessName { get; set; }
+            public string ProcessName { get; set; } = string.Empty;
             public bool IsService { get; set; }
         }
 
-        public MultiProfileCoordinator(string logPath = null)
+        public MultiProfileCoordinator(string? logPath = null)
         {
             _logPath = logPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HELIOS", "Logs", "ProfileCoordinator.log");
             EnsureLogDirectory();
@@ -54,7 +54,7 @@ namespace HELIOS.Platform.Phase10.Users
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
-                        string username = mo["Name"]?.ToString();
+                        string? username = mo["Name"]?.ToString();
                         if (!string.IsNullOrEmpty(username))
                         {
                             _profileStates[username] = new ProfileState
@@ -184,11 +184,12 @@ namespace HELIOS.Platform.Phase10.Users
                 {
                     foreach (ManagementObject mo in searcher.Get())
                     {
+                        var processName = mo["Name"]?.ToString();
                         processes.Add(new ProcessInfo
                         {
                             ProcessId = Convert.ToInt32(mo["ProcessId"]),
-                            ProcessName = mo["Name"]?.ToString(),
-                            IsService = IsServiceProcess(mo["Name"]?.ToString())
+                            ProcessName = processName ?? string.Empty,
+                            IsService = IsServiceProcess(processName)
                         });
                     }
                 }
@@ -204,8 +205,13 @@ namespace HELIOS.Platform.Phase10.Users
         /// <summary>
         /// Determines if process is a service.
         /// </summary>
-        private bool IsServiceProcess(string processName)
+        private bool IsServiceProcess(string? processName)
         {
+            if (string.IsNullOrEmpty(processName))
+            {
+                return false;
+            }
+
             var serviceProcesses = new[] { "svchost.exe", "services.exe", "lsass.exe", "csrss.exe" };
             return serviceProcesses.Contains(processName, StringComparer.OrdinalIgnoreCase);
         }
@@ -421,7 +427,7 @@ namespace HELIOS.Platform.Phase10.Users
         /// <summary>
         /// Gets profile state for user.
         /// </summary>
-        public ProfileState GetProfileState(string username)
+        public ProfileState? GetProfileState(string username)
         {
             _profileStates.TryGetValue(username, out var state);
             return state;
@@ -464,8 +470,8 @@ namespace HELIOS.Platform.Phase10.Users
         {
             try
             {
-                string logDir = Path.GetDirectoryName(_logPath);
-                if (!Directory.Exists(logDir))
+                string? logDir = Path.GetDirectoryName(_logPath);
+                if (!string.IsNullOrWhiteSpace(logDir) && !Directory.Exists(logDir))
                 {
                     Directory.CreateDirectory(logDir);
                 }

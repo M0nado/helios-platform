@@ -13,7 +13,7 @@ C:\helios-platform-repo\
 │   └── Integration/             # Third-party integrations
 ├── tests/                       # Unit and integration tests
 ├── HELIOS.Platform.csproj       # Project file (net8.0)
-├── HELIOS.Platform.slnx         # Solution
+├── HELIOS.Platform.sln          # Solution
 ├── docs/                        # Documentation
 └── build/                       # Build outputs
 ```

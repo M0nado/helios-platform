@@ -3,7 +3,7 @@
     "csharp-gui": {
       "title": "C# MAUI/WinUI/Super GUI specialist",
       "focus": ["MonadoBlade GUI", "WinUI/MAUI patterns", "view models", "themes", "local command center integration"],
-      "checks": ["dotnet build HELIOS.Platform.slnx", "python3 scripts/dashboard/generate-gui.py"],
+      "checks": ["dotnet build HELIOS.Platform.sln", "python3 scripts/dashboard/generate-gui.py"],
       "paths": ["src/gui/MonadoBlade.GUI", "src/core/HELIOS.Platform/Presentation", "status-site"]
     },
     "csharp-core-vault": {
