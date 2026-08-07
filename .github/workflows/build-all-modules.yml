@@ -135,7 +135,7 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore target dependencies
-        run: dotnet restore "${{ matrix.target }}"
+        run: dotnet restore "${{ matrix.target }}" -p:RestoreLockedMode=false
 
       - name: Build target
         run: dotnet build "${{ matrix.target }}" --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
@@ -151,6 +151,7 @@ jobs:
           dotnet test "${{ matrix.target }}" \
             --configuration Release \
             --no-build \
+            -p:RestoreLockedMode=false \
             --results-directory artifacts/test-results \
             --logger "trx;LogFileName=${TARGET_NAME}.trx"
 

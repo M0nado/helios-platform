@@ -107,7 +107,6 @@ jobs:
           ]
           windows_candidates = [
               "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
-              "src/tests/HELIOS.Platform.Tests.csproj",
           ]
 
           linux_tests = [path for path in linux_candidates if Path(path).exists()]
@@ -176,6 +175,7 @@ jobs:
               'test',
               $project,
               '--configuration', '${{ matrix.variant.configuration }}',
+              '-p:RestoreLockedMode=false',
               '--results-directory', 'test-results',
               '--logger', "trx;LogFileName=$logName",
               '--verbosity', 'minimal'
