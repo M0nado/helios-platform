@@ -27,6 +27,8 @@ public sealed class SetupWizardTests
         Assert.Contains($"$sourceSha = '{SourceSha}'", first.Script);
         Assert.Contains("git -C ./helios-platform checkout --detach $sourceSha", first.Script);
         Assert.Contains("-SourceCommitSha $sourceSha", first.Script);
+        Assert.Contains("$allowedClientIds = if ($env:HELIOS_ALLOWED_CLIENT_IDS)", first.Script);
+        Assert.Contains("-AllowedClientIds $allowedClientIds", first.Script);
         Assert.DoesNotContain("git clone https://github.com", first.Script);
     }
 

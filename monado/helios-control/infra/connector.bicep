@@ -23,6 +23,11 @@ param entraTenantId string = subscription().tenantId
 @description('Object ID of the user or service principal allowed to call the connector.')
 @minLength(1)
 param allowedPrincipalObjectId string
+
+@description('Comma-separated OAuth client ID allowlist enforced against azp/appid claims.')
+@minLength(36)
+param allowedClientIds string
+
 @description('Optional canonical HTTPS origin exposed to Edge, such as a reviewed Front Door or custom DNS hostname. It must be an origin with no path, query, fragment, or trailing slash. Leave empty to use the Container Apps FQDN.')
 param publicBaseUrl string = ''
 @description('Exact Git commit used to build the immutable connector image and pin generated setup scripts.')
@@ -52,7 +57,7 @@ var validatedPublicHostname = publicBaseUrlIsOrigin
   ? (empty(publicBaseUrl) ? defaultPublicHostname : suppliedPublicHostname)
   : fail('publicBaseUrl must be one HTTPS origin without a path, query, fragment, or trailing slash.')
 var validatedPublicBaseUrl = 'https://${validatedPublicHostname}'
-var teamsSsoApplicationIdUri = 'api://${validatedPublicHostname}/${entraClientId}'
+var connectorApplicationIdUri = 'api://${entraClientId}'
 var digestParts = split(toLower(containerImage), '@sha256:')
 var containerImageDigest = length(digestParts) == 2 ? digestParts[1] : ''
 var previewPlaceholderDigest = '0000000000000000000000000000000000000000000000000000000000000000'
@@ -105,6 +110,17 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     sku: { family: 'A', name: 'standard' }
     publicNetworkAccess: 'Enabled'
     networkAcls: { bypass: 'AzureServices', defaultAction: 'Deny' }
+  }
+}
+
+var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
+resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(vault.id, identity.properties.principalId, keyVaultSecretsUserRoleId)
+  scope: vault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+    principalId: identity.properties.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -192,6 +208,13 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
         transport: 'auto'
         allowInsecure: false
       }
+      secrets: [
+        {
+          name: 'helios-openai-api-key'
+          keyVaultUrl: 'https://${vault.name}.vault.azure.net/secrets/helios-openai-api-key'
+          identity: identity.id
+        }
+      ]
       registries: [{
         server: containerRegistryServer
         identity: identity.id
@@ -207,9 +230,12 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
           { name: 'HELIOS_CLOUD_RUNTIME_ONLY', value: 'true' }
           { name: 'HELIOS_LOCAL_RUNTIME_ALLOWED', value: 'false' }
           { name: 'HELIOS_ENTRA_CLIENT_ID', value: entraClientId }
+          { name: 'HELIOS_ALLOWED_CLIENT_IDS', value: allowedClientIds }
           { name: 'HELIOS_SOURCE_SHA', value: toLower(sourceCommitSha) }
           { name: 'HELIOS_PUBLIC_BASE_URL', value: validatedPublicBaseUrl }
-          { name: 'HELIOS_ENTRA_APPLICATION_ID_URI', value: teamsSsoApplicationIdUri }
+          { name: 'HELIOS_ENTRA_APPLICATION_ID_URI', value: connectorApplicationIdUri }
+          { name: 'HELIOS_DEPLOY_ENABLED', value: 'true' }
+          { name: 'HELIOS_CONNECTOR_DELIVERY_ENABLED', value: 'true' }
           { name: 'AZURE_TENANT_ID', value: entraTenantId }
           { name: 'AZURE_SUBSCRIPTION_ID', value: subscription().subscriptionId }
           { name: 'AZURE_RESOURCE_GROUP', value: resourceGroup().name }
@@ -218,6 +244,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
           { name: 'HELIOS_COSMOS_DATABASE', value: controlDatabase.name }
           { name: 'HELIOS_COSMOS_CONTAINER', value: controlRuns.name }
           { name: 'HELIOS_CONNECTOR_DELIVERY_MODE', value: 'dry-run' }
+          { name: 'OPENAI_API_KEY', secretRef: 'helios-openai-api-key' }
           { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
         ]
         resources: { cpu: json('0.5'), memory: '1Gi' }
@@ -276,7 +303,7 @@ resource apiAuth 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
           openIdIssuer: 'https://login.microsoftonline.com/${entraTenantId}/v2.0'
         }
         validation: {
-          allowedAudiences: [ teamsSsoApplicationIdUri ]
+          allowedAudiences: [ entraClientId ]
           defaultAuthorizationPolicy: {
             allowedPrincipals: { identities: [ allowedPrincipalObjectId ] }
           }
@@ -292,7 +319,7 @@ output containerAppName string = api.name
 output connectorUrl string = 'https://${api.properties.configuration.ingress.fqdn}'
 output connectorMcpUrl string = 'https://${api.properties.configuration.ingress.fqdn}/mcp'
 output connectorEntraClientId string = entraClientId
-output connectorEntraApplicationIdUri string = teamsSsoApplicationIdUri
+output connectorEntraApplicationIdUri string = connectorApplicationIdUri
 output connectorEntraTenantId string = entraTenantId
 output keyVaultName string = vault.name
 output managedIdentityClientId string = identity.properties.clientId

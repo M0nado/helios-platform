@@ -37,6 +37,10 @@ param entraTenantId string = subscription().tenantId
 @minLength(1)
 param allowedPrincipalObjectId string
 
+@description('Comma-separated OAuth client ID allowlist enforced against azp/appid claims.')
+@minLength(36)
+param allowedClientIds string
+
 @description('Optional canonical HTTPS origin for Edge/custom DNS. Leave empty to use the Container Apps FQDN.')
 param publicBaseUrl string = ''
 
@@ -62,6 +66,7 @@ module connector './connector.bicep' = {
     entraClientId: entraClientId
     entraTenantId: entraTenantId
     allowedPrincipalObjectId: allowedPrincipalObjectId
+    allowedClientIds: allowedClientIds
     publicBaseUrl: publicBaseUrl
     sourceCommitSha: sourceCommitSha
     commonTags: commonTags

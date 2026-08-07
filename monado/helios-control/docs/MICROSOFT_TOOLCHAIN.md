@@ -35,19 +35,20 @@ agents use managed identity. Key Vault is used only for services that cannot use
 federation. PATs, client secrets, raw tokens, and recovery material never enter
 source control or agent memory.
 
-The Microsoft 365/Teams tab uses TeamsJS SSO with a domain-bound Entra
-Application ID URI (`api://<PUBLIC_HOSTNAME>/<client-id>`) and delegated
-`access_as_user`. The Container Apps auth policy accepts that audience, while
-the tab sends the short-lived token only in the request Authorization header.
+The Microsoft 365/Teams tab uses TeamsJS SSO with Entra Application ID URI
+`api://<client-id>` and delegated `access_as_user`. The Container Apps auth
+policy requires `aud=<client-id>` plus an allowed `azp`/`appid` client ID,
+while the tab sends the short-lived token only in the request Authorization
+header.
 A user-initiated same-origin popup is the fallback for interactive consent; no
 token is returned through the popup result.
 
-The deployed Bicep currently creates an empty, RBAC-enabled Key Vault but does
-not grant the connector access to provider secrets or map any secret into the
-Container App. Online OpenAI is therefore disabled and fails closed. Enabling it
-requires an administrator-reviewed Key Vault secret/reference, managed-identity
-RBAC, explicit model selection, and a new protected what-if/deployment; repository
-scripts never accept or persist a plaintext provider key.
+The deployed Bicep creates an RBAC-enabled Key Vault, grants the runtime
+identity Key Vault Secrets User, and wires the `helios-openai-api-key` secret
+reference into `OPENAI_API_KEY`. Automation never writes secret values, so
+online OpenAI still fails closed until an administrator provisions that secret
+and completes the reviewed deployment path. Repository scripts never accept or
+persist a plaintext provider key.
 
 Run `scripts/Invoke-HeliosCliMatrix.ps1` to check independent CLI installations
 in parallel. The command reports versions only; optional authentication probes

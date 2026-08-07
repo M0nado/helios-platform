@@ -530,35 +530,53 @@ static object BuildMcpAuthenticationToolResult(HttpContext context) => new
 
 static string? GetMcpDelegatedScope(IConfiguration configuration)
 {
-    var applicationIdUri = configuration["HELIOS_ENTRA_APPLICATION_ID_URI"]?.Trim().TrimEnd('/');
-    if (!string.IsNullOrWhiteSpace(applicationIdUri))
-    {
-        var expectedApplicationIdUri = GetExpectedApplicationIdUri(configuration);
-        if (expectedApplicationIdUri is null ||
-            !string.Equals(applicationIdUri, expectedApplicationIdUri, StringComparison.OrdinalIgnoreCase))
-            return null;
-    }
-    else
-    {
-        var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"];
-        if (string.IsNullOrWhiteSpace(clientId)) return null;
-        applicationIdUri = $"api://{clientId}";
-    }
-    return $"{applicationIdUri}/access_as_user";
+    var expectedApplicationIdUri = GetExpectedApplicationIdUri(configuration);
+    if (expectedApplicationIdUri is null) return null;
+
+    var configuredApplicationIdUri = configuration["HELIOS_ENTRA_APPLICATION_ID_URI"]?.Trim().TrimEnd('/');
+    if (!string.IsNullOrWhiteSpace(configuredApplicationIdUri) &&
+        !string.Equals(configuredApplicationIdUri, expectedApplicationIdUri, StringComparison.OrdinalIgnoreCase))
+        return null;
+
+    return $"{expectedApplicationIdUri}/access_as_user";
 }
 
 static string? GetExpectedApplicationIdUri(IConfiguration configuration)
 {
-    var clientId = configuration["HELIOS_ENTRA_CLIENT_ID"];
-    var publicBaseUrl = configuration["HELIOS_PUBLIC_BASE_URL"];
-    if (string.IsNullOrWhiteSpace(clientId) ||
-        !Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out var publicUri) ||
-        publicUri.Scheme != Uri.UriSchemeHttps ||
-        publicUri.AbsolutePath.Trim('/') != string.Empty ||
-        !string.IsNullOrEmpty(publicUri.Query) ||
-        !string.IsNullOrEmpty(publicUri.Fragment))
-        return null;
-    return $"api://{publicUri.DnsSafeHost.ToLowerInvariant()}/{clientId}";
+    return TryGetNormalizedGuid(configuration["HELIOS_ENTRA_CLIENT_ID"], out var clientId)
+        ? $"api://{clientId}"
+        : null;
+}
+
+static bool TryGetAllowedClientIds(IConfiguration configuration, out HashSet<string> allowedClientIds)
+{
+    allowedClientIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    var configured = configuration["HELIOS_ALLOWED_CLIENT_IDS"];
+    if (string.IsNullOrWhiteSpace(configured)) return false;
+
+    var values = configured.Split(
+        new[] { ',', ';', ' ', '\t', '\r', '\n' },
+        StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (values.Length == 0) return false;
+
+    foreach (var value in values)
+    {
+        if (!TryGetNormalizedGuid(value, out var clientId))
+        {
+            allowedClientIds.Clear();
+            return false;
+        }
+        allowedClientIds.Add(clientId);
+    }
+    return allowedClientIds.Count > 0;
+}
+
+static bool TryGetNormalizedGuid(string? candidate, out string normalizedGuid)
+{
+    normalizedGuid = string.Empty;
+    if (!Guid.TryParse(candidate, out var parsedGuid)) return false;
+    normalizedGuid = parsedGuid.ToString("D").ToLowerInvariant();
+    return true;
 }
 
 static string GetMcpPublicOrigin(HttpContext context)
@@ -778,7 +796,8 @@ static object BuildToolResult(JsonElement root)
 
 static bool IsConnectorAuthorized(HttpContext context)
 {
-    var required = RequiresEntraAuthorization(context.RequestServices.GetRequiredService<IConfiguration>());
+    var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+    var required = RequiresEntraAuthorization(configuration);
     if (!required) return true;
     if (string.IsNullOrWhiteSpace(context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault())) return false;
 
@@ -786,10 +805,12 @@ static bool IsConnectorAuthorized(HttpContext context)
     if (string.IsNullOrWhiteSpace(encodedPrincipal) || encodedPrincipal.Length > 32_768) return false;
     try
     {
-        var expectedAudience = GetExpectedApplicationIdUri(context.RequestServices.GetRequiredService<IConfiguration>());
-        if (expectedAudience is null) return false;
+        if (!TryGetNormalizedGuid(configuration["HELIOS_ENTRA_CLIENT_ID"], out var expectedAudienceClientId)) return false;
+        if (!TryGetAllowedClientIds(configuration, out var allowedClientIds)) return false;
+
         var hasRequiredAudience = false;
         var hasRequiredScope = false;
+        var hasAllowedClient = false;
         using var principal = JsonDocument.Parse(Convert.FromBase64String(encodedPrincipal));
         if (!principal.RootElement.TryGetProperty("claims", out var claims) ||
             claims.ValueKind != JsonValueKind.Array)
@@ -804,13 +825,22 @@ static bool IsConnectorAuthorized(HttpContext context)
             var value = valueValue.GetString();
             if (string.Equals(type, "aud", StringComparison.OrdinalIgnoreCase) ||
                 (type?.EndsWith("/audience", StringComparison.OrdinalIgnoreCase) ?? false))
-                hasRequiredAudience |= string.Equals(value, expectedAudience, StringComparison.OrdinalIgnoreCase);
+                hasRequiredAudience |=
+                    TryGetNormalizedGuid(value, out var audience) &&
+                    string.Equals(audience, expectedAudienceClientId, StringComparison.OrdinalIgnoreCase);
             if (string.Equals(type, "scp", StringComparison.OrdinalIgnoreCase) ||
                 (type?.EndsWith("/scope", StringComparison.OrdinalIgnoreCase) ?? false))
                 hasRequiredScope |= value?.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Contains("access_as_user", StringComparer.Ordinal) == true;
+            if (string.Equals(type, "azp", StringComparison.OrdinalIgnoreCase) ||
+                (type?.EndsWith("/azp", StringComparison.OrdinalIgnoreCase) ?? false) ||
+                string.Equals(type, "appid", StringComparison.OrdinalIgnoreCase) ||
+                (type?.EndsWith("/appid", StringComparison.OrdinalIgnoreCase) ?? false))
+                hasAllowedClient |=
+                    TryGetNormalizedGuid(value, out var authorizedClientId) &&
+                    allowedClientIds.Contains(authorizedClientId);
         }
-        return hasRequiredAudience && hasRequiredScope;
+        return hasRequiredAudience && hasRequiredScope && hasAllowedClient;
     }
     catch (FormatException) { }
     catch (JsonException) { }
@@ -842,6 +872,7 @@ static async Task<IResult> BuildReadinessResultAsync(
         "AZURE_RESOURCE_GROUP",
         "AZURE_CLIENT_ID",
         "HELIOS_ENTRA_CLIENT_ID",
+        "HELIOS_ALLOWED_CLIENT_IDS",
         "HELIOS_ENTRA_APPLICATION_ID_URI",
         "HELIOS_PUBLIC_BASE_URL",
         "HELIOS_COSMOS_ENDPOINT"
@@ -856,13 +887,22 @@ static async Task<IResult> BuildReadinessResultAsync(
             statusCode: StatusCodes.Status503ServiceUnavailable);
 
     var expectedApplicationIdUri = GetExpectedApplicationIdUri(configuration);
-    if (expectedApplicationIdUri is null ||
-        !string.Equals(
+    if (expectedApplicationIdUri is null)
+        return Results.Json(
+            new { service = "helios-connect", status = "not-ready", invalidConfiguration = "HELIOS_ENTRA_CLIENT_ID" },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    if (!string.Equals(
             configuration["HELIOS_ENTRA_APPLICATION_ID_URI"]?.Trim().TrimEnd('/'),
             expectedApplicationIdUri,
             StringComparison.OrdinalIgnoreCase))
         return Results.Json(
             new { service = "helios-connect", status = "not-ready", invalidConfiguration = "HELIOS_ENTRA_APPLICATION_ID_URI" },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    if (!TryGetAllowedClientIds(configuration, out _))
+        return Results.Json(
+            new { service = "helios-connect", status = "not-ready", invalidConfiguration = "HELIOS_ALLOWED_CLIENT_IDS" },
             statusCode: StatusCodes.Status503ServiceUnavailable);
 
     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -1240,7 +1280,9 @@ static HeliosSystemRecord[] BuildHeliosSystemRecords(IConfiguration configuratio
         "AZURE_SUBSCRIPTION_ID",
         "AZURE_RESOURCE_GROUP",
         "AZURE_CLIENT_ID",
-        "HELIOS_ENTRA_CLIENT_ID"
+        "HELIOS_ENTRA_CLIENT_ID",
+        "HELIOS_ENTRA_APPLICATION_ID_URI",
+        "HELIOS_ALLOWED_CLIENT_IDS"
     }.All(key => !string.IsNullOrWhiteSpace(configuration[key]));
     var azureLive = azureConfigured &&
         IsEnabled(configuration["HELIOS_DEPLOY_ENABLED"]) &&

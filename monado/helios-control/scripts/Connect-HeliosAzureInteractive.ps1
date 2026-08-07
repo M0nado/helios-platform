@@ -20,7 +20,7 @@ intentionally available only through the two-stage protected GitHub workflow.
 ./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Configure -EnvironmentName dev -ContainerRegistryName heliosdev12345 -RequiredReviewerId 12345678
 
 .EXAMPLE
-./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Publish -EnvironmentName dev -ContainerRegistryName heliosdev12345
+./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Publish -EnvironmentName dev -ContainerRegistryName heliosdev12345 -RequiredReviewerId 12345678
 #>
 
 [CmdletBinding()]
@@ -38,6 +38,7 @@ param(
     [string] $ImageReference,
     [string] $ContainerRegistryName,
     [string] $AllowedPrincipalObjectId,
+    [string] $AllowedClientIds,
 
     [string] $GitHubOwner = 'M0nado',
     [string] $GitHubRepository = 'helios-platform',
@@ -58,6 +59,7 @@ $script:AzPath = $null
 $script:GhPath = $null
 $script:PlaceholderClientId = '00000000-0000-0000-0000-000000000000'
 $script:PlaceholderDigest = 'sha256:0000000000000000000000000000000000000000000000000000000000000000'
+$script:AzureCliClientId = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
 $script:ContributorRole = [pscustomobject]@{ Name = 'Contributor'; Id = 'b24988ac-6180-42a0-ab88-20f7382dd24c' }
 $script:ReaderRole = [pscustomobject]@{ Name = 'Reader'; Id = 'acdd72a7-3385-48ef-bd42-f606fba81ae7' }
 $script:RequiredProviders = @(
@@ -245,6 +247,35 @@ function Test-GuidValue {
 
     $parsed = [guid]::Empty
     return [guid]::TryParse($Value, [ref] $parsed)
+}
+
+function Resolve-AllowedOAuthClientIds {
+    param([AllowEmptyString()] [string] $ConfiguredClientIds)
+
+    $resolved = [System.Collections.Generic.List[string]]::new()
+    $defaultClientId = ([guid] $script:AzureCliClientId).ToString().ToLowerInvariant()
+    [void] $resolved.Add($defaultClientId)
+
+    if (-not [string]::IsNullOrWhiteSpace($ConfiguredClientIds)) {
+        $candidates = $ConfiguredClientIds.Split(
+            [char[]] @(',', ';', ' ', "`t", "`r", "`n"),
+            [System.StringSplitOptions]::RemoveEmptyEntries)
+        foreach ($candidate in $candidates) {
+            $trimmed = $candidate.Trim()
+            if (-not (Test-GuidValue $trimmed)) {
+                throw "AllowedClientIds contains '$trimmed', which is not a GUID client ID."
+            }
+            $normalized = ([guid] $trimmed).ToString().ToLowerInvariant()
+            if (-not $resolved.Contains($normalized)) {
+                [void] $resolved.Add($normalized)
+            }
+        }
+    }
+
+    if ($resolved.Count -eq 0) {
+        throw 'At least one OAuth client ID must be allowlisted.'
+    }
+    return [string]::Join(',', $resolved)
 }
 
 function Read-Selection {
@@ -517,7 +548,6 @@ function Ensure-ServicePrincipal {
 function Ensure-EntraApplication {
     param(
         [Parameter(Mandatory)] [string] $DisplayName,
-        [string] $ApiHostname,
         [switch] $ExposeDelegatedScope
     )
 
@@ -554,10 +584,7 @@ function Ensure-EntraApplication {
     [void] (Ensure-ServicePrincipal -ApplicationId $application.appId -DisplayName $DisplayName)
 
     if ($ExposeDelegatedScope) {
-        if ($ApiHostname -and [Uri]::CheckHostName($ApiHostname) -ne [UriHostNameType]::Dns) {
-            throw "ApiHostname '$ApiHostname' is not a valid DNS hostname."
-        }
-        $requiredIdentifierUri = if ($ApiHostname) { "api://$($ApiHostname.ToLowerInvariant())/$($application.appId)" } else { "api://$($application.appId)" }
+        $requiredIdentifierUri = "api://$($application.appId)"
         $existingScopes = @($application.api.oauth2PermissionScopes)
         $matchingScopes = @($existingScopes | Where-Object value -eq 'access_as_user')
         if ($matchingScopes.Count -gt 1) {
@@ -627,7 +654,7 @@ function Ensure-EntraApplication {
         # Microsoft documents Azure CLI as a governed public client for this
         # delegated-flow pattern. Preauthorization avoids AADSTS65001 while
         # Easy Auth still limits callers to the configured Entra principal.
-        $azureCliClientId = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
+        $azureCliClientId = $script:AzureCliClientId
         $scopeId = [string] $finalScopes[0].id
         $preauthorized = @($application.api.preAuthorizedApplications)
         $azureCliEntry = $preauthorized | Where-Object appId -eq $azureCliClientId | Select-Object -First 1
@@ -1657,6 +1684,7 @@ function Invoke-BicepPreview {
         [Parameter(Mandatory)] [pscustomobject] $Context,
         [Parameter(Mandatory)] [string] $ResourceGroupName,
         [Parameter(Mandatory)] [string] $ConnectorClientId,
+        [Parameter(Mandatory)] [string] $AllowedClientIdsValue,
         [Parameter(Mandatory)] [string] $PrincipalObjectId,
         [Parameter(Mandatory)] [string] $ImmutableImage,
         [Parameter(Mandatory)] [string] $RegistryName,
@@ -1671,6 +1699,7 @@ function Invoke-BicepPreview {
         "allowPreviewPlaceholder=$($isPreviewPlaceholder.ToString().ToLowerInvariant())",
         "entraClientId=$ConnectorClientId",
         "entraTenantId=$($Context.TenantId)",
+        "allowedClientIds=$AllowedClientIdsValue",
         "allowedPrincipalObjectId=$PrincipalObjectId"
     )
 
@@ -1773,6 +1802,7 @@ try {
     }
 
     $principalObjectId = Resolve-AllowedPrincipalObjectId
+    $resolvedAllowedClientIds = Resolve-AllowedOAuthClientIds -ConfiguredClientIds $AllowedClientIds
     $selectedGroup = Select-ResourceGroup -Context $azureContext
     $selectedResourceGroup = [string] $selectedGroup.name
     $selectedLocation = [string] $selectedGroup.location
@@ -1900,11 +1930,7 @@ try {
 
     $entraContext = Get-ExistingEntraContext
     if ($Mode -eq 'Configure') {
-        $deployedApiHostname = Resolve-DeployedApiHostname -Context $azureContext -ResourceGroupName $selectedResourceGroup
-        $connectorApplication = Ensure-EntraApplication -DisplayName $ConnectorAppName -ApiHostname $deployedApiHostname -ExposeDelegatedScope
-        if (-not $deployedApiHostname) {
-            Write-Warning 'The Container App is not deployed yet. Re-run Configure after deployment to bind the domain-qualified Teams SSO Application ID URI.'
-        }
+        $connectorApplication = Ensure-EntraApplication -DisplayName $ConnectorAppName -ExposeDelegatedScope
         $githubApplication = Ensure-EntraApplication -DisplayName $GitHubOidcAppName
         $runtimeIdentity = Ensure-RuntimeManagedIdentity `
             -Context $azureContext `
@@ -1921,6 +1947,7 @@ try {
             AZURE_RESOURCE_GROUP = $selectedResourceGroup
             HELIOS_CONTAINER_REGISTRY_NAME = $resolvedRegistryName
             HELIOS_ENTRA_CLIENT_ID = [string] $connectorApplication.appId
+            HELIOS_ALLOWED_CLIENT_IDS = $resolvedAllowedClientIds
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID = $principalObjectId
             HELIOS_REQUIRED_REVIEWER_ID = $RequiredReviewerId
             HELIOS_OIDC_SUBJECT = $githubOidcTrust.Subject
@@ -1960,6 +1987,7 @@ try {
     Write-Host "  container registry: $resolvedRegistryName"
     Write-Host "  environment: $EnvironmentName"
     Write-Host "  GitHub trust environment: $GitHubEnvironment"
+    Write-Host "  allowed OAuth client IDs: $resolvedAllowedClientIds"
     Write-Host '  runtime: Azure Container Apps only; local runtime disabled'
 
     if ($Mode -eq 'Publish') {
@@ -1981,6 +2009,7 @@ try {
             -Context $azureContext `
             -ResourceGroupName $selectedResourceGroup `
             -ConnectorClientId $connectorClientId `
+            -AllowedClientIdsValue $resolvedAllowedClientIds `
             -PrincipalObjectId $principalObjectId `
             -ImmutableImage $immutableImage `
             -RegistryName $resolvedRegistryName `

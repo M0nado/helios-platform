@@ -62,29 +62,34 @@ navigation API and an explicit HTTPS redirect allowlist.
 The server exposes initialize, tool/resource discovery, and the declared UI
 resource before account linking so ChatGPT and Copilot can discover the app.
 Every tool descriptor declares its OAuth 'securitySchemes'; tool execution
-requires the origin-bound Entra scope
-'api://<approved-hostname>/<client-id>/access_as_user'. An unauthenticated or
-incorrectly scoped tool call returns '_meta["mcp/www_authenticate"]' with the
-RFC protected-resource challenge. Typed app tools declare 'outputSchema' and
-return matching 'structuredContent'.
+requires the Entra delegated scope
+'api://<client-id>/access_as_user', `aud=<client-id>`, and an allowed
+`azp`/`appid` claim from `HELIOS_ALLOWED_CLIENT_IDS`. Anonymous `tools/list`
+remains public discovery; unauthenticated tool execution returns
+'_meta["mcp/www_authenticate"]' with the RFC protected-resource challenge.
+Typed app tools declare 'outputSchema' and return matching
+'structuredContent'.
 
 ## Connect Azure and GitHub OIDC
 
 1. Select the Azure tenant, subscription, resource group, and Foundry project.
 2. Register the exact Entra application ID URI
-   'api://<approved-hostname>/<client-id>' and delegated scope 'access_as_user'.
+   'api://<client-id>' and delegated scope 'access_as_user'.
 3. Verify the protected-resource metadata at
    '<approved-origin>/.well-known/oauth-protected-resource/mcp'.
 4. Run 'scripts/Connect-HeliosAzureInteractive.ps1'.
 5. Create the protected GitHub 'azure-dev' environment.
-6. Grant workflow permission 'id-token: write' and 'contents: read'.
+6. Grant workflow permissions 'id-token: write', 'contents: read', and
+   'actions: read'.
 7. Configure issuer 'https://token.actions.githubusercontent.com', audience
    'api://AzureADTokenExchange', and exact subject
    'repo:M0nado/helios-platform:environment:azure-dev'.
 8. Assign least-privilege RBAC at the reviewed scope.
 9. Publish a digest-pinned immutable image.
-10. Review the exact Bicep, parameter, image, and what-if hashes.
-11. Approve deployment separately.
+10. Run `helios-cloud-deploy` with `mode=what-if` and review exact Bicep,
+    parameter, image, and what-if hashes.
+11. Run `helios-cloud-deploy` with `mode=deploy`,
+    `reviewedRunId=<what-if-run-id>`, and `confirmDeployment=DEPLOY`.
 
 No client secret is required for the GitHub-to-Azure path.
 
@@ -110,8 +115,8 @@ After '/health/ready' succeeds:
 1. Set 'HELIOS_AZURE_CONNECTOR_URL' to the approved HTTPS origin.
 2. Install or refresh the repository plugin.
 3. Add the same '<origin>/mcp' endpoint as an internal ChatGPT app.
-4. Complete Entra authorization for the exact origin-bound 'access_as_user'
-   scope.
+4. Complete Entra authorization for the exact
+   'api://<client-id>/access_as_user' scope and allowed client application.
 5. Verify public initialize/discovery, authenticated 'search' and 'fetch',
    resource read, Monado rendering, and the auth challenge on an unlinked tool
    call.
