@@ -40,7 +40,7 @@ def main() -> int:
 
         existing = command(
             ["gh", "issue", "list", *repo_args, "--state", "all", "--search", marker,
-             "--json", "number", "--jq", "length"], capture=True
+             "--json", "number", "--jq", "length"], capture=TrueWhen a different issue, body, or comment merely references a backlog marker such as [ORG-001], this broad search can return that issue and make int(existing) nonzero, causing the script to skip creation even when the canonical backlog issue is absent. The CLI documents --search as a general issue-search query, and GitHub's [issue-search documentation](https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests) explains that unqualified terms search issue content rather than exact titles; retrieve candidate titles and compare the complete generated title exactly before declaring the task present.
         )
         if int(existing):
             print("    already exists")
