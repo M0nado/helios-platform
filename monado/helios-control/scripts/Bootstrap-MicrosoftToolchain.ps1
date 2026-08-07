@@ -8,9 +8,14 @@ $ErrorActionPreference = 'Stop'
 $required = @('az', 'azd', 'dotnet', 'gh', 'pwsh', 'docker', 'node', 'npm', 'jq')
 $optional = @('func', 'pac', 'atk', 'claude', 'code-insiders')
 $report = [ordered]@{ mode = $Mode; required = @(); optional = @(); ready = $true }
+$azdFallbacks = @('C:\Program Files\Azure Dev CLI\azd.exe')
+if ($env:LOCALAPPDATA) {
+    $azdFallbacks = @((Join-Path $env:LOCALAPPDATA 'Programs\Azure Dev CLI\azd.exe')) + $azdFallbacks
+}
+
 $fallbacks = @{
     az     = @('C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd', 'C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\wbin\az.cmd')
-    azd    = @((Join-Path $env:LOCALAPPDATA 'Programs\Azure Dev CLI\azd.exe'), 'C:\Program Files\Azure Dev CLI\azd.exe')
+    azd    = $azdFallbacks
     dotnet = @('C:\Program Files\dotnet\dotnet.exe', 'C:\Program Files (x86)\dotnet\dotnet.exe')
     pwsh   = @('C:\Program Files\PowerShell\7\pwsh.exe', 'C:\Program Files\PowerShell\7-preview\pwsh.exe')
     docker = @('C:\Program Files\Docker\Docker\resources\bin\docker.exe')

@@ -68,6 +68,7 @@ WINDOWS_TOOL_FALLBACKS: dict[str, tuple[str, ...]] = {
 }
 
 HELIOS_CLI_RELATIVE_PATH = "plugins/helios-control-fabric/scripts/helios.py"
+HELIOS_PLAN_COMMAND_PREFIX = f"python {HELIOS_CLI_RELATIVE_PATH}"
 
 ENVIRONMENT_KEYS = (
     "HELIOS_AZURE_CONNECTOR_URL",
@@ -108,6 +109,14 @@ def resolve_command_path(command: str) -> str | None:
     return None
 
 
+def tool_probe_command(path: str, arguments: tuple[str, ...]) -> list[str]:
+    if os.name == "nt" and Path(path).suffix.lower() in {".cmd", ".bat"}:
+        comspec = os.environ.get("ComSpec") or "cmd.exe"
+        command_line = subprocess.list2cmdline([path, *arguments])
+        return [comspec, "/d", "/s", "/c", command_line]
+    return [path, *arguments]
+
+
 def check_tool(command: str, arguments: tuple[str, ...], required: bool) -> dict[str, Any]:
     path = resolve_command_path(command)
     result: dict[str, Any] = {
@@ -119,8 +128,9 @@ def check_tool(command: str, arguments: tuple[str, ...], required: bool) -> dict
         return result
     result["path"] = path
     try:
+        probe_command = tool_probe_command(path, arguments)
         process = subprocess.run(
-            [path, *arguments],
+            probe_command,
             check=False,
             capture_output=True,
             text=True,
@@ -295,7 +305,6 @@ def resolve_github_oidc_trust(
 
 def release_plan(environment: str) -> dict[str, Any]:
     validate_environment(environment)
-    python_invocation = preferred_python_invocation()
     return {
         "environment": environment,
         "executionMode": "plan-only",
@@ -319,9 +328,9 @@ def release_plan(environment: str) -> dict[str, Any]:
         ],
         "commands": [
             "pwsh ./monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1",
-            f"{python_invocation} {HELIOS_CLI_RELATIVE_PATH} doctor --json",
-            f"{python_invocation} {HELIOS_CLI_RELATIVE_PATH} oidc --environment {environment} --json",
-            f"{python_invocation} {HELIOS_CLI_RELATIVE_PATH} edge --environment {environment} --json",
+            f"{HELIOS_PLAN_COMMAND_PREFIX} doctor --json",
+            f"{HELIOS_PLAN_COMMAND_PREFIX} oidc --environment {environment} --json",
+            f"{HELIOS_PLAN_COMMAND_PREFIX} edge --environment {environment} --json",
             "GitHub Actions: HELIOS Azure → what-if",
             "GitHub protected environment: " + environment + " → deployment approval",
         ],

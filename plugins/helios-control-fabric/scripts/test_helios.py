@@ -59,6 +59,26 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(result["path"], r"C:\Program Files\dotnet\dotnet.exe")
         self.assertEqual(result["version"], "9.0.314")
 
+    def test_check_tool_uses_cmd_for_windows_batch_fallback(self) -> None:
+        with patch.object(HELIOS.os, "name", "nt"):
+            with patch.dict(HELIOS.os.environ, {"ComSpec": r"C:\Windows\System32\cmd.exe"}):
+                with patch.object(
+                    HELIOS,
+                    "resolve_command_path",
+                    return_value=r"C:\Program Files\nodejs\npm.cmd",
+                ):
+                    with patch.object(HELIOS.subprocess, "run") as run:
+                        run.return_value = Mock(returncode=0, stdout="10.8.1\n", stderr="")
+                        result = HELIOS.check_tool("npm", ("--version",), required=True)
+
+        run.assert_called_once()
+        probe_command = run.call_args.args[0]
+        self.assertEqual(probe_command[0], r"C:\Windows\System32\cmd.exe")
+        self.assertEqual(probe_command[1:4], ["/d", "/s", "/c"])
+        self.assertIn("npm.cmd", probe_command[4])
+        self.assertTrue(result["available"])
+        self.assertTrue(result["healthy"])
+
     def test_preferred_python_invocation_uses_windows_launcher_when_needed(self) -> None:
         with patch.object(HELIOS.os, "name", "nt"):
             with patch.object(
@@ -81,8 +101,7 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(targets["state"]["azure"], "not-live")
 
     def test_plan_is_non_executing(self) -> None:
-        with patch.object(HELIOS, "preferred_python_invocation", return_value="py -3"):
-            plan = HELIOS.release_plan("azure-dev")
+        plan = HELIOS.release_plan("azure-dev")
         self.assertEqual(plan["executionMode"], "plan-only")
         self.assertIn("Azure deployment approval", plan["administratorGates"])
         self.assertIn(
@@ -91,7 +110,7 @@ class HeliosCliTests(unittest.TestCase):
         )
         self.assertNotIn("federationSubject", plan)
         self.assertIn(
-            "py -3 plugins/helios-control-fabric/scripts/helios.py doctor --json",
+            "python plugins/helios-control-fabric/scripts/helios.py doctor --json",
             plan["commands"],
         )
 
