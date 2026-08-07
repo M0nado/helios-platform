@@ -349,23 +349,26 @@ jobs:
                   for pattern in workflow_requirements.get("job_name_patterns", ())
                   if pattern
               )
-              protected_jobs = []
-              for job in jobs:
-                  job_name = str(job.get("name") or "").lower()
-                  if not any(
-                      re.match(pattern, job_name, flags=re.IGNORECASE)
-                      for pattern in protected_job_patterns
-                  ):
-                      continue
+              if run_status in {"requested", "pending", "queued"} and not jobs:
+                  protected_jobs = [dict(name="pending-protected-run")]
+              else:
+                  protected_jobs = []
+                  for job in jobs:
+                      job_name = str(job.get("name") or "").lower()
+                      if not any(
+                          re.match(pattern, job_name, flags=re.IGNORECASE)
+                          for pattern in protected_job_patterns
+                      ):
+                          continue
 
-                  status = str(job.get("status") or "").lower()
-                  conclusion = str(job.get("conclusion") or "").lower()
-                  if status not in {"waiting", "in_progress"} and not (
-                      status == "completed" and conclusion == "success"
-                  ):
-                      continue
+                      status = str(job.get("status") or "").lower()
+                      conclusion = str(job.get("conclusion") or "").lower()
+                      if status not in {"waiting", "in_progress"} and not (
+                          status == "completed" and conclusion == "success"
+                      ):
+                          continue
 
-                  protected_jobs.append(job)
+                      protected_jobs.append(job)
               if not protected_jobs:
                   print(
                       "Protected approval workflow run must include a protected-environment approval/deployment job that is waiting, in progress, or successful.",
