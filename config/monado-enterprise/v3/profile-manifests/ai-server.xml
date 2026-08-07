@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonadoProfileManifest version="3.0.0" profileId="ai-server">
+  <DisplayName>AI / Server</DisplayName>
+  <Glyph>智</Glyph>
+  <SemanticUi>daemon-runtime-view</SemanticUi>
+  <Theme>ai-server-graphite</Theme>
+  <ChromaProfile>ai-server-muted</ChromaProfile>
+  <WyvernAudioProfile>ai-server-muted</WyvernAudioProfile>
+  <ServiceBudget alwaysOnMax="16" backgroundPriority="service-controlled" />
+  <ProcessBudget maxHighPriorityProcesses="8" />
+  <NetworkPolicy>deny-by-default-service-allowlist</NetworkPolicy>
+  <TelemetryPolicy>service-uptime-and-safety</TelemetryPolicy>
+  <AlvisToolBudget maxConcurrentTools="3" denyAutonomousApply="true" />
+  <StateModel recoveryWorkflow="false" quarantineWorkflow="false" postAuthShellEnabled="false" />
+</MonadoProfileManifest>

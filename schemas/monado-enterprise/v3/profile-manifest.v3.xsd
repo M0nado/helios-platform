@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:simpleType name="ProfileIdType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="core"/>
+      <xs:enumeration value="developer"/>
+      <xs:enumeration value="studio"/>
+      <xs:enumeration value="gamer"/>
+      <xs:enumeration value="ai-server"/>
+      <xs:enumeration value="sysadmin"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="MonadoProfileManifest">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="DisplayName" type="xs:string"/>
+        <xs:element name="Glyph" type="xs:string"/>
+        <xs:element name="SemanticUi" type="xs:string"/>
+        <xs:element name="Theme" type="xs:string"/>
+        <xs:element name="ChromaProfile" type="xs:string"/>
+        <xs:element name="WyvernAudioProfile" type="xs:string"/>
+        <xs:element name="ServiceBudget">
+          <xs:complexType>
+            <xs:attribute name="alwaysOnMax" type="xs:nonNegativeInteger" use="required"/>
+            <xs:attribute name="backgroundPriority" type="xs:string" use="required"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="ProcessBudget">
+          <xs:complexType>
+            <xs:attribute name="maxHighPriorityProcesses" type="xs:nonNegativeInteger" use="required"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="NetworkPolicy" type="xs:string"/>
+        <xs:element name="TelemetryPolicy" type="xs:string"/>
+        <xs:element name="AlvisToolBudget">
+          <xs:complexType>
+            <xs:attribute name="maxConcurrentTools" type="xs:nonNegativeInteger" use="required"/>
+            <xs:attribute name="denyAutonomousApply" type="xs:boolean" use="required"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="StateModel">
+          <xs:complexType>
+            <xs:attribute name="recoveryWorkflow" type="xs:boolean" use="required"/>
+            <xs:attribute name="quarantineWorkflow" type="xs:boolean" use="required"/>
+            <xs:attribute name="postAuthShellEnabled" type="xs:boolean" use="required"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required"/>
+      <xs:attribute name="profileId" type="ProfileIdType" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
