@@ -200,6 +200,60 @@ class HeliosCliTests(unittest.TestCase):
             any(blocked["step"] == "runners" for blocked in result["blocked"])
         )
 
+    def test_all_skip_oidc_keeps_setup_not_ready(self) -> None:
+        healthy_doctor = {
+            "mode": "read-only",
+            "tools": [
+                {"command": "az", "required": True, "available": True, "healthy": True},
+            ],
+            "environment": {},
+            "requiredToolsReady": True,
+            "cloudAuthenticated": "not-checked",
+            "azureDeployed": False,
+        }
+        with patch.object(HELIOS, "doctor", return_value=healthy_doctor):
+            result = HELIOS.full_setup("azure-dev", skip_oidc=True)
+        self.assertFalse(result["ready"])
+        self.assertFalse(result["oidcReady"])
+        self.assertTrue(
+            any(blocked["step"] == "oidc" for blocked in result["blocked"])
+        )
+
+    def test_all_blocks_when_oidc_variables_are_missing(self) -> None:
+        healthy_doctor = {
+            "mode": "read-only",
+            "tools": [
+                {"command": "az", "required": True, "available": True, "healthy": True},
+            ],
+            "environment": {},
+            "requiredToolsReady": True,
+            "cloudAuthenticated": "not-checked",
+            "azureDeployed": False,
+        }
+        oidc_result = {
+            "selectedSubject": "repo:M0nado/helios-platform:environment:azure-dev",
+            "useImmutableSubject": False,
+            "configuredVariables": {
+                "AZURE_CLIENT_ID": True,
+                "AZURE_TENANT_ID": False,
+                "AZURE_SUBSCRIPTION_ID": True,
+                "AZURE_RESOURCE_GROUP": False,
+            },
+        }
+        with patch.object(HELIOS, "doctor", return_value=healthy_doctor):
+            with patch.object(HELIOS, "oidc_contract", return_value=oidc_result):
+                result = HELIOS.full_setup("azure-dev", skip_oidc=False)
+        self.assertFalse(result["ready"])
+        self.assertFalse(result["oidcReady"])
+        self.assertTrue(
+            any(
+                blocked["step"] == "oidc"
+                and "AZURE_TENANT_ID" in blocked["reason"]
+                and "AZURE_RESOURCE_GROUP" in blocked["reason"]
+                for blocked in result["blocked"]
+            )
+        )
+
     def test_all_human_output_exposes_step_details(self) -> None:
         healthy_doctor = {
             "mode": "read-only",
@@ -219,6 +273,12 @@ class HeliosCliTests(unittest.TestCase):
                 "helios-platform@1207349837:environment:azure-dev"
             ),
             "useImmutableSubject": True,
+            "configuredVariables": {
+                "AZURE_CLIENT_ID": True,
+                "AZURE_TENANT_ID": True,
+                "AZURE_SUBSCRIPTION_ID": True,
+                "AZURE_RESOURCE_GROUP": True,
+            },
         }
         with patch.object(HELIOS, "doctor", return_value=healthy_doctor):
             with patch.object(HELIOS, "oidc_contract", return_value=oidc_result):
@@ -236,6 +296,12 @@ class HeliosCliTests(unittest.TestCase):
         self.assertIn("edge target:", text)
         self.assertIn("devops sync:", text)
         self.assertIn("runners release environment:", text)
+
+    def test_runners_cli_returns_nonzero_when_blocked(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            result = HELIOS.main(["runners", "--environment", "azure-test", "--json"])
+        self.assertEqual(result, 2)
 
     def test_edge_plan_requires_private_link_and_separate_approval(self) -> None:
         plan = HELIOS.edge_plan("azure-dev")

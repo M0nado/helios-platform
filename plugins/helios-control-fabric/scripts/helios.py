@@ -373,8 +373,8 @@ def full_setup(environment: str, skip_oidc: bool = False) -> dict[str, Any]:
         "requiredToolFailures": doctor_failures,
     }
     required_tools_ready = bool(doctor_result.get("requiredToolsReady")) and not doctor_failures
-    oidc_required = not skip_oidc
-    oidc_ready = not oidc_required
+    oidc_required = True
+    oidc_ready = False
     runner_result = runner_plan(environment)
     runners_ready = runner_result.get("executionMode") != "blocked"
 
@@ -400,10 +400,50 @@ def full_setup(environment: str, skip_oidc: bool = False) -> dict[str, Any]:
             }
         )
 
-    if oidc_required:
+    if skip_oidc:
+        oidc_reason = "OIDC contract skipped. Run `oidc` after `gh auth login`."
+        steps["oidc"] = {
+            "executionMode": "skipped",
+            "reason": oidc_reason,
+        }
+        blocked.append(
+            {
+                "step": "oidc",
+                "reason": oidc_reason,
+            }
+        )
+    else:
         try:
-            steps["oidc"] = oidc_contract(environment)
-            oidc_ready = True
+            oidc_step = oidc_contract(environment)
+            configured_variables = oidc_step.get("configuredVariables")
+            if not isinstance(configured_variables, dict):
+                oidc_reason = "OIDC contract did not return configured variable state."
+                steps["oidc"] = {
+                    **oidc_step,
+                    "executionMode": "blocked",
+                    "reason": oidc_reason,
+                }
+                blocked.append({"step": "oidc", "reason": oidc_reason})
+                oidc_ready = False
+            else:
+                missing_variables = sorted(
+                    key for key, configured in configured_variables.items() if not configured
+                )
+                if missing_variables:
+                    oidc_reason = (
+                        "OIDC contract is missing required variables: "
+                        + ", ".join(missing_variables)
+                    )
+                    steps["oidc"] = {
+                        **oidc_step,
+                        "executionMode": "blocked",
+                        "reason": oidc_reason,
+                    }
+                    blocked.append({"step": "oidc", "reason": oidc_reason})
+                    oidc_ready = False
+                else:
+                    steps["oidc"] = oidc_step
+                    oidc_ready = True
         except RuntimeError as error:
             steps["oidc"] = {
                 "executionMode": "blocked",
@@ -411,11 +451,6 @@ def full_setup(environment: str, skip_oidc: bool = False) -> dict[str, Any]:
             }
             blocked.append({"step": "oidc", "reason": str(error)})
             oidc_ready = False
-    else:
-        steps["oidc"] = {
-            "executionMode": "skipped",
-            "reason": "Skipped by --skip-oidc.",
-        }
 
     if not runners_ready:
         blocked.append(
@@ -473,7 +508,7 @@ def print_human(payload: dict[str, Any]) -> None:
 
         oidc_step = steps.get("oidc", {})
         if oidc_step.get("executionMode") == "skipped":
-            print("  oidc: skipped (--skip-oidc)")
+            print(f"  oidc: skipped ({oidc_step.get('reason', 'skipped')})")
         elif oidc_step.get("executionMode") == "blocked":
             print(f"  oidc: blocked ({oidc_step.get('reason', 'unknown reason')})")
         else:
@@ -640,6 +675,8 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print_human(payload)
     if args.command == "all" and not payload.get("ready", False):
+        return 2
+    if args.command == "runners" and payload.get("executionMode") == "blocked":
         return 2
     return 0
 
