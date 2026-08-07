@@ -1,0 +1,127 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v2/synchronization.contract.v2.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-enterprise-synchronization-v2",
+  "executionMode": "proposal-only",
+  "directExternalDeliveryEnabled": false,
+  "normalizedEnvelope": {
+    "schemaReference": "config/integrations/event-contract.schema.json",
+    "requiredFields": [
+      "schemaVersion",
+      "eventId",
+      "source",
+      "eventType",
+      "repository",
+      "correlationId",
+      "environment",
+      "occurredAt",
+      "dataClassification",
+      "links",
+      "payload"
+    ]
+  },
+  "idempotency": {
+    "algorithm": "sha256",
+    "normalization": "nfc+trim+length-prefixed-utf8",
+    "inputFields": [
+      "routeId",
+      "source.eventId",
+      "target.system",
+      "operation"
+    ],
+    "keyTemplate": "sha256(normalized-length-prefixed:{routeId}:{source.eventId}:{target.system}:{operation})",
+    "retention": "P30D",
+    "duplicateOutcome": "return-recorded-result-without-repeating-side-effect"
+  },
+  "surfaces": {
+    "github": {
+      "authority": "engineering-source",
+      "mode": "read-write-via-pr-and-workflow-gates"
+    },
+    "linear": {
+      "authority": "work-tracking",
+      "mode": "proposal-then-approved-delivery"
+    },
+    "slack": {
+      "authority": "operational-notification",
+      "mode": "concise-checkpoint-only",
+      "maxMessagesPerMilestone": 1
+    },
+    "sharepoint": {
+      "authority": "governed-evidence",
+      "mode": "approved-documentation-sync"
+    },
+    "azure-devops": {
+      "authority": "enterprise-delivery-bridge",
+      "mode": "read-only-mirror-until-approved-sync-identity",
+      "readOnly": true
+    },
+    "adobe-design": {
+      "authority": "approved-design-source-catalog",
+      "mode": "evidence-reference-only",
+      "writesEnabled": false
+    }
+  },
+  "routes": [
+    {
+      "routeId": "github-pr-status-to-linear-sharepoint-v2",
+      "source": "github",
+      "eventType": "pull_request.synchronized",
+      "targets": [
+        "linear",
+        "sharepoint"
+      ],
+      "operation": "status-sync-proposal",
+      "requiresApproval": true
+    },
+    {
+      "routeId": "approved-milestone-to-slack-checkpoint-v2",
+      "source": "github",
+      "eventType": "issue.milestone.approved",
+      "targets": [
+        "slack"
+      ],
+      "operation": "single-checkpoint-proposal",
+      "requiresApproval": true
+    },
+    {
+      "routeId": "design-evidence-reference-to-sharepoint-v2",
+      "source": "adobe-design",
+      "eventType": "design.asset.approved",
+      "targets": [
+        "sharepoint"
+      ],
+      "operation": "evidence-reference-proposal",
+      "requiresApproval": true
+    },
+    {
+      "routeId": "github-release-reference-to-azure-devops-readonly-v2",
+      "source": "github",
+      "eventType": "release.created",
+      "targets": [
+        "azure-devops"
+      ],
+      "operation": "read-only-mirror-record",
+      "requiresApproval": false
+    }
+  ],
+  "approvals": {
+    "requiredFor": [
+      "external-write",
+      "tenant-or-rbac-change",
+      "production-deployment",
+      "privileged-storage-action"
+    ],
+    "immutableEvidenceRequired": true,
+    "expiryRequired": true,
+    "rollbackPlanRequired": true
+  },
+  "prohibitions": [
+    "direct-to-main-write",
+    "tenant-consent-without-approval",
+    "azure-apply-without-protected-environment",
+    "physical-usb-write-from-runtime",
+    "disk-or-vhdx-apply-from-runtime",
+    "secret-material-in-payload"
+  ]
+}
