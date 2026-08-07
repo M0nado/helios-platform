@@ -44,6 +44,7 @@ jobs:
               sys.exit(f"Unsupported branch name: {head}")
           if base == 'main' and not (head.startswith('integration/') or head.startswith('hotfix/')):When a PR targets any base other than main, this check performs no base validation, and for main it accepts every head beginning with integration/ (for example, integration/typo). The governance config defines only five exact integration branches and the reset plan requires short-lived work to merge into one of them, but both feature/x targeting an arbitrary branch and integration/typo targeting main pass this advertised routing check. Validate exact source/base pairs against integrationBranches instead of only special-casing main by prefix
               sys.exit('Only integration lanes and approved hotfixes may target main')
+          body = re.sub(r'<!--.*?-->', '', body, flags=re.DOTALL)
           if not re.search(r'(?i)(close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#\d+', body):
               sys.exit('PR body must close one scoped issue')
           PY
