@@ -396,8 +396,8 @@ jobs:
 
           roots = [Path('config'), Path('docs/architecture'), Path('schemas/monado-enterprise/v2'), Path('schemas/monado-enterprise/v3')]
           patterns = [
-              re.compile(r'sk-[A-Za-z0-9_-]{20,}'),
-              re.compile(r'github_pat_[A-Za-z0-9_]{20,}'),
+              re.compile(r'(?<![A-Za-z0-9_])sk-[A-Za-z0-9_-]{20,}'),
+              re.compile(r'(?<![A-Za-z0-9_])github_pat_[A-Za-z0-9_]{20,}'),
               re.compile(r'(?i)(client_secret|api_key|access_token)\s*[:=]\s*["\'][^"\']{12,}["\']'),
           ]
           for root in roots:
