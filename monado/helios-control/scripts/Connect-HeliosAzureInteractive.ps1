@@ -1859,16 +1859,18 @@ try {
             -Environment $GitHubEnvironment `
             -ReviewerId ([int64] $RequiredReviewerId) `
             -DeploymentBranch $GitHubDeploymentBranch
-        $protectedSubnetBinding = Get-GitHubEnvironmentVariableValue `
-            -Owner $GitHubOwner `
-            -Repository $GitHubRepository `
-            -Environment $GitHubEnvironment `
-            -Name 'HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID'
-        if ([string]::IsNullOrWhiteSpace($protectedSubnetBinding)) {
-            throw "GitHub environment variable HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID is not configured for '$GitHubEnvironment'. Run -Mode Configure before Publish."
-        }
-        if (-not [string]::Equals($protectedSubnetBinding, $ContainerAppsInfrastructureSubnetId, [StringComparison]::OrdinalIgnoreCase)) {
-            throw 'Publish requires -ContainerAppsInfrastructureSubnetId to match protected environment binding HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID. Run -Mode Configure to persist the reviewed subnet before dispatch.'
+        if ($EnvironmentName -eq 'prod') {
+            $protectedSubnetBinding = Get-GitHubEnvironmentVariableValue `
+                -Owner $GitHubOwner `
+                -Repository $GitHubRepository `
+                -Environment $GitHubEnvironment `
+                -Name 'HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID'
+            if ([string]::IsNullOrWhiteSpace($protectedSubnetBinding)) {
+                throw "GitHub environment variable HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID is not configured for '$GitHubEnvironment'. Run -Mode Configure before Publish."
+            }
+            if (-not [string]::Equals($protectedSubnetBinding, $ContainerAppsInfrastructureSubnetId, [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'Publish requires -ContainerAppsInfrastructureSubnetId to match protected environment binding HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID. Run -Mode Configure to persist the reviewed subnet before dispatch.'
+            }
         }
         Assert-GitHubFederationPresent `
             -Application $publishGitHubApplication `

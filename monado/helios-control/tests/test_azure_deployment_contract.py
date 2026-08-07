@@ -123,6 +123,10 @@ class AzureDeploymentContractTests(unittest.TestCase):
         interactive = (PROJECT_ROOT / "scripts" / "Connect-HeliosAzureInteractive.ps1").read_text(encoding="utf-8")
         self.assertIn("Get-GitHubEnvironmentVariableValue", interactive)
         self.assertIn("HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID", interactive)
+        self.assertRegex(
+            interactive,
+            r"if \(\$EnvironmentName -eq 'prod'\) \{\s+\$protectedSubnetBinding = Get-GitHubEnvironmentVariableValue",
+        )
         self.assertIn(
             "Publish requires -ContainerAppsInfrastructureSubnetId to match protected environment binding HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID.",
             interactive,
@@ -132,8 +136,19 @@ class AzureDeploymentContractTests(unittest.TestCase):
         workflow = AZURE_INFRA_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("Restrict production apply to main branch", workflow)
         self.assertIn("Production deploy requests are restricted to refs/heads/main.", workflow)
+        self.assertIn("Require reviewed rollback plan for production deploy", workflow)
+        self.assertIn("Require reviewed rollback plan before production apply", workflow)
         self.assertIn("Deploy production after protected approval", workflow)
+        self.assertIn("Capture reviewed production what-if", workflow)
+        self.assertIn("Re-run production what-if after approval", workflow)
+        self.assertIn("Fail on production what-if drift", workflow)
         self.assertIn("environment: azure-prod", workflow)
+        self.assertIn("key_vault_private_cutover_approved:", workflow)
+        self.assertIn("enabled_egress_profiles:", workflow)
+        self.assertIn("connector_relay_destinations:", workflow)
+        self.assertIn("keyVaultPrivateCutoverApproved=", workflow)
+        self.assertIn("enabledEgressProfiles=", workflow)
+        self.assertIn("connectorRelayDestinations=", workflow)
         self.assertIn(
             "if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' && github.ref == 'refs/heads/main' }}",
             workflow,

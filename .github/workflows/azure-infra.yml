@@ -56,6 +56,22 @@ on:
         description: 'Firewall Policy resource ID (required for azureFirewall)'
         required: false
         default: ''
+      key_vault_private_cutover_approved:
+        description: 'Optional Key Vault private-cutover approval override (true/false). Empty retains the current vault posture.'
+        required: false
+        default: ''
+      enabled_egress_profiles:
+        description: 'JSON array of approved egress profiles. Required for prod deploys with azureFirewall.'
+        required: false
+        default: ''
+      connector_relay_destinations:
+        description: 'JSON array of reviewed connector relay destinations. Required for prod deploys with azureFirewall.'
+        required: false
+        default: ''
+      rollback_plan:
+        description: 'Required for prod deploy: link or ticket for the reviewed rollback plan.'
+        required: false
+        default: ''
       deploy:
         description: 'Deploy after validation and what-if'
         required: false
@@ -68,8 +84,14 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      key_vault_private_cutover_approved: ${{ steps.params.outputs.key_vault_private_cutover_approved }}
+      enabled_egress_profiles: ${{ steps.params.outputs.enabled_egress_profiles }}
+      connector_relay_destinations: ${{ steps.params.outputs.connector_relay_destinations }}
+      prod_whatif_sha256: ${{ steps.prod_whatif.outputs.sha256 }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Restrict production apply to main branch
         if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' }}
         run: |
@@ -78,16 +100,78 @@ jobs:
             echo "Production deploy requests are restricted to refs/heads/main." >&2
             exit 1
           fi
+
+      - name: Require reviewed rollback plan for production deploy
+        if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' }}
+        env:
+          ROLLBACK_PLAN: ${{ github.event.inputs.rollback_plan }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ROLLBACK_PLAN}" ]]; then
+            echo "Production deploy requests require rollback_plan evidence before approval." >&2
+            exit 1
+          fi
+
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Build Bicep
         run: az bicep build --file infra/azure/main.bicep
-      - name: Validate deployment
+
+      - name: Build reviewed deployment parameter set
+        id: params
         run: |
           set -euo pipefail
+
+          enabled_egress_profiles_input='${{ github.event.inputs.enabled_egress_profiles }}'
+          connector_relay_destinations_input='${{ github.event.inputs.connector_relay_destinations }}'
+          if [[ -z "${enabled_egress_profiles_input}" ]]; then
+            if [[ "${{ github.event.inputs.deploy }}" == "true" && "${{ github.event.inputs.environment_name }}" == "prod" && "${{ github.event.inputs.egress_mode }}" == "azureFirewall" ]]; then
+              echo "Production azureFirewall deploy requests require enabled_egress_profiles as a JSON array." >&2
+              exit 1
+            fi
+            enabled_egress_profiles_input='[]'
+          fi
+          if [[ -z "${connector_relay_destinations_input}" ]]; then
+            if [[ "${{ github.event.inputs.deploy }}" == "true" && "${{ github.event.inputs.environment_name }}" == "prod" && "${{ github.event.inputs.egress_mode }}" == "azureFirewall" ]]; then
+              echo "Production azureFirewall deploy requests require connector_relay_destinations as a JSON array." >&2
+              exit 1
+            fi
+            connector_relay_destinations_input='[]'
+          fi
+
+          enabled_egress_profiles_json="$(jq -c -e 'if type=="array" then . else error("enabled_egress_profiles must be a JSON array.") end' <<<"${enabled_egress_profiles_input}")"
+          connector_relay_destinations_json="$(jq -c -e 'if type=="array" then . else error("connector_relay_destinations must be a JSON array.") end' <<<"${connector_relay_destinations_input}")"
+
+          key_vault_private_cutover_input='${{ github.event.inputs.key_vault_private_cutover_approved }}'
+          if [[ -z "${key_vault_private_cutover_input}" ]]; then
+            raw_key_vault_name='${{ github.event.inputs.name_prefix }}-${{ github.event.inputs.environment_name }}-kv'
+            key_vault_name="$(printf '%s' "${raw_key_vault_name}" | tr '[:upper:]' '[:lower:]' | tr -d '-' | cut -c1-24)"
+            existing_public_network_access="$(az keyvault list \
+              --resource-group "${{ github.event.inputs.resource_group }}" \
+              --query "[?name=='${key_vault_name}'].properties.publicNetworkAccess | [0]" \
+              --output tsv)"
+            if [[ "${existing_public_network_access}" == "Disabled" || "${existing_public_network_access}" == "disabled" ]]; then
+              key_vault_private_cutover_approved='true'
+            else
+              key_vault_private_cutover_approved='false'
+            fi
+          else
+            case "${key_vault_private_cutover_input,,}" in
+              true|false)
+                key_vault_private_cutover_approved="${key_vault_private_cutover_input,,}"
+                ;;
+              *)
+                echo "key_vault_private_cutover_approved must be true or false when supplied." >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+          params_file="${RUNNER_TEMP}/azure-infra.params"
           params=(
             "infra/azure/parameters/dev.json"
             "location=${{ github.event.inputs.location }}"
@@ -96,6 +180,9 @@ jobs:
             "publisherEmail=${{ github.event.inputs.publisher_email }}"
             "networkOnly=${{ github.event.inputs.network_only }}"
             "egressMode=${{ github.event.inputs.egress_mode }}"
+            "enabledEgressProfiles=${enabled_egress_profiles_json}"
+            "connectorRelayDestinations=${connector_relay_destinations_json}"
+            "keyVaultPrivateCutoverApproved=${key_vault_private_cutover_approved}"
           )
           if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
             params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
@@ -109,63 +196,66 @@ jobs:
           if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
             params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
           fi
+
+          printf '%s\n' "${params[@]}" > "${params_file}"
+          echo "file=${params_file}" >> "${GITHUB_OUTPUT}"
+          echo "enabled_egress_profiles=${enabled_egress_profiles_json}" >> "${GITHUB_OUTPUT}"
+          echo "connector_relay_destinations=${connector_relay_destinations_json}" >> "${GITHUB_OUTPUT}"
+          echo "key_vault_private_cutover_approved=${key_vault_private_cutover_approved}" >> "${GITHUB_OUTPUT}"
+
+      - name: Validate deployment
+        run: |
+          set -euo pipefail
+          mapfile -t params < "${{ steps.params.outputs.file }}"
           az deployment group validate \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
             --parameters "${params[@]}"
+
       - name: What-if
         run: |
           set -euo pipefail
-          params=(
-            "infra/azure/parameters/dev.json"
-            "location=${{ github.event.inputs.location }}"
-            "environmentName=${{ github.event.inputs.environment_name }}"
-            "namePrefix=${{ github.event.inputs.name_prefix }}"
-            "publisherEmail=${{ github.event.inputs.publisher_email }}"
-            "networkOnly=${{ github.event.inputs.network_only }}"
-            "egressMode=${{ github.event.inputs.egress_mode }}"
-          )
-          if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
-            params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
-          fi
-          if [[ -n "${{ github.event.inputs.azure_firewall_private_ip }}" ]]; then
-            params+=("azureFirewallPrivateIp=${{ github.event.inputs.azure_firewall_private_ip }}")
-          fi
-          if [[ -n "${{ github.event.inputs.hub_virtual_network_id }}" ]]; then
-            params+=("hubVirtualNetworkId=${{ github.event.inputs.hub_virtual_network_id }}")
-          fi
-          if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
-            params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
-          fi
+          mapfile -t params < "${{ steps.params.outputs.file }}"
           az deployment group what-if \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
             --parameters "${params[@]}"
+
+      - name: Capture reviewed production what-if
+        if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' }}
+        id: prod_whatif
+        run: |
+          set -euo pipefail
+          mapfile -t params < "${{ steps.params.outputs.file }}"
+          raw_whatif="${RUNNER_TEMP}/azure-infra-prod-whatif.raw.json"
+          canonical_whatif="${RUNNER_TEMP}/azure-infra-prod-whatif.canonical.json"
+          az deployment group what-if \
+            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --template-file infra/azure/main.bicep \
+            --result-format FullResourcePayloads \
+            --output json \
+            --parameters "${params[@]}" > "${raw_whatif}"
+          jq --sort-keys . "${raw_whatif}" > "${canonical_whatif}"
+          sha256="$(sha256sum "${canonical_whatif}" | cut -d' ' -f1)"
+          if [[ ! "${sha256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "Production what-if digest is malformed." >&2
+            exit 1
+          fi
+          echo "path=${canonical_whatif}" >> "${GITHUB_OUTPUT}"
+          echo "sha256=${sha256}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload reviewed production what-if
+        if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: azure-infra-prod-whatif-${{ github.run_id }}
+          path: ${{ steps.prod_whatif.outputs.path }}
+
       - name: Deploy non-production
         if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name != 'prod' }}
         run: |
           set -euo pipefail
-          params=(
-            "infra/azure/parameters/dev.json"
-            "location=${{ github.event.inputs.location }}"
-            "environmentName=${{ github.event.inputs.environment_name }}"
-            "namePrefix=${{ github.event.inputs.name_prefix }}"
-            "publisherEmail=${{ github.event.inputs.publisher_email }}"
-            "networkOnly=${{ github.event.inputs.network_only }}"
-            "egressMode=${{ github.event.inputs.egress_mode }}"
-          )
-          if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
-            params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
-          fi
-          if [[ -n "${{ github.event.inputs.azure_firewall_private_ip }}" ]]; then
-            params+=("azureFirewallPrivateIp=${{ github.event.inputs.azure_firewall_private_ip }}")
-          fi
-          if [[ -n "${{ github.event.inputs.hub_virtual_network_id }}" ]]; then
-            params+=("hubVirtualNetworkId=${{ github.event.inputs.hub_virtual_network_id }}")
-          fi
-          if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
-            params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
-          fi
+          mapfile -t params < "${{ steps.params.outputs.file }}"
           az deployment group create \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
@@ -181,14 +271,44 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+
+      - name: Require reviewed rollback plan before production apply
+        env:
+          ROLLBACK_PLAN: ${{ github.event.inputs.rollback_plan }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ROLLBACK_PLAN}" ]]; then
+            echo "Production deployment requires rollback_plan evidence before apply." >&2
+            exit 1
+          fi
+          echo "Reviewed rollback plan: ${ROLLBACK_PLAN}" >> "${GITHUB_STEP_SUMMARY}"
+
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Deploy production after protected approval
+
+      - name: Build production deployment parameter set from reviewed values
+        id: params
+        env:
+          KEY_VAULT_PRIVATE_CUTOVER_APPROVED: ${{ needs.validate.outputs.key_vault_private_cutover_approved }}
+          ENABLED_EGRESS_PROFILES: ${{ needs.validate.outputs.enabled_egress_profiles }}
+          CONNECTOR_RELAY_DESTINATIONS: ${{ needs.validate.outputs.connector_relay_destinations }}
         run: |
           set -euo pipefail
+          if [[ -z "${KEY_VAULT_PRIVATE_CUTOVER_APPROVED}" ]]; then
+            echo "Validated Key Vault cutover approval output is missing." >&2
+            exit 1
+          fi
+          if [[ "${{ github.event.inputs.egress_mode }}" == "azureFirewall" ]]; then
+            if [[ -z "${ENABLED_EGRESS_PROFILES}" || -z "${CONNECTOR_RELAY_DESTINATIONS}" ]]; then
+              echo "Validated firewall egress profile outputs are missing for production deployment." >&2
+              exit 1
+            fi
+          fi
+
+          params_file="${RUNNER_TEMP}/azure-infra-prod.params"
           params=(
             "infra/azure/parameters/dev.json"
             "location=${{ github.event.inputs.location }}"
@@ -197,6 +317,9 @@ jobs:
             "publisherEmail=${{ github.event.inputs.publisher_email }}"
             "networkOnly=${{ github.event.inputs.network_only }}"
             "egressMode=${{ github.event.inputs.egress_mode }}"
+            "enabledEgressProfiles=${ENABLED_EGRESS_PROFILES}"
+            "connectorRelayDestinations=${CONNECTOR_RELAY_DESTINATIONS}"
+            "keyVaultPrivateCutoverApproved=${KEY_VAULT_PRIVATE_CUTOVER_APPROVED}"
           )
           if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
             params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
@@ -210,6 +333,66 @@ jobs:
           if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
             params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
           fi
+
+          printf '%s\n' "${params[@]}" > "${params_file}"
+          echo "file=${params_file}" >> "${GITHUB_OUTPUT}"
+
+      - name: Download reviewed production what-if
+        uses: actions/download-artifact@v4
+        with:
+          name: azure-infra-prod-whatif-${{ github.run_id }}
+          path: ${{ runner.temp }}/approved-whatif
+
+      - name: Re-run production what-if after approval
+        id: post_approval_whatif
+        run: |
+          set -euo pipefail
+          mapfile -t params < "${{ steps.params.outputs.file }}"
+          raw_whatif="${RUNNER_TEMP}/azure-infra-prod-whatif.post-approval.raw.json"
+          canonical_whatif="${RUNNER_TEMP}/azure-infra-prod-whatif.post-approval.canonical.json"
+          az deployment group what-if \
+            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --template-file infra/azure/main.bicep \
+            --result-format FullResourcePayloads \
+            --output json \
+            --parameters "${params[@]}" > "${raw_whatif}"
+          jq --sort-keys . "${raw_whatif}" > "${canonical_whatif}"
+          sha256="$(sha256sum "${canonical_whatif}" | cut -d' ' -f1)"
+          if [[ ! "${sha256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "Post-approval production what-if digest is malformed." >&2
+            exit 1
+          fi
+          echo "sha256=${sha256}" >> "${GITHUB_OUTPUT}"
+
+      - name: Fail on production what-if drift
+        env:
+          EXPECTED_REVIEWED_WHATIF_SHA256: ${{ needs.validate.outputs.prod_whatif_sha256 }}
+          POST_APPROVAL_WHATIF_SHA256: ${{ steps.post_approval_whatif.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${EXPECTED_REVIEWED_WHATIF_SHA256}" ]]; then
+            echo "Expected reviewed production what-if digest is missing." >&2
+            exit 1
+          fi
+          approved_whatif="${RUNNER_TEMP}/approved-whatif/azure-infra-prod-whatif.canonical.json"
+          if [[ ! -f "${approved_whatif}" ]]; then
+            echo "Reviewed production what-if artifact is missing." >&2
+            exit 1
+          fi
+          approved_sha256="$(sha256sum "${approved_whatif}" | cut -d' ' -f1)"
+          if [[ "${approved_sha256}" != "${EXPECTED_REVIEWED_WHATIF_SHA256}" ]]; then
+            echo "Downloaded reviewed production what-if does not match the digest recorded before approval." >&2
+            exit 1
+          fi
+          if [[ "${POST_APPROVAL_WHATIF_SHA256}" != "${EXPECTED_REVIEWED_WHATIF_SHA256}" ]]; then
+            echo "Production what-if changed after approval. Re-review is required before apply." >&2
+            exit 1
+          fi
+
+      - name: Deploy production after protected approval
+        run: |
+          set -euo pipefail
+          mapfile -t params < "${{ steps.params.outputs.file }}"
           az deployment group create \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
