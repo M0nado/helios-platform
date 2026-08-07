@@ -56,7 +56,11 @@ case "$cmd" in
     printf '7/15 Branch merge/prune recommendations and Codex PR trains\n'
     python3 scripts/analysis/branch_intelligence.py
     python3 scripts/analysis/merge_prune_recommendations.py
-    python3 scripts/analysis/codex_pr_merge_trains.py
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+      python3 scripts/analysis/codex_pr_merge_trains.py
+    else
+      printf 'Skipping Codex PR trains (gh missing or not authenticated).\n'
+    fi
     printf '8/15 Dashboard actions page\n'
     python3 scripts/dashboard/generate-actions.py
     python3 scripts/control/doctor.py

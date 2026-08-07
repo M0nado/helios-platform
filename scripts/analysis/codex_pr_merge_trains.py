@@ -53,6 +53,8 @@ CHECK_SUCCESS = {"SUCCESS", "NEUTRAL", "SKIPPED"}
 CHECK_FAILURE = {"FAILURE", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE", "STALE"}
 STATUS_SUCCESS = {"SUCCESS"}
 STATUS_FAILURE = {"FAILURE", "ERROR"}
+REQUIRED_CHECK_SUCCESS = CHECK_SUCCESS | {"PASS", "PASSED", "OK"}
+REQUIRED_CHECK_FAILURE = CHECK_FAILURE | STATUS_FAILURE | {"FAIL", "FAILED"}
 
 
 def run(cmd: list[str], timeout: int = 60) -> str:
@@ -83,6 +85,10 @@ def parse_iso(value: str | None) -> datetime:
 
 def slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+
+
+def normalize_repo_key(value: str) -> str:
+    return value.strip().lower()
 
 
 def parse_number_list(raw: str) -> list[int]:
@@ -150,6 +156,7 @@ def load_open_pr_summaries(repo: str, limit: int) -> list[dict[str, Any]]:
             "additions",
             "deletions",
             "url",
+            "state",
         ]
     )
     rows = gh_json(["pr", "list", "--repo", repo, "--state", "open", "--limit", str(limit), "--json", fields]) or []
@@ -195,12 +202,84 @@ def load_pr_detail(repo: str, number: int) -> dict[str, Any]:
             "createdAt",
             "updatedAt",
             "url",
+            "state",
+            "headRepository",
+            "headRepositoryOwner",
+            "isCrossRepository",
         ]
     )
     detail = gh_json(["pr", "view", str(number), "--repo", repo, "--json", fields], timeout=90) or {}
     if not isinstance(detail, dict):
         raise RuntimeError(f"Unexpected PR detail payload for #{number}")
     return detail
+
+
+def pr_summary_from_detail(detail: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "number": int(detail.get("number") or 0),
+        "title": detail.get("title", ""),
+        "headRefName": detail.get("headRefName", ""),
+        "baseRefName": detail.get("baseRefName", ""),
+        "isDraft": bool(detail.get("isDraft")),
+        "mergeStateStatus": detail.get("mergeStateStatus", ""),
+        "mergeable": detail.get("mergeable", ""),
+        "author": detail.get("author") or {},
+        "createdAt": detail.get("createdAt", ""),
+        "updatedAt": detail.get("updatedAt", ""),
+        "changedFiles": int(detail.get("changedFiles") or 0),
+        "additions": int(detail.get("additions") or 0),
+        "deletions": int(detail.get("deletions") or 0),
+        "url": detail.get("url", ""),
+        "state": detail.get("state", ""),
+    }
+
+
+def load_required_checks(repo: str, number: int) -> list[dict[str, str]] | None:
+    try:
+        rows = gh_json(
+            ["pr", "checks", str(number), "--repo", repo, "--required", "--json", "name,workflow,state"],
+            timeout=90,
+        )
+    except RuntimeError:
+        return None
+
+    if rows is None:
+        return []
+    if not isinstance(rows, list):
+        return None
+
+    required: list[dict[str, str]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("name", "")).strip() or "unnamed-required-check"
+        workflow = row.get("workflow", "")
+        if isinstance(workflow, dict):
+            workflow = workflow.get("name", "")
+        workflow_name = str(workflow or "").strip()
+        display = f"{workflow_name} / {name}" if workflow_name else name
+        required.append({"name": display, "state": str(row.get("state", "")).upper()})
+    return required
+
+
+def head_repository_key(detail: dict[str, Any], fallback_repo: str) -> str:
+    head_repo = detail.get("headRepository")
+    owner = detail.get("headRepositoryOwner")
+    owner_login = ""
+    if isinstance(owner, dict):
+        owner_login = str(owner.get("login", "")).strip()
+
+    repo_name_with_owner = ""
+    repo_name = ""
+    if isinstance(head_repo, dict):
+        repo_name_with_owner = str(head_repo.get("nameWithOwner", "")).strip()
+        repo_name = str(head_repo.get("name", "")).strip()
+
+    if repo_name_with_owner:
+        return normalize_repo_key(repo_name_with_owner)
+    if owner_login and repo_name:
+        return normalize_repo_key(f"{owner_login}/{repo_name}")
+    return normalize_repo_key(fallback_repo)
 
 
 def ownership_surfaces(paths: list[str]) -> list[str]:
@@ -240,35 +319,49 @@ def check_display_name(entry: dict[str, Any]) -> str:
     return str(entry.get("context", "status-context")).strip() or "status-context"
 
 
-def summarize_checks(entries: list[dict[str, Any]]) -> dict[str, Any]:
+def summarize_checks(entries: list[dict[str, Any]], required_checks: list[dict[str, str]] | None = None) -> dict[str, Any]:
     passed: list[str] = []
     failed: list[str] = []
     pending: list[str] = []
     required_names: set[str] = set()
 
-    for entry in entries:
-        name = check_display_name(entry)
-        required_names.add(name)
-        typename = entry.get("__typename")
-        if typename == "CheckRun":
-            status = str(entry.get("status", "")).upper()
-            conclusion = str(entry.get("conclusion", "")).upper()
-            if status != "COMPLETED":
-                pending.append(name)
-            elif conclusion in CHECK_SUCCESS:
+    if required_checks is not None:
+        for check in required_checks:
+            name = str(check.get("name", "")).strip()
+            if not name:
+                continue
+            required_names.add(name)
+            state = str(check.get("state", "")).upper()
+            if state in REQUIRED_CHECK_SUCCESS:
                 passed.append(name)
-            elif conclusion in CHECK_FAILURE:
+            elif state in REQUIRED_CHECK_FAILURE:
                 failed.append(name)
             else:
                 pending.append(name)
-            continue
-        state = str(entry.get("state", "")).upper()
-        if state in STATUS_SUCCESS:
-            passed.append(name)
-        elif state in STATUS_FAILURE:
-            failed.append(name)
-        else:
-            pending.append(name)
+    else:
+        for entry in entries:
+            name = check_display_name(entry)
+            required_names.add(name)
+            typename = entry.get("__typename")
+            if typename == "CheckRun":
+                status = str(entry.get("status", "")).upper()
+                conclusion = str(entry.get("conclusion", "")).upper()
+                if status != "COMPLETED":
+                    pending.append(name)
+                elif conclusion in CHECK_SUCCESS:
+                    passed.append(name)
+                elif conclusion in CHECK_FAILURE:
+                    failed.append(name)
+                else:
+                    pending.append(name)
+                continue
+            state = str(entry.get("state", "")).upper()
+            if state in STATUS_SUCCESS:
+                passed.append(name)
+            elif state in STATUS_FAILURE:
+                failed.append(name)
+            else:
+                pending.append(name)
 
     if failed:
         state = "failing"
@@ -296,7 +389,7 @@ def gate_status(pr: dict[str, Any]) -> dict[str, Any]:
     mergeable = str(pr.get("mergeable", ""))
     merge_state = str(pr.get("mergeStateStatus", ""))
     review_decision = str(pr.get("reviewDecision", "") or "")
-    checks_satisfied = checks["state"] == "passed"
+    checks_satisfied = checks["state"] in {"passed", "not-configured"}
     approvals_satisfied = review_decision == "APPROVED"
     mergeability_satisfied = mergeable == "MERGEABLE" and merge_state not in {"DIRTY", "UNKNOWN"}
     return {
@@ -355,17 +448,35 @@ def detect_superseded(prs: list[dict[str, Any]], overlap_rows: list[dict[str, An
         right = indexed[pair["right"]]
         if left["train"] != right["train"]:
             continue
-        left_time = parse_iso(left.get("updatedAt"))
-        right_time = parse_iso(right.get("updatedAt"))
-        if left_time <= right_time:
+        if str(left.get("baseRefName", "")) != str(right.get("baseRefName", "")):
+            continue
+        left_commits = {oid for oid in left.get("commitOids", []) if oid}
+        right_commits = {oid for oid in right.get("commitOids", []) if oid}
+        if not left_commits or not right_commits:
+            continue
+        older: dict[str, Any] | None = None
+        newer: dict[str, Any] | None = None
+        if left_commits < right_commits:
             older, newer = left, right
-        else:
+        elif right_commits < left_commits:
             older, newer = right, left
+        elif left_commits == right_commits:
+            left_time = parse_iso(left.get("createdAt"))
+            right_time = parse_iso(right.get("createdAt"))
+            if left_time <= right_time:
+                older, newer = left, right
+            else:
+                older, newer = right, left
+        if older is None or newer is None:
+            continue
         if older["number"] in superseded:
             continue
         superseded[older["number"]] = {
             "by": newer["number"],
-            "reason": f"High overlap with PR #{newer['number']} (jaccard {pair['jaccard']}).",
+            "reason": (
+                f"High overlap and commit-containment evidence with PR #{newer['number']} "
+                f"(jaccard {pair['jaccard']})."
+            ),
         }
     return superseded
 
@@ -451,24 +562,36 @@ def build_trains(
                 if dep not in {member["number"] for member in ordered}
             }
         )
-        commands = [
-            f"git checkout {default_branch}",
-            "git pull --ff-only",
-            f"git checkout -b {branch}",
-        ]
-        for pr in ordered:
-            if pr["disposition"] != "merge-train":
-                continue
-            commands.append(f"# PR #{pr['number']} {pr['title']}")
-            commands.append(f"git fetch origin pull/{pr['number']}/head:pr-{pr['number']}")
-            if pr["commitOids"]:
-                commands.append("git cherry-pick " + " ".join(pr["commitOids"]))
-            else:
-                commands.append(f"# no commit oids returned for PR #{pr['number']}")
-        commands.append(
-            f"gh pr create --repo {repo} --base {default_branch} --head {branch} "
-            f"--title \"Issue #{issue_number or 'N/A'} train: {train_name}\" --draft"
-        )
+        commands: list[str]
+        if not merge_candidates:
+            commands = ["# No merge-train candidates in this domain after triage."]
+        elif external_deps:
+            deps_text = ", ".join(f"#{dep}" for dep in external_deps)
+            commands = [
+                f"# External dependencies outside this train were detected: {deps_text}",
+                "# Resolve those dependencies (merge or integrate upstream) before using automated train commands.",
+                "# Automatic command generation is intentionally suppressed for this train to avoid partial cherry-picks.",
+            ]
+        else:
+            commands = [
+                f"git checkout {default_branch}",
+                "git pull --ff-only",
+                f"git checkout -b {branch}",
+            ]
+            for pr in ordered:
+                if pr["disposition"] != "merge-train":
+                    continue
+                commands.append(f"# PR #{pr['number']} {pr['title']}")
+                commands.append(f"git fetch origin pull/{pr['number']}/head:pr-{pr['number']}")
+                if pr["commitOids"]:
+                    commands.append("git cherry-pick " + " ".join(pr["commitOids"]))
+                else:
+                    commands.append(f"# no commit oids returned for PR #{pr['number']}")
+            commands.append(f"git push -u origin {branch}")
+            commands.append(
+                f"gh pr create --repo {repo} --base {default_branch} --head {branch} "
+                f"--title \"Issue #{issue_number or 'N/A'} train: {train_name}\" --draft"
+            )
         trains.append(
             {
                 "name": train_name,
@@ -682,7 +805,17 @@ def main() -> int:
     explicit_numbers = set(parse_number_list(args.pr_numbers))
     head_prefixes = tuple(prefix.strip().lower() for prefix in args.head_prefixes.split(",") if prefix.strip())
 
-    summaries = load_open_pr_summaries(repo, args.limit)
+    detail_cache: dict[int, dict[str, Any]] = {}
+    summary_map = {int(row.get("number", 0)): row for row in load_open_pr_summaries(repo, args.limit) if int(row.get("number", 0)) > 0}
+    for number in sorted(explicit_numbers):
+        if number in summary_map:
+            continue
+        detail = load_pr_detail(repo, number)
+        detail_cache[number] = detail
+        if str(detail.get("state", "")).upper() != "OPEN":
+            continue
+        summary_map[number] = pr_summary_from_detail(detail)
+    summaries = list(summary_map.values())
     candidates = [
         summary
         for summary in summaries
@@ -692,14 +825,20 @@ def main() -> int:
 
     details: list[dict[str, Any]] = []
     for row in candidates:
-        details.append(load_pr_detail(repo, int(row["number"])))
+        number = int(row["number"])
+        detail = detail_cache.get(number)
+        if detail is None:
+            detail = load_pr_detail(repo, number)
+            detail_cache[number] = detail
+        details.append(detail)
 
     prepared: list[dict[str, Any]] = []
     for detail in details:
         files = sorted({entry.get("path", "") for entry in detail.get("files", []) if entry.get("path")})
         scores = domain_scores(files)
         domain = primary_domain(files, scores)
-        checks = summarize_checks(detail.get("statusCheckRollup", []))
+        required_checks = load_required_checks(repo, int(detail.get("number")))
+        checks = summarize_checks(detail.get("statusCheckRollup", []), required_checks=required_checks)
         commits = detail.get("commits", []) or []
         prepared.append(
             {
@@ -718,6 +857,7 @@ def main() -> int:
                 "author": (detail.get("author") or {}).get("login", ""),
                 "createdAt": detail.get("createdAt", ""),
                 "updatedAt": detail.get("updatedAt", ""),
+                "headRepository": head_repository_key(detail, repo),
                 "filePaths": files,
                 "ownershipSurfaces": ownership_surfaces(files),
                 "domainScores": scores,
@@ -729,7 +869,12 @@ def main() -> int:
             }
         )
 
-    head_to_number = {pr["headRefName"]: pr["number"] for pr in prepared if pr.get("headRefName")}
+    base_repo_key = normalize_repo_key(repo)
+    head_to_number = {
+        pr["headRefName"]: pr["number"]
+        for pr in prepared
+        if pr.get("headRefName") and normalize_repo_key(str(pr.get("headRepository", ""))) == base_repo_key
+    }
     dependency_map: dict[int, list[int]] = {}
     for pr in prepared:
         deps: list[int] = []
@@ -804,8 +949,16 @@ def main() -> int:
     md_path = out_dir / MD_NAME
     json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     md_path.write_text(render_markdown(payload), encoding="utf-8")
-    print(f"Wrote {json_path.relative_to(ROOT)}")
-    print(f"Wrote {md_path.relative_to(ROOT)}")
+    try:
+        json_display = json_path.relative_to(ROOT)
+    except ValueError:
+        json_display = json_path
+    try:
+        md_display = md_path.relative_to(ROOT)
+    except ValueError:
+        md_display = md_path
+    print(f"Wrote {json_display}")
+    print(f"Wrote {md_display}")
     return 0
 
 
