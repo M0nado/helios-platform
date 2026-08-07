@@ -24,7 +24,7 @@ type XCoreAnalytics() =
             |> Seq.toArray
             :> IReadOnlyList<RouteScore>
         member _.DetectAnomalies(values, threshold) =
-            if threshold <= 0.0 then invalidArg "threshold" "Threshold must be positive."
+            if not (Double.IsFinite threshold) || threshold <= 0.0 then invalidArg "threshold" "Threshold must be finite and positive."
             let indexed = values |> Seq.mapi (fun index value -> index, value) |> Seq.toArray
             let nonFinite =
                 indexed

@@ -8,9 +8,16 @@ public sealed class XCore9Service : IXCore9Service
 {
     private const string EventSchemaVersion = "1.0";
     private const string EventSource = "xcore";
-    private const string EventEnvironment = "local";
     private const string EventDataClassification = "internal";
     private const string EventRepository = "M0nado/helios-platform";
+    private static readonly HashSet<string> AllowedAuditEnvironments = new(StringComparer.Ordinal)
+    {
+        "local",
+        "development",
+        "test",
+        "staging",
+        "production"
+    };
 
     private static readonly StringComparer IdentifierComparer = StringComparer.Ordinal;
     private static readonly HashSet<string> AllowedFeatures = new(IdentifierComparer)
@@ -29,6 +36,7 @@ public sealed class XCore9Service : IXCore9Service
     private readonly IXCoreAuthorization _authorization;
     private readonly IXCoreAuditSink _audit;
     private readonly XCore9Options _options;
+    private readonly string _auditEnvironment;
     private readonly IReadOnlyDictionary<string, WorkerTemplate> _templates;
     private readonly IReadOnlyDictionary<string, ToolchainDefinition> _toolchains;
     private readonly IReadOnlyDictionary<string, ToolDefinition> _tools;
@@ -57,6 +65,7 @@ public sealed class XCore9Service : IXCore9Service
         _options = options ?? new XCore9Options();
 
         ValidateOptions(_options);
+        _auditEnvironment = NormalizeAuditEnvironment(_options.AuditEnvironment);
 
         _templates = templates.ToDictionary(
             template => template.TemplateId,
@@ -127,6 +136,11 @@ public sealed class XCore9Service : IXCore9Service
     {
         ArgumentNullException.ThrowIfNull(candidates);
 
+        if (candidates.Count > _options.MaxRoutesPerScoringRequest)
+        {
+            throw new InvalidOperationException("Candidate set exceeds the configured scoring request bound.");
+        }
+
         foreach (var candidate in candidates)
         {
             ValidateCandidate(candidate);
@@ -154,6 +168,7 @@ public sealed class XCore9Service : IXCore9Service
 
         _ = ConstructToolchain(toolchainId);
 
+        WorkerLease lease;
         lock (_gate)
         {
             PruneLeases();
@@ -167,15 +182,38 @@ public sealed class XCore9Service : IXCore9Service
                 throw new InvalidOperationException("Worker instance or resource limit reached.");
             }
 
-            var lease = new WorkerLease(
+            lease = new WorkerLease(
                 LeaseId: Guid.NewGuid(),
                 TemplateId: templateId,
                 CorrelationId: correlationId,
                 ExpiresAt: DateTimeOffset.UtcNow + _options.EffectiveLeaseDuration);
 
             _leases[lease.LeaseId] = lease;
-            return lease;
         }
+
+        try
+        {
+            await WriteAuditAsync(
+                eventType: "xcore9.worker.selected",
+                actor: actor,
+                correlationId: correlationId,
+                evidenceLinks: Array.Empty<Uri>(),
+                payload: new Dictionary<string, object?>(IdentifierComparer)
+                {
+                    ["leaseId"] = lease.LeaseId.ToString("N"),
+                    ["templateId"] = lease.TemplateId,
+                    ["toolchainId"] = toolchainId,
+                    ["expiresAt"] = lease.ExpiresAt
+                },
+                cancellationToken);
+        }
+        catch
+        {
+            _leases.TryRemove(lease.LeaseId, out _);
+            throw;
+        }
+
+        return lease;
     }
 
     public ConstructedToolchain ConstructToolchain(string toolchainId)
@@ -203,7 +241,7 @@ public sealed class XCore9Service : IXCore9Service
 
             if (visited.Add(toolId))
             {
-                foreach (var dependency in tool.Dependencies.Order())
+                foreach (var dependency in tool.Dependencies.OrderBy(static dependency => dependency, StringComparer.Ordinal))
                 {
                     Visit(dependency);
                 }
@@ -214,7 +252,7 @@ public sealed class XCore9Service : IXCore9Service
             visiting.Remove(toolId);
         }
 
-        foreach (var toolId in toolchain.ToolIds.Order())
+        foreach (var toolId in toolchain.ToolIds.OrderBy(static toolId => toolId, StringComparer.Ordinal))
         {
             Visit(toolId);
         }
@@ -359,11 +397,6 @@ public sealed class XCore9Service : IXCore9Service
             throw new UnauthorizedAccessException("Lease correlation does not match release request.");
         }
 
-        if (!_leases.TryRemove(lease.LeaseId, out _))
-        {
-            throw new InvalidOperationException("Worker lease release failed.");
-        }
-
         await WriteAuditAsync(
             eventType: "xcore9.worker.released",
             actor: actor,
@@ -372,9 +405,24 @@ public sealed class XCore9Service : IXCore9Service
             payload: new Dictionary<string, object?>(IdentifierComparer)
             {
                 ["leaseId"] = lease.LeaseId.ToString("N"),
-                ["templateId"] = lease.TemplateId
+                ["templateId"] = activeLease.TemplateId
             },
             cancellationToken);
+
+        if (!_leases.TryGetValue(lease.LeaseId, out var postAuditLease))
+        {
+            throw new InvalidOperationException("Worker lease is not active.");
+        }
+
+        if (!string.Equals(postAuditLease.CorrelationId, correlationId, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException("Lease correlation does not match release request.");
+        }
+
+        if (!_leases.TryRemove(lease.LeaseId, out _))
+        {
+            throw new InvalidOperationException("Worker lease release failed.");
+        }
     }
 
     private static void ValidateOptions(XCore9Options options)
@@ -383,6 +431,7 @@ public sealed class XCore9Service : IXCore9Service
             options.MaxCpuUnits < 1 ||
             options.MaxMemoryMiB < 1 ||
             options.MaxFeaturesPerRun < 1 ||
+            options.MaxRoutesPerScoringRequest < 1 ||
             options.MaxRunHistoryEntries < 1 ||
             options.MaxNegotiationEntries < 1 ||
             options.MinimumHoldoutSamples < 1)
@@ -399,6 +448,11 @@ public sealed class XCore9Service : IXCore9Service
         {
             throw new ArgumentException("Lease duration must be positive when configured.");
         }
+
+        if (string.IsNullOrWhiteSpace(options.AuditEnvironment))
+        {
+            throw new ArgumentException("Audit environment is required.");
+        }
     }
 
     private void ValidateCatalogSnapshots()
@@ -413,12 +467,9 @@ public sealed class XCore9Service : IXCore9Service
                 throw new ArgumentException("Every template must declare bounded resources and an immutable prompt digest.");
             }
 
-            foreach (var allowedToolchainId in template.AllowedToolchainIds)
+            foreach (var allowedToolchainId in template.AllowedToolchainIds.Where(allowedToolchainId => !_toolchains.ContainsKey(allowedToolchainId)))
             {
-                if (!_toolchains.ContainsKey(allowedToolchainId))
-                {
-                    throw new ArgumentException("Template references a toolchain outside the approved catalog.");
-                }
+                throw new ArgumentException("Template references a toolchain outside the approved catalog.");
             }
         }
 
@@ -540,6 +591,11 @@ public sealed class XCore9Service : IXCore9Service
             throw new ArgumentException("Correlation ID is required.");
         }
 
+        if (correlationId.Trim().Length < 4)
+        {
+            throw new ArgumentException("Correlation ID must be at least 4 characters.");
+        }
+
         if (evidenceLinks is null)
         {
             throw new ArgumentNullException(nameof(evidenceLinks));
@@ -573,7 +629,7 @@ public sealed class XCore9Service : IXCore9Service
             EventType: eventType,
             Repository: EventRepository,
             CorrelationId: correlationId,
-            Environment: EventEnvironment,
+            Environment: _auditEnvironment,
             OccurredAt: DateTimeOffset.UtcNow,
             DataClassification: EventDataClassification,
             Actor: new XCoreEventActor(Type: "service", Id: actor, DisplayName: null),
@@ -581,6 +637,17 @@ public sealed class XCore9Service : IXCore9Service
             Payload: payloadSnapshot);
 
         await _audit.WriteAsync(envelope, cancellationToken);
+    }
+
+    private static string NormalizeAuditEnvironment(string environment)
+    {
+        var normalized = environment.Trim().ToLowerInvariant();
+        if (!AllowedAuditEnvironments.Contains(normalized))
+        {
+            throw new ArgumentException("Audit environment must be one of: local, development, test, staging, production.");
+        }
+
+        return normalized;
     }
 
     private static void AppendBounded<T>(List<T> entries, T value, int maxEntries)

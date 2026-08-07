@@ -1,0 +1,378 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monado-enterprise/v2/profiles.contract.v2.schema.json",
+  "title": "Monado enterprise profiles contract v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "defaultProfile",
+    "profiles",
+    "states",
+    "overlays",
+    "invariants"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "contractId": {
+      "const": "monado-enterprise-profiles-v2"
+    },
+    "defaultProfile": {
+      "const": "core"
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/profile"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "core"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "developer"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "gamer"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "studio"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "personal"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "sysops"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "ai-server"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id",
+              "administrator",
+              "hidden",
+              "enabledByDefault"
+            ],
+            "properties": {
+              "id": {
+                "const": "sysadmin"
+              },
+              "administrator": {
+                "const": true
+              },
+              "hidden": {
+                "const": true
+              },
+              "enabledByDefault": {
+                "const": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    "states": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/state"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "recovery"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "quarantine"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "overlays": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/overlay"
+      },
+      "contains": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind"
+        ],
+        "properties": {
+          "id": {
+            "const": "airgap"
+          },
+          "kind": {
+            "const": "overlay"
+          }
+        }
+      }
+    },
+    "invariants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "onlySysAdminIsAdministrator",
+        "sysAdminHiddenAndDisabledByDefault",
+        "recoveryAndQuarantineAreStatesNotProfiles",
+        "airgapIsOverlayNotProfile"
+      ],
+      "properties": {
+        "onlySysAdminIsAdministrator": {
+          "const": true
+        },
+        "sysAdminHiddenAndDisabledByDefault": {
+          "const": true
+        },
+        "recoveryAndQuarantineAreStatesNotProfiles": {
+          "const": true
+        },
+        "airgapIsOverlayNotProfile": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "displayName",
+        "windowsRole",
+        "interactive",
+        "administrator",
+        "hidden",
+        "enabledByDefault"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "core",
+            "developer",
+            "gamer",
+            "studio",
+            "personal",
+            "sysops",
+            "ai-server",
+            "sysadmin"
+          ]
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "windowsRole": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interactive": {
+          "type": "boolean"
+        },
+        "administrator": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "enabledByDefault": {
+          "type": "boolean"
+        },
+        "activation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "physicalPresenceRequired",
+            "minimumFactors",
+            "remoteActivationDenied",
+            "cloudActivationDenied",
+            "aiActivationDenied"
+          ],
+          "properties": {
+            "physicalPresenceRequired": {
+              "type": "boolean"
+            },
+            "minimumFactors": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "remoteActivationDenied": {
+              "type": "boolean"
+            },
+            "cloudActivationDenied": {
+              "type": "boolean"
+            },
+            "aiActivationDenied": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "displayName",
+        "kind",
+        "entryRequiresApproval"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "recovery",
+            "quarantine"
+          ]
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "state"
+        },
+        "entryRequiresApproval": {
+          "type": "boolean"
+        }
+      }
+    },
+    "overlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "appliesTo",
+        "networkEgress"
+      ],
+      "properties": {
+        "id": {
+          "const": "airgap"
+        },
+        "kind": {
+          "const": "overlay"
+        },
+        "appliesTo": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "core",
+              "developer",
+              "gamer",
+              "studio",
+              "personal",
+              "sysops",
+              "ai-server",
+              "sysadmin"
+            ]
+          }
+        },
+        "networkEgress": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

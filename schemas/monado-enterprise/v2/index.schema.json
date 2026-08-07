@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monado-enterprise/v2/index.schema.json",
+  "title": "Monado enterprise experience fabric v2 index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "status",
+    "historicalInputs",
+    "executionMode",
+    "destructiveApplyDefault",
+    "requiresApprovalEvidence",
+    "contracts",
+    "profileManifestDirectory",
+    "profileManifestSchema",
+    "relatedIssues",
+    "blockedPathsFromDraftPr205"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "contractId": {
+      "const": "monado-enterprise-experience-fabric-v2"
+    },
+    "status": {
+      "const": "authoritative"
+    },
+    "historicalInputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "executionMode": {
+      "const": "proposal-only"
+    },
+    "destructiveApplyDefault": {
+      "const": false
+    },
+    "requiresApprovalEvidence": {
+      "const": true
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "storage",
+        "profiles",
+        "experience",
+        "synchronization",
+        "repositoryMap"
+      ],
+      "properties": {
+        "storage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profiles": {
+          "type": "string",
+          "minLength": 1
+        },
+        "experience": {
+          "type": "string",
+          "minLength": 1
+        },
+        "synchronization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repositoryMap": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "profileManifestDirectory": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profileManifestSchema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relatedIssues": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "blockedPathsFromDraftPr205": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

@@ -13,24 +13,73 @@ public sealed class XCore9ServiceTests
         var (service, _) = Create(options: new XCore9Options(MaxTotalInstances: 1, MaxCpuUnits: 2, MaxMemoryMiB: 512));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            service.SelectWorkerAsync("generated", "safe", "c-1", "operator", default).AsTask());
+            service.SelectWorkerAsync("generated", "safe", "corr-1", "operator", default).AsTask());
 
-        var lease = await service.SelectWorkerAsync("reviewer", "safe", "c-1", "operator", default);
+        var lease = await service.SelectWorkerAsync("reviewer", "safe", "corr-1", "operator", default);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.SelectWorkerAsync("reviewer", "safe", "c-2", "operator", default).AsTask());
+            service.SelectWorkerAsync("reviewer", "safe", "corr-2", "operator", default).AsTask());
 
-        await service.ReleaseWorkerAsync(lease, "c-1", "operator", default);
+        await service.ReleaseWorkerAsync(lease, "corr-1", "operator", default);
+    }
+
+    [Fact]
+    public async Task Selection_is_audited_and_rolls_back_on_audit_failure()
+    {
+        var (service, audit) = Create();
+        var lease = await service.SelectWorkerAsync("reviewer", "safe", "corr-1", "operator", default);
+
+        var selectedEvent = Assert.Single(audit.Events, evt => evt.EventType == "xcore9.worker.selected");
+        Assert.Equal("corr-1", selectedEvent.CorrelationId);
+        Assert.Equal("reviewer", selectedEvent.Payload["templateId"]);
+
+        await service.ReleaseWorkerAsync(lease, "corr-1", "operator", default);
+
+        var failingAudit = new RecordingAuditSink(failEventType: "xcore9.worker.selected");
+        var (failingService, _) = Create(
+            options: new XCore9Options(MaxTotalInstances: 1),
+            audit: failingAudit);
+
+        var first = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            failingService.SelectWorkerAsync("reviewer", "safe", "corr-2", "operator", default).AsTask());
+        Assert.Equal("audit-sink-failure", first.Message);
+
+        var second = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            failingService.SelectWorkerAsync("reviewer", "safe", "corr-3", "operator", default).AsTask());
+        Assert.Equal("audit-sink-failure", second.Message);
+    }
+
+    [Fact]
+    public async Task Selection_enforces_minimum_correlation_id_length()
+    {
+        var (service, _) = Create();
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.SelectWorkerAsync("reviewer", "safe", "c-1", "operator", default).AsTask());
     }
 
     [Fact]
     public async Task Worker_release_requires_matching_correlation()
     {
         var (service, _) = Create();
-        var lease = await service.SelectWorkerAsync("reviewer", "safe", "c-1", "operator", default);
+        var lease = await service.SelectWorkerAsync("reviewer", "safe", "corr-6", "operator", default);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            service.ReleaseWorkerAsync(lease, "c-2", "operator", default).AsTask());
+            service.ReleaseWorkerAsync(lease, "corr-7", "operator", default).AsTask());
+    }
+
+    [Fact]
+    public async Task Worker_release_keeps_lease_active_when_release_audit_fails()
+    {
+        var audit = new RecordingAuditSink(failEventType: "xcore9.worker.released");
+        var (service, _) = Create(options: new XCore9Options(MaxTotalInstances: 1), audit: audit);
+        var lease = await service.SelectWorkerAsync("reviewer", "safe", "corr-4", "operator", default);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ReleaseWorkerAsync(lease, "corr-4", "operator", default).AsTask());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SelectWorkerAsync("reviewer", "safe", "corr-5", "operator", default).AsTask());
     }
 
     [Fact]
@@ -45,6 +94,19 @@ public sealed class XCore9ServiceTests
             Features: [new SanitizedRunFeature("success_rate", 0.8)]);
 
         Assert.Throws<InvalidOperationException>(() => service.ScoreRoutes([candidate]));
+    }
+
+    [Fact]
+    public void Scoring_rejects_candidate_sets_above_configured_bound()
+    {
+        var (service, _) = Create(options: new XCore9Options(MaxRoutesPerScoringRequest: 1));
+        var candidates = new[]
+        {
+            new CandidateRoute("a", "reviewer", "safe", [new SanitizedRunFeature("success_rate", .8)]),
+            new CandidateRoute("b", "reviewer", "safe", [new SanitizedRunFeature("success_rate", .7)])
+        };
+
+        Assert.Throws<InvalidOperationException>(() => service.ScoreRoutes(candidates));
     }
 
     [Fact]
@@ -84,7 +146,7 @@ public sealed class XCore9ServiceTests
         var (service, _) = Create();
         var candidate = new RoutingPolicy("candidate", 2, new Dictionary<string, string>(), null);
         var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
-        var request = new PromotionRequest("p-1", candidate, holdout, "xcore-9", [new Uri("https://evidence.test/1")]);
+        var request = new PromotionRequest("corr-p1", candidate, holdout, "xcore-9", [new Uri("https://evidence.test/1")]);
 
         var self = await service.EvaluatePromotionAsync(request, "xcore-9", default);
         Assert.False(self.Approved);
@@ -93,7 +155,7 @@ public sealed class XCore9ServiceTests
         var approved = await service.EvaluatePromotionAsync(
             request with
             {
-                CorrelationId = "p-2",
+                CorrelationId = "corr-p2",
                 RequestedBy = "guardian"
             },
             "guardian",
@@ -111,7 +173,7 @@ public sealed class XCore9ServiceTests
         var holdout = new HoldoutEvaluation(100, double.NaN, .2, .9, true);
 
         var decision = await service.EvaluatePromotionAsync(
-            new PromotionRequest("p-3", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]),
+            new PromotionRequest("corr-p3", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]),
             "guardian",
             default);
 
@@ -128,13 +190,13 @@ public sealed class XCore9ServiceTests
         var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
 
         var first = await service.EvaluatePromotionAsync(
-            new PromotionRequest("p-4", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]),
+            new PromotionRequest("corr-p4", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]),
             "guardian",
             default);
         Assert.True(first.Approved);
 
         var second = await service.EvaluatePromotionAsync(
-            new PromotionRequest("p-5", candidate, holdout, "guardian", [new Uri("https://evidence.test/2")]),
+            new PromotionRequest("corr-p5", candidate, holdout, "guardian", [new Uri("https://evidence.test/2")]),
             "guardian",
             default);
 
@@ -150,7 +212,7 @@ public sealed class XCore9ServiceTests
         var (service, _) = Create(audit: audit);
         var candidate = new RoutingPolicy("candidate", 2, new Dictionary<string, string>(), null);
         var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
-        var request = new PromotionRequest("p-6", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]);
+        var request = new PromotionRequest("corr-p6", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.EvaluatePromotionAsync(request, "guardian", default).AsTask());
@@ -158,7 +220,7 @@ public sealed class XCore9ServiceTests
         var blocked = await service.EvaluatePromotionAsync(
             request with
             {
-                CorrelationId = "p-7",
+                CorrelationId = "corr-p7",
                 Holdout = holdout with { Passed = false }
             },
             "guardian",
@@ -191,6 +253,8 @@ public sealed class XCore9ServiceTests
         var anomalies = analytics.DetectAnomalies([double.NaN, 0, 0], 2);
         Assert.Contains(0, anomalies);
 
+        Assert.Throws<ArgumentException>(() => analytics.DetectAnomalies([0, 1], double.NaN));
+
         Assert.Throws<ArgumentException>(() => analytics.EvaluatePredictions(
             [double.NaN, 1],
             [0, 1],
@@ -202,6 +266,9 @@ public sealed class XCore9ServiceTests
     {
         Assert.Throws<ArgumentException>(() =>
             Create(options: new XCore9Options(LeaseDuration: TimeSpan.Zero)));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(AuditEnvironment: "qa")));
     }
 
     private static (XCore9Service Service, RecordingAuditSink Audit) Create(

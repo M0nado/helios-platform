@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "1.0",
+  "provider": "github",
+  "apiBaseUrl": "https://api.github.com",
+  "apiVersion": "2022-11-28",
+  "authentication": "github-cli-or-fine-grained-token",
+  "operations": ["read-approved-scopes", "generate-mutation-plan"],
+  "mutationExecution": false
+}

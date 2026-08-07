@@ -5,10 +5,12 @@ public sealed record XCore9Options(
     int MaxCpuUnits = 18,
     int MaxMemoryMiB = 18432,
     int MaxFeaturesPerRun = 64,
+    int MaxRoutesPerScoringRequest = 256,
     int MaxRunHistoryEntries = 2048,
     int MaxNegotiationEntries = 1024,
     int MinimumHoldoutSamples = 100,
     double MinimumImprovement = 0.01,
+    string AuditEnvironment = "local",
     TimeSpan? LeaseDuration = null)
 {
     public TimeSpan EffectiveLeaseDuration => LeaseDuration ?? TimeSpan.FromMinutes(15);
