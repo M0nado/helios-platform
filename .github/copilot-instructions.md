@@ -111,6 +111,37 @@ python -m json.tool config/integrations/event-contract.schema.json > $null
 python -m json.tool config/integrations/repositories.json > $null
 ```
 
+## Benchmark, code-scoring, and XCore/Hermes evaluation loop
+
+Use these commands when work touches benchmarking, scoring, branch consolidation, or fleet/evaluator streams.
+
+### Performance benchmark lanes
+
+```powershell
+dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Performance|FullyQualifiedName~ScalingTest"
+dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~EndToEnd|FullyQualifiedName~E2E"
+```
+
+### Branch/code scoring and prune analysis (proposal-only)
+
+```powershell
+python scripts/analysis/deep_branch_code_score.py
+python scripts/analysis/complex_code_grading.py
+python scripts/analysis/branch_intelligence.py
+python scripts/analysis/merge_prune_recommendations.py
+python scripts/analysis/commit_window_unification.py --since "14 days ago"
+```
+
+Outputs are written to `reports/branch-intelligence/*` and `reports/learning/*` and are evidence inputs, not merge actions.
+
+### Generated-report cleanup
+
+```powershell
+python scripts/analysis/prune_generated_artifacts.py
+```
+
+This cleanup removes generated report artifacts only; it does not merge or delete Git branches.
+
 ## Architecture map (big picture)
 
 - **Core platform modules:** `src/core/HELIOS.Platform`, `src/core/HELIOS.Platform.Contracts`, `src/core/HELIOS.Platform.Minimal`.
@@ -129,6 +160,19 @@ python -m json.tool config/integrations/repositories.json > $null
 - Local fleet launcher: `monado/helios-control/scripts/Start-HeliosLocalFleet.ps1`.
 - Performance evidence surfaces: `docs/guides/PERFORMANCE_BENCHMARK.md`, `tests/PERFORMANCE_BENCHMARK.md`, `src/core/HELIOS.Platform/Core/Performance/PerformanceBenchmarkService.cs`.
 
+### Main integration sweep (issues, PRs, commits)
+
+Run this sweep before integrating to `main`:
+
+```powershell
+gh issue list --repo M0nado/helios-platform --state all --limit 200 --json number,title,state,updatedAt,url
+gh pr list --repo M0nado/helios-platform --state all --limit 200 --json number,title,state,isDraft,headRefName,baseRefName,updatedAt,url
+git --no-pager log main --date=iso --pretty=format:"%h|%ad|%s" -n 80
+python scripts/analysis/commit_window_unification.py --since "7 days ago"
+```
+
+Prioritize the newest active consolidation and XCore/Hermes streams first, then follow dependency order.
+
 ## Repository-specific conventions (required)
 
 1. Use a scoped issue, feature branch, and PR for substantial work.
@@ -143,6 +187,8 @@ python -m json.tool config/integrations/repositories.json > $null
 10. Use normalized event envelope fields from `config/integrations/event-contract.schema.json`.
 11. Default destructive Windows automation to dry-run/`-WhatIf` and document rollback behavior.
 12. Microsoft Copilot/Copilot Studio actions must traverse approved broker APIs and cannot bypass GitHub/Azure approval gates.
+13. Auto-prune and auto-merge are recommendation-only: scoring/prune scripts must not merge or delete branches automatically.
+14. XCore/Hermes evaluator outputs are advisory until issue/PR review, policy gates, and human approval are completed.
 
 ## Merge and repo-sync readiness playbook
 
@@ -153,6 +199,7 @@ Before proposing merge/repo sync:
 3. Run targeted lane commands for touched surfaces (do not default to unrelated full-suite runs).
 4. Confirm guardrails: no auto-merge, no implicit deploys, no implicit RBAC/consent/publication.
 5. Link evidence in GitHub; sync status to Slack/Linear/Teams/SharePoint through approved governed paths only.
+6. If using branch/prune scoring outputs, open or update the governing issue/PR thread with rationale before any consolidation action.
 
 Useful GitHub commands:
 
