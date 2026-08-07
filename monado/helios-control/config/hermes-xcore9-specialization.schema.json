@@ -13,6 +13,7 @@
     "multimodalRouting"
   ],
   "properties": {
+    "$schema": { "type": "string" },
     "schemaVersion": { "type": "string", "const": "1.0" },
     "registryVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "parallelPolicy": {

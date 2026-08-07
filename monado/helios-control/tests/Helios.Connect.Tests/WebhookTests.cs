@@ -656,6 +656,27 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Azure_mcp_non_specialization_tools_do_not_require_specialization_registry()
+    {
+        await using var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("HELIOS_SPECIALIZATION_CONFIG_PATH", "config/does-not-exist.json");
+            builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
+            builder.UseSetting("HELIOS_ENTRA_CLIENT_ID", "11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", "api://helios.example.test/11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test");
+        });
+        using var client = factory.CreateClient();
+        using var request = CreateMcpRequest(
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"search\",\"arguments\":{\"query\":\"HELIOS\"}}}",
+            "openid access_as_user");
+        using var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.False(document.RootElement.GetProperty("result").GetProperty("isError").GetBoolean());
+    }
+
+    [Fact]
     public async Task Azure_mcp_returns_specialization_plan_with_multimodal_metadata()
     {
         const string payload = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_plan_specialization_run\",\"arguments\":{\"specializationId\":\"hermes-xcore9-orchestrator\",\"requestedParallelism\":3,\"requestedFanOut\":3,\"requestedFanIn\":3,\"timeoutSeconds\":180,\"idempotencyKey\":\"mcp-specialization-0001\",\"correlationId\":\"corr-mcp-241\",\"requestedTools\":[\"search\",\"fetch\",\"helios_plan_specialization_run\"],\"requestedSkills\":[\"helios-control-skill\"],\"requestedModalities\":[\"text\",\"code\"],\"evidenceLinks\":[{\"rel\":\"issue\",\"href\":\"https://github.com/M0nado/helios-platform/issues/241\"}]}}}";

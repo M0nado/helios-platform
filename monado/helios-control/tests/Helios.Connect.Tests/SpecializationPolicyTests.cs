@@ -76,6 +76,94 @@ public sealed class SpecializationPolicyTests
         Assert.Contains(decision.Violations, violation => violation.Code == "pack-parallelism-exceeded");
         Assert.Contains(decision.Violations, violation => violation.Code == "pack-fanout-exceeded");
         Assert.Contains(decision.Violations, violation => violation.Code == "pack-fanin-exceeded");
+        Assert.NotEmpty(decision.EvidenceMetadata);
+        Assert.All(decision.EvidenceMetadata, metadata =>
+        {
+            Assert.Equal("corr-241-bounds", metadata.CorrelationId);
+            Assert.Equal("specialization-bounds-0001", metadata.IdempotencyKey);
+        });
+    }
+
+    [Fact]
+    public void Negative_requested_limits_are_rejected()
+    {
+        var evaluator = new SpecializationPolicyEvaluator(LoadRegistry("hermes-xcore9-specialization-packs.json"));
+        var decision = evaluator.Evaluate(new SpecializationExecutionRequest(
+            SpecializationId: "hermes-xcore9-orchestrator",
+            RequestedParallelism: -1,
+            RequestedFanOut: -2,
+            RequestedFanIn: -3,
+            TimeoutSeconds: -4,
+            IdempotencyKey: "specialization-negative-0001",
+            CorrelationId: "corr-241-negative",
+            RequestedTools: ["search"],
+            RequestedSkills: ["helios-control-skill"],
+            RequestedModalities: ["text"],
+            EvidenceLinks: [new EvidenceLink("issue", "https://github.com/M0nado/helios-platform/issues/241")]));
+
+        Assert.False(decision.Allowed);
+        Assert.Contains(decision.Violations, violation => violation.Code == "invalid-requested-parallelism");
+        Assert.Contains(decision.Violations, violation => violation.Code == "invalid-requested-fanout");
+        Assert.Contains(decision.Violations, violation => violation.Code == "invalid-requested-fanin");
+        Assert.Contains(decision.Violations, violation => violation.Code == "invalid-timeout");
+    }
+
+    [Fact]
+    public void Blank_requested_modalities_are_rejected()
+    {
+        var evaluator = new SpecializationPolicyEvaluator(LoadRegistry("hermes-xcore9-specialization-packs.json"));
+        var decision = evaluator.Evaluate(new SpecializationExecutionRequest(
+            SpecializationId: "hermes-xcore9-orchestrator",
+            RequestedParallelism: 1,
+            RequestedFanOut: 1,
+            RequestedFanIn: 1,
+            TimeoutSeconds: 60,
+            IdempotencyKey: "specialization-blank-modalities-0001",
+            CorrelationId: "corr-241-modalities",
+            RequestedTools: ["search"],
+            RequestedSkills: ["helios-control-skill"],
+            RequestedModalities: ["  "],
+            EvidenceLinks: [new EvidenceLink("issue", "https://github.com/M0nado/helios-platform/issues/241")]));
+
+        Assert.False(decision.Allowed);
+        Assert.Contains(decision.Violations, violation => violation.Code == "invalid-requested-modalities");
+    }
+
+    [Fact]
+    public void Null_evidence_link_entries_are_rejected_without_throwing()
+    {
+        var evaluator = new SpecializationPolicyEvaluator(LoadRegistry("hermes-xcore9-specialization-packs.json"));
+        var decision = evaluator.Evaluate(new SpecializationExecutionRequest(
+            SpecializationId: "hermes-xcore9-orchestrator",
+            RequestedParallelism: 1,
+            RequestedFanOut: 1,
+            RequestedFanIn: 1,
+            TimeoutSeconds: 60,
+            IdempotencyKey: "specialization-null-links-0001",
+            CorrelationId: "corr-241-links",
+            RequestedTools: ["search"],
+            RequestedSkills: ["helios-control-skill"],
+            RequestedModalities: ["text"],
+            EvidenceLinks: [null!, new EvidenceLink("issue", "https://github.com/M0nado/helios-platform/issues/241")]));
+
+        Assert.False(decision.Allowed);
+        Assert.Contains(decision.Violations, violation => violation.Code == "invalid-evidence-link");
+    }
+
+    [Fact]
+    public void Unsupported_required_provenance_fields_are_rejected()
+    {
+        var registry = LoadRegistry("hermes-xcore9-specialization-packs.json");
+        var invalidRegistry = registry with
+        {
+            MultimodalRouting = registry.MultimodalRouting with
+            {
+                RequiredProvenanceFields = [..registry.MultimodalRouting.RequiredProvenanceFields, "commitSha"]
+            }
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() => new SpecializationPolicyEvaluator(invalidRegistry));
+        Assert.Contains("Unsupported required provenance field", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -129,6 +217,13 @@ public sealed class SpecializationPolicyTests
 
     private static string FindConfigPath(string fileName)
     {
+        if (string.IsNullOrWhiteSpace(fileName))
+            throw new ArgumentException("Config file name is required.", nameof(fileName));
+        if (Path.IsPathRooted(fileName) ||
+            fileName.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            fileName.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal))
+            throw new ArgumentException("Config file name must be a relative leaf file name.", nameof(fileName));
+
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null)
         {

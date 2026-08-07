@@ -12,6 +12,9 @@ public interface ISpecializationPolicyEvaluator
 public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluator
 {
     private static readonly StringComparer Comparer = StringComparer.OrdinalIgnoreCase;
+    private static readonly StringComparer LinkHrefComparer = StringComparer.Ordinal;
+    private const int MaxParallelBound = 64;
+    private const int MaxTimeoutBound = 3_600;
     private static readonly HashSet<string> AllowedTimeoutBehaviors = new(Comparer)
     {
         "cancel-running-children",
@@ -24,6 +27,18 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         "continue-and-report",
         "continue-and-compensate"
     };
+    private static readonly HashSet<string> SupportedProvenanceFields = new(Comparer)
+    {
+        "correlationId",
+        "idempotencyKey",
+        "specializationId",
+        "specializationPackId",
+        "skillIds",
+        "modality",
+        "evidenceLinks",
+        "emittedAt",
+        "schemaVersion"
+    };
 
     private readonly Dictionary<string, SpecializationSkillContract> _skills;
     private readonly Dictionary<string, SpecializationPackContract> _packs;
@@ -34,9 +49,9 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
     public SpecializationPolicyEvaluator(SpecializationRegistryDocument registry)
     {
         Registry = ValidateRegistry(registry);
-        _skills = Registry.Skills.ToDictionary(skill => skill.Id, Comparer);
-        _packs = Registry.Packs.ToDictionary(pack => pack.Id, Comparer);
-        _lanes = Registry.MultimodalRouting.Lanes.ToDictionary(lane => lane.Id, Comparer);
+        _skills = Registry.Skills.ToDictionary(skill => skill.Id.Trim(), Comparer);
+        _packs = Registry.Packs.ToDictionary(pack => pack.Id.Trim(), Comparer);
+        _lanes = Registry.MultimodalRouting.Lanes.ToDictionary(lane => lane.Id.Trim(), Comparer);
     }
 
     public static ISpecializationPolicyEvaluator CreateFromConfiguration(
@@ -53,6 +68,8 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         try
         {
             var json = File.ReadAllText(path);
+            using var document = JsonDocument.Parse(json);
+            ValidateRequiredRegistryJsonFields(document.RootElement, path);
             var registry = JsonSerializer.Deserialize<SpecializationRegistryDocument>(
                 json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -68,20 +85,18 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
 
     private static string ResolveRegistryPath(IConfiguration configuration, IWebHostEnvironment environment)
     {
-        var configuredPath = configuration["HELIOS_SPECIALIZATION_CONFIG_PATH"];
+        var configuredPath = configuration["HELIOS_SPECIALIZATION_CONFIG_PATH"]?.Trim();
         if (!string.IsNullOrWhiteSpace(configuredPath))
         {
             return Path.IsPathRooted(configuredPath)
-                ? configuredPath
-                : Path.GetFullPath(Path.Combine(environment.ContentRootPath, configuredPath));
+                ? Path.GetFullPath(configuredPath)
+                : Path.GetFullPath(configuredPath, environment.ContentRootPath);
         }
-
-        var relativePath = Path.Combine("config", "hermes-xcore9-specialization-packs.json");
         var candidates = new[]
         {
-            Path.Combine(environment.ContentRootPath, relativePath),
-            Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "..", relativePath)),
-            Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "..", "..", relativePath))
+            Path.GetFullPath(Path.Combine(environment.ContentRootPath, "config", "hermes-xcore9-specialization-packs.json")),
+            Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "..", "config", "hermes-xcore9-specialization-packs.json")),
+            Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "..", "..", "config", "hermes-xcore9-specialization-packs.json"))
         };
 
         return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
@@ -113,9 +128,16 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         var packSkills = ToSet(pack.BoundSkills, "pack boundSkills");
         var packModalities = ToSet(pack.Modalities, "pack modalities");
 
-        var selectedSkillIds = request.RequestedSkills is { Count: > 0 }
+        var requestedSkillsSpecified = request.RequestedSkills is { Count: > 0 };
+        var selectedSkillIds = requestedSkillsSpecified
             ? NormalizeRequestValues(request.RequestedSkills)
             : Normalize(pack.BoundSkills, "pack bound skill");
+        if (requestedSkillsSpecified && selectedSkillIds.Count == 0)
+        {
+            violations.Add(new("invalid-requested-skills",
+                "requestedSkills must include at least one non-empty value when provided."));
+        }
+
         var selectedSkills = new List<SpecializationSkillContract>();
         foreach (var skillId in selectedSkillIds)
         {
@@ -138,6 +160,11 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         if (selectedSkills.Count == 0)
             violations.Add(new("missing-skill-binding", "At least one bound skill contract is required."));
 
+        if (request.RequestedParallelism < 0)
+        {
+            violations.Add(new("invalid-requested-parallelism",
+                "requestedParallelism cannot be negative."));
+        }
         var effectiveParallelism = request.RequestedParallelism > 0 ? request.RequestedParallelism : 1;
         if (effectiveParallelism > Registry.ParallelPolicy.MaxGlobalParallelism)
             violations.Add(new("global-parallelism-exceeded",
@@ -146,6 +173,11 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
             violations.Add(new("pack-parallelism-exceeded",
                 $"Requested parallelism {effectiveParallelism} exceeds specialization limit {pack.MaxParallelism}."));
 
+        if (request.RequestedFanOut < 0)
+        {
+            violations.Add(new("invalid-requested-fanout",
+                "requestedFanOut cannot be negative."));
+        }
         var defaultFanOut = Math.Min(pack.MaxFanOut, Registry.ParallelPolicy.MaxFanOut);
         var effectiveFanOut = request.RequestedFanOut > 0 ? request.RequestedFanOut : defaultFanOut;
         if (effectiveFanOut > Registry.ParallelPolicy.MaxFanOut)
@@ -155,6 +187,11 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
             violations.Add(new("pack-fanout-exceeded",
                 $"Requested fan-out {effectiveFanOut} exceeds specialization limit {pack.MaxFanOut}."));
 
+        if (request.RequestedFanIn < 0)
+        {
+            violations.Add(new("invalid-requested-fanin",
+                "requestedFanIn cannot be negative."));
+        }
         var defaultFanIn = Math.Min(pack.MaxFanIn, Registry.ParallelPolicy.MaxFanIn);
         var effectiveFanIn = request.RequestedFanIn > 0 ? request.RequestedFanIn : defaultFanIn;
         if (effectiveFanIn > Registry.ParallelPolicy.MaxFanIn)
@@ -164,6 +201,11 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
             violations.Add(new("pack-fanin-exceeded",
                 $"Requested fan-in {effectiveFanIn} exceeds specialization limit {pack.MaxFanIn}."));
 
+        if (request.TimeoutSeconds < 0)
+        {
+            violations.Add(new("invalid-timeout",
+                "timeoutSeconds cannot be negative."));
+        }
         var defaultTimeout = Math.Min(pack.TimeoutSeconds, Registry.ParallelPolicy.DefaultTimeoutSeconds);
         var effectiveTimeoutSeconds = request.TimeoutSeconds > 0 ? request.TimeoutSeconds : defaultTimeout;
         if (effectiveTimeoutSeconds <= 0)
@@ -187,9 +229,16 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
             violations.Add(new("invalid-correlation-id",
                 "A safe correlationId (4-128 printable non-control characters) is required."));
 
-        var selectedModalities = request.RequestedModalities is { Count: > 0 }
+        var requestedModalitiesSpecified = request.RequestedModalities is { Count: > 0 };
+        var selectedModalities = requestedModalitiesSpecified
             ? NormalizeRequestValues(request.RequestedModalities)
             : Normalize(pack.Modalities, "pack modality");
+        if (requestedModalitiesSpecified && selectedModalities.Count == 0)
+        {
+            violations.Add(new("invalid-requested-modalities",
+                "requestedModalities must include at least one non-empty value when provided."));
+        }
+
         var activeLanes = new List<MultimodalLaneContract>();
         foreach (var modality in selectedModalities)
         {
@@ -209,9 +258,15 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
             activeLanes.Add(lane);
         }
 
-        var normalizedTools = request.RequestedTools is { Count: > 0 }
+        var requestedToolsSpecified = request.RequestedTools is { Count: > 0 };
+        var normalizedTools = requestedToolsSpecified
             ? NormalizeRequestValues(request.RequestedTools)
             : BuildDefaultToolSet(packAllowedTools, packDeniedTools, selectedSkills);
+        if (requestedToolsSpecified && normalizedTools.Count == 0)
+        {
+            violations.Add(new("invalid-requested-tools",
+                "requestedTools must include at least one non-empty value when provided."));
+        }
         if (normalizedTools.Count == 0)
             violations.Add(new("missing-tools",
                 $"Specialization '{pack.Id}' has no executable tool set after capability filtering."));
@@ -258,27 +313,25 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
                 "At least one evidence link is required by the selected skills/modalities."));
         }
 
+        var effectiveTimeoutBehavior = Registry.ParallelPolicy.CancelRunningChildrenOnTimeout ||
+            string.Equals(pack.TimeoutBehavior, "cancel-running-children", StringComparison.OrdinalIgnoreCase)
+                ? "cancel-running-children"
+                : "complete-active-children";
+        var cancelRunningChildrenOnTimeout = string.Equals(
+            effectiveTimeoutBehavior,
+            "cancel-running-children",
+            StringComparison.OrdinalIgnoreCase);
         var policy = new SpecializationDecisionPolicy(
             pack.Id,
             effectiveParallelism,
             effectiveFanOut,
             effectiveFanIn,
             effectiveTimeoutSeconds,
-            pack.TimeoutBehavior,
+            effectiveTimeoutBehavior,
             pack.PartialFailurePolicy,
-            Registry.ParallelPolicy.CancelRunningChildrenOnTimeout ||
-                string.Equals(pack.TimeoutBehavior, "cancel-running-children", StringComparison.OrdinalIgnoreCase),
+            cancelRunningChildrenOnTimeout,
             selectedSkills.Select(skill => skill.Id).OrderBy(value => value, Comparer).ToArray(),
             normalizedTools.OrderBy(value => value, Comparer).ToArray());
-
-        if (violations.Count > 0)
-            return new SpecializationExecutionDecision(
-                Allowed: false,
-                SchemaVersion: Registry.SchemaVersion,
-                RegistryVersion: Registry.RegistryVersion,
-                Policy: policy,
-                Violations: violations,
-                EvidenceMetadata: []);
 
         var metadata = activeLanes
             .OrderBy(lane => lane.Id, Comparer)
@@ -299,6 +352,15 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
                     selectedSkills.Select(skill => skill.Id),
                     evidenceLinks)))
             .ToArray();
+
+        if (violations.Count > 0)
+            return new SpecializationExecutionDecision(
+                Allowed: false,
+                SchemaVersion: Registry.SchemaVersion,
+                RegistryVersion: Registry.RegistryVersion,
+                Policy: policy,
+                Violations: violations,
+                EvidenceMetadata: metadata);
 
         return new SpecializationExecutionDecision(
             Allowed: true,
@@ -322,6 +384,86 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
             Violations: [violation],
             EvidenceMetadata: []);
 
+    private static void ValidateRequiredRegistryJsonFields(JsonElement root, string path)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+            throw new InvalidOperationException($"Specialization registry file '{path}' must contain a JSON object.");
+
+        var parallelPolicy = ReadObjectProperty(root, "parallelPolicy", path);
+        EnsureBooleanProperty(parallelPolicy, "requireIdempotencyKey", "parallelPolicy");
+        EnsureBooleanProperty(parallelPolicy, "requireCorrelationId", "parallelPolicy");
+        EnsureBooleanProperty(parallelPolicy, "cancelRunningChildrenOnTimeout", "parallelPolicy");
+        ValidateIntegerRangeProperty(parallelPolicy, "maxGlobalParallelism", 1, MaxParallelBound, "parallelPolicy");
+        ValidateIntegerRangeProperty(parallelPolicy, "maxFanOut", 1, MaxParallelBound, "parallelPolicy");
+        ValidateIntegerRangeProperty(parallelPolicy, "maxFanIn", 1, MaxParallelBound, "parallelPolicy");
+        ValidateIntegerRangeProperty(parallelPolicy, "defaultTimeoutSeconds", 1, MaxTimeoutBound, "parallelPolicy");
+        ValidateIntegerRangeProperty(parallelPolicy, "maxTimeoutSeconds", 1, MaxTimeoutBound, "parallelPolicy");
+
+        var skills = ReadArrayProperty(root, "skills", path);
+        var skillIndex = 0;
+        foreach (var skill in skills.EnumerateArray())
+        {
+            if (skill.ValueKind != JsonValueKind.Object)
+                throw new InvalidOperationException($"skills[{skillIndex}] must be an object.");
+            EnsureBooleanProperty(skill, "requiresCorrelationId", $"skills[{skillIndex}]");
+            EnsureBooleanProperty(skill, "requiresEvidenceLinks", $"skills[{skillIndex}]");
+            skillIndex++;
+        }
+
+        var packs = ReadArrayProperty(root, "packs", path);
+        var packIndex = 0;
+        foreach (var pack in packs.EnumerateArray())
+        {
+            if (pack.ValueKind != JsonValueKind.Object)
+                throw new InvalidOperationException($"packs[{packIndex}] must be an object.");
+            ValidateIntegerRangeProperty(pack, "maxParallelism", 1, MaxParallelBound, $"packs[{packIndex}]");
+            ValidateIntegerRangeProperty(pack, "maxFanOut", 1, MaxParallelBound, $"packs[{packIndex}]");
+            ValidateIntegerRangeProperty(pack, "maxFanIn", 1, MaxParallelBound, $"packs[{packIndex}]");
+            ValidateIntegerRangeProperty(pack, "timeoutSeconds", 1, MaxTimeoutBound, $"packs[{packIndex}]");
+            packIndex++;
+        }
+
+        var multimodalRouting = ReadObjectProperty(root, "multimodalRouting", path);
+        var lanes = ReadArrayProperty(multimodalRouting, "lanes", path);
+        var laneIndex = 0;
+        foreach (var lane in lanes.EnumerateArray())
+        {
+            if (lane.ValueKind != JsonValueKind.Object)
+                throw new InvalidOperationException($"multimodalRouting.lanes[{laneIndex}] must be an object.");
+            EnsureBooleanProperty(lane, "requiresEvidenceMetadata", $"multimodalRouting.lanes[{laneIndex}]");
+            laneIndex++;
+        }
+    }
+
+    private static JsonElement ReadObjectProperty(JsonElement parent, string name, string context)
+    {
+        if (!parent.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Object)
+            throw new InvalidOperationException($"Specialization registry '{context}' must include object property '{name}'.");
+        return value;
+    }
+
+    private static JsonElement ReadArrayProperty(JsonElement parent, string name, string context)
+    {
+        if (!parent.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Array)
+            throw new InvalidOperationException($"Specialization registry '{context}' must include array property '{name}'.");
+        return value;
+    }
+
+    private static void EnsureBooleanProperty(JsonElement parent, string name, string context)
+    {
+        if (!parent.TryGetProperty(name, out var value) ||
+            (value.ValueKind != JsonValueKind.True && value.ValueKind != JsonValueKind.False))
+            throw new InvalidOperationException($"Specialization registry '{context}' property '{name}' must be a boolean.");
+    }
+
+    private static void ValidateIntegerRangeProperty(JsonElement parent, string name, int min, int max, string context)
+    {
+        if (!parent.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var parsed))
+            throw new InvalidOperationException($"Specialization registry '{context}' property '{name}' must be an integer.");
+        if (parsed < min || parsed > max)
+            throw new InvalidOperationException($"Specialization registry '{context}' property '{name}' must be between {min} and {max}.");
+    }
+
     private static SpecializationRegistryDocument ValidateRegistry(SpecializationRegistryDocument registry)
     {
         ArgumentNullException.ThrowIfNull(registry);
@@ -333,12 +475,18 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
             throw new InvalidOperationException("Specialization registry registryVersion is required.");
         if (registry.ParallelPolicy is null)
             throw new InvalidOperationException("Specialization registry parallelPolicy is required.");
-        if (registry.ParallelPolicy.MaxGlobalParallelism <= 0)
-            throw new InvalidOperationException("parallelPolicy.maxGlobalParallelism must be positive.");
-        if (registry.ParallelPolicy.MaxFanOut <= 0 || registry.ParallelPolicy.MaxFanIn <= 0)
-            throw new InvalidOperationException("parallelPolicy fan-out/fan-in limits must be positive.");
+        if (registry.ParallelPolicy.MaxGlobalParallelism <= 0 ||
+            registry.ParallelPolicy.MaxGlobalParallelism > MaxParallelBound)
+            throw new InvalidOperationException($"parallelPolicy.maxGlobalParallelism must be between 1 and {MaxParallelBound}.");
+        if (registry.ParallelPolicy.MaxFanOut <= 0 ||
+            registry.ParallelPolicy.MaxFanOut > MaxParallelBound ||
+            registry.ParallelPolicy.MaxFanIn <= 0 ||
+            registry.ParallelPolicy.MaxFanIn > MaxParallelBound)
+            throw new InvalidOperationException($"parallelPolicy fan-out/fan-in limits must be between 1 and {MaxParallelBound}.");
         if (registry.ParallelPolicy.DefaultTimeoutSeconds <= 0 ||
-            registry.ParallelPolicy.MaxTimeoutSeconds < registry.ParallelPolicy.DefaultTimeoutSeconds)
+            registry.ParallelPolicy.DefaultTimeoutSeconds > MaxTimeoutBound ||
+            registry.ParallelPolicy.MaxTimeoutSeconds < registry.ParallelPolicy.DefaultTimeoutSeconds ||
+            registry.ParallelPolicy.MaxTimeoutSeconds > MaxTimeoutBound)
             throw new InvalidOperationException("parallelPolicy timeout limits are invalid.");
         if (registry.Skills is null || registry.Skills.Count == 0)
             throw new InvalidOperationException("Specialization registry skills cannot be empty.");
@@ -354,7 +502,10 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         {
             if (string.IsNullOrWhiteSpace(lane.Id))
                 throw new InvalidOperationException("Every multimodal lane must define id.");
-            if (!laneIds.Add(lane.Id.Trim()))
+            var laneId = lane.Id.Trim();
+            if (!string.Equals(lane.Id, laneId, StringComparison.Ordinal))
+                throw new InvalidOperationException($"multimodal lane id '{lane.Id}' must not include surrounding whitespace.");
+            if (!laneIds.Add(laneId))
                 throw new InvalidOperationException($"Duplicate multimodal lane '{lane.Id}'.");
             var laneContentTypes = ToSet(lane.AllowedContentTypes, $"lane {lane.Id} allowedContentTypes");
             if (laneContentTypes.Count == 0)
@@ -372,13 +523,21 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
                     $"multimodalRouting.requiredProvenanceFields must include '{required}'.");
             }
         }
+        foreach (var field in requiredProvenanceFields)
+        {
+            if (!SupportedProvenanceFields.Contains(field))
+                throw new InvalidOperationException($"Unsupported required provenance field '{field}'.");
+        }
 
         var skillIds = new HashSet<string>(Comparer);
         foreach (var skill in registry.Skills)
         {
             if (string.IsNullOrWhiteSpace(skill.Id))
                 throw new InvalidOperationException("Every skill contract must define id.");
-            if (!skillIds.Add(skill.Id.Trim()))
+            var skillId = skill.Id.Trim();
+            if (!string.Equals(skill.Id, skillId, StringComparison.Ordinal))
+                throw new InvalidOperationException($"skill contract id '{skill.Id}' must not include surrounding whitespace.");
+            if (!skillIds.Add(skillId))
                 throw new InvalidOperationException($"Duplicate skill contract '{skill.Id}'.");
             var allowed = ToSet(skill.AllowedTools, $"skill {skill.Id} allowedTools");
             var denied = ToSet(skill.DeniedTools, $"skill {skill.Id} deniedTools");
@@ -393,15 +552,26 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         {
             if (string.IsNullOrWhiteSpace(pack.Id))
                 throw new InvalidOperationException("Every specialization pack must define id.");
-            if (!packIds.Add(pack.Id.Trim()))
+            var packId = pack.Id.Trim();
+            if (!string.Equals(pack.Id, packId, StringComparison.Ordinal))
+                throw new InvalidOperationException($"specialization id '{pack.Id}' must not include surrounding whitespace.");
+            if (!packIds.Add(packId))
                 throw new InvalidOperationException($"Duplicate specialization pack '{pack.Id}'.");
-            if (pack.MaxParallelism <= 0 || pack.MaxParallelism > registry.ParallelPolicy.MaxGlobalParallelism)
+            if (pack.MaxParallelism <= 0 ||
+                pack.MaxParallelism > MaxParallelBound ||
+                pack.MaxParallelism > registry.ParallelPolicy.MaxGlobalParallelism)
                 throw new InvalidOperationException($"specialization {pack.Id} maxParallelism is out of bounds.");
-            if (pack.MaxFanOut <= 0 || pack.MaxFanOut > registry.ParallelPolicy.MaxFanOut)
+            if (pack.MaxFanOut <= 0 ||
+                pack.MaxFanOut > MaxParallelBound ||
+                pack.MaxFanOut > registry.ParallelPolicy.MaxFanOut)
                 throw new InvalidOperationException($"specialization {pack.Id} maxFanOut is out of bounds.");
-            if (pack.MaxFanIn <= 0 || pack.MaxFanIn > registry.ParallelPolicy.MaxFanIn)
+            if (pack.MaxFanIn <= 0 ||
+                pack.MaxFanIn > MaxParallelBound ||
+                pack.MaxFanIn > registry.ParallelPolicy.MaxFanIn)
                 throw new InvalidOperationException($"specialization {pack.Id} maxFanIn is out of bounds.");
-            if (pack.TimeoutSeconds <= 0 || pack.TimeoutSeconds > registry.ParallelPolicy.MaxTimeoutSeconds)
+            if (pack.TimeoutSeconds <= 0 ||
+                pack.TimeoutSeconds > MaxTimeoutBound ||
+                pack.TimeoutSeconds > registry.ParallelPolicy.MaxTimeoutSeconds)
                 throw new InvalidOperationException($"specialization {pack.Id} timeoutSeconds is out of bounds.");
             if (!AllowedTimeoutBehaviors.Contains(pack.TimeoutBehavior))
                 throw new InvalidOperationException($"specialization {pack.Id} timeoutBehavior is not allowed.");
@@ -461,9 +631,15 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         ICollection<SpecializationViolation> violations)
     {
         if (links is null || links.Count == 0) return [];
-        var normalized = new Dictionary<string, EvidenceLink>(Comparer);
+        var normalized = new Dictionary<string, EvidenceLink>(StringComparer.Ordinal);
         foreach (var link in links)
         {
+            if (link is null)
+            {
+                violations.Add(new("invalid-evidence-link",
+                    "Evidence links cannot contain null items."));
+                continue;
+            }
             if (string.IsNullOrWhiteSpace(link.Rel) || string.IsNullOrWhiteSpace(link.Href))
             {
                 violations.Add(new("invalid-evidence-link",
@@ -480,9 +656,9 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
 
             var rel = link.Rel.Trim();
             var href = link.Href.Trim();
-            normalized[$"{rel}|{href}"] = new EvidenceLink(rel, href);
+            normalized[$"{rel.ToLowerInvariant()}|{href}"] = new EvidenceLink(rel, href);
         }
-        return normalized.Values.OrderBy(value => value.Rel, Comparer).ThenBy(value => value.Href, Comparer).ToArray();
+        return normalized.Values.OrderBy(value => value.Rel, Comparer).ThenBy(value => value.Href, LinkHrefComparer).ToArray();
     }
 
     private static IReadOnlyDictionary<string, string> BuildProvenance(
@@ -512,7 +688,7 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
                 "evidencelinks" => evidence,
                 "emittedat" => now,
                 "schemaversion" => "specialization-evidence.v1",
-                _ => "set-by-policy"
+                _ => throw new InvalidOperationException($"Unsupported required provenance field '{field}'.")
             };
             provenance[field] = value;
         }
@@ -526,9 +702,8 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
     {
         if (values is null) return [];
         var normalized = new HashSet<string>(Comparer);
-        foreach (var value in values)
+        foreach (var value in values.Where(value => !string.IsNullOrWhiteSpace(value)))
         {
-            if (string.IsNullOrWhiteSpace(value)) continue;
             normalized.Add(value.Trim());
         }
         return normalized.OrderBy(value => value, Comparer).ToList();

@@ -448,14 +448,13 @@ app.MapPost("/mcp", async (HttpContext context, CancellationToken cancellationTo
             var wizard = context.RequestServices.GetRequiredService<ISetupWizardService>();
             var coordinator = context.RequestServices.GetRequiredService<ControlRunCoordinator>();
             var dispatcher = context.RequestServices.GetRequiredService<IConnectorDispatcher>();
-            var specializationEvaluator = context.RequestServices.GetRequiredService<ISpecializationPolicyEvaluator>();
             var toolName = root.GetProperty("params").GetProperty("name").GetString();
             var inventory = toolName is "helios_plan_automation" or "helios_propose_upgrade" or "helios_get_run" or "helios_list_connectors" or "helios_plan_specialization_run" or "search" or "fetch" or "helios_get_control_plane_status" or "helios_render_control_center"
                 ? null!
                 : context.RequestServices.GetRequiredService<IAzureInventoryService>();
             var principal = context.Request.Headers["X-MS-CLIENT-PRINCIPAL-ID"].FirstOrDefault() ?? "authorized-user";
             var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
-            return McpResult(id, await BuildAzureToolResultAsync(root, inventory, planner, wizard, coordinator, dispatcher, specializationEvaluator, configuration, principal, cancellationToken));
+            return McpResult(id, await BuildAzureToolResultAsync(root, context.RequestServices, inventory, planner, wizard, coordinator, dispatcher, configuration, principal, cancellationToken));
         }
 
         return method switch
@@ -1346,7 +1345,7 @@ static object BuildSpecializationPlannerOutputSchema() => new
     additionalProperties = false
 };
 
-static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, ISetupWizardService wizard, ControlRunCoordinator coordinator, IConnectorDispatcher dispatcher, ISpecializationPolicyEvaluator specializationEvaluator, IConfiguration configuration, string requestedBy, CancellationToken cancellationToken)
+static async Task<object> BuildAzureToolResultAsync(JsonElement root, IServiceProvider services, IAzureInventoryService inventory, IEdgeAutomationPlanner planner, ISetupWizardService wizard, ControlRunCoordinator coordinator, IConnectorDispatcher dispatcher, IConfiguration configuration, string requestedBy, CancellationToken cancellationToken)
 {
     var name = root.TryGetProperty("params", out var parameters) && parameters.TryGetProperty("name", out var nameValue)
         ? nameValue.GetString()
@@ -1365,7 +1364,8 @@ static async Task<object> BuildAzureToolResultAsync(JsonElement root, IAzureInve
             "azure_list_foundry_resources" => await inventory.ListFoundryResourcesAsync(cancellationToken),
             "helios_plan_automation" => planner.CreatePlan(ReadAutomationRequest(parameters)),
             "helios_propose_upgrade" => wizard.CreateUpgradeProposal(ReadUpgradeProposal(parameters)),
-            "helios_plan_specialization_run" => specializationEvaluator.Evaluate(ReadSpecializationExecutionRequest(parameters)),
+            "helios_plan_specialization_run" => services.GetRequiredService<ISpecializationPolicyEvaluator>()
+                .Evaluate(ReadSpecializationExecutionRequest(parameters)),
             "helios_get_run" => await coordinator.GetAsync(ReadRunId(parameters), requestedBy, cancellationToken),
             "helios_list_connectors" => dispatcher.GetStatus(),
             _ => new { error = "unknown tool" }
