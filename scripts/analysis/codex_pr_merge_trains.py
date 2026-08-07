@@ -10,6 +10,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT_DIR = ROOT / "reports" / "branch-intelligence"
@@ -58,7 +59,15 @@ REQUIRED_CHECK_FAILURE = CHECK_FAILURE | STATUS_FAILURE | {"FAIL", "FAILED"}
 
 
 def run(cmd: list[str], timeout: int = 60) -> str:
-    proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, timeout=timeout)
+    proc = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=timeout,
+    )
     if proc.returncode != 0:
         detail = (proc.stderr or proc.stdout).strip()
         raise RuntimeError(f"Command failed ({proc.returncode}): {' '.join(cmd)}\n{detail}")
@@ -89,6 +98,45 @@ def slug(value: str) -> str:
 
 def normalize_repo_key(value: str) -> str:
     return value.strip().lower()
+
+
+def parse_remote_repo(url: str) -> str | None:
+    value = url.strip()
+    if not value:
+        return None
+    if value.endswith(".git"):
+        value = value[:-4]
+    if value.startswith("git@"):
+        _, _, tail = value.partition(":")
+        if "/" not in tail:
+            return None
+        owner, repo = tail.split("/", 1)
+        return normalize_repo_key(f"{owner}/{repo}")
+    if "://" in value:
+        parsed = urlparse(value)
+        path = parsed.path.strip("/")
+        if "/" not in path:
+            return None
+        owner, repo = path.split("/", 1)
+        return normalize_repo_key(f"{owner}/{repo}")
+    return None
+
+
+def resolve_remote_for_repo(repo: str) -> str | None:
+    target = normalize_repo_key(repo)
+    try:
+        remotes_text = run(["git", "remote"], timeout=15)
+    except RuntimeError:
+        return None
+    remotes = [line.strip() for line in remotes_text.splitlines() if line.strip()]
+    for remote in remotes:
+        try:
+            remote_url = run(["git", "remote", "get-url", remote], timeout=15)
+        except RuntimeError:
+            continue
+        if parse_remote_repo(remote_url) == target:
+            return remote
+    return None
 
 
 def parse_number_list(raw: str) -> list[int]:
@@ -146,6 +194,9 @@ def load_open_pr_summaries(repo: str, limit: int) -> list[dict[str, Any]]:
             "title",
             "headRefName",
             "baseRefName",
+            "headRepository",
+            "headRepositoryOwner",
+            "isCrossRepository",
             "isDraft",
             "mergeStateStatus",
             "mergeable",
@@ -161,6 +212,83 @@ def load_open_pr_summaries(repo: str, limit: int) -> list[dict[str, Any]]:
     )
     rows = gh_json(["pr", "list", "--repo", repo, "--state", "open", "--limit", str(limit), "--json", fields]) or []
     return [row for row in rows if isinstance(row, dict)]
+
+
+def load_paginated_list(endpoint: str, timeout: int = 120) -> list[dict[str, Any]]:
+    payload = gh_json(["api", "--paginate", "--slurp", endpoint], timeout=timeout)
+    if payload is None:
+        return []
+    rows: list[dict[str, Any]] = []
+    if isinstance(payload, list):
+        for page in payload:
+            if isinstance(page, list):
+                rows.extend(item for item in page if isinstance(item, dict))
+            elif isinstance(page, dict):
+                rows.append(page)
+        return rows
+    if isinstance(payload, dict):
+        return [payload]
+    return []
+
+
+def normalize_pr_files(entries: list[dict[str, Any]]) -> list[dict[str, str]]:
+    paths: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        path = str(entry.get("path") or entry.get("filename") or "").strip()
+        if not path or path in seen:
+            continue
+        seen.add(path)
+        paths.append({"path": path})
+    return paths
+
+
+def commit_headline(entry: dict[str, Any]) -> str:
+    headline = str(entry.get("messageHeadline") or "").strip()
+    if headline:
+        return headline
+    commit = entry.get("commit")
+    if isinstance(commit, dict):
+        message = str(commit.get("message") or "")
+        return message.splitlines()[0].strip() if message else ""
+    message = str(entry.get("message") or "")
+    return message.splitlines()[0].strip() if message else ""
+
+
+def commit_parent_count(entry: dict[str, Any]) -> int:
+    parents = entry.get("parents")
+    if isinstance(parents, list):
+        return max(1, len(parents))
+    if isinstance(parents, dict):
+        nodes = parents.get("nodes")
+        if isinstance(nodes, list):
+            return max(1, len(nodes))
+    commit = entry.get("commit")
+    if isinstance(commit, dict):
+        commit_parents = commit.get("parents")
+        if isinstance(commit_parents, list):
+            return max(1, len(commit_parents))
+    return 1
+
+
+def normalize_pr_commits(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    commits: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        oid = str(entry.get("oid") or entry.get("sha") or "").strip()
+        if not oid:
+            continue
+        commits.append(
+            {
+                "oid": oid,
+                "messageHeadline": commit_headline(entry),
+                "parentCount": commit_parent_count(entry),
+            }
+        )
+    return commits
 
 
 def include_pr(summary: dict[str, Any], issue_numbers: set[int], head_prefixes: tuple[str, ...], explicit_numbers: set[int]) -> bool:
@@ -196,8 +324,6 @@ def load_pr_detail(repo: str, number: int) -> dict[str, Any]:
             "changedFiles",
             "additions",
             "deletions",
-            "files",
-            "commits",
             "author",
             "createdAt",
             "updatedAt",
@@ -211,6 +337,18 @@ def load_pr_detail(repo: str, number: int) -> dict[str, Any]:
     detail = gh_json(["pr", "view", str(number), "--repo", repo, "--json", fields], timeout=90) or {}
     if not isinstance(detail, dict):
         raise RuntimeError(f"Unexpected PR detail payload for #{number}")
+    fallback_files = normalize_pr_files(detail.get("files", []) if isinstance(detail.get("files"), list) else [])
+    fallback_commits = normalize_pr_commits(detail.get("commits", []) if isinstance(detail.get("commits"), list) else [])
+    try:
+        detail["files"] = normalize_pr_files(load_paginated_list(f"repos/{repo}/pulls/{number}/files?per_page=100"))
+    except RuntimeError:
+        detail["files"] = fallback_files
+    try:
+        detail["commits"] = normalize_pr_commits(
+            load_paginated_list(f"repos/{repo}/pulls/{number}/commits?per_page=100")
+        )
+    except RuntimeError:
+        detail["commits"] = fallback_commits
     return detail
 
 
@@ -235,14 +373,45 @@ def pr_summary_from_detail(detail: dict[str, Any]) -> dict[str, Any]:
 
 
 def load_required_checks(repo: str, number: int) -> list[dict[str, str]] | None:
-    try:
-        rows = gh_json(
-            ["pr", "checks", str(number), "--repo", repo, "--required", "--json", "name,workflow,state"],
-            timeout=90,
+    cmd = [
+        "gh",
+        "pr",
+        "checks",
+        str(number),
+        "--repo",
+        repo,
+        "--required",
+        "--json",
+        "name,workflow,state",
+    ]
+    proc = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        timeout=90,
+    )
+    if proc.returncode != 0:
+        detail = f"{proc.stderr}\n{proc.stdout}".lower()
+        no_required_markers = (
+            "no required checks",
+            "no checks reported",
+            "no checks for this pull request",
+            "has no check runs",
         )
-    except RuntimeError:
+        if any(marker in detail for marker in no_required_markers):
+            return []
         return None
 
+    output = proc.stdout.strip()
+    if not output:
+        return []
+    try:
+        rows = json.loads(output)
+    except json.JSONDecodeError:
+        return None
     if rows is None:
         return []
     if not isinstance(rows, list):
@@ -390,8 +559,8 @@ def gate_status(pr: dict[str, Any]) -> dict[str, Any]:
     merge_state = str(pr.get("mergeStateStatus", ""))
     review_decision = str(pr.get("reviewDecision", "") or "")
     checks_satisfied = checks["state"] in {"passed", "not-configured"}
-    approvals_satisfied = review_decision == "APPROVED"
-    mergeability_satisfied = mergeable == "MERGEABLE" and merge_state not in {"DIRTY", "UNKNOWN"}
+    approvals_satisfied = review_decision in {"", "APPROVED"}
+    mergeability_satisfied = mergeable == "MERGEABLE" and merge_state in {"CLEAN", "UNSTABLE"}
     return {
         "checksSatisfied": checks_satisfied,
         "approvalsSatisfied": approvals_satisfied,
@@ -533,6 +702,7 @@ def build_trains(
     repo: str,
     issue_number: int | None,
     default_branch: str,
+    train_remote: str | None,
     prs: list[dict[str, Any]],
     dependency_map: dict[int, list[int]],
 ) -> list[dict[str, Any]]:
@@ -572,22 +742,32 @@ def build_trains(
                 "# Resolve those dependencies (merge or integrate upstream) before using automated train commands.",
                 "# Automatic command generation is intentionally suppressed for this train to avoid partial cherry-picks.",
             ]
+        elif train_remote is None:
+            commands = [
+                f"# No local git remote in this checkout points to {repo}.",
+                "# Run train commands from a checkout with a matching remote before applying train automation.",
+            ]
         else:
             commands = [
                 f"git checkout {default_branch}",
-                "git pull --ff-only",
+                f"git pull --ff-only {train_remote} {default_branch}",
                 f"git checkout -b {branch}",
             ]
             for pr in ordered:
                 if pr["disposition"] != "merge-train":
                     continue
                 commands.append(f"# PR #{pr['number']} {pr['title']}")
-                commands.append(f"git fetch origin pull/{pr['number']}/head:pr-{pr['number']}")
-                if pr["commitOids"]:
+                commands.append(f"git fetch {train_remote} pull/{pr['number']}/head:pr-{pr['number']}")
+                if int(pr.get("mergeCommitCount") or 0) > 0:
+                    commands.append(
+                        f"# PR #{pr['number']} includes merge commits; merge branch tip to preserve parent topology."
+                    )
+                    commands.append(f"git merge --no-ff --no-edit pr-{pr['number']}")
+                elif pr["commitOids"]:
                     commands.append("git cherry-pick " + " ".join(pr["commitOids"]))
                 else:
                     commands.append(f"# no commit oids returned for PR #{pr['number']}")
-            commands.append(f"git push -u origin {branch}")
+            commands.append(f"git push -u {train_remote} {branch}")
             commands.append(
                 f"gh pr create --repo {repo} --base {default_branch} --head {branch} "
                 f"--title \"Issue #{issue_number or 'N/A'} train: {train_name}\" --draft"
@@ -799,6 +979,7 @@ def main() -> int:
         raise SystemExit("gh not found. Install GitHub CLI and authenticate before running this script.")
 
     repo, discovered_default = discover_repo(args.repo)
+    train_remote = resolve_remote_for_repo(repo)
     default_branch = args.base_branch.strip() or discovered_default
     issue = load_issue_context(repo, args.issue)
     issue_numbers = set(int(number) for number in issue.get("candidateNumbers", []))
@@ -806,13 +987,22 @@ def main() -> int:
     head_prefixes = tuple(prefix.strip().lower() for prefix in args.head_prefixes.split(",") if prefix.strip())
 
     detail_cache: dict[int, dict[str, Any]] = {}
+    skipped_numbers: dict[int, str] = {}
     summary_map = {int(row.get("number", 0)): row for row in load_open_pr_summaries(repo, args.limit) if int(row.get("number", 0)) > 0}
-    for number in sorted(explicit_numbers):
+    for number in sorted(explicit_numbers | issue_numbers):
         if number in summary_map:
             continue
-        detail = load_pr_detail(repo, number)
+        try:
+            detail = load_pr_detail(repo, number)
+        except RuntimeError as exc:
+            message = str(exc)
+            if "Could not resolve to a PullRequest" in message:
+                skipped_numbers[number] = "not-a-pr-or-missing"
+                continue
+            raise
         detail_cache[number] = detail
         if str(detail.get("state", "")).upper() != "OPEN":
+            skipped_numbers[number] = "not-open"
             continue
         summary_map[number] = pr_summary_from_detail(detail)
     summaries = list(summary_map.values())
@@ -832,6 +1022,17 @@ def main() -> int:
             detail_cache[number] = detail
         details.append(detail)
 
+    base_repo_key = normalize_repo_key(repo)
+    head_to_numbers: dict[str, set[int]] = defaultdict(set)
+    for summary in summaries:
+        number = int(summary.get("number", 0))
+        head_ref = str(summary.get("headRefName", "")).strip()
+        if number <= 0 or not head_ref:
+            continue
+        if normalize_repo_key(head_repository_key(summary, repo)) != base_repo_key:
+            continue
+        head_to_numbers[head_ref].add(number)
+
     prepared: list[dict[str, Any]] = []
     for detail in details:
         files = sorted({entry.get("path", "") for entry in detail.get("files", []) if entry.get("path")})
@@ -840,6 +1041,7 @@ def main() -> int:
         required_checks = load_required_checks(repo, int(detail.get("number")))
         checks = summarize_checks(detail.get("statusCheckRollup", []), required_checks=required_checks)
         commits = detail.get("commits", []) or []
+        merge_commit_count = sum(1 for commit in commits if int(commit.get("parentCount") or 1) > 1)
         prepared.append(
             {
                 "number": int(detail.get("number")),
@@ -866,21 +1068,16 @@ def main() -> int:
                 "checks": checks,
                 "commitOids": [commit.get("oid", "") for commit in commits if commit.get("oid")],
                 "commitHeadlines": [commit.get("messageHeadline", "") for commit in commits if commit.get("messageHeadline")][:12],
+                "mergeCommitCount": merge_commit_count,
             }
         )
 
-    base_repo_key = normalize_repo_key(repo)
-    head_to_number = {
-        pr["headRefName"]: pr["number"]
-        for pr in prepared
-        if pr.get("headRefName") and normalize_repo_key(str(pr.get("headRepository", ""))) == base_repo_key
-    }
     dependency_map: dict[int, list[int]] = {}
     for pr in prepared:
         deps: list[int] = []
-        base_ref = pr.get("baseRefName", "")
-        if base_ref in head_to_number:
-            deps.append(head_to_number[base_ref])
+        base_ref = str(pr.get("baseRefName", ""))
+        if base_ref and base_ref != default_branch:
+            deps.extend(sorted(number for number in head_to_numbers.get(base_ref, set()) if number != pr["number"]))
         dependency_map[pr["number"]] = sorted(set(deps))
         pr["dependencies"] = dependency_map[pr["number"]]
 
@@ -904,7 +1101,7 @@ def main() -> int:
         pr["disposition"] = disposition
         pr["dispositionRationale"] = rationale
 
-    trains = build_trains(repo, args.issue, default_branch, prepared, dependency_map)
+    trains = build_trains(repo, args.issue, default_branch, train_remote, prepared, dependency_map)
     conflicts = ownership_conflicts(prepared, overlap_rows)
 
     triage = {
@@ -934,6 +1131,7 @@ def main() -> int:
             "headPrefixes": list(head_prefixes),
             "explicitPrNumbers": sorted(explicit_numbers),
             "issueCandidateNumbers": sorted(issue_numbers),
+            "skippedNumbers": [{"number": number, "reason": reason} for number, reason in sorted(skipped_numbers.items())],
         },
         "triage": triage,
         "acceptance": acceptance,
