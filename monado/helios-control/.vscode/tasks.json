@@ -31,6 +31,73 @@
       "presentation": { "panel": "dedicated", "focus": true }
     },
     {
+      "label": "Helios: Cloud Approval Status",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/Invoke-HeliosCloudApprovalFlow.ps1",
+        "-Mode",
+        "Status",
+        "-EnvironmentName",
+        "dev"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Helios: Cloud Configure (Guided)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/Invoke-HeliosCloudApprovalFlow.ps1",
+        "-Mode",
+        "Configure",
+        "-EnvironmentName",
+        "dev"
+      ],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Helios: Cloud Publish What-If (Guided)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/Invoke-HeliosCloudApprovalFlow.ps1",
+        "-Mode",
+        "Publish",
+        "-EnvironmentName",
+        "dev"
+      ],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Helios: Cloud Finalize Connector URL (Guided)",
+      "type": "shell",
+      "command": "pwsh",
+      "args": [
+        "-NoLogo",
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/Invoke-HeliosCloudApprovalFlow.ps1",
+        "-Mode",
+        "Finalize",
+        "-EnvironmentName",
+        "dev"
+      ],
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "focus": true }
+    },
+    {
       "label": "Helios: Start Local API",
       "type": "process",
       "command": "dotnet",

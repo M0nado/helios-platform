@@ -130,6 +130,44 @@ The connector is deployed in cloud-only, `dry-run`, read-only inventory mode.
 This does not enable tenant-wide writes, Graph consent, Foundry model access,
 Agent 365 publication, or Copilot Studio publication.
 
+## Guided automation wrapper
+
+`scripts/Invoke-HeliosCloudApprovalFlow.ps1` keeps the same approval model while
+automating the handoff between Configure, Publish, Deploy dispatch, and post-deploy
+connector binding.
+
+```powershell
+# 1) Show exact blockers for azure-dev.
+pwsh -NoProfile -File ./scripts/Invoke-HeliosCloudApprovalFlow.ps1 `
+  -Mode Status `
+  -EnvironmentName dev
+
+# 2) Run Configure through the existing wizard and auto-resolve reviewer ID
+# from the authenticated GitHub user when -RequiredReviewerId is omitted.
+pwsh -NoProfile -File ./scripts/Invoke-HeliosCloudApprovalFlow.ps1 `
+  -Mode Configure `
+  -EnvironmentName dev `
+  -UseDeviceCode
+
+# 3) Revalidate gates and dispatch protected what-if.
+pwsh -NoProfile -File ./scripts/Invoke-HeliosCloudApprovalFlow.ps1 `
+  -Mode Publish `
+  -EnvironmentName dev `
+  -UseDeviceCode
+
+# 4) Dispatch deploy mode intentionally (still gated by protected approvals).
+pwsh -NoProfile -File ./scripts/Invoke-HeliosCloudApprovalFlow.ps1 `
+  -Mode Deploy `
+  -EnvironmentName dev
+
+# 5) After approved deployment, bind HELIOS_AZURE_CONNECTOR_URL from Azure
+# Container Apps and run cloud verification.
+pwsh -NoProfile -File ./scripts/Invoke-HeliosCloudApprovalFlow.ps1 `
+  -Mode Finalize `
+  -EnvironmentName dev `
+  -InteractiveAuth
+```
+
 ## 5. Verify the live cloud connector
 
 First verify the anonymous health and fail-closed boundary. Add
