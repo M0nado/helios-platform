@@ -47,7 +47,7 @@ jobs:
               throw 'Pull request base ref is unavailable.'
             }
             git fetch origin $env:BASE_REF --depth=1
-            $paths = @(git diff --name-only --diff-filter=ACMR "origin/$env:BASE_REF...HEAD")
+            $paths = @(git diff --name-only --diff-filter=ACMR "origin/$env:BASE_REF..HEAD")
           }
           elseif ($env:BEFORE_SHA -and $env:BEFORE_SHA -notmatch '^0+$') {
             $paths = @(git diff --name-only --diff-filter=ACMR $env:BEFORE_SHA HEAD)

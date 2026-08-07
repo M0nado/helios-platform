@@ -119,7 +119,6 @@ class HeliosCliTests(unittest.TestCase):
         with redirect_stdout(output):
             HELIOS.print_human(bundle)
         self.assertIn("routes:", output.getvalue())
-
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             contract = HELIOS.oidc_contract(

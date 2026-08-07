@@ -305,7 +305,7 @@ namespace HELIOS.Platform.Tests.AI
 
             Assert.Equal("Success", recommendations.Status);
             Assert.NotEmpty(recommendations.Recommendations);
-            Assert.Any(recommendations.Recommendations, r => r.Category == "Performance");
+            Assert.Contains(recommendations.Recommendations, r => r.Category == "Performance");
         }
 
         [Fact]
@@ -322,7 +322,7 @@ namespace HELIOS.Platform.Tests.AI
             var recommendations = await engine.GenerateRecommendationsAsync();
 
             Assert.NotEmpty(recommendations.Recommendations);
-            Assert.Any(recommendations.Recommendations, r => r.Category == "Memory");
+            Assert.Contains(recommendations.Recommendations, r => r.Category == "Memory");
         }
 
         #endregion

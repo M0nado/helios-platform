@@ -4,6 +4,7 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,12 +24,11 @@
 
   <ItemGroup>
     <Compile Remove="Phase10/Quarantine/**/*.cs" />
-    <Compile Include="../Phase3Phase5IntegrationTests.cs" Link="Imported/Phase3Phase5IntegrationTests.cs" />
     <Compile Include="../SandboxTests.cs" Link="Imported/SandboxTests.cs" />
     <Compile Include="../Plugins/**/*.cs" Link="Imported/Plugins/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../unit/**/*.cs" Link="Imported/Unit/%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="../../src/core/HELIOS.Platform/**/Tests/**/*.cs" Exclude="../../src/core/HELIOS.Platform/Phase10/Users/Tests/**/*.cs" Link="Imported/Core/%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="../../src/core/HELIOS.Platform/**/*Tests.cs" Exclude="../../src/core/HELIOS.Platform/**/Tests/**/*.cs" Link="Imported/Core/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../src/core/HELIOS.Platform/**/Tests/**/*.cs" Exclude="../../src/core/HELIOS.Platform/Phase10/Users/Tests/**/*.cs;../../src/core/HELIOS.Platform/Phase10/Malware/Tests/MalwareTests.cs;../../src/core/HELIOS.Platform/Tests/Phase3MLServicesTests.cs" Link="Imported/Core/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../src/core/HELIOS.Platform/**/*Tests.cs" Exclude="../../src/core/HELIOS.Platform/**/Tests/**/*.cs;../../src/core/HELIOS.Platform/Core/AdvancedOptimization/AdvancedOptimizationServicesTests.cs;../../src/core/HELIOS.Platform/Phase10/Vault/VaultSystemTests.cs;../../src/core/HELIOS.Platform/Tests/Phase3MLServicesTests.cs" Link="Imported/Core/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

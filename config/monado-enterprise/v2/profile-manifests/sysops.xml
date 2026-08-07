@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonadoProfileManifest version="2.0.0" profileId="sysops">
+  <DisplayName>SysOps</DisplayName>
+  <SemanticUi>operations-cockpit</SemanticUi>
+  <Theme>sysops-blue-amber</Theme>
+  <ChromaProfile>sysops-alert</ChromaProfile>
+  <WyvernAudioProfile>sysops-alert</WyvernAudioProfile>
+  <ServiceBudget alwaysOnMax="12" backgroundPriority="high" />
+  <ProcessBudget maxHighPriorityProcesses="7" />
+  <NetworkPolicy>infra-vpn-monitored</NetworkPolicy>
+  <TelemetryPolicy>operations-and-security-detailed</TelemetryPolicy>
+  <AlvisToolBudget maxConcurrentTools="4" denyAutonomousApply="true" />
+  <StateModel recoveryState="false" quarantineState="false" overlayAirgapAllowed="true" />
+</MonadoProfileManifest>

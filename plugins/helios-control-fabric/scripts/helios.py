@@ -77,7 +77,6 @@ REQUIRED_CONTROL_SETUP_CONFIGS = (
     "monado/helios-control/config/edge-automation.json",
 )
 
-
 def read_asset(name: str) -> dict[str, Any]:
     return json.loads((ASSETS / name).read_text(encoding="utf-8"))
 
@@ -327,7 +326,6 @@ def full_setup_bundle(environment: str) -> dict[str, Any]:
                 "python plugins/helios-control-fabric/scripts/helios.py runners --json",
             ],
         }
-
     cloud_runtime = read_control_config("cloud-runtime.json")
     identity_bindings = read_control_config("identity-bindings.json")
     integrations = read_control_config("integrations.json")
@@ -692,7 +690,6 @@ def print_human(payload: dict[str, Any]) -> None:
             f"{integrations['enabledRouteCount']}/"
             f"{integrations['routeCount']} enabled"
         )
-        print(
             "  release environments: "
             + ", ".join(environments["releaseEnvironments"])
         )
