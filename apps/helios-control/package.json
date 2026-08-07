@@ -18,6 +18,10 @@
     "express": "^5.1.0",
     "zod": "^3.24.4"
   },
+  "overrides": {
+    "fast-uri": "^3.1.5",
+    "ip-address": "^10.3.1"
+  },
   "devDependencies": {
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.3",
