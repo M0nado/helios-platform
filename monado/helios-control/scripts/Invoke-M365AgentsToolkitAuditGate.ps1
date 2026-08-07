@@ -103,6 +103,47 @@ function ConvertFrom-NpmJsonOutput {
     }
 }
 
+function Invoke-PinnedPackageAudit {
+    param(
+        [Parameter(Mandatory)] [string] $PackageName,
+        [Parameter(Mandatory)] [string] $Version
+    )
+
+    $auditRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("helios-atk-direct-audit-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $auditRoot | Out-Null
+    try {
+        $manifestPath = Join-Path $auditRoot 'package.json'
+        $manifest = @{
+            name = 'helios-m365agentstoolkit-cli-direct-audit'
+            private = $true
+            dependencies = @{
+                $PackageName = $Version
+            }
+        } | ConvertTo-Json -Depth 4
+        Set-Content -LiteralPath $manifestPath -Value $manifest -Encoding utf8
+
+        Push-Location $auditRoot
+        try {
+            $installResult = Invoke-NpmCommand -Arguments @('install', '--ignore-scripts', '--no-fund', '--silent')
+            if ($installResult.ExitCode -ne 0) {
+                $detail = Get-FirstNonEmptyLine -Text ($installResult.Output | Out-String)
+                if (-not $detail) { $detail = 'npm install failed without output.' }
+                throw "npm install failed for direct package audit: $detail"
+            }
+
+            $auditResult = Invoke-NpmCommand -Arguments @('audit', '--audit-level=high', '--json')
+            $auditText = $auditResult.Output | Out-String
+            return ConvertFrom-NpmJsonOutput -Text $auditText
+        }
+        finally {
+            Pop-Location
+        }
+    }
+    finally {
+        Remove-Item -LiteralPath $auditRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
 $controlRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $toolchainPath = Join-Path (Join-Path $controlRoot 'config') 'microsoft-toolchain.json'
 $auditFixturePath = Join-Path $controlRoot $auditFixtureRelativePath
@@ -207,18 +248,25 @@ finally {
     Pop-Location
 }
 
-$metadata = Get-RequiredObjectProperty -Object $auditReport -Name 'metadata'
-$vulnerabilities = Get-RequiredObjectProperty -Object $metadata -Name 'vulnerabilities'
-$high = Assert-NonNegativeInteger -Value (Get-RequiredObjectProperty -Object $vulnerabilities -Name 'high') -Name 'metadata.vulnerabilities.high'
-$critical = Assert-NonNegativeInteger -Value (Get-RequiredObjectProperty -Object $vulnerabilities -Name 'critical') -Name 'metadata.vulnerabilities.critical'
+$fixtureMetadata = Get-RequiredObjectProperty -Object $auditReport -Name 'metadata'
+$fixtureVulnerabilities = Get-RequiredObjectProperty -Object $fixtureMetadata -Name 'vulnerabilities'
+$fixtureHigh = Assert-NonNegativeInteger -Value (Get-RequiredObjectProperty -Object $fixtureVulnerabilities -Name 'high') -Name 'fixture.metadata.vulnerabilities.high'
+$fixtureCritical = Assert-NonNegativeInteger -Value (Get-RequiredObjectProperty -Object $fixtureVulnerabilities -Name 'critical') -Name 'fixture.metadata.vulnerabilities.critical'
 
-Write-Host "Toolkit audit summary: version=$version high=$high critical=$critical automaticInstall=$automaticInstall"
+$directInstallAuditReport = Invoke-PinnedPackageAudit -PackageName $packageName -Version $version
+$directMetadata = Get-RequiredObjectProperty -Object $directInstallAuditReport -Name 'metadata'
+$directVulnerabilities = Get-RequiredObjectProperty -Object $directMetadata -Name 'vulnerabilities'
+$directHigh = Assert-NonNegativeInteger -Value (Get-RequiredObjectProperty -Object $directVulnerabilities -Name 'high') -Name 'direct.metadata.vulnerabilities.high'
+$directCritical = Assert-NonNegativeInteger -Value (Get-RequiredObjectProperty -Object $directVulnerabilities -Name 'critical') -Name 'direct.metadata.vulnerabilities.critical'
 
-if ($automaticInstall -and ($high -gt 0 -or $critical -gt 0)) {
-    throw 'automaticInstall is true while high/critical advisories are present. Keep automaticInstall false until the audit gate is clean.'
+Write-Host "Toolkit audit summary: version=$version fixtureHigh=$fixtureHigh fixtureCritical=$fixtureCritical directHigh=$directHigh directCritical=$directCritical automaticInstall=$automaticInstall"
+
+$hasBlockingAdvisories = ($fixtureHigh -gt 0 -or $fixtureCritical -gt 0 -or $directHigh -gt 0 -or $directCritical -gt 0)
+if ($automaticInstall -and $hasBlockingAdvisories) {
+    throw 'automaticInstall is true while high/critical advisories are present in the fixture or direct-install graph. Keep automaticInstall false until both audits are clean.'
 }
 
-if (-not $automaticInstall -and ($high -gt 0 -or $critical -gt 0)) {
+if (-not $automaticInstall -and $hasBlockingAdvisories) {
     Write-Host 'automaticInstall remains disabled because high/critical advisories are present.'
 }
 elseif (-not $automaticInstall) {

@@ -55,12 +55,11 @@ discard command output so tenant, subscription, and user details are not copied
 into evidence. Installation remains the responsibility of the devcontainer or
 approved enterprise software distribution.
 
-The CI gate `scripts/Invoke-M365AgentsToolkitAuditGate.ps1` installs from
-`security/m365agentstoolkit-cli-audit/package-lock.json`, runs
-`npm audit --audit-level=high`, and blocks any attempt to set
-`automaticInstall: true` while high/critical advisories are present. The audit
-fixture currently pins transitive remediations for `adm-zip` and `uuid` through
-the lockfile override policy.
+The CI gate `scripts/Invoke-M365AgentsToolkitAuditGate.ps1` now validates both
+the lockfile-backed fixture graph (`npm ci` + `npm audit --audit-level=high`)
+and a direct install graph (`npm install @microsoft/m365agentstoolkit-cli@<pin>`
++ `npm audit --audit-level=high`). It blocks any attempt to set
+`automaticInstall: true` while either graph reports high/critical advisories.
 
 ## Provisioning order
 
