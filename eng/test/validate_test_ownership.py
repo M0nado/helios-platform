@@ -7,12 +7,30 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "eng/test/test-ownership.json"
 LAYERS = {"portable", "windows", "privileged", "integration", "performance", "end-to-end"}
+IGNORED_SEGMENTS = {"obj", "bin", ".git", "node_modules"}
+IGNORED_SUFFIXES = (".AssemblyAttributes.cs", ".AssemblyInfo.cs", ".g.cs")
+
+def is_source_file(path: Path) -> bool:
+    lowered_parts = {part.lower() for part in path.parts}
+    if lowered_parts & IGNORED_SEGMENTS:
+        return False
+    return not path.name.endswith(IGNORED_SUFFIXES)
 
 def sources():
     roots = [ROOT / "tests", ROOT / "src/tests", ROOT / "monado/helios-control/tests"]
-    found = {p.relative_to(ROOT).as_posix() for root in roots for ext in ("*.cs", "*.fs") for p in root.rglob(ext)}
+    found = {
+        p.relative_to(ROOT).as_posix()
+        for root in roots
+        for ext in ("*.cs", "*.fs")
+        for p in root.rglob(ext)
+        if is_source_file(p)
+    }
     core = ROOT / "src/core/HELIOS.Platform"
-    found |= {p.relative_to(ROOT).as_posix() for p in core.rglob("*.cs") if "Tests" in p.parts or p.name.endswith("Tests.cs")}
+    found |= {
+        p.relative_to(ROOT).as_posix()
+        for p in core.rglob("*.cs")
+        if is_source_file(p) and ("Tests" in p.parts or p.name.endswith("Tests.cs"))
+    }
     return sorted(found)
 
 def owner(path):
