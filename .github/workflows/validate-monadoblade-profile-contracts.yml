@@ -6,6 +6,7 @@ on:
       - 'config/profiles/monadoblade-profiles.v1.json'
       - 'config/profiles/monadoblade-profiles.v2.json'
       - 'config/profiles/monadoblade-profiles.migration.v1-to-v2.json'
+      - 'config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json'
       - 'config/storage/monadoblade-*.json'
       - 'config/software/monadoblade-profile-software.v1.json'
       - 'config/gui/monado-profile-shell.v1.json'
@@ -16,6 +17,7 @@ on:
       - 'config/runtime/helios-fabric-services.v1.json'
       - 'config/runtime/helios-fabric-services.v2.json'
       - 'config/integrations/monadoblade-collaboration-projection.v1.json'
+      - 'config/integrations/event-contract.schema.json'
       - 'config/usb/monadoblade-usb-wizard.v1.json'
       - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
       - 'docs/WIKI/README.md'
@@ -30,6 +32,7 @@ on:
       - 'config/profiles/monadoblade-profiles.v1.json'
       - 'config/profiles/monadoblade-profiles.v2.json'
       - 'config/profiles/monadoblade-profiles.migration.v1-to-v2.json'
+      - 'config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json'
       - 'config/storage/monadoblade-*.json'
       - 'config/software/monadoblade-profile-software.v1.json'
       - 'config/gui/monado-profile-shell.v1.json'
@@ -40,6 +43,7 @@ on:
       - 'config/runtime/helios-fabric-services.v1.json'
       - 'config/runtime/helios-fabric-services.v2.json'
       - 'config/integrations/monadoblade-collaboration-projection.v1.json'
+      - 'config/integrations/event-contract.schema.json'
       - 'config/usb/monadoblade-usb-wizard.v1.json'
       - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
       - 'docs/WIKI/README.md'
@@ -76,6 +80,7 @@ jobs:
               Path('config/profiles/monadoblade-profiles.v1.json'),
               Path('config/profiles/monadoblade-profiles.v2.json'),
               Path('config/profiles/monadoblade-profiles.migration.v1-to-v2.json'),
+              Path('config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json'),
               Path('config/storage/monadoblade-partitions.2x2tb.v1.json'),
               Path('config/storage/monadoblade-folder-hierarchy.v1.json'),
               Path('config/software/monadoblade-profile-software.v1.json'),
@@ -87,6 +92,7 @@ jobs:
               Path('config/runtime/helios-fabric-services.v1.json'),
               Path('config/runtime/helios-fabric-services.v2.json'),
               Path('config/integrations/monadoblade-collaboration-projection.v1.json'),
+              Path('config/integrations/event-contract.schema.json'),
               Path('config/usb/monadoblade-usb-wizard.v1.json'),
           ]
           for path in paths:
@@ -278,6 +284,18 @@ jobs:
           if ai_server_gui.get('scalarFieldsFromPrimary') != ['backgroundVariant', 'panelStyle', 'density']:
               raise SystemExit('AI/Server guiThemes scalar precedence is not deterministic')
 
+          ai_server_workspace = resolution.get('storageWorkspaces', {}).get('ai-server', {})
+          if ai_server_workspace.get('strategy') != 'multi-source-merge':
+              raise SystemExit('AI/Server storage workspace resolution must use multi-source-merge')
+          if ai_server_workspace.get('sources') != ['SysOps', 'ServerBackground']:
+              raise SystemExit('AI/Server storage workspace sources must retain SysOps and ServerBackground')
+          if ai_server_workspace.get('mergeMode') != 'union':
+              raise SystemExit('AI/Server storage workspace merge mode must be union')
+          if ai_server_workspace.get('primaryWorkspace') != 'SysOps':
+              raise SystemExit('AI/Server storage workspace primary workspace must remain SysOps')
+          if ai_server_workspace.get('preserveLegacyWorkspace') != 'ServerBackground':
+              raise SystemExit('AI/Server storage workspace must preserve ServerBackground lineage')
+
           sysadmin_workspace = resolution.get('storageWorkspaces', {}).get('sysadmin-offline', {})
           if sysadmin_workspace.get('source') != 'SysAdmin':
               raise SystemExit('sysadmin-offline storage workspace source must be SysAdmin')
@@ -313,6 +331,15 @@ jobs:
               raise SystemExit('MONADO_SECURE must include 02_ProfileData/SysAdmin')
 
           shell = json.loads(Path('config/gui/monado-profile-shell.v2.json').read_text(encoding='utf-8'))
+          if shell.get('inheritsFrom') != 'config/gui/monado-profile-shell.v1.json':
+              raise SystemExit('Shell v2 must declare inheritance from shell v1')
+          if not Path(shell['inheritsFrom']).exists():
+              raise SystemExit(f'Shell v2 inheritance contract is missing: {shell["inheritsFrom"]}')
+          inheritance = shell.get('inheritance', {})
+          if inheritance.get('mode') != 'overlay-readiness-and-wheel':
+              raise SystemExit('Shell v2 inheritance mode must be overlay-readiness-and-wheel')
+          if inheritance.get('preserveSections') != ['rendering', 'scene', 'blade', 'quickSwitch', 'profileThemes', 'accessibility']:
+              raise SystemExit('Shell v2 must preserve rendering, scene, blade, quickSwitch, profileThemes, and accessibility sections from v1')
           chain = shell.get('postAuthStateMachine', [])
           if chain != ['safe-boot', 'identity-verified', 'wheel-ready', 'profile-selected', 'readiness-check', 'shell-ready']:
               raise SystemExit(f'Unexpected shell post-auth chain: {chain}')
@@ -344,6 +371,8 @@ jobs:
               raise SystemExit('Runtime v2 must declare v1 inheritance for continuity')
           if not Path(runtime['inheritsFrom']).exists():
               raise SystemExit(f'Runtime v2 inheritance contract is missing: {runtime["inheritsFrom"]}')
+          if runtime.get('fabricId') != 'helios-fabric':
+              raise SystemExit('Runtime v2 fabricId must stay aligned with inherited helios-fabric identity')
           if runtime.get('defaultTransport') != 'local-grpc':
               raise SystemExit('Runtime v2 default transport must remain local-grpc')
           if not runtime.get('services'):
@@ -380,9 +409,49 @@ jobs:
               'active': 'config/profiles/monadoblade-profiles.v2.json',
               'legacyInput': 'config/profiles/monadoblade-profiles.v1.json',
               'migration': 'config/profiles/monadoblade-profiles.migration.v1-to-v2.json',
+              'typedAdapter': 'config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json',
           }
           if runtime.get('profileContracts') != expected_profile_contracts:
               raise SystemExit(f'Unexpected runtime profile contract links: {runtime.get("profileContracts")}')
+          typed_adapter_path = Path(expected_profile_contracts['typedAdapter'])
+          if not typed_adapter_path.exists():
+              raise SystemExit(f'Missing v2 typed adapter contract: {typed_adapter_path}')
+          typed_adapter = json.loads(typed_adapter_path.read_text(encoding='utf-8'))
+          if typed_adapter.get('sourceCatalog') != expected_profile_contracts['active']:
+              raise SystemExit('Typed adapter source catalog must match the active v2 profile catalog')
+          if typed_adapter.get('targetTypedModelMode') != 'legacy-seven-profile-enum':
+              raise SystemExit('Typed adapter must target the legacy seven-profile typed model mode')
+          expected_projection_pairs = {
+              ('core', 'personal'),
+              ('developer', 'developer'),
+              ('studio', 'studio'),
+              ('gamer', 'gamer'),
+              ('ai-server', 'sysops'),
+              ('ai-server', 'server-background'),
+              ('sysadmin-offline', 'sysadmin'),
+          }
+          projection_rules = typed_adapter.get('projectionRules', [])
+          projection_pairs = {(rule.get('sourceProfile'), rule.get('targetTypedProfile')) for rule in projection_rules}
+          if projection_pairs != expected_projection_pairs:
+              raise SystemExit(f'Typed adapter projection map mismatch: {projection_pairs}')
+          required_adapter_fields = ['glyph', 'soundCue', 'background', 'aihubMode', 'dashboardWidgets']
+          for rule in projection_rules:
+              source_profile = rule.get('sourceProfile')
+              target_profile = rule.get('targetTypedProfile')
+              for field in required_adapter_fields:
+                  if field not in rule:
+                      raise SystemExit(f'Typed adapter rule {source_profile}->{target_profile} is missing {field}')
+              if not isinstance(rule['dashboardWidgets'], list) or not rule['dashboardWidgets']:
+                  raise SystemExit(f'Typed adapter rule {source_profile}->{target_profile} must define dashboardWidgets as a non-empty list')
+          adapter_invariants = typed_adapter.get('safetyInvariants', {})
+          expected_adapter_invariants = [
+              'allLegacyTypedProfilesProjected',
+              'requiresDeterministicOneToOneRulePerTarget',
+              'forbidRemoteActivationForSysadminTarget',
+              'denySecretValueProjection',
+          ]
+          if not all(adapter_invariants.get(key) is True for key in expected_adapter_invariants):
+              raise SystemExit('Typed adapter safety invariants are incomplete')
           surface_contracts = runtime.get('surfaceContracts', {})
           for key in ('shell', 'usbWizard', 'alvisCapabilities', 'integrationProjection'):
               path = surface_contracts.get(key)

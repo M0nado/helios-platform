@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "fromVersion": "config/profiles/monadoblade-profiles.v1.json",
   "toVersion": "config/profiles/monadoblade-profiles.v2.json",
   "preserveLegacyInput": true,
@@ -97,9 +97,11 @@
       "studio": { "strategy": "single-source", "source": "Studio" },
       "gamer": { "strategy": "single-source", "source": "Gamer" },
       "ai-server": {
-        "strategy": "single-source",
-        "source": "SysOps",
-        "alternateLegacySource": "ServerBackground"
+        "strategy": "multi-source-merge",
+        "sources": ["SysOps", "ServerBackground"],
+        "mergeMode": "union",
+        "primaryWorkspace": "SysOps",
+        "preserveLegacyWorkspace": "ServerBackground"
       },
       "sysadmin-offline": {
         "strategy": "single-source",
@@ -147,6 +149,7 @@
     "Legacy software, AIHub, shell-theme, storage workspace, and resource-policy scopes stay v1-labeled until their dedicated v2 manifests ship.",
     "AI/Server theme resolution is deterministic: SysOps provides scalar appearance, and ServerBackground metrics are appended.",
     "AI/Server AIHub policy resolution is deterministic: union policy arrays, retain SysOps scalar precedence, and preserve approval gates from both SysOps and ServerBackground.",
-    "AI/Server resource policy resolution is deterministic: scalar precedence plus max-merge for numeric budgets with a pinned materialized policy."
+    "AI/Server resource policy resolution is deterministic: scalar precedence plus max-merge for numeric budgets with a pinned materialized policy.",
+    "AI/Server workspace migration is deterministic: merge SysOps and ServerBackground workspace metadata, keep SysOps as primary, and preserve ServerBackground workspace lineage."
   ]
 }

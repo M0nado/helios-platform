@@ -1,7 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "shellId": "monadoblade-profile-shell",
+  "inheritsFrom": "config/gui/monado-profile-shell.v1.json",
+  "inheritance": {
+    "mode": "overlay-readiness-and-wheel",
+    "preserveSections": ["rendering", "scene", "blade", "quickSwitch", "profileThemes", "accessibility"]
+  },
   "securityBoundary": {
     "runsAfterWindowsAuthentication": true,
     "replacesWindowsCredentialProvider": false,

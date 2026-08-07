@@ -47,6 +47,8 @@ jobs:
         run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
       - shell: pwsh
         run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+      - shell: pwsh
+        run: dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj --configuration Release
 
   integration:
     name: Tests / Integration

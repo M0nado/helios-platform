@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "2.1.0",
-  "fabricId": "monadoblade-delivery-fabric",
+  "version": "2.2.0",
+  "fabricId": "helios-fabric",
   "contractMode": "deterministic-and-versioned",
   "inheritsFrom": "config/runtime/helios-fabric-services.v1.json",
   "defaultTransport": "local-grpc",
@@ -145,7 +145,8 @@
   "profileContracts": {
     "active": "config/profiles/monadoblade-profiles.v2.json",
     "legacyInput": "config/profiles/monadoblade-profiles.v1.json",
-    "migration": "config/profiles/monadoblade-profiles.migration.v1-to-v2.json"
+    "migration": "config/profiles/monadoblade-profiles.migration.v1-to-v2.json",
+    "typedAdapter": "config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json"
   },
   "surfaceContracts": {
     "shell": "config/gui/monado-profile-shell.v2.json",

@@ -344,7 +344,7 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    if (string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+                    if (IsCurrentLocalIdentity(username))
                     {
                         using var currentIdentity = WindowsIdentity.GetCurrent();
                         var currentPrincipal = new WindowsPrincipal(currentIdentity);
@@ -415,7 +415,7 @@ namespace HELIOS.Platform.Phase10.Users
                         catch { }
                     }
 
-                    if (groups.Count == 0 && string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+                    if (groups.Count == 0 && IsCurrentLocalIdentity(username))
                     {
                         groups.AddRange(GetCurrentIdentityGroupNames());
                     }
@@ -462,6 +462,51 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 LogMessage($"Error getting current identity groups: {ex.Message}", LogLevel.Warning);
                 return new List<string>();
+            }
+        }
+
+        private bool IsCurrentLocalIdentity(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return false;
+            }
+
+            try
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                if (identity.User is null)
+                {
+                    return false;
+                }
+
+                if (TryResolveLocalUserSid(username, out var candidateSid))
+                {
+                    return string.Equals(identity.User.Value, candidateSid, StringComparison.OrdinalIgnoreCase);
+                }
+
+                var expectedLocalName = $@"{Environment.MachineName}\{username}";
+                return string.Equals(identity.Name, expectedLocalName, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error checking current local identity match: {ex.Message}", LogLevel.Warning);
+                return false;
+            }
+        }
+
+        private static bool TryResolveLocalUserSid(string username, out string sid)
+        {
+            sid = string.Empty;
+            try
+            {
+                var account = new NTAccount(Environment.MachineName, username);
+                sid = account.Translate(typeof(SecurityIdentifier)).Value;
+                return !string.IsNullOrWhiteSpace(sid);
+            }
+            catch
+            {
+                return false;
             }
         }
 
