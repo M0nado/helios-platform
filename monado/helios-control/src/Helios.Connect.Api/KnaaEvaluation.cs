@@ -22,6 +22,8 @@ public sealed record KnaaEvaluatorOptions(
         ArgumentNullException.ThrowIfNull(configuration);
         var defaults = Default;
         var schemaVersion = ReadString(configuration, "HELIOS_KNAA_SCHEMA_VERSION", defaults.SchemaVersion);
+        if (!string.Equals(schemaVersion, defaults.SchemaVersion, StringComparison.Ordinal))
+            throw new InvalidOperationException($"HELIOS_KNAA_SCHEMA_VERSION is fixed to {defaults.SchemaVersion} for KNAA v1.");
         var modelVersion = ReadString(configuration, "HELIOS_KNAA_MODEL_VERSION", defaults.ModelVersion);
         var block = ReadDouble(configuration, "HELIOS_KNAA_THRESHOLD_BLOCK", defaults.Thresholds.Block);
         var warn = ReadDouble(configuration, "HELIOS_KNAA_THRESHOLD_WARN", defaults.Thresholds.Warn);
@@ -30,7 +32,7 @@ public sealed record KnaaEvaluatorOptions(
             throw new InvalidOperationException("KNAA thresholds must satisfy block < warn < review-required.");
         var conservativeAutoBlock = ReadBoolean(configuration, "HELIOS_KNAA_CONSERVATIVE_AUTO_BLOCK", defaults.ConservativeAutoBlock);
         return new KnaaEvaluatorOptions(
-            schemaVersion,
+            defaults.SchemaVersion,
             modelVersion,
             new KnaaThresholds(block, warn, reviewRequired),
             conservativeAutoBlock);
@@ -172,7 +174,7 @@ public sealed class KnaaEvaluator(KnaaEvaluatorOptions options) : IKnaaEvaluator
         return new KnaaAssessment(
             _options.SchemaVersion,
             _options.ModelVersion,
-            DateTimeOffset.UtcNow,
+            ResolveEvaluatedAt(run),
             evidenceState,
             score,
             confidence,
@@ -243,6 +245,13 @@ public sealed class KnaaEvaluator(KnaaEvaluatorOptions options) : IKnaaEvaluator
         return links;
     }
 
+    private static DateTimeOffset ResolveEvaluatedAt(ControlRunSnapshot run)
+    {
+        if (run.Knaa is { EvaluatedAt: var persistedEvaluatedAt } && persistedEvaluatedAt != default)
+            return persistedEvaluatedAt;
+        return run.CreatedAt;
+    }
+
     private static IReadOnlyList<KnaaSourceSignal> BuildSignals(ControlRunSnapshot run)
     {
         var contextStep = run.Steps.FirstOrDefault(step => string.Equals(step.Name, "context", StringComparison.OrdinalIgnoreCase));
@@ -265,10 +274,8 @@ public sealed class KnaaEvaluator(KnaaEvaluatorOptions options) : IKnaaEvaluator
         var approvalStep = run.Steps.Any(step => string.Equals(step.Name, "approval", StringComparison.OrdinalIgnoreCase)) ? 1d : (double?)null;
         var approvalState = approvalStep.HasValue ? Known : Unknown;
 
-        var connectorSelectionCoverage = run.Connectors.Count == 0
-            ? (double?)null
-            : NormalizeRatio(run.Connectors.Count, 4);
-        var connectorState = connectorSelectionCoverage.HasValue ? Known : Unknown;
+        var connectorSelectionCoverage = NormalizeRatio(run.Connectors.Count, 4);
+        var connectorState = Known;
 
         return
         [

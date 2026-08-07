@@ -1,4 +1,5 @@
 using Helios.Connect.Api;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Helios.Connect.Tests;
@@ -140,6 +141,75 @@ public sealed class KnaaEvaluatorTests
         Assert.Equal("block", result.Policy.Outcome);
         Assert.True(result.Policy.AutoBlockTriggered);
         Assert.False(result.Policy.AdvisoryOnly);
+    }
+
+    [Fact]
+    public void FromConfiguration_rejects_non_v1_schema_version()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["HELIOS_KNAA_SCHEMA_VERSION"] = "helios.knaa.v2"
+            })
+            .Build();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => KnaaEvaluatorOptions.FromConfiguration(configuration));
+        Assert.Contains("HELIOS_KNAA_SCHEMA_VERSION", exception.Message);
+    }
+
+    [Fact]
+    public void Evaluate_reuses_persisted_evaluated_timestamp_for_recovery()
+    {
+        var evaluator = new KnaaEvaluator(KnaaEvaluatorOptions.Default);
+        var run = CreateSnapshot(
+            steps:
+            [
+                new ControlRunStep("context", "completed", "ok"),
+                new ControlRunStep("approval", "queued", "pending")
+            ],
+            plan: CreatePlan(mutating: true),
+            evidenceSha256: new string('a', 64),
+            resourceCount: 3,
+            connectors: ["github", "slack"]);
+
+        var initialAssessment = evaluator.Evaluate(run);
+        var persistedAssessment = initialAssessment with { EvaluatedAt = initialAssessment.EvaluatedAt.AddMinutes(-5) };
+
+        var recovered = evaluator.Evaluate(run with
+        {
+            Knaa = persistedAssessment,
+            UpdatedAt = run.UpdatedAt.AddMinutes(15)
+        });
+
+        Assert.Equal(persistedAssessment.EvaluatedAt, recovered.EvaluatedAt);
+    }
+
+    [Fact]
+    public void Evaluate_scores_empty_connector_selection_as_known_zero_coverage()
+    {
+        var evaluator = new KnaaEvaluator(KnaaEvaluatorOptions.Default);
+        var noConnectorRun = CreateSnapshot(
+            steps:
+            [
+                new ControlRunStep("context", "completed", "ok"),
+                new ControlRunStep("approval", "queued", "pending")
+            ],
+            plan: CreatePlan(mutating: true),
+            evidenceSha256: new string('a', 64),
+            resourceCount: 3,
+            connectors: []);
+
+        var oneConnectorRun = noConnectorRun with { Connectors = ["github"] };
+
+        var noConnectorResult = evaluator.Evaluate(noConnectorRun);
+        var oneConnectorResult = evaluator.Evaluate(oneConnectorRun);
+
+        var connectorCoverage = Assert.Single(noConnectorResult.SourceSignals, signal => signal.Id == "connector-selection-coverage");
+        Assert.Equal("known", connectorCoverage.State);
+        Assert.Equal(0d, connectorCoverage.NormalizedValue);
+        Assert.NotNull(noConnectorResult.Score);
+        Assert.NotNull(oneConnectorResult.Score);
+        Assert.True(noConnectorResult.Score <= oneConnectorResult.Score);
     }
 
     private static EdgeAutomationPlan CreatePlan(bool mutating) =>
