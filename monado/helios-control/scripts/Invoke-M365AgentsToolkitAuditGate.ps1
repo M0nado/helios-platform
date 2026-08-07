@@ -275,3 +275,5 @@ elseif (-not $automaticInstall) {
 else {
     Write-Host 'Audit gate is clean and automaticInstall is enabled.'
 }
+
+$global:LASTEXITCODE = 0
