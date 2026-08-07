@@ -74,9 +74,20 @@ struct RuntimeSignals {
       (features[7] * 0.08));          // VM memory pressure
 }
 
+[[nodiscard]] constexpr bool has_non_finite_signals(const RuntimeSignals& signals) noexcept {
+  return !is_finite(signals.cpuUtilization) || !is_finite(signals.gpuUtilization) ||
+         !is_finite(signals.memoryUtilization) || !is_finite(signals.storageLatencyMs) ||
+         !is_finite(signals.networkLatencyMs) || !is_finite(signals.thermalPressure) ||
+         !is_finite(signals.securityRisk) || !is_finite(signals.vmMemoryPressure) ||
+         !is_finite(signals.modelLatencyMs);
+}
+
 [[nodiscard]] constexpr bool requires_operator_review(const RuntimeSignals& signals) noexcept {
+  if (has_non_finite_signals(signals)) {
+    return true;
+  }
   const auto pressure = profile_activation_pressure(signals);
-  if (!is_finite(signals.securityRisk) || !is_finite(signals.thermalPressure) || !is_finite(pressure)) {
+  if (!is_finite(pressure)) {
     return true;
   }
   return signals.securityRisk >= 60.0 || signals.thermalPressure >= 85.0 || pressure >= 0.70;

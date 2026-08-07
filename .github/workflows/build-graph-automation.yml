@@ -46,6 +46,7 @@ jobs:
           dotnet restore src/tests/HELIOS.Platform.Tests.csproj
           dotnet restore src/gui/MonadoBlade.GUI/MonadoBlade.GUI.csproj
           dotnet build src/gui/MonadoBlade.GUI/MonadoBlade.GUI.csproj --configuration Release --no-restore
+          az bicep build --file infra/azure/main.bicep >/dev/null
           python3 scripts/azure/azure_connection_pipeline.py --stage all --json >/dev/null
           python3 scripts/azure/azure_what_if.py --plan-only
           docker compose -f .devcontainer/docker-compose.yml config >/dev/null

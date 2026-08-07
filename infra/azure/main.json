@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.44.1.10279",
-      "templateHash": "17180668740734640484"
+      "version": "0.46.1.21595",
+      "templateHash": "1500139165936830733"
     }
   },
   "parameters": {
@@ -57,6 +57,13 @@
       "metadata": {
         "description": "Azure VM size for the optional VM deployment."
       }
+    },
+    "vmAllowedSshSourcePrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/8",
+      "metadata": {
+        "description": "CIDR or source prefix allowed to reach VM SSH (port 22)."
+      }
     }
   },
   "resources": [
@@ -86,8 +93,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "13279710666713133380"
+              "version": "0.46.1.21595",
+              "templateHash": "10715132405677047811"
             }
           },
           "parameters": {
@@ -156,8 +163,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "6755065585343343743"
+              "version": "0.46.1.21595",
+              "templateHash": "13882684140230276334"
             }
           },
           "parameters": {
@@ -233,8 +240,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "5289879715038000992"
+              "version": "0.46.1.21595",
+              "templateHash": "11946314332491304436"
             }
           },
           "parameters": {
@@ -315,8 +322,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "1454943715729017667"
+              "version": "0.46.1.21595",
+              "templateHash": "18318434530928885810"
             }
           },
           "parameters": {
@@ -387,6 +394,9 @@
           },
           "vmSize": {
             "value": "[parameters('vmSize')]"
+          },
+          "allowedSshSourcePrefix": {
+            "value": "[parameters('vmAllowedSshSourcePrefix')]"
           }
         },
         "template": {
@@ -395,8 +405,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "10316775344893451380"
+              "version": "0.46.1.21595",
+              "templateHash": "12140370726468064252"
             }
           },
           "parameters": {
@@ -426,11 +436,16 @@
             "vmSize": {
               "type": "string",
               "defaultValue": "Standard_B2s"
+            },
+            "allowedSshSourcePrefix": {
+              "type": "string",
+              "defaultValue": "10.0.0.0/8"
             }
           },
           "variables": {
             "publicIpName": "[take(toLower(format('{0}-{1}-vm-pip', parameters('namePrefix'), parameters('environmentName'))), 80)]",
             "networkInterfaceName": "[take(toLower(format('{0}-{1}-vm-nic', parameters('namePrefix'), parameters('environmentName'))), 80)]",
+            "networkSecurityGroupName": "[take(toLower(format('{0}-{1}-vm-nsg', parameters('namePrefix'), parameters('environmentName'))), 80)]",
             "vmName": "[take(toLower(format('{0}-{1}-vm', parameters('namePrefix'), parameters('environmentName'))), 64)]"
           },
           "resources": [
@@ -447,11 +462,37 @@
               }
             },
             {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[variables('networkSecurityGroupName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "allow-ssh-from-approved-sources",
+                    "properties": {
+                      "access": "Allow",
+                      "direction": "Inbound",
+                      "priority": 1000,
+                      "protocol": "Tcp",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "22",
+                      "sourceAddressPrefix": "[parameters('allowedSshSourcePrefix')]",
+                      "destinationAddressPrefix": "*"
+                    }
+                  }
+                ]
+              }
+            },
+            {
               "type": "Microsoft.Network/networkInterfaces",
               "apiVersion": "2023-11-01",
               "name": "[variables('networkInterfaceName')]",
               "location": "[parameters('location')]",
               "properties": {
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                },
                 "ipConfigurations": [
                   {
                     "name": "ipconfig1",
@@ -468,6 +509,7 @@
                 ]
               },
               "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
                 "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
               ]
             },

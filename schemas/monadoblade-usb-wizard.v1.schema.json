@@ -60,7 +60,7 @@
           "const": false
         },
         "requireDeviceIdentityForStoragePlan": {
-          "type": "boolean"
+          "const": true
         },
         "recoveryWorkflowProfile": {
           "type": "string",

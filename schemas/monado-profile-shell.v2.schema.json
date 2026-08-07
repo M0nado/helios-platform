@@ -33,13 +33,13 @@
       ],
       "properties": {
         "runsAfterWindowsAuthentication": {
-          "type": "boolean"
+          "const": true
         },
         "replacesWindowsCredentialProvider": {
-          "type": "boolean"
+          "const": false
         },
         "networkRequiredForLogin": {
-          "type": "boolean"
+          "const": false
         },
         "fallbackShell": {
           "type": "string",

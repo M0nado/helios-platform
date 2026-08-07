@@ -80,5 +80,43 @@ int main() {
           "non-finite telemetry label must be review-required")) {
     return 1;
   }
+
+  const auto checkFieldFailClosed = [&](double RuntimeSignals::*field, std::string_view name) {
+    RuntimeSignals invalid = stable;
+    invalid.*field = std::numeric_limits<double>::quiet_NaN();
+    if (require(requires_operator_review(invalid), name)) {
+      return false;
+    }
+    return true;
+  };
+
+  if (!checkFieldFailClosed(&RuntimeSignals::cpuUtilization, "non-finite cpu must require review")) {
+    return 1;
+  }
+  if (!checkFieldFailClosed(&RuntimeSignals::gpuUtilization, "non-finite gpu must require review")) {
+    return 1;
+  }
+  if (!checkFieldFailClosed(&RuntimeSignals::memoryUtilization, "non-finite memory must require review")) {
+    return 1;
+  }
+  if (!checkFieldFailClosed(&RuntimeSignals::storageLatencyMs, "non-finite storage latency must require review")) {
+    return 1;
+  }
+  if (!checkFieldFailClosed(&RuntimeSignals::networkLatencyMs, "non-finite network latency must require review")) {
+    return 1;
+  }
+  if (!checkFieldFailClosed(&RuntimeSignals::thermalPressure, "non-finite thermal pressure must require review")) {
+    return 1;
+  }
+  if (!checkFieldFailClosed(&RuntimeSignals::securityRisk, "non-finite security risk must require review")) {
+    return 1;
+  }
+  if (!checkFieldFailClosed(&RuntimeSignals::vmMemoryPressure, "non-finite VM memory pressure must require review")) {
+    return 1;
+  }
+  if (!checkFieldFailClosed(&RuntimeSignals::modelLatencyMs, "non-finite model latency must require review")) {
+    return 1;
+  }
+
   return 0;
 }

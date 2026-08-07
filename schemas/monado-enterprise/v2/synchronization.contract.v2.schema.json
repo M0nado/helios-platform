@@ -45,12 +45,19 @@
           "const": "config/integrations/event-contract.schema.json"
         },
         "requiredFields": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+          "const": [
+            "schemaVersion",
+            "eventId",
+            "source",
+            "eventType",
+            "repository",
+            "correlationId",
+            "environment",
+            "occurredAt",
+            "dataClassification",
+            "links",
+            "payload"
+          ]
         }
       }
     },
@@ -220,12 +227,12 @@
       ],
       "properties": {
         "requiredFor": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+          "const": [
+            "external-write",
+            "tenant-or-rbac-change",
+            "production-deployment",
+            "privileged-storage-action"
+          ]
         },
         "immutableEvidenceRequired": {
           "const": true

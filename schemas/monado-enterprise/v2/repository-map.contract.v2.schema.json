@@ -36,6 +36,21 @@
     "ownershipBoundaries": {
       "type": "array",
       "minItems": 1,
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "repository"
+            ],
+            "properties": {
+              "repository": {
+                "const": "Heli0s-Dynamics/adaptive-multibrain-bootstrap"
+              }
+            }
+          }
+        }
+      ],
       "items": {
         "type": "object",
         "additionalProperties": false,
