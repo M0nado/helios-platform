@@ -42,12 +42,18 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
+      - name: Initialize Submodules (best effort)
+        run: |
+          if [ -f .gitmodules ]; then
+            git submodule sync --recursive
+            git submodule update --init --recursive || echo "::warning::Submodule initialization failed; continuing with in-repo modules."
+          fi
 
       - name: Setup Build Configuration
         id: setup
         run: |
           # Discover buildable Node.js modules instead of assuming fixed top-level directories.
-          mapfile -t MODULE_DIRS < <(find . -maxdepth 3 -name package.json -not -path './node_modules/*' -printf '%h\n' | sed 's#^./##' | sort)
+          mapfile -t MODULE_DIRS < <(find . -maxdepth 4 -name package.json -not -path './node_modules/*' -printf '%h\n' | sed 's#^./##' | sort)
 
           if [ ${#MODULE_DIRS[@]} -eq 0 ]; then
             MODULES='["__no_node_modules__"]'
@@ -60,7 +66,7 @@ jobs:
           fi
 
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
-          echo "node-version=18" >> $GITHUB_OUTPUT
+          echo "node-version=22" >> $GITHUB_OUTPUT
           echo "has-modules=$HAS_MODULES" >> $GITHUB_OUTPUT
           echo "Build matrix configured"
 
@@ -79,11 +85,27 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
+      - name: Initialize Submodules (best effort)
+        run: |
+          if [ -f .gitmodules ]; then
+            git submodule sync --recursive
+            git submodule update --init --recursive || echo "::warning::Submodule initialization failed; continuing with in-repo modules."
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ needs.setup.outputs.node-version }}
+
+      - name: Normalize module artifact name
+        id: module_meta
+        run: |
+          SAFE_MODULE=$(printf '%s' '${{ matrix.module }}' | tr '/\\' '--' | tr -c 'A-Za-z0-9._-' '-')
+          SAFE_MODULE=$(printf '%s' "$SAFE_MODULE" | sed -E 's/^-+//; s/-+$//')
+          if [ -z "$SAFE_MODULE" ]; then
+            SAFE_MODULE="module"
+          fi
+          echo "safe-module=$SAFE_MODULE" >> "$GITHUB_OUTPUT"
 
       - name: Setup NPM Build Cache
         if: github.event.inputs.clean_build != 'true' && hashFiles(format('{0}/package-lock.json', matrix.module)) != ''
@@ -108,17 +130,26 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd ${{ matrix.module }}
+          cd "${{ matrix.module }}"
           if [ -f package-lock.json ]; then
             npm ci --prefer-offline --no-audit
           else
             npm install --prefer-offline --no-audit
           fi
 
+      - name: Run Module Check Script
+        run: |
+          cd "${{ matrix.module }}"
+          if [ -f "package.json" ] && grep -q '"check"' package.json; then
+            npm run check
+          else
+            echo "No check script found"
+          fi
+
       - name: Lint Code
         continue-on-error: true
         run: |
-          cd ${{ matrix.module }}
+          cd "${{ matrix.module }}"
           if [ -f "package.json" ] && grep -q '"lint"' package.json; then
             npm run lint
           else
@@ -127,7 +158,7 @@ jobs:
 
       - name: Build Module
         run: |
-          cd ${{ matrix.module }}
+          cd "${{ matrix.module }}"
           if [ -f "package.json" ] && grep -q '"build"' package.json; then
             npm run build
           else
@@ -136,7 +167,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          cd ${{ matrix.module }}
+          cd "${{ matrix.module }}"
           if [ -f "package.json" ] && grep -q '"test"' package.json; then
             npm test -- --coverage --passWithNoTests
           else
@@ -146,7 +177,7 @@ jobs:
       - name: Generate Coverage Report
         if: always()
         run: |
-          cd ${{ matrix.module }}
+          cd "${{ matrix.module }}"
           if [ -d "coverage" ]; then
             echo "Coverage report generated"
             find coverage -name "*.json" -o -name "*.html" | head -10
@@ -156,7 +187,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-${{ matrix.module }}
+          name: build-artifacts-${{ steps.module_meta.outputs.safe-module }}
           path: |
             ${{ matrix.module }}/dist/
             ${{ matrix.module }}/build/
@@ -167,7 +198,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.module }}
+          name: coverage-${{ steps.module_meta.outputs.safe-module }}
           path: ${{ matrix.module }}/coverage/
           if-no-files-found: warn
           retention-days: 7

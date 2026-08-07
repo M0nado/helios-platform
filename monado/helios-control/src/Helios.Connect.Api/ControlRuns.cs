@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -52,6 +53,7 @@ public sealed record ControlRunSnapshot(
     EdgeAutomationPlan? Plan = null,
     string? EvidenceSha256 = null,
     int ResourceCount = 0,
+    KnaaAssessment? Knaa = null,
     string? Error = null,
     string LifecycleState = "INIT",
     int AttemptCount = 0,
@@ -242,6 +244,23 @@ public interface IConnectorDispatcher
 public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IConfiguration configuration) : IConnectorDispatcher
 {
     private static readonly string[] AllowedConnectors = ["github", "linear", "slack", "sharepoint", "teams", "copilot"];
+    private static readonly HashSet<string> AllowedIntegrationSources = new(StringComparer.Ordinal)
+    {
+        "github", "azure", "hermes", "xcore", "codex", "github-copilot",
+        "microsoft-copilot", "copilot-studio", "helios-platform", "monado-blade"
+    };
+    private static readonly HashSet<string> AllowedIntegrationEnvironments = new(StringComparer.Ordinal)
+    {
+        "local", "development", "test", "staging", "production"
+    };
+    private static readonly HashSet<string> AllowedDataClassifications = new(StringComparer.Ordinal)
+    {
+        "public", "internal", "confidential", "restricted"
+    };
+    private static readonly HashSet<string> AllowedActorTypes = new(StringComparer.Ordinal)
+    {
+        "human", "service", "agent", "workflow"
+    };
 
     public IReadOnlyList<ConnectorBindingStatus> GetStatus()
     {
@@ -273,19 +292,23 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
 
             // Retries must reproduce the exact body for the same idempotency key.
             var occurredAt = run.CreatedAt;
-            var envelope = new HeliosEvent(
-                Id: $"{run.Id}:{connector}:status",
-                Type: "helios.control-run.status",
-                Source: "helios-control",
-                Subject: $"control-runs/{run.Id}",
-                OccurredAt: occurredAt,
+            var envelope = new HeliosIntegrationEvent(
+                SchemaVersion: "1.0",
+                EventId: $"{run.Id}:{connector}:status",
+                Source: "helios-platform",
+                EventType: "helios.control-run.status",
+                Repository: string.IsNullOrWhiteSpace(run.Repository) ? null : run.Repository,
+                EntityId: run.Id,
                 CorrelationId: run.CorrelationId,
-                TraceParent: null,
+                CausationId: null,
+                Environment: NormalizeIntegrationEnvironment(run.Environment),
+                OccurredAt: occurredAt,
                 DataClassification: "internal",
+                Actor: new HeliosIntegrationActor("service", "helios-control", "HELIOS Control"),
+                Links: BuildIntegrationLinks(run),
                 Payload: new Dictionary<string, object?>
                 {
                     ["schema"] = "helios.connectorDelivery.v1",
-                    ["schemaVersion"] = "1.0",
                     ["connector"] = connector,
                     ["runId"] = run.Id,
                     ["status"] = run.Status,
@@ -304,8 +327,18 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
                     ["incidentFingerprint"] = run.IncidentFingerprint,
                     ["evidenceSha256"] = run.EvidenceSha256,
                     ["resourceCount"] = run.ResourceCount,
-                    ["planId"] = run.Plan?.PlanId
+                    ["planId"] = run.Plan?.PlanId,
+                    ["knaaModelVersion"] = run.Knaa?.ModelVersion,
+                    ["knaaThresholds"] = run.Knaa?.Policy.Thresholds,
+                    ["knaaEvidenceLinks"] = run.Knaa?.EvidenceLinks,
+                    ["knaaOutcome"] = run.Knaa?.Policy.Outcome,
+                    ["knaa"] = run.Knaa
                 });
+            if (!TryValidateIntegrationEvent(envelope, out var validationError))
+            {
+                receipts.Add(new(connector, "failed", 0, $"Relay event envelope failed validation: {validationError}"));
+                continue;
+            }
             var payload = JsonSerializer.Serialize(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web));
             var idempotencyKey = $"{run.Id}:{connector}";
             var timestamp = occurredAt.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -359,6 +392,87 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
 
     private static bool IsSafeKeyId(string value) => value.Length is >= 1 and <= 64 &&
         value.All(character => char.IsAsciiLetterOrDigit(character) || character is '.' or '_' or ':' or '-');
+
+    private static IReadOnlyList<HeliosIntegrationLink> BuildIntegrationLinks(ControlRunSnapshot run)
+    {
+        var links = new List<HeliosIntegrationLink>
+        {
+            new("run", new Uri($"run://control-runs/{Uri.EscapeDataString(run.Id)}"))
+        };
+        if (!string.IsNullOrWhiteSpace(run.EvidenceSha256))
+            links.Add(new("evidence", new Uri($"evidence://sha256/{Uri.EscapeDataString(run.EvidenceSha256)}")));
+        if (!string.IsNullOrWhiteSpace(run.Plan?.PlanId))
+            links.Add(new("plan", new Uri($"plan://plans/{Uri.EscapeDataString(run.Plan.PlanId)}")));
+        return links;
+    }
+
+    private static string NormalizeIntegrationEnvironment(string environment) =>
+        environment.ToLowerInvariant() switch
+        {
+            "dev" or "development" => "development",
+            "test" => "test",
+            "preview" or "stage" or "staging" => "staging",
+            "prod" or "production" => "production",
+            _ => "local"
+        };
+
+    private static bool TryValidateIntegrationEvent(HeliosIntegrationEvent envelope, out string error)
+    {
+        if (!string.Equals(envelope.SchemaVersion, "1.0", StringComparison.Ordinal))
+        {
+            error = "schemaVersion must be 1.0.";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(envelope.EventId) || envelope.EventId.Length < 8)
+        {
+            error = "eventId must be at least 8 characters.";
+            return false;
+        }
+        if (!AllowedIntegrationSources.Contains(envelope.Source))
+        {
+            error = $"source '{envelope.Source}' is not in the allowlist.";
+            return false;
+        }
+        if (!Regex.IsMatch(envelope.EventType, "^[a-z0-9]+([._-][a-z0-9]+)*$", RegexOptions.CultureInvariant))
+        {
+            error = "eventType does not match the canonical pattern.";
+            return false;
+        }
+        if (string.IsNullOrWhiteSpace(envelope.CorrelationId) || envelope.CorrelationId.Length < 4)
+        {
+            error = "correlationId must be at least 4 characters.";
+            return false;
+        }
+        if (!AllowedIntegrationEnvironments.Contains(envelope.Environment))
+        {
+            error = $"environment '{envelope.Environment}' is not supported.";
+            return false;
+        }
+        if (!AllowedDataClassifications.Contains(envelope.DataClassification))
+        {
+            error = $"dataClassification '{envelope.DataClassification}' is not supported.";
+            return false;
+        }
+        if (envelope.Actor is { } actor &&
+            (!AllowedActorTypes.Contains(actor.Type) || string.IsNullOrWhiteSpace(actor.Id)))
+        {
+            error = "actor is invalid.";
+            return false;
+        }
+        if (envelope.Links.Count == 0 || envelope.Links.Any(link => string.IsNullOrWhiteSpace(link.Rel) || !link.Href.IsAbsoluteUri))
+        {
+            error = "links must include absolute URIs with relation names.";
+            return false;
+        }
+        if (envelope.Payload is null)
+        {
+            error = "payload must be present.";
+            return false;
+        }
+
+        error = string.Empty;
+        return true;
+    }
 
     private bool TryReadBinding(string connector, out Uri? endpoint, out string? secret)
     {
@@ -414,6 +528,7 @@ public sealed partial class ControlRunCoordinator(
     IConnectorDispatcher dispatcher,
     ILogger<ControlRunCoordinator> logger,
     ControlRunCoordinatorTiming? timing = null,
+    IKnaaEvaluator? knaaEvaluator = null,
     AgentCorePolicy? policy = null) : BackgroundService
 {
     private const string DefaultRepository = "M0nado/helios-platform";
@@ -421,6 +536,7 @@ public sealed partial class ControlRunCoordinator(
     private static readonly HashSet<string> Intents = new(StringComparer.OrdinalIgnoreCase) { "provision-resources", "cleanup-owned-resources" };
     private static readonly HashSet<string> Connectors = new(StringComparer.OrdinalIgnoreCase) { "github", "linear", "slack", "sharepoint", "teams", "copilot" };
     private readonly ControlRunCoordinatorTiming _timing = ControlRunCoordinatorTiming.Validate(timing);
+    private readonly IKnaaEvaluator _knaaEvaluator = knaaEvaluator ?? new KnaaEvaluator(KnaaEvaluatorOptions.Default);
     private readonly AgentCorePolicy _policy = policy ?? AgentCorePolicy.Default;
     private readonly Channel<string> _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(256)
     {
@@ -475,6 +591,7 @@ public sealed partial class ControlRunCoordinator(
             Step("inventory", "queued", "Read non-secret resource metadata."),
             Step("plan", "queued", "Create a deterministic governed plan."),
             Step("evidence", "queued", "Hash the normalized plan and inventory summary."),
+            Step("evaluation", "queued", "Compute KNAA value vector and policy recommendation."),
             Step("connectors", "queued", "Deliver idempotent status receipts through configured relays."),
             Step("approval", "queued", "Stop at the protected approval boundary.")
         };
@@ -617,44 +734,81 @@ public sealed partial class ControlRunCoordinator(
         try
         {
             var workToken = workCts.Token;
+            var reusePersistedKnaa = CanReusePersistedKnaaForRecovery(run);
             run = await SetStepAsync(run, "context", "running", "Verifying tenant, subscription, and resource group.", workToken);
             var context = inventory.GetContext();
             if (!context.Configured || !string.Equals(context.ResourceGroup, run.Target, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("The server Azure context does not match the requested resource group.");
             run = await SetStepAsync(run, "context", "completed", "Configured Azure boundary verified.", workToken);
 
-            run = await SetStepAsync(run, "inventory", "running", "Reading Azure resource metadata with managed identity.", workToken);
-            var resources = await inventory.ListResourcesAsync(null, workToken);
-            run = await ReplaceAsync(run, run with { ResourceCount = resources.Count, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
-            run = await SetStepAsync(run, "inventory", "completed", $"Read metadata for {resources.Count} resources.", workToken);
-
-            run = await TransitionLifecycleAsync(run, "PLAN", workToken);
-            run = await SetStepAsync(run, "plan", "running", "Creating deterministic plan-only automation.", workToken);
-            var plan = planner.CreatePlan(new EdgeAutomationRequest(run.Intent, run.Environment, run.Target, "all"));
-            run = await ReplaceAsync(run, run with { Plan = plan, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
-            run = await SetStepAsync(run, "plan", "completed", $"Plan {plan.PlanId[..12]} created; apply is unavailable from Edge.", workToken);
-
-            run = await SetStepAsync(run, "evidence", "running", "Canonicalizing non-secret evidence.", workToken);
-            var resourceEvidence = resources.OrderBy(resource => resource.Id, StringComparer.Ordinal)
-                .Select(resource => new
-                {
-                    resource.Id,
-                    resource.Name,
-                    resource.Type,
-                    resource.Location,
-                    tags = resource.Tags?.OrderBy(tag => tag.Key, StringComparer.Ordinal)
-                });
-            var canonical = JsonSerializer.Serialize(new
+            IReadOnlyList<AzureInventoryResource> resources = [];
+            EdgeAutomationPlan plan;
+            if (reusePersistedKnaa)
             {
-                schema = "helios.orchestrationEvidence.v1",
-                azure = new { context.TenantId, context.SubscriptionId, context.ResourceGroup },
-                request = new { run.Intent, run.Environment, run.Target, run.Connectors },
-                plan,
-                resources = resourceEvidence
-            });
-            var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
-            run = await ReplaceAsync(run, run with { EvidenceSha256 = digest, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
-            run = await SetStepAsync(run, "evidence", "completed", $"Evidence SHA-256 {digest}.", workToken);
+                run = await TransitionLifecycleAsync(run, "PLAN", workToken);
+                plan = run.Plan ?? throw new InvalidOperationException("Persisted KNAA recovery requires a persisted plan.");
+            }
+            else
+            {
+                run = await SetStepAsync(run, "inventory", "running", "Reading Azure resource metadata with managed identity.", workToken);
+                resources = await inventory.ListResourcesAsync(null, workToken);
+                run = await ReplaceAsync(run, run with { ResourceCount = resources.Count, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+                run = await SetStepAsync(run, "inventory", "completed", $"Read metadata for {resources.Count} resources.", workToken);
+
+                run = await TransitionLifecycleAsync(run, "PLAN", workToken);
+                run = await SetStepAsync(run, "plan", "running", "Creating deterministic plan-only automation.", workToken);
+                plan = planner.CreatePlan(new EdgeAutomationRequest(run.Intent, run.Environment, run.Target, "all"));
+                run = await ReplaceAsync(run, run with { Plan = plan, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+                run = await SetStepAsync(run, "plan", "completed", $"Plan {plan.PlanId[..12]} created; apply is unavailable from Edge.", workToken);
+
+                run = await SetStepAsync(run, "evidence", "running", "Canonicalizing non-secret evidence.", workToken);
+                var resourceEvidence = resources.OrderBy(resource => resource.Id, StringComparer.Ordinal)
+                    .Select(resource => new
+                    {
+                        resource.Id,
+                        resource.Name,
+                        resource.Type,
+                        resource.Location,
+                        tags = resource.Tags?.OrderBy(tag => tag.Key, StringComparer.Ordinal)
+                    });
+                var canonical = JsonSerializer.Serialize(new
+                {
+                    schema = "helios.orchestrationEvidence.v1",
+                    azure = new { context.TenantId, context.SubscriptionId, context.ResourceGroup },
+                    request = new { run.Intent, run.Environment, run.Target, run.Connectors },
+                    plan,
+                    resources = resourceEvidence
+                });
+                var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+                run = await ReplaceAsync(run, run with { EvidenceSha256 = digest, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+                run = await SetStepAsync(run, "evidence", "completed", $"Evidence SHA-256 {digest}.", workToken);
+            }
+
+            run = await SetStepAsync(run, "evaluation", "running", "Scoring KNAA vector and policy thresholds.", workToken);
+            KnaaAssessment knaa;
+            string evaluationDetail;
+            if (reusePersistedKnaa && run.Knaa is not null)
+            {
+                knaa = run.Knaa;
+                var persistedScoreText = knaa.Score.HasValue
+                    ? knaa.Score.Value.ToString("0.000", CultureInfo.InvariantCulture)
+                    : "unknown";
+                evaluationDetail =
+                    $"Reused persisted KNAA outcome {knaa.Policy.Outcome}; score {persistedScoreText}; confidence {knaa.Confidence.ToString("0.000", CultureInfo.InvariantCulture)}.";
+            }
+            else
+            {
+                var evaluationInput = run.Knaa is null ? run : run with { Knaa = null };
+                knaa = _knaaEvaluator.Evaluate(evaluationInput);
+                run = await ReplaceAsync(run, run with { Knaa = knaa, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+                var scoreText = knaa.Score.HasValue
+                    ? knaa.Score.Value.ToString("0.000", CultureInfo.InvariantCulture)
+                    : "unknown";
+                evaluationDetail =
+                    $"KNAA outcome {knaa.Policy.Outcome}; score {scoreText}; confidence {knaa.Confidence.ToString("0.000", CultureInfo.InvariantCulture)}.";
+            }
+
+            run = await SetStepAsync(run, "evaluation", "completed", evaluationDetail, workToken);
 
             run = await SetStepAsync(run, "connectors", "running", "Reconciling external status receipts.", workToken);
             var awaitsApproval = plan.Steps.Any(step => step.Mutating);
@@ -673,9 +827,7 @@ public sealed partial class ControlRunCoordinator(
             run = await SetStepAsync(run, "connectors", "completed", $"Recorded {receipts.Count} connector receipts.", workToken);
 
             run = await SetStepAsync(run, "approval", "running", "Evaluating protected mutation gates.", workToken);
-            run = await SetStepAsync(run, "approval", "completed", awaitsApproval
-                ? "Stopped before mutation. Review what-if evidence and approve through the protected workflow."
-                : "No mutating step is present.", workToken);
+            run = await SetStepAsync(run, "approval", "completed", BuildApprovalDetail(awaitsApproval, run.Knaa), workToken);
             if (!awaitsApproval) run = await TransitionLifecycleAsync(run, "COMPLETE", workToken);
             await ReplaceAsync(run, run with
             {
@@ -816,15 +968,28 @@ public sealed partial class ControlRunCoordinator(
     private async Task<ControlRunSnapshot> SetStepAsync(ControlRunSnapshot run, string name, string status, string detail, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
-        var steps = run.Steps.Select(step => step.Name == name
-            ? step with
+        var matched = false;
+        var steps = run.Steps.Select(step =>
+        {
+            if (!string.Equals(step.Name, name, StringComparison.Ordinal)) return step;
+            matched = true;
+            return step with
             {
                 Status = status,
                 Detail = detail,
                 StartedAt = step.StartedAt ?? (status == "running" ? now : null),
                 CompletedAt = status == "completed" ? now : step.CompletedAt
-            }
-            : step).ToArray();
+            };
+        }).ToList();
+        if (!matched)
+        {
+            steps.Add(new ControlRunStep(
+                name,
+                status,
+                detail,
+                StartedAt: status == "running" ? now : null,
+                CompletedAt: status == "completed" ? now : null));
+        }
         return await ReplaceAsync(run, run with { Steps = steps, UpdatedAt = now }, cancellationToken);
     }
 
@@ -906,6 +1071,48 @@ public sealed partial class ControlRunCoordinator(
     }
 
     private static ControlRunStep Step(string name, string status, string detail) => new(name, status, detail);
+
+    private static bool CanReusePersistedKnaaForRecovery(ControlRunSnapshot run)
+    {
+        if (run.Knaa is null || run.Plan is null || string.IsNullOrWhiteSpace(run.EvidenceSha256))
+            return false;
+        if (!IsStepCompleted(run, "inventory") ||
+            !IsStepCompleted(run, "plan") ||
+            !IsStepCompleted(run, "evidence") ||
+            !IsStepCompleted(run, "evaluation"))
+            return false;
+
+        var expectedEvidenceLink = $"evidence://sha256/{run.EvidenceSha256}";
+        if (!run.Knaa.EvidenceLinks.Contains(expectedEvidenceLink, StringComparer.Ordinal))
+            return false;
+
+        var resourceCoverageSignal = run.Knaa.SourceSignals.FirstOrDefault(signal => string.Equals(signal.Id, "resource-coverage", StringComparison.Ordinal));
+        if (resourceCoverageSignal?.RawValue is double rawValue &&
+            Math.Abs(rawValue - run.ResourceCount) > 0.0005d)
+            return false;
+
+        return true;
+    }
+
+    private static bool IsStepCompleted(ControlRunSnapshot run, string stepName) =>
+        run.Steps.Any(step =>
+            string.Equals(step.Name, stepName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(step.Status, "completed", StringComparison.OrdinalIgnoreCase));
+
+    private static string BuildApprovalDetail(bool awaitsApproval, KnaaAssessment? knaa)
+    {
+        if (!awaitsApproval) return "No mutating step is present.";
+        if (knaa is null) return "Stopped before mutation. Review what-if evidence and approve through the protected workflow.";
+        if (knaa.Policy.AutoBlockTriggered)
+            return "Stopped before mutation. Conservative KNAA auto-block policy triggered and requires explicit operator review.";
+        return knaa.Policy.Outcome switch
+        {
+            "block" => "Stopped before mutation. KNAA advisory outcome is block; complete evidence and manual review are required.",
+            "warn" => "Stopped before mutation. KNAA outcome is warn; proceed only with explicit reviewer justification.",
+            "review-required" => "Stopped before mutation. KNAA outcome requires manual review through the protected workflow.",
+            _ => "Stopped before mutation. Review what-if evidence and approve through the protected workflow."
+        };
+    }
 
     private static string Normalize(string? value, string name, int maxLength)
     {

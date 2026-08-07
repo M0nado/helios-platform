@@ -1,0 +1,369 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/knaa-value-model-v1.json",
+  "title": "HELIOS KNAA Value Model",
+  "description": "Versioned XCore9 KNAA scoring and policy output for control-run telemetry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "modelVersion",
+    "evaluatedAt",
+    "evidenceState",
+    "score",
+    "confidence",
+    "uncertainty",
+    "sourceSignals",
+    "vector",
+    "policy",
+    "recommendation",
+    "evidenceLinks"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "helios.knaa.v1"
+    },
+    "modelVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evaluatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidenceState": {
+      "type": "string",
+      "enum": [
+        "sufficient",
+        "unknown",
+        "insufficient-evidence"
+      ]
+    },
+    "score": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "uncertainty": {
+      "type": "string",
+      "enum": [
+        "none",
+        "unknown",
+        "insufficient-evidence"
+      ]
+    },
+    "sourceSignals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source",
+          "rawValue",
+          "normalizedValue",
+          "state",
+          "detail"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rawValue": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "normalizedValue": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "known",
+              "unknown",
+              "insufficient-evidence"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "vector": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "value",
+          "state",
+          "sourceSignalIds"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "knowledge",
+              "normalization",
+              "actionability",
+              "assurance"
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "known",
+              "unknown",
+              "insufficient-evidence"
+            ]
+          },
+          "sourceSignalIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "advisoryOnly",
+        "autoBlockTriggered",
+        "thresholds",
+        "reason"
+      ],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "review-required",
+            "warn",
+            "block"
+          ]
+        },
+        "advisoryOnly": {
+          "type": "boolean"
+        },
+        "autoBlockTriggered": {
+          "type": "boolean"
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "block",
+            "warn",
+            "reviewRequired"
+          ],
+          "properties": {
+            "block": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "warn": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "reviewRequired": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            }
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "detail",
+        "promotionRecommended",
+        "deploymentAuthorized",
+        "basedOnComponents"
+      ],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "review-required",
+            "warn",
+            "block"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "minLength": 1
+        },
+        "promotionRecommended": {
+          "type": "boolean"
+        },
+        "deploymentAuthorized": {
+          "type": "boolean"
+        },
+        "basedOnComponents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "knowledge",
+              "normalization",
+              "actionability",
+              "assurance"
+            ]
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "evidenceLinks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": "helios.knaa.v1",
+      "modelVersion": "xcore9-knaa-1.0.0",
+      "evaluatedAt": "2026-08-06T00:00:00Z",
+      "evidenceState": "sufficient",
+      "score": 0.916,
+      "confidence": 1.0,
+      "uncertainty": "none",
+      "sourceSignals": [
+        {
+          "id": "context-verified",
+          "source": "control-run-step.context",
+          "rawValue": 1,
+          "normalizedValue": 1,
+          "state": "known",
+          "detail": "Whether Azure boundary verification completed."
+        }
+      ],
+      "vector": [
+        {
+          "name": "knowledge",
+          "value": 1,
+          "state": "known",
+          "sourceSignalIds": [
+            "context-verified",
+            "resource-coverage",
+            "evidence-digest"
+          ]
+        }
+      ],
+      "policy": {
+        "outcome": "pass",
+        "advisoryOnly": true,
+        "autoBlockTriggered": false,
+        "thresholds": {
+          "block": 0.35,
+          "warn": 0.55,
+          "reviewRequired": 0.75
+        },
+        "reason": "KNAA score is above all review thresholds."
+      },
+      "recommendation": {
+        "outcome": "pass",
+        "detail": "Recommendation can be considered for promotion review, but never bypasses human approval gates.",
+        "promotionRecommended": true,
+        "deploymentAuthorized": false,
+        "basedOnComponents": [
+          "knowledge",
+          "normalization",
+          "actionability",
+          "assurance"
+        ]
+      },
+      "evidenceLinks": [
+        "run://control-runs/0123456789abcdef0123456789abcdef",
+        "evidence://sha256/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "plan://plan-123"
+      ]
+    },
+    {
+      "schemaVersion": "helios.knaa.v1",
+      "modelVersion": "xcore9-knaa-1.0.0",
+      "evaluatedAt": "2026-08-06T00:00:00Z",
+      "evidenceState": "insufficient-evidence",
+      "score": null,
+      "confidence": 0.42,
+      "uncertainty": "insufficient-evidence",
+      "sourceSignals": [],
+      "vector": [],
+      "policy": {
+        "outcome": "review-required",
+        "advisoryOnly": true,
+        "autoBlockTriggered": false,
+        "thresholds": {
+          "block": 0.35,
+          "warn": 0.55,
+          "reviewRequired": 0.75
+        },
+        "reason": "Insufficient KNAA evidence requires human review."
+      },
+      "recommendation": {
+        "outcome": "review-required",
+        "detail": "Recommendation needs manual reviewer judgment before any promotion decision.",
+        "promotionRecommended": false,
+        "deploymentAuthorized": false,
+        "basedOnComponents": [
+          "knowledge"
+        ]
+      },
+      "evidenceLinks": [
+        "run://control-runs/example"
+      ]
+    }
+  ]
+}

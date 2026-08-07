@@ -46,6 +46,10 @@
   authority, incident suppression limits, rollback governance, sandboxing, and
   append-only audit fields. Runtime policy loading is fail-closed for strict
   cloud modes, and validation tests plus failure-injection tests are required.
+- KNAA v1 evaluator integration for control runs, including versioned model
+  metadata, normalized source-signal vectors, confidence/uncertainty semantics,
+  threshold-scored policy outcomes (`block`/`warn`/`review-required`/`pass`),
+  and audit payload traceability links.
 - Signed HTTPS connector relays for GitHub, Linear, Slack, SharePoint, Teams,
   and Copilot. The runtime stores per-destination receipts, uses stable
   idempotency keys, retries three times, and never returns relay URLs or HMAC

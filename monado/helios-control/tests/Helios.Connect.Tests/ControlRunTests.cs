@@ -37,6 +37,11 @@ public sealed class ControlRunTests
             Assert.True(completed.HopCount >= 1);
             Assert.Equal(2, completed.ResourceCount);
             Assert.Equal(4, completed.Receipts.Count);
+            Assert.NotNull(completed.Knaa);
+            Assert.Equal("helios.knaa.v1", completed.Knaa!.SchemaVersion);
+            Assert.Equal("xcore9-knaa-1.0.0", completed.Knaa.ModelVersion);
+            Assert.NotEmpty(completed.Knaa.EvidenceLinks);
+            Assert.Equal("awaiting-approval", completed.Status);
             Assert.All(completed.Steps, step => Assert.Equal("completed", step.Status));
         }
         finally
@@ -91,6 +96,7 @@ public sealed class ControlRunTests
             new ControlRunStep("inventory", "queued", "queued"),
             new ControlRunStep("plan", "queued", "queued"),
             new ControlRunStep("evidence", "queued", "queued"),
+            new ControlRunStep("evaluation", "queued", "queued"),
             new ControlRunStep("connectors", "queued", "queued"),
             new ControlRunStep("approval", "queued", "queued")
         };
@@ -107,6 +113,69 @@ public sealed class ControlRunTests
             Assert.Equal("awaiting-approval", completed.Status);
             Assert.Null(completed.LeaseOwner);
             Assert.Null(completed.LeaseExpiresAt);
+        }
+        finally
+        {
+            await coordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task Recovered_run_reuses_persisted_knaa_assessment_for_dispatch_idempotency()
+    {
+        var store = new InMemoryControlRunStore();
+        var now = DateTimeOffset.UtcNow;
+        var inventory = new CountingInventory(resourceCount: 7);
+        var persistedKnaa = BuildSampleKnaaAssessment(now.AddMinutes(-20)) with
+        {
+            EvidenceLinks =
+            [
+                "run://control-runs/0123456789abcdef0123456789abcdef",
+                $"evidence://sha256/{new string('b', 64)}"
+            ]
+        };
+        var steps = new[]
+        {
+            new ControlRunStep("context", "completed", "completed"),
+            new ControlRunStep("inventory", "completed", "completed"),
+            new ControlRunStep("plan", "completed", "completed"),
+            new ControlRunStep("evidence", "completed", "completed"),
+            new ControlRunStep("evaluation", "completed", "completed"),
+            new ControlRunStep("connectors", "queued", "queued"),
+            new ControlRunStep("approval", "queued", "queued")
+        };
+        var persisted = new ControlRunSnapshot(
+            "bcdefabcdefabcdefabcdefabcdefabc", "control-runs", new string('a', 64), "correlation-recovery-knaa", "principal-1",
+            "provision-resources", "dev", "helios-dev-rg", ["github"], "queued", "diagnose-plan-sync", now, now, steps, [],
+            Plan: new EdgeAutomationPlanner().CreatePlan(new EdgeAutomationRequest("provision-resources", "dev", "helios-dev-rg", "all")),
+            EvidenceSha256: new string('b', 64),
+            ResourceCount: 2,
+            Knaa: persistedKnaa);
+        await store.CreateOrGetAsync(persisted, CancellationToken.None);
+
+        var overrideEvaluator = new KnaaEvaluator(new KnaaEvaluatorOptions(
+            "helios.knaa.v1",
+            "override-model-version",
+            new KnaaThresholds(0.20, 0.40, 0.60),
+            ConservativeAutoBlock: false));
+
+        using var coordinator = new ControlRunCoordinator(
+            store,
+            inventory,
+            new EdgeAutomationPlanner(),
+            new FakeDispatcher(),
+            NullLogger<ControlRunCoordinator>.Instance,
+            knaaEvaluator: overrideEvaluator);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var completed = await WaitForTerminalAsync(coordinator, persisted.Id);
+            Assert.NotNull(completed.Knaa);
+            Assert.Equal(persistedKnaa.ModelVersion, completed.Knaa!.ModelVersion);
+            Assert.Equal(persistedKnaa.EvaluatedAt, completed.Knaa.EvaluatedAt);
+            Assert.Equal(persisted.ResourceCount, completed.ResourceCount);
+            Assert.Equal(persisted.EvidenceSha256, completed.EvidenceSha256);
+            Assert.Equal(0, inventory.ListResourcesCalls);
         }
         finally
         {
@@ -399,7 +468,7 @@ public sealed class ControlRunTests
         var run = new ControlRunSnapshot("0123456789abcdef0123456789abcdef", "control-runs", "edge-relay-0001", "correlation-1", "principal-1",
             "provision-resources", "dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
             EvidenceSha256: new string('a', 64), ResourceCount: 2, LifecycleState: "AWAIT_APPROVAL", PolicyVersion: "1.0.0",
-            TenantId: "tenant-a", Repository: "M0nado/helios-platform", ArtifactDigest: new string('b', 64), AttemptCount: 1, HopCount: 4,
+            TenantId: "tenant-a", Repository: "M0nado/helios-platform", ArtifactDigest: new string('b', 64), AttemptCount: 1, HopCount: 4, Knaa: BuildSampleKnaaAssessment(now),
             ApprovalState: "awaiting-approval");
 
         var receipts = await dispatcher.DispatchAsync(run, CancellationToken.None);
@@ -424,20 +493,70 @@ public sealed class ControlRunTests
         Assert.Equal("test-key-1", handler.KeyId);
         Assert.True(long.TryParse(handler.Timestamp, out _));
         Assert.DoesNotContain(new string('s', 32), handler.Body);
-        var envelope = JsonSerializer.Deserialize<HeliosEvent>(handler.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var envelope = JsonSerializer.Deserialize<HeliosIntegrationEvent>(handler.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         Assert.NotNull(envelope);
-        Assert.Equal("helios.control-run.status", envelope!.Type);
-        Assert.Equal("helios-control", envelope.Source);
-        Assert.Equal("control-runs/0123456789abcdef0123456789abcdef", envelope.Subject);
+        Assert.Equal("1.0", envelope!.SchemaVersion);
+        Assert.Equal("helios.control-run.status", envelope.EventType);
+        Assert.Equal("helios-platform", envelope.Source);
+        Assert.Equal("development", envelope.Environment);
         Assert.Equal("correlation-1", envelope.CorrelationId);
         Assert.Equal("internal", envelope.DataClassification);
+        Assert.Equal("0123456789abcdef0123456789abcdef", envelope.EntityId);
+        Assert.Equal("M0nado/helios-platform", envelope.Repository);
+        Assert.Contains(envelope.Links, link => link.Rel == "run");
         Assert.Equal("github", ((JsonElement)envelope.Payload["connector"]!).GetString());
         Assert.Equal("0123456789abcdef0123456789abcdef", ((JsonElement)envelope.Payload["runId"]!).GetString());
+        Assert.Equal("xcore9-knaa-1.0.0", ((JsonElement)envelope.Payload["knaaModelVersion"]!).GetString());
+        var thresholds = (JsonElement)envelope.Payload["knaaThresholds"]!;
+        Assert.Equal(0.35, thresholds.GetProperty("block").GetDouble());
+        Assert.Equal(0.55, thresholds.GetProperty("warn").GetDouble());
+        Assert.Equal(0.75, thresholds.GetProperty("reviewRequired").GetDouble());
+        var evidenceLinks = ((JsonElement)envelope.Payload["knaaEvidenceLinks"]!).EnumerateArray().Select(value => value.GetString()).ToArray();
+        Assert.Contains("run://control-runs/0123456789abcdef0123456789abcdef", evidenceLinks);
         Assert.Equal("AWAIT_APPROVAL", ((JsonElement)envelope.Payload["lifecycleState"]!).GetString());
         Assert.Equal("tenant-a", ((JsonElement)envelope.Payload["tenant"]!).GetString());
         Assert.Equal("M0nado/helios-platform", ((JsonElement)envelope.Payload["repository"]!).GetString());
         Assert.Equal("awaiting-approval", ((JsonElement)envelope.Payload["approvalState"]!).GetString());
     }
+
+    private static KnaaAssessment BuildSampleKnaaAssessment(DateTimeOffset now) => new(
+        SchemaVersion: "helios.knaa.v1",
+        ModelVersion: "xcore9-knaa-1.0.0",
+        EvaluatedAt: now,
+        EvidenceState: "sufficient",
+        Score: 0.91,
+        Confidence: 0.93,
+        Uncertainty: "none",
+        SourceSignals:
+        [
+            new KnaaSourceSignal("context-verified", "control-run-step.context", 1, 1, "known", "context complete"),
+            new KnaaSourceSignal("evidence-digest", "control-run.evidenceSha256", 1, 1, "known", "digest present"),
+            new KnaaSourceSignal("plan-present", "edge.plan", 1, 1, "known", "plan available")
+        ],
+        Vector:
+        [
+            new KnaaVectorComponent("knowledge", 0.92, "known", ["context-verified", "evidence-digest"]),
+            new KnaaVectorComponent("normalization", 0.89, "known", ["plan-present", "context-verified"]),
+            new KnaaVectorComponent("actionability", 0.91, "known", ["plan-present"]),
+            new KnaaVectorComponent("assurance", 0.92, "known", ["evidence-digest", "context-verified"])
+        ],
+        Policy: new KnaaPolicyDecision(
+            Outcome: "pass",
+            AdvisoryOnly: true,
+            AutoBlockTriggered: false,
+            Thresholds: new KnaaThresholds(0.35, 0.55, 0.75),
+            Reason: "KNAA score is above all review thresholds."),
+        Recommendation: new KnaaRecommendation(
+            Outcome: "pass",
+            Detail: "Eligible for promotion review only.",
+            PromotionRecommended: true,
+            DeploymentAuthorized: false,
+            BasedOnComponents: ["knowledge", "normalization", "actionability", "assurance"]),
+        EvidenceLinks:
+        [
+            "run://control-runs/0123456789abcdef0123456789abcdef",
+            "evidence://sha256/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ]);
 
     private static async Task<ControlRunSnapshot> WaitForTerminalAsync(ControlRunCoordinator coordinator, string id)
     {
@@ -459,6 +578,29 @@ public sealed class ControlRunTests
                 new("/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.App/containerApps/api", "api", "Microsoft.App/containerApps", "eastus2"),
                 new("/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.KeyVault/vaults/vault", "vault", "Microsoft.KeyVault/vaults", "eastus2")
             ]);
+
+        public Task<IReadOnlyList<AzureInventoryResource>> ListFoundryResourcesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AzureInventoryResource>>([]);
+    }
+
+    private sealed class CountingInventory(int resourceCount) : IAzureInventoryService
+    {
+        public int ListResourcesCalls { get; private set; }
+
+        public AzureConnectorContext GetContext() => new("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "helios-dev-rg", "read-only-resource-group", true);
+
+        public Task<IReadOnlyList<AzureInventoryResource>> ListResourcesAsync(string? typePrefix, CancellationToken cancellationToken)
+        {
+            ListResourcesCalls++;
+            var resources = Enumerable.Range(1, resourceCount)
+                .Select(index => new AzureInventoryResource(
+                    $"/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.App/containerApps/app-{index}",
+                    $"app-{index}",
+                    "Microsoft.App/containerApps",
+                    "eastus2"))
+                .ToArray();
+            return Task.FromResult<IReadOnlyList<AzureInventoryResource>>(resources);
+        }
 
         public Task<IReadOnlyList<AzureInventoryResource>> ListFoundryResourcesAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<AzureInventoryResource>>([]);
