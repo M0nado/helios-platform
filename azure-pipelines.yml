@@ -20,3 +20,4 @@ pool:
 steps:
 - checkout: self
   clean: true
+  submodules: false
