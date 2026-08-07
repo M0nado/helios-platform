@@ -97,19 +97,70 @@ jobs:
           VALIDATE_MARKDOWN: true
         continue-on-error: true
 
+  xcore-hermes-local-benchmark:
+    name: XCore/Hermes Local Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile benchmark and fleet scripts
+        run: |
+          python3 -m py_compile \
+            scripts/agents/hermes_fleet_readiness.py \
+            scripts/agents/agent_fleet_control_catalog.py \
+            scripts/agents/agent_fleet_autopilot.py \
+            scripts/analysis/deep_branch_code_score.py \
+            scripts/integrations/readiness_score.py
+
+      - name: Run local XCore/Hermes benchmark and code checks
+        run: |
+          python3 scripts/agents/agent_fleet_control_catalog.py --agents 16 --mode local-first
+          python3 scripts/agents/agent_fleet_autopilot.py --agents 16 --mode local-first
+          python3 scripts/agents/hermes_fleet_readiness.py --strict
+          python3 scripts/analysis/deep_branch_code_score.py
+          python3 scripts/integrations/readiness_score.py
+
+      - name: Verify benchmark outputs
+        run: |
+          test -f reports/branch-agents/agent-fleet-control-catalog.json
+          test -f reports/branch-agents/agent-fleet-autopilot.json
+          test -f reports/hermes-fleet/latest.json
+          test -f reports/branch-intelligence/deep-branch-code-score.json
+          test -f reports/integrations/readiness-score.json
+          test -f reports/integrations/finish-readiness.json
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcore-hermes-local-benchmark
+          path: |
+            reports/branch-agents/agent-fleet-control-catalog.*
+            reports/branch-agents/agent-fleet-autopilot.*
+            reports/hermes-fleet/latest.*
+            reports/branch-intelligence/deep-branch-code-score.*
+            reports/integrations/readiness-score.*
+            reports/integrations/finish-readiness.*
+          if-no-files-found: error
+
   quality-summary:
-    name: Quality Check Summary
+    name: Local Benchmark and Code Check Summary
     if: always()
-    needs: [powershell-lint, markdown-lint, json-validate, security-scan]
+    needs: [powershell-lint, markdown-lint, json-validate, security-scan, xcore-hermes-local-benchmark]
     runs-on: ubuntu-latest
     steps:
       - name: Report Status
         run: |
-          echo "## Code Quality Results" >> $GITHUB_STEP_SUMMARY
+          echo "## Local code check and benchmark results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- PowerShell Lint: ${{ needs.powershell-lint.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Markdown Lint: ${{ needs.markdown-lint.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- JSON Validation: ${{ needs.json-validate.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Security Scan: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- XCore/Hermes Local Benchmark: ${{ needs.xcore-hermes-local-benchmark.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Quality checks completed"
+          echo "✅ Local benchmark and code-check system completed"

@@ -73,14 +73,14 @@ if shutil.which('dotnet') is None: recommended.append({'area':'dotnet','command'
 if shutil.which('az') is None: recommended.append({'area':'azure','command':'scripts/setup/bootstrap-local-tools.sh && az login','reason':'az not found or not authenticated'})
 recommended.extend(build.get('nextFixes',[])[:10])
 finish={'generatedUtc':payload['generatedUtc'],'score':finish_score,'categoryScores':category_scores,'categories':categories,'blockers':blockers,'recommendedFixes':recommended,'buildGraphCounts':build.get('counts',{}),'nextFixes':build.get('nextFixes',[])[:10]}
-OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n'); FINISH_JSON.write_text(json.dumps(finish,indent=2,sort_keys=True)+'\n')
+OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n', encoding='utf-8'); FINISH_JSON.write_text(json.dumps(finish,indent=2,sort_keys=True)+'\n', encoding='utf-8')
 lines=['# HELIOS Readiness Score','',f"Generated: `{payload['generatedUtc']}`",'',f"Score: **{score}%**",'','| Check | Target | Status |','| --- | --- | --- |']
 for c in base_checks: lines.append(f"| {c['id']} | `{c['target']}` | {'✅' if c['ok'] else '⚠️'} |")
-MD.write_text('\n'.join(lines)+'\n')
+MD.write_text('\n'.join(lines)+'\n', encoding='utf-8')
 flines=['# HELIOS Finish Readiness','',f"Generated: `{finish['generatedUtc']}`",'',f"Score: **{finish_score}%**",'','| Category | Score |','| --- | ---: |']+[f"| {k} | {v}% |" for k,v in category_scores.items()]
 if recommended:
     flines += ['', '## Recommended fixes', '', '| Area | Command | Reason |', '| --- | --- | --- |']+[f"| {r.get('area', r.get('node',''))} | `{r.get('command','')}` | {r.get('reason','')} |" for r in recommended]
 if blockers:
     flines += ['','## Blockers','','| Category | Check | Target |','| --- | --- | --- |']+[f"| {b['category']} | {b['id']} | `{b['target']}` |" for b in blockers]
-FINISH_MD.write_text('\n'.join(flines)+'\n')
+FINISH_MD.write_text('\n'.join(flines)+'\n', encoding='utf-8')
 print(f'Wrote {OUT.relative_to(ROOT)}'); print(f'Wrote {MD.relative_to(ROOT)}'); print(f'Wrote {FINISH_JSON.relative_to(ROOT)}'); print(f'Wrote {FINISH_MD.relative_to(ROOT)}')

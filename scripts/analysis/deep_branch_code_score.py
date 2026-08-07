@@ -130,7 +130,7 @@ def main() -> int:
         'branches': sorted(rows, key=lambda r: (not r['isTarget'], -r['score'], r['branch'])),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(payload, indent=2) + '\n')
+    OUT.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
     lines = ['# Deep Branch Code Score', '', f"Generated: `{payload['generatedUtc']}`", '', f"Target branch: `{target}`", '', payload['summary'], '', '| Branch | Target | Score | Files | Languages | Domains | Action |', '| --- | --- | ---: | ---: | --- | --- | --- |']
     for row in payload['branches']:
         langs = ', '.join(f"{k}:{v}" for k, v in row['languageCounts'].items() if v)
@@ -142,7 +142,7 @@ def main() -> int:
             lines += [f"- `{cmd}`" for cmd in row['broadPlans']]
         else:
             lines += ['- No code-domain plan detected; run `python3 scripts/analysis/super_branch_unification.py` for merge context.']
-    MD.write_text('\n'.join(lines) + '\n')
+    MD.write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print(f"Wrote {OUT.relative_to(ROOT)}")
     print(f"Wrote {MD.relative_to(ROOT)}")
     return 0
