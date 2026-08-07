@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "../../schemas/monadoblade-usb-wizard.v1.schema.json",
   "version": "1.0.0",
   "wizardId": "monadoblade-usb-wizard",
   "defaultMode": "dry-run",
@@ -17,3 +17,4 @@
     "quarantineIsNotAProfile": true
   }
 }
+

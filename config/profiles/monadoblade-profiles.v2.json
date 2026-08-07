@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "../../schemas/monadoblade-profiles.v2.schema.json",
   "version": "2.0.0",
   "contractName": "monadoblade-six-profile-delivery-fabric",
   "legacyInput": "config/profiles/monadoblade-profiles.v1.json",

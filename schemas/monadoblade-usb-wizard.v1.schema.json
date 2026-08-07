@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.local/monadoblade-usb-wizard.v1.schema.json",
+  "title": "MonadoBlade USB wizard v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "wizardId",
+    "defaultMode",
+    "routes",
+    "boundaries"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": "1.0.0"
+    },
+    "wizardId": {
+      "const": "monadoblade-usb-wizard"
+    },
+    "defaultMode": {
+      "const": "dry-run"
+    },
+    "routes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inventory",
+        "storage-plan",
+        "apply"
+      ],
+      "properties": {
+        "inventory": {
+          "const": "read-only"
+        },
+        "storage-plan": {
+          "const": "device-specific-plan-only"
+        },
+        "apply": {
+          "const": "approval-gated"
+        }
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowPhysicalDiskWriteWithoutApproval",
+        "requireDeviceIdentityForStoragePlan",
+        "recoveryWorkflowProfile",
+        "quarantineWorkflowProfile",
+        "recoveryIsNotAProfile",
+        "quarantineIsNotAProfile"
+      ],
+      "properties": {
+        "allowPhysicalDiskWriteWithoutApproval": {
+          "type": "boolean"
+        },
+        "requireDeviceIdentityForStoragePlan": {
+          "type": "boolean"
+        },
+        "recoveryWorkflowProfile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quarantineWorkflowProfile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recoveryIsNotAProfile": {
+          "type": "boolean"
+        },
+        "quarantineIsNotAProfile": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

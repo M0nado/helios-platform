@@ -19,6 +19,12 @@ on:
       - 'config/usb/monadoblade-usb-wizard.v1.json'
       - 'config/monado-enterprise/v2/**'
       - 'schemas/monado-enterprise/v2/**'
+      - 'schemas/monadoblade-profiles.v2.schema.json'
+      - 'schemas/monado-profile-shell.v2.schema.json'
+      - 'schemas/helios-fabric-services.v2.schema.json'
+      - 'schemas/monadoblade-usb-wizard.v1.schema.json'
+      - 'schemas/alvis-capabilities.v1.schema.json'
+      - 'schemas/monadoblade-collaboration-projection.v1.schema.json'
       - 'scripts/contracts/validate_monado_enterprise_v2.py'
       - 'scripts/contracts/tests/test_validate_monado_enterprise_v2.py'
       - 'src/core/HELIOS.Platform.Contracts.Tests/**'
@@ -53,6 +59,12 @@ on:
       - 'config/usb/monadoblade-usb-wizard.v1.json'
       - 'config/monado-enterprise/v2/**'
       - 'schemas/monado-enterprise/v2/**'
+      - 'schemas/monadoblade-profiles.v2.schema.json'
+      - 'schemas/monado-profile-shell.v2.schema.json'
+      - 'schemas/helios-fabric-services.v2.schema.json'
+      - 'schemas/monadoblade-usb-wizard.v1.schema.json'
+      - 'schemas/alvis-capabilities.v1.schema.json'
+      - 'schemas/monadoblade-collaboration-projection.v1.schema.json'
       - 'scripts/contracts/validate_monado_enterprise_v2.py'
       - 'scripts/contracts/tests/test_validate_monado_enterprise_v2.py'
       - 'src/core/HELIOS.Platform.Contracts.Tests/**'
@@ -329,6 +341,31 @@ jobs:
               Draft202012Validator.check_schema(schema)
               Draft202012Validator(schema).validate(document)
               print(f'schema ok: {document_path}')
+          PY
+
+      - name: Validate delivery-fabric application schemas
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator
+
+          pairs = [
+              ('schemas/monadoblade-profiles.v2.schema.json', 'config/profiles/monadoblade-profiles.v2.json'),
+              ('schemas/monado-profile-shell.v2.schema.json', 'config/gui/monado-profile-shell.v2.json'),
+              ('schemas/helios-fabric-services.v2.schema.json', 'config/runtime/helios-fabric-services.v2.json'),
+              ('schemas/monadoblade-usb-wizard.v1.schema.json', 'config/usb/monadoblade-usb-wizard.v1.json'),
+              ('schemas/alvis-capabilities.v1.schema.json', 'config/aihub/alvis-capabilities.v1.json'),
+              ('schemas/monadoblade-collaboration-projection.v1.schema.json', 'config/integrations/monadoblade-collaboration-projection.v1.json'),
+          ]
+
+          for schema_path, document_path in pairs:
+              schema = json.loads(Path(schema_path).read_text(encoding='utf-8'))
+              document = json.loads(Path(document_path).read_text(encoding='utf-8'))
+              Draft202012Validator.check_schema(schema)
+              Draft202012Validator(schema).validate(document)
+              print(f'application schema ok: {document_path}')
           PY
 
       - name: Validate v2 dependency-free invariants

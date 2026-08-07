@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "../../schemas/monadoblade-collaboration-projection.v1.schema.json",
   "version": "1.0.0",
   "projectionId": "monadoblade-collaboration-evidence",
   "sourceOfTruth": "github",
@@ -14,3 +14,4 @@
     "azure-devops": "discovery-and-sync-only"
   }
 }
+

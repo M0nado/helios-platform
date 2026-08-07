@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "../../schemas/alvis-capabilities.v1.schema.json",
   "version": "1.0.0",
   "agent": "ALVIS",
   "capabilities": {
@@ -10,3 +10,4 @@
   "directExecutorToolsDenied": true,
   "approvalModel": "request_* remains pending until explicit approval evidence is attached"
 }
+

@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.local/monadoblade-profiles.v2.schema.json",
+  "title": "MonadoBlade six-profile delivery fabric v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "contractName",
+    "legacyInput",
+    "defaultProfile",
+    "profiles"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": "2.0.0"
+    },
+    "contractName": {
+      "const": "monadoblade-six-profile-delivery-fabric"
+    },
+    "legacyInput": {
+      "const": "config/profiles/monadoblade-profiles.v1.json"
+    },
+    "defaultProfile": {
+      "const": "core"
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    }
+  },
+  "$defs": {
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "physicalPresenceRequired",
+        "minimumFactors",
+        "allowedFactors",
+        "remoteActivationDenied",
+        "cloudActivationDenied",
+        "aiActivationDenied",
+        "offlineOnly"
+      ],
+      "properties": {
+        "physicalPresenceRequired": {
+          "type": "boolean"
+        },
+        "minimumFactors": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "allowedFactors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "remoteActivationDenied": {
+          "type": "boolean"
+        },
+        "cloudActivationDenied": {
+          "type": "boolean"
+        },
+        "aiActivationDenied": {
+          "type": "boolean"
+        },
+        "offlineOnly": {
+          "type": "boolean"
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "displayName",
+        "kanji",
+        "windowsRole",
+        "interactive",
+        "admin",
+        "color",
+        "softwareBundles",
+        "roots",
+        "networkPolicy"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "core",
+            "developer",
+            "studio",
+            "gamer",
+            "ai-server",
+            "sysadmin-offline"
+          ]
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kanji": {
+          "type": "string",
+          "minLength": 1
+        },
+        "windowsRole": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interactive": {
+          "type": "boolean"
+        },
+        "admin": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "enabledByDefault": {
+          "type": "boolean"
+        },
+        "activation": {
+          "$ref": "#/$defs/activation"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        },
+        "softwareBundles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "networkPolicy": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "id": {
+                "const": "sysadmin-offline"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "hidden",
+              "enabledByDefault",
+              "activation"
+            ],
+            "properties": {
+              "admin": {
+                "const": true
+              },
+              "hidden": {
+                "const": true
+              },
+              "enabledByDefault": {
+                "const": false
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
