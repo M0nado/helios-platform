@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import shutil
 import subprocess
 from collections import Counter, defaultdict
@@ -98,6 +99,10 @@ def slug(value: str) -> str:
 
 def normalize_repo_key(value: str) -> str:
     return value.strip().lower()
+
+
+def shell_quote(value: str) -> str:
+    return shlex.quote(value)
 
 
 def parse_remote_repo(url: str) -> str | None:
@@ -215,6 +220,41 @@ def load_open_pr_summaries(repo: str, limit: int) -> list[dict[str, Any]]:
         ]
     )
     rows = gh_json(["pr", "list", "--repo", repo, "--state", "open", "--limit", str(limit), "--json", fields]) or []
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def load_open_pr_summaries_for_head(repo: str, head_ref: str) -> list[dict[str, Any]]:
+    text = head_ref.strip()
+    if not text:
+        return []
+    fields = ",".join(
+        [
+            "number",
+            "title",
+            "headRefName",
+            "baseRefName",
+            "headRepository",
+            "headRepositoryOwner",
+            "isCrossRepository",
+            "isDraft",
+            "mergeStateStatus",
+            "mergeable",
+            "author",
+            "createdAt",
+            "updatedAt",
+            "changedFiles",
+            "additions",
+            "deletions",
+            "url",
+            "state",
+        ]
+    )
+    try:
+        rows = gh_json(
+            ["pr", "list", "--repo", repo, "--state", "open", "--head", text, "--limit", "100", "--json", fields]
+        ) or []
+    except RuntimeError:
+        return []
     return [row for row in rows if isinstance(row, dict)]
 
 
@@ -387,6 +427,25 @@ def pr_summary_from_detail(detail: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def parse_required_check_rows(rows: Any) -> list[dict[str, str]] | None:
+    if rows is None:
+        return []
+    if not isinstance(rows, list):
+        return None
+    required: list[dict[str, str]] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("name", "")).strip() or "unnamed-required-check"
+        workflow = row.get("workflow", "")
+        if isinstance(workflow, dict):
+            workflow = workflow.get("name", "")
+        workflow_name = str(workflow or "").strip()
+        display = f"{workflow_name} / {name}" if workflow_name else name
+        required.append({"name": display, "state": str(row.get("state", "")).upper()})
+    return required
+
+
 def load_required_checks(repo: str, number: int) -> list[dict[str, str]] | None:
     cmd = [
         "gh",
@@ -408,6 +467,16 @@ def load_required_checks(repo: str, number: int) -> list[dict[str, str]] | None:
         capture_output=True,
         timeout=90,
     )
+    output = proc.stdout.strip()
+    if output:
+        try:
+            rows = json.loads(output)
+            parsed = parse_required_check_rows(rows)
+            if parsed is not None:
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
     if proc.returncode != 0:
         detail = f"{proc.stderr}\n{proc.stdout}".lower()
         no_required_markers = (
@@ -420,30 +489,9 @@ def load_required_checks(repo: str, number: int) -> list[dict[str, str]] | None:
             return []
         return None
 
-    output = proc.stdout.strip()
     if not output:
         return []
-    try:
-        rows = json.loads(output)
-    except json.JSONDecodeError:
-        return None
-    if rows is None:
-        return []
-    if not isinstance(rows, list):
-        return None
-
-    required: list[dict[str, str]] = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        name = str(row.get("name", "")).strip() or "unnamed-required-check"
-        workflow = row.get("workflow", "")
-        if isinstance(workflow, dict):
-            workflow = workflow.get("name", "")
-        workflow_name = str(workflow or "").strip()
-        display = f"{workflow_name} / {name}" if workflow_name else name
-        required.append({"name": display, "state": str(row.get("state", "")).upper()})
-    return required
+    return None
 
 
 def head_repository_key(detail: dict[str, Any], fallback_repo: str) -> str:
@@ -501,6 +549,17 @@ def check_display_name(entry: dict[str, Any]) -> str:
         name = str(entry.get("name", "")).strip() or "unnamed-checkrun"
         return f"{wf} / {name}" if wf else name
     return str(entry.get("context", "status-context")).strip() or "status-context"
+
+
+def is_train_eligible(pr: dict[str, Any]) -> bool:
+    title = str(pr.get("title", "")).upper()
+    if pr.get("isDraft") or "[WIP]" in title:
+        return False
+    mergeable = str(pr.get("mergeable", ""))
+    merge_state = str(pr.get("mergeStateStatus", ""))
+    if mergeable == "CONFLICTING" or merge_state == "DIRTY":
+        return False
+    return True
 
 
 def summarize_checks(entries: list[dict[str, Any]], required_checks: list[dict[str, str]] | None = None) -> dict[str, Any]:
@@ -653,6 +712,8 @@ def detect_superseded(prs: list[dict[str, Any]], overlap_rows: list[dict[str, An
                 older, newer = right, left
         if older is None or newer is None:
             continue
+        if not is_train_eligible(newer):
+            continue
         if older["number"] in superseded:
             continue
         superseded[older["number"]] = {
@@ -779,21 +840,29 @@ def build_trains(
             ]
         else:
             integrated_oids: set[str] = set()
+            quoted_default_branch = shell_quote(default_branch)
+            quoted_train_remote = shell_quote(train_remote)
+            quoted_branch = shell_quote(branch)
+            quoted_repo = shell_quote(repo)
+            quoted_title = shell_quote(f"Issue #{issue_number or 'N/A'} train: {train_name}")
             commands = [
-                f"git checkout {default_branch}",
-                f"git pull --ff-only {train_remote} {default_branch}",
-                f"git checkout -b {branch}",
+                "set -euo pipefail",
+                f"git checkout {quoted_default_branch}",
+                f"git pull --ff-only {quoted_train_remote} {quoted_default_branch}",
+                f"git checkout -b {quoted_branch}",
             ]
             for pr in ordered:
                 if pr["disposition"] != "merge-train":
                     continue
                 commands.append(f"# PR #{pr['number']} {pr['title']}")
-                commands.append(f"git fetch {train_remote} pull/{pr['number']}/head:pr-{pr['number']}")
+                pr_ref = f"pull/{pr['number']}/head:pr-{pr['number']}"
+                commands.append(f"git fetch {quoted_train_remote} {shell_quote(pr_ref)}")
                 if int(pr.get("mergeCommitCount") or 0) > 0:
                     commands.append(
                         f"# PR #{pr['number']} includes merge commits; merge branch tip to preserve parent topology."
                     )
-                    commands.append(f"git merge --no-ff --no-edit pr-{pr['number']}")
+                    merge_ref = shell_quote(f"pr-{pr['number']}")
+                    commands.append(f"git merge --no-ff --no-edit {merge_ref}")
                     integrated_oids.update([oid for oid in pr["commitOids"] if oid])
                 elif pr["commitOids"]:
                     unique_oids = [oid for oid in pr["commitOids"] if oid and oid not in integrated_oids]
@@ -806,10 +875,10 @@ def build_trains(
                         )
                 else:
                     commands.append(f"# no commit oids returned for PR #{pr['number']}")
-            commands.append(f"git push -u {train_remote} {branch}")
+            commands.append(f"git push -u {quoted_train_remote} {quoted_branch}")
             commands.append(
-                f"gh pr create --repo {repo} --base {default_branch} --head {branch} "
-                f"--title \"Issue #{issue_number or 'N/A'} train: {train_name}\" --draft"
+                f"gh pr create --repo {quoted_repo} --base {quoted_default_branch} --head {quoted_branch} "
+                f"--title {quoted_title} --draft"
             )
         trains.append(
             {
@@ -1112,12 +1181,31 @@ def main() -> int:
             }
         )
 
+    dependency_lookup_cache: dict[str, set[int]] = {}
     dependency_map: dict[int, list[int]] = {}
     for pr in prepared:
         deps: list[int] = []
         base_ref = str(pr.get("baseRefName", ""))
         if base_ref and base_ref != default_branch:
             deps.extend(sorted(number for number in head_to_numbers.get(base_ref, set()) if number != pr["number"]))
+            if not deps:
+                cached = dependency_lookup_cache.get(base_ref)
+                if cached is None:
+                    fetched: set[int] = set()
+                    for summary in load_open_pr_summaries_for_head(repo, base_ref):
+                        number = int(summary.get("number", 0))
+                        if number <= 0:
+                            continue
+                        if normalize_repo_key(head_repository_key(summary, repo)) != base_repo_key:
+                            continue
+                        fetched.add(number)
+                        if number not in summary_map:
+                            summary_map[number] = summary
+                    dependency_lookup_cache[base_ref] = fetched
+                    if fetched:
+                        head_to_numbers[base_ref].update(fetched)
+                    cached = fetched
+                deps.extend(sorted(number for number in cached if number != pr["number"]))
         dependency_map[pr["number"]] = sorted(set(deps))
         pr["dependencies"] = dependency_map[pr["number"]]
 
