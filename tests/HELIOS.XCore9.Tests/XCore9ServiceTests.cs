@@ -95,7 +95,7 @@ public sealed class XCore9ServiceTests
                 await service.ReleaseWorkerAsync(lease, "corr-8", "operator", default);
                 return null;
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 return ex;
             }
