@@ -25,7 +25,12 @@ done
 
 scripts/setup/bootstrap-local-tools.sh
 TOOLS_DIR="${HELIOS_TOOLS_DIR:-$ROOT_DIR/.tools}"
-export PATH="$TOOLS_DIR/dotnet:$TOOLS_DIR/gh/bin:$TOOLS_DIR/azcli-venv/bin:$PATH"
+if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* || "$(uname -s)" == CYGWIN* ]]; then
+  VENV_BIN="Scripts"
+else
+  VENV_BIN="bin"
+fi
+export PATH="$TOOLS_DIR/dotnet:$TOOLS_DIR/gh/bin:$TOOLS_DIR/azcli-venv/$VENV_BIN:$TOOLS_DIR/rg:$PATH"
 mkdir -p reports/local-setup
 
 {
