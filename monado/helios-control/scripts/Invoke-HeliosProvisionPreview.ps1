@@ -27,7 +27,10 @@ param(
 
     [Parameter(Mandatory)]
     [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
-    [string] $AllowedPrincipalObjectId
+    [string] $AllowedPrincipalObjectId,
+
+    [ValidatePattern('^[0-9a-fA-F]{40}$')]
+    [string] $SourceCommitSha = $env:GITHUB_SHA
 )
 
 $ErrorActionPreference = 'Stop'
@@ -53,6 +56,11 @@ if (-not $digestMatch.Success) {
 $allowPreviewPlaceholder = $digestMatch.Groups[1].Value -eq $previewDigest
 $allowPreviewPlaceholderValue = if ($allowPreviewPlaceholder) { 'true' } else { 'false' }
 
+if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
+    throw 'SourceCommitSha is required. Provide the exact 40-character commit SHA for this preview.'
+}
+$normalizedSourceCommitSha = $SourceCommitSha.ToLowerInvariant()
+
 az account show --output none
 if ($LASTEXITCODE -ne 0) { throw 'Azure CLI is not authenticated.' }
 
@@ -68,6 +76,7 @@ $deploymentParameters = @(
     "entraClientId=$EntraClientId"
     "entraTenantId=$EntraTenantId"
     "allowedPrincipalObjectId=$AllowedPrincipalObjectId"
+    "sourceCommitSha=$normalizedSourceCommitSha"
 )
 
 az deployment group what-if `

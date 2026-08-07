@@ -11,7 +11,7 @@ param(
     [switch] $BuildBicep,
     [switch] $RunAzureWhatIf,
 
-    [ValidateSet('dev', 'test', 'prod')]
+    [ValidateSet('dev', 'test', 'preview', 'prod')]
     [string] $EnvironmentName = 'dev',
 
     [string] $ResourceGroup,
@@ -20,6 +20,8 @@ param(
     [string] $EntraClientId,
     [string] $EntraTenantId,
     [string] $AllowedPrincipalObjectId,
+    [ValidatePattern('^[0-9a-fA-F]{40}$')]
+    [string] $SourceCommitSha,
 
     [string] $ReportPath
 )
@@ -96,10 +98,35 @@ function Test-JsonFile {
     }
 }
 
+function Resolve-SourceCommitSha {
+    if (-not [string]::IsNullOrWhiteSpace($script:SourceCommitSha)) {
+        return $script:SourceCommitSha.ToLowerInvariant()
+    }
+
+    if ($env:GITHUB_SHA -match '^[0-9a-fA-F]{40}$') {
+        return $env:GITHUB_SHA.ToLowerInvariant()
+    }
+
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($git) {
+        $resolved = & $git.Source rev-parse HEAD 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $candidate = @($resolved | Select-Object -First 1) -join ''
+            $candidate = $candidate.Trim()
+            if ($candidate -match '^[0-9a-fA-F]{40}$') {
+                return $candidate.ToLowerInvariant()
+            }
+        }
+    }
+
+    return $null
+}
+
 $moduleProjects = @(
     Get-ChildItem -LiteralPath $repoRoot -Recurse -Filter '*.csproj' -File |
         Where-Object {
-            $_.FullName -notmatch '\\(bin|obj|artifacts|packages|reference|docs|samples)\\' -and
+            $normalizedPath = $_.FullName.Replace('\', '/')
+            $normalizedPath -notmatch '/(bin|obj|artifacts|packages|reference|docs|samples)/' -and
             ($_.BaseName -match '^(HELIOS\.|Helios\.Connect|MonadoBlade\.)')
         } |
         Sort-Object FullName
@@ -154,16 +181,20 @@ if ($effectiveRunRestore -or $effectiveRunTests) {
         }
 
         if ($effectiveRunTests) {
-            $testSolution = Join-Path $controlRoot 'Helios.Connect.sln'
-            if (Test-Path -LiteralPath $testSolution) {
-                $testArguments = @('test', $testSolution, '--configuration', 'Release')
+            $testTargets = @(
+                (Join-Path $repoRoot 'HELIOS.Platform.slnx')
+                (Join-Path $controlRoot 'Helios.Connect.sln')
+            ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -Unique
+
+            foreach ($testTarget in $testTargets) {
+                $testArguments = @('test', $testTarget, '--configuration', 'Release')
                 if ($effectiveRunRestore) {
                     $testArguments += '--no-restore'
                 }
                 $testResult = Invoke-NativeCommand `
                     -Command $dotnet.Source `
                     -Arguments $testArguments `
-                    -Operation "dotnet test $(Get-RelativePath -Path $testSolution)"
+                    -Operation "dotnet test $(Get-RelativePath -Path $testTarget)"
                 if ($testResult.exitCode -ne 0) { $failedCommands++ }
                 $commandResults.Add($testResult)
             }
@@ -226,7 +257,7 @@ else {
                 })
         }
 
-        $usesMatches = [regex]::Matches($content, '(?m)^\s*uses:\s*([^\s#]+)')
+        $usesMatches = [regex]::Matches($content, '(?m)^\s*(?:-\s*)?uses:\s*([^\s#]+)')
         foreach ($match in $usesMatches) {
             $reference = $match.Groups[1].Value.Trim()
             if ($reference.StartsWith('./', [StringComparison]::Ordinal)) {
@@ -363,23 +394,29 @@ if (-not (Test-Path -LiteralPath $cliMatrixScript)) {
 }
 else {
     try {
-        $cliArgs = @()
-        if ($IncludeNetworkTools) { $cliArgs += '-IncludeNetworkTools' }
-        if ($CheckAuthentication) { $cliArgs += '-CheckAuthentication' }
-        $cliRaw = (& $cliMatrixScript @cliArgs | Out-String).Trim()
+        $cliParams = @{}
+        if ($IncludeNetworkTools) { $cliParams.IncludeNetworkTools = $true }
+        if ($CheckAuthentication) { $cliParams.CheckAuthentication = $true }
+        $cliRaw = (& $cliMatrixScript @cliParams | Out-String).Trim()
         $cliExit = $LASTEXITCODE
         $cliReport = $cliRaw | ConvertFrom-Json
         $missingRequiredIds = @($cliReport.tools | Where-Object { $_.required -and $_.status -ne 'ready' } | ForEach-Object { $_.id })
+        $authenticationFailures = @()
+        if ($CheckAuthentication) {
+            $authenticationFailures = @($cliReport.authentication | Where-Object { $_.status -ne 'authenticated' })
+        }
+        $toolingReady = ($cliExit -eq 0 -and $cliReport.ready -and $authenticationFailures.Count -eq 0)
 
         Add-StepResult `
             -Name 'local-dev-tooling' `
-            -Status $(if ($cliExit -eq 0 -and $cliReport.ready) { 'configured' } else { 'blocked' }) `
-            -Detail $(if ($cliExit -eq 0 -and $cliReport.ready) { 'Required CLI tooling is ready.' } else { "$($missingRequiredIds.Count) required CLI tool(s) are not ready." }) `
+            -Status $(if ($toolingReady) { 'configured' } else { 'blocked' }) `
+            -Detail $(if ($toolingReady) { 'Required CLI tooling is ready.' } else { if ($authenticationFailures.Count -gt 0) { "$($authenticationFailures.Count) authentication check(s) are not ready." } else { "$($missingRequiredIds.Count) required CLI tool(s) are not ready." } }) `
             -Data ([ordered]@{
                 executionEngine = $cliReport.executionEngine
-                ready = $cliReport.ready
+                ready = $toolingReady
                 missingRequired = $cliReport.missingRequired
                 missingRequiredIds = @($missingRequiredIds)
+                authenticationFailures = @($authenticationFailures | ForEach-Object { $_.id })
                 tools = @($cliReport.tools)
                 authentication = @($cliReport.authentication)
             })
@@ -459,7 +496,7 @@ if (-not $RunAzureWhatIf) {
         -Status 'pending' `
         -Detail 'What-if preview was not requested. Use -RunAzureWhatIf with required Azure identifiers.' `
         -Data ([ordered]@{
-            requiredParameters = @('ResourceGroup', 'ContainerRegistryName', 'EntraClientId', 'EntraTenantId', 'AllowedPrincipalObjectId')
+            requiredParameters = @('ResourceGroup', 'ContainerRegistryName', 'EntraClientId', 'EntraTenantId', 'AllowedPrincipalObjectId', 'SourceCommitSha')
         })
 }
 else {
@@ -473,18 +510,23 @@ else {
     }
     else {
         $missingParameters = [System.Collections.Generic.List[string]]::new()
+        $resolvedSourceCommitSha = Resolve-SourceCommitSha
         if ([string]::IsNullOrWhiteSpace($ResourceGroup)) { $missingParameters.Add('ResourceGroup') }
         if ([string]::IsNullOrWhiteSpace($ContainerRegistryName)) { $missingParameters.Add('ContainerRegistryName') }
         if ([string]::IsNullOrWhiteSpace($EntraClientId)) { $missingParameters.Add('EntraClientId') }
         if ([string]::IsNullOrWhiteSpace($EntraTenantId)) { $missingParameters.Add('EntraTenantId') }
         if ([string]::IsNullOrWhiteSpace($AllowedPrincipalObjectId)) { $missingParameters.Add('AllowedPrincipalObjectId') }
+        if ([string]::IsNullOrWhiteSpace($resolvedSourceCommitSha)) { $missingParameters.Add('SourceCommitSha') }
 
         if ($missingParameters.Count -gt 0) {
             Add-StepResult `
                 -Name 'azure-resources-what-if' `
                 -Status 'blocked' `
                 -Detail 'Required Azure what-if parameters are missing.' `
-                -Data ([ordered]@{ missing = @($missingParameters) })
+                -Data ([ordered]@{
+                    missing = @($missingParameters)
+                    sourceCommitShaResolution = 'Provide -SourceCommitSha explicitly, set GITHUB_SHA, or run inside a git checkout.'
+                })
         }
         else {
             $previewArgs = @(
@@ -493,7 +535,8 @@ else {
                 '-ContainerRegistryName', $ContainerRegistryName,
                 '-EntraClientId', $EntraClientId,
                 '-EntraTenantId', $EntraTenantId,
-                '-AllowedPrincipalObjectId', $AllowedPrincipalObjectId
+                '-AllowedPrincipalObjectId', $AllowedPrincipalObjectId,
+                '-SourceCommitSha', $resolvedSourceCommitSha
             )
             if (-not [string]::IsNullOrWhiteSpace($ContainerImage)) {
                 $previewArgs += @('-ContainerImage', $ContainerImage)
@@ -510,6 +553,7 @@ else {
                 -Data ([ordered]@{
                     command = 'Invoke-HeliosProvisionPreview.ps1'
                     exitCode = $previewExitCode
+                    sourceCommitSha = $resolvedSourceCommitSha
                     output = @($previewLines)
                 })
         }

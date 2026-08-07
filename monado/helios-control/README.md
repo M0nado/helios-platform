@@ -49,11 +49,13 @@ pwsh ./scripts/Invoke-HeliosFullSetup.ps1 -Mode Apply -CreateLocalEnv -RunRestor
 
 # Optional: run Azure what-if preview (no deployment)
 pwsh ./scripts/Invoke-HeliosFullSetup.ps1 -Mode Apply -RunAzureWhatIf `
+  -EnvironmentName preview `
   -ResourceGroup <rg> `
   -ContainerRegistryName <acrName> `
   -EntraClientId <client-guid> `
   -EntraTenantId <tenant-guid> `
-  -AllowedPrincipalObjectId <principal-guid>
+  -AllowedPrincipalObjectId <principal-guid> `
+  -SourceCommitSha <40-char-commit-sha>
 ```
 
 `Invoke-HeliosFullSetup.ps1` validates HELIOS module project discovery, GitHub
