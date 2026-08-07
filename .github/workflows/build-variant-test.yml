@@ -12,239 +12,290 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'monado/**'
       - '.github/workflows/build-variant-test.yml'
   workflow_dispatch:
     inputs:
       variants:
-        description: 'Build variants to test'
+        description: 'Comma-separated variants (development,staging,production,test) or all'
         required: false
         default: 'all'
 
 permissions:
   contents: read
   checks: write
-  issues: write
   pull-requests: write
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   setup-variants:
     name: Setup Build Variants
     runs-on: ubuntu-latest
     outputs:
-      variants: ${{ steps.variants.outputs.variants }}
-      matrix: ${{ steps.matrix.outputs.matrix }}
+      variants: ${{ steps.setup.outputs.variants }}
+      platforms: ${{ steps.setup.outputs.platforms }}
+      linux_test_projects: ${{ steps.setup.outputs.linux_test_projects }}
+      windows_test_projects: ${{ steps.setup.outputs.windows_test_projects }}
+      has_tests: ${{ steps.setup.outputs.has_tests }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Define Build Variants
-        id: variants
-        run: |
-          VARIANTS='[
-            {
-              "name": "dev",
-              "env": "development",
-              "minify": false,
-              "sourcemap": true,
-              "optimization": "none"
-            },
-            {
-              "name": "staging",
-              "env": "staging",
-              "minify": true,
-              "sourcemap": true,
-              "optimization": "balanced"
-            },
-            {
-              "name": "prod",
-              "env": "production",
-              "minify": true,
-              "sourcemap": false,
-              "optimization": "full"
-            },
-            {
-              "name": "test",
-              "env": "test",
-              "minify": false,
-              "sourcemap": true,
-              "optimization": "none",
-              "coverage": true
-            }
-          ]'
-          echo "variants<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$VARIANTS" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: Build Matrix
-        id: matrix
+      - name: Build variant and platform matrix
+        id: setup
+        env:
+          SELECTED_VARIANTS: ${{ github.event.inputs.variants || 'all' }}
         run: |
-          MATRIX='[
-            {"os": "ubuntu-latest", "node": "18"},
-            {"os": "ubuntu-latest", "node": "20"},
-            {"os": "windows-latest", "node": "18"}
-          ]'
-          echo "matrix<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$MATRIX" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          python << 'PYTHON_EOF'
+          import json
+          import os
+          from pathlib import Path
+
+          all_variants = [
+              {
+                  "name": "development",
+                  "configuration": "Debug",
+                  "dotnet_environment": "Development",
+                  "ci_build": "false",
+              },
+              {
+                  "name": "staging",
+                  "configuration": "Release",
+                  "dotnet_environment": "Staging",
+                  "ci_build": "true",
+              },
+              {
+                  "name": "production",
+                  "configuration": "Release",
+                  "dotnet_environment": "Production",
+                  "ci_build": "true",
+              },
+              {
+                  "name": "test",
+                  "configuration": "Release",
+                  "dotnet_environment": "Test",
+                  "ci_build": "false",
+              },
+          ]
+
+          selected = os.environ.get("SELECTED_VARIANTS", "all").strip().lower()
+          if selected in {"", "all"}:
+              variants = all_variants
+          else:
+              allow = {item.strip() for item in selected.split(",") if item.strip()}
+              variants = [entry for entry in all_variants if entry["name"] in allow]
+              if not variants:
+                  raise SystemExit(
+                      "No valid variants selected. Use: development,staging,production,test or all."
+                  )
+
+          platforms = [
+              {"os": "ubuntu-latest"},
+              {"os": "windows-latest"},
+          ]
+
+          linux_candidates = [
+              "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+          ]
+          windows_candidates = [
+              "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+              "src/tests/HELIOS.Platform.Tests.csproj",
+          ]
+
+          linux_tests = [path for path in linux_candidates if Path(path).exists()]
+          windows_tests = [path for path in windows_candidates if Path(path).exists()]
+          has_tests = bool(linux_tests or windows_tests)
+
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"variants={json.dumps(variants)}\n")
+              output.write(f"platforms={json.dumps(platforms)}\n")
+              output.write(f"linux_test_projects={json.dumps(linux_tests)}\n")
+              output.write(f"windows_test_projects={json.dumps(windows_tests)}\n")
+              output.write(f"has_tests={'true' if has_tests else 'false'}\n")
+          PYTHON_EOF
 
   test-variants:
-    name: Test ${{ matrix.variant.name }} on Node ${{ matrix.platform.node }} (${{ matrix.platform.os }})
+    name: Test ${{ matrix.variant.name }} on ${{ matrix.platform.os }}
     runs-on: ${{ matrix.platform.os }}
     needs: setup-variants
+    if: needs.setup-variants.outputs.has_tests == 'true'
     strategy:
       matrix:
         variant: ${{ fromJson(needs.setup-variants.outputs.variants) }}
-        platform: ${{ fromJson(needs.setup-variants.outputs.matrix) }}
+        platform: ${{ fromJson(needs.setup-variants.outputs.platforms) }}
       fail-fast: false
     env:
-      NODE_ENV: ${{ matrix.variant.env }}
-      BUILD_MINIFY: ${{ matrix.variant.minify }}
-      BUILD_SOURCEMAP: ${{ matrix.variant.sourcemap }}
-      BUILD_OPTIMIZATION: ${{ matrix.variant.optimization }}
+      DOTNET_ENVIRONMENT: ${{ matrix.variant.dotnet_environment }}
+      HELIOS_BUILD_VARIANT: ${{ matrix.variant.name }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
 
-      - name: Setup Node.js ${{ matrix.platform.node }}
-        uses: actions/setup-node@v4
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: ${{ matrix.platform.node }}
+          dotnet-version: '8.0.x'
 
-      - name: Detect Node project
-        id: node_project
-        shell: bash
+      - name: Restore NuGet cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', 'global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore and build core target
+        shell: pwsh
         run: |
-          if [ -f package.json ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::No package.json found at repository root; skipping Node variant steps."
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+          dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj
+          dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj --configuration ${{ matrix.variant.configuration }} --no-restore -p:ContinuousIntegrationBuild=${{ matrix.variant.ci_build }}
 
-      - name: Display Configuration
+      - name: Run variant tests
+        shell: pwsh
         run: |
-          echo "===== Build Configuration ====="
-          echo "Variant: ${{ matrix.variant.name }}"
-          echo "OS: ${{ matrix.platform.os }}"
-          echo "Node: ${{ matrix.platform.node }}"
-          echo "Environment: ${{ matrix.variant.env }}"
-          echo "Minify: ${{ matrix.variant.minify }}"
-          echo "Sourcemap: ${{ matrix.variant.sourcemap }}"
-          echo "Optimization: ${{ matrix.variant.optimization }}"
-          echo "==============================="
+          if ('${{ matrix.platform.os }}' -eq 'windows-latest') {
+            $projects = '${{ needs.setup-variants.outputs.windows_test_projects }}' | ConvertFrom-Json
+          } else {
+            $projects = '${{ needs.setup-variants.outputs.linux_test_projects }}' | ConvertFrom-Json
+          }
 
-      - name: Install Dependencies
-        if: steps.node_project.outputs.exists == 'true'
-        shell: bash
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+          if (-not $projects -or $projects.Count -eq 0) {
+            Write-Host "No tests configured for this platform."
+            exit 0
+          }
 
-      - name: Build for ${{ matrix.variant.name }}
-        if: steps.node_project.outputs.exists == 'true'
-        shell: bash
-        run: |
-          npm run build:${{ matrix.variant.name }}
+          New-Item -Path test-results -ItemType Directory -Force | Out-Null
+          foreach ($project in $projects) {
+            $safeName = $project -replace '[\\/:.]', '_'
+            $logName = "$safeName-${{ matrix.variant.name }}-${{ matrix.platform.os }}.trx"
+            $args = @(
+              'test',
+              $project,
+              '--configuration', '${{ matrix.variant.configuration }}',
+              '--results-directory', 'test-results',
+              '--logger', "trx;LogFileName=$logName",
+              '--verbosity', 'minimal'
+            )
 
-      - name: Run Tests
-        if: steps.node_project.outputs.exists == 'true'
-        shell: bash
-        run: |
-          npm test -- --testTimeout=30000
+            if ('${{ matrix.platform.os }}' -eq 'windows-latest' -and $project -like '*tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj') {
+              $args += @('--filter', 'FullyQualifiedName!~Integration&FullyQualifiedName!~Performance&FullyQualifiedName!~EndToEnd&FullyQualifiedName!~E2E&FullyQualifiedName!~Security&FullyQualifiedName!~Vault&FullyQualifiedName!~Driver&FullyQualifiedName!~Malware&FullyQualifiedName!~Deployment')
+            }
+            if ('${{ matrix.platform.os }}' -eq 'windows-latest' -and $project -like '*src/tests/HELIOS.Platform.Tests.csproj') {
+              $args += @('--filter', 'FullyQualifiedName!~Integration')
+            }
+            if ('${{ matrix.variant.name }}' -eq 'test') {
+              $args += @('--collect', 'XPlat Code Coverage')
+            }
 
-      - name: Generate Coverage
-        if: steps.node_project.outputs.exists == 'true' && matrix.variant.name == 'test'
-        shell: bash
-        run: |
-          npm run test:coverage
+            dotnet @args
+          }
 
-      - name: Validate Build Output
-        if: steps.node_project.outputs.exists == 'true'
-        shell: bash
-        run: |
-          ls -la dist/ || echo "No dist directory"
-          echo "Build output size: $(du -sh dist 2>/dev/null || echo 'N/A')"
-
-      - name: Performance Check
-        if: steps.node_project.outputs.exists == 'true'
-        shell: bash
-        run: |
-          if [ -f "dist/bundle.js" ]; then
-            SIZE=$(stat -f%z "dist/bundle.js" 2>/dev/null || stat -c%s "dist/bundle.js" 2>/dev/null)
-            echo "Bundle size: $SIZE bytes"
-            if [ "$SIZE" -gt 1048576 ]; then
-              echo "::warning::Bundle exceeds 1MB"
-            fi
-          fi
-
-      - name: Upload Variant Artifacts
+      - name: Upload variant artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: variant-${{ matrix.variant.name }}-node${{ matrix.platform.node }}-${{ matrix.platform.os }}
+          name: variant-${{ matrix.variant.name }}-${{ matrix.platform.os }}
           path: |
-            dist/
-            coverage/
+            test-results/
+            **/TestResults/
           if-no-files-found: warn
-          retention-days: 5
+          retention-days: 7
 
   compare-variants:
     name: Compare Build Variants
     runs-on: ubuntu-latest
-    needs: test-variants
+    needs: [setup-variants, test-variants]
     if: always()
     steps:
-      - name: Download All Artifacts
+      - name: Download all artifacts
+        if: needs.test-variants.result != 'skipped'
         uses: actions/download-artifact@v4
         with:
-          path: variants
+          path: variant-artifacts
 
-      - name: Generate Comparison Report
-        run: |
-          echo "## Build Variant Comparison" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Variants Tested" >> $GITHUB_STEP_SUMMARY
-          echo "- Development" >> $GITHUB_STEP_SUMMARY
-          echo "- Staging" >> $GITHUB_STEP_SUMMARY
-          echo "- Production" >> $GITHUB_STEP_SUMMARY
-          echo "- Test" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Platforms Tested" >> $GITHUB_STEP_SUMMARY
-          echo "- Ubuntu 20.04 (Node 18, 20)" >> $GITHUB_STEP_SUMMARY
-          echo "- Windows Server (Node 18)" >> $GITHUB_STEP_SUMMARY
+      - name: Setup Python
+        if: needs.test-variants.result != 'skipped'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: Analyze Results
+      - name: Generate comparison report
         run: |
-          echo "Analyzing variant test results..."
-          find variants -type f -name "*.json" | wc -l
-          echo "✓ Analysis complete"
+          echo "## Build Variant Comparison" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Test matrix status: ${{ needs.test-variants.result }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ needs.test-variants.result }}" = "skipped" ]; then
+            echo "- No platform test projects were discovered." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          python << 'PYTHON_EOF'
+          from collections import Counter
+          from pathlib import Path
+          import re
+
+          root = Path("variant-artifacts")
+          counts = Counter()
+          pattern = re.compile(r"-(development|staging|production|test)-")
+
+          for trx_file in root.rglob("*.trx"):
+              match = pattern.search(trx_file.name)
+              if match:
+                  counts[match.group(1)] += 1
+
+          with Path("variant-summary.md").open("w", encoding="utf-8") as output:
+              output.write("### Collected Test Result Files\n")
+              output.write("| Variant | TRX files |\n")
+              output.write("| --- | ---: |\n")
+              for variant in ("development", "staging", "production", "test"):
+                  output.write(f"| {variant} | {counts.get(variant, 0)} |\n")
+          PYTHON_EOF
+
+          cat variant-summary.md >> "$GITHUB_STEP_SUMMARY"
 
   report-results:
     name: Report Test Results
     runs-on: ubuntu-latest
-    needs: [test-variants, compare-variants]
+    needs: [setup-variants, test-variants, compare-variants]
     if: always()
     steps:
-      - name: Generate Summary
+      - name: Enforce variant test status
         run: |
-          echo "Test Status: ${{ needs.test-variants.result }}"
-          echo "Comparison Status: ${{ needs.compare-variants.result }}"
+          HAS_TESTS="${{ needs.setup-variants.outputs.has_tests }}"
+          TEST_RESULT="${{ needs.test-variants.result }}"
+          if [ "$HAS_TESTS" = "true" ] && [ "$TEST_RESULT" != "success" ]; then
+            echo "Variant tests failed."
+            exit 1
+          fi
 
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const status = '${{ needs.test-variants.result }}' === 'success' ? '✓' : '✗';
-            github.rest.issues.createComment({
+            const status = '${{ needs.test-variants.result }}' === 'success' ? '✅' : '❌';
+            const body = [
+              `## ${status} Build Variant Tests`,
+              '',
+              `- Setup status: **${{ needs.setup-variants.result }}**`,
+              `- Variant matrix status: **${{ needs.test-variants.result }}**`,
+              `- Comparison status: **${{ needs.compare-variants.result }}**`,
+              '',
+              `[View detailed results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            ].join('\n');
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ${status} Build Variant Tests\n\n**Status**: ${{ needs.test-variants.result }}\n\n**Variants Tested**:\n- Development\n- Staging\n- Production\n- Test\n\n**Platforms**:\n- Ubuntu (Node 18, 20)\n- Windows (Node 18)\n\n[View detailed results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
-            })
+              body
+            });

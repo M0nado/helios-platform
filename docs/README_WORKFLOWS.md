@@ -50,9 +50,9 @@ This comprehensive documentation covers all aspects of the HELIOS Platform's Git
    - Local testing procedures
    - Troubleshooting
 
-3. **[WORKFLOW_BUILD.md](workflows/WORKFLOW_BUILD.md)** (15 KB)
-   - Multi-module builds (build-all-modules.yml)
-   - 5 parallel modules
+3. **[WORKFLOW_BUILD.md](workflows/WORKFLOW_BUILD.md)** (updated)
+   - Hybrid build targets (build-all-modules.yml)
+   - Variant test matrix (build-variant-test.yml)
    - Caching strategy
    - Testing integration
    - Performance optimization
@@ -120,22 +120,18 @@ This comprehensive documentation covers all aspects of the HELIOS Platform's Git
 
 ```
 ✅ code-checks.yml            - Code quality & linting
-✅ build-all-modules.yml      - Multi-module builds
+✅ build-all-modules.yml      - Dynamic .NET/Node target builds
+✅ build-variant-test.yml     - Cross-platform variant tests
+✅ component-version-check.yml - Manifest version validation
+✅ multi-repo-sync.yml        - Submodule integrity and sync
+✅ code-registry-update.yml   - Registry artifact generation/publish
+✅ status-dashboard.yml       - Live workflow status dashboard
 ✅ nuget.yml                  - NuGet publishing
 ✅ deploy.yml                 - Azure deployments
 ✅ ci-validation.yml          - Integration validation
 ✅ Workflow integration       - All 14 workflows
 
-⚠️ Additional workflows (14 total):
-  - code-registry-update.yml
-  - build-variant-test.yml
-  - phase-build.yml
-  - documentation-update.yml
-  - ai-code-review.yml
-  - component-version-check.yml
-  - multi-repo-sync.yml
-  - status-dashboard.yml
-  - wiki-generator.yml
+⚠️ Additional workflows remain outside deep-dive docs and are covered in index/reference material.
 ```
 
 ### Topics Covered

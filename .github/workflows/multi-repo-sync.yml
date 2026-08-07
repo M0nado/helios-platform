@@ -2,6 +2,15 @@ name: Multi-Repo Sync
 
 on:
   workflow_dispatch:
+    inputs:
+      apply_changes:
+        description: 'Commit and push submodule updates (false = dry-run)'
+        required: false
+        default: 'false'
+      target_ref:
+        description: 'Optional branch or ref to sync'
+        required: false
+        default: ''
   push:
     branches:
       - main
@@ -17,143 +26,118 @@ permissions:
   contents: read
 
 jobs:
+  audit-submodule-integrity:
+    name: Audit Submodule Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate submodule repository map
+        run: |
+          python scripts/validate_submodule_integrity.py \
+            --gitmodules .gitmodules \
+            --repositories config/integrations/repositories.json \
+            --json-out artifacts/submodule-integrity-report.json
+
+      - name: Capture submodule state
+        run: |
+          mkdir -p artifacts
+          git submodule status --recursive | tee artifacts/submodule-status.txt
+
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: submodule-integrity-audit
+          path: artifacts/
+          retention-days: 14
+
+      - name: Publish audit summary
+        run: |
+          echo "## Submodule Integrity Audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Validation: ✅ Passed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Submodules: $(git config -f .gitmodules --get-regexp '^submodule\\..*\\.path$' | wc -l)" >> "$GITHUB_STEP_SUMMARY"
+
   sync-submodules:
     name: Sync Submodules
     if: github.event_name == 'workflow_dispatch'
+    needs: audit-submodule-integrity
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.inputs.target_ref != '' && github.event.inputs.target_ref || github.ref }}
+          submodules: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Submodules
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sync and update submodules
         run: |
-          git config --global user.email "helios-bot@platform.local"
-          git config --global user.name "HELIOS Platform Bot"
+          git submodule sync --recursive
           git submodule update --init --recursive --remote
-          git submodule foreach --recursive "git fetch origin"
 
-      - name: Check Submodule Status
-        id: check-status
+      - name: Revalidate submodule mapping after sync
         run: |
-          echo "Status Report:"
-          git submodule foreach 'echo "=== $name ===" && git status && git log --oneline -1'
-          STATUS_OUTPUT=$(git diff --name-only HEAD)
-          echo "changes_detected=$([[ -n "$STATUS_OUTPUT" ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          python scripts/validate_submodule_integrity.py \
+            --gitmodules .gitmodules \
+            --repositories config/integrations/repositories.json \
+            --json-out artifacts/submodule-integrity-post-sync.json
 
-      - name: Commit Changes
-        if: steps.check-status.outputs.changes_detected == 'true'
+      - name: Detect changed pointers
+        id: detect
         run: |
-          git add -A
-          git commit -m "chore: sync submodules to latest remote versions"
-          git push origin HEAD:${{ github.ref }}
-
-      - name: Create Pull Request
-        if: steps.check-status.outputs.changes_detected == 'true' && github.ref == 'refs/heads/develop'
-        uses: peter-evans/create-pull-request@v5
-        with:
-          commit-message: "chore: sync submodules to latest versions"
-          title: "[SYNC] Submodule Updates"
-          body: |
-            ## Submodule Synchronization
-            
-            This PR updates all submodules to their latest remote versions.
-            
-            ### Changes:
-            ```
-            ${{ steps.check-status.outputs.changes_detected }}
-            ```
-            
-            - [ ] Review submodule changes
-            - [ ] Verify component compatibility
-            - [ ] Run integration tests
-          branch: sync/submodules-${{ github.run_number }}
-          delete-branch: true
-          labels: |
-            chore
-            automated
-
-      - name: Report Sync Status
-        run: |
-          echo "## Multi-Repo Sync Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
-          echo "**Changes Detected**: ${{ steps.check-status.outputs.changes_detected }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Submodule Status" >> $GITHUB_STEP_SUMMARY
-          echo "$(git submodule foreach 'echo "- $name"')" >> $GITHUB_STEP_SUMMARY
-
-  audit-submodule-integrity:
-    name: Audit Submodule Integrity
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: true
-
-      - name: Verify Submodule Hashes
-        run: |
-          echo "Verifying submodule integrity..."
-          git submodule foreach 'echo "Submodule: $name" && git rev-parse HEAD'
-
-      - name: Check for Conflicts
-        run: |
-          if git diff --name-only --diff-filter=U | grep -q .; then
-            echo "ERROR: Merge conflicts detected in submodules"
-            exit 1
-          fi
-          echo "✓ No conflicts detected"
-
-      - name: Validate .gitmodules
-        run: |
-          if git config -f .gitmodules --get-regexp path | grep -q .; then
-            echo "✓ .gitmodules is valid"
+          mkdir -p artifacts
+          git status --short -- .gitmodules modules | tee artifacts/sync-diff.txt
+          if [ -n "$(git status --porcelain -- .gitmodules modules)" ]; then
+            echo "changes_detected=true" >> "$GITHUB_OUTPUT"
           else
-            echo "ERROR: .gitmodules validation failed"
-            exit 1
+            echo "changes_detected=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Validate Repository Map
-        run: python -m json.tool config/integrations/repositories.json > /dev/null
+      - name: Commit updated pointers
+        if: steps.detect.outputs.changes_detected == 'true' && github.event.inputs.apply_changes == 'true'
+        run: |
+          git config user.email "helios-bot@platform.local"
+          git config user.name "HELIOS Platform Bot"
+          git add .gitmodules modules/
+          git commit -m "chore: sync submodule pointers"
 
-  validate-sync:
-    name: Validate Sync Integrity
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    needs: sync-submodules
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Push updated pointers
+        if: steps.detect.outputs.changes_detected == 'true' && github.event.inputs.apply_changes == 'true'
+        run: git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Report dry-run changes
+        if: steps.detect.outputs.changes_detected == 'true' && github.event.inputs.apply_changes != 'true'
+        run: |
+          echo "::notice::Submodule updates detected. Re-run with apply_changes=true to commit and push."
+
+      - name: Upload sync artifacts
+        uses: actions/upload-artifact@v4
         with:
-          fetch-depth: 0
-          submodules: true
+          name: submodule-sync-report
+          path: artifacts/
+          retention-days: 14
 
-      - name: Verify Submodule Hashes
+      - name: Publish sync summary
         run: |
-          echo "Verifying submodule integrity..."
-          git submodule foreach 'echo "Submodule: $name" && git rev-parse HEAD'
-
-      - name: Check for Conflicts
-        run: |
-          if git diff --name-only --diff-filter=U | grep -q .; then
-            echo "ERROR: Merge conflicts detected in submodules"
-            exit 1
-          fi
-          echo "✓ No conflicts detected"
-
-      - name: Validate .gitmodules
-        run: |
-          if git config -f .gitmodules --get-regexp path | wc -l | grep -q .; then
-            echo "✓ .gitmodules is valid"
-          else
-            echo "ERROR: .gitmodules validation failed"
-            exit 1
-          fi
+          echo "## Submodule Sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Apply mode: ${{ github.event.inputs.apply_changes }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Changes detected: ${{ steps.detect.outputs.changes_detected }}" >> "$GITHUB_STEP_SUMMARY"

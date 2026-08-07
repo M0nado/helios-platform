@@ -103,13 +103,13 @@ Status Check: Required for merge
 ### Contents
 
 - build-all-modules.yml workflow
-- Module architecture (5 modules)
-- Build matrix strategy (5 parallel jobs)
-- Node.js versioning strategy
+- Hybrid target discovery (.sln/.slnx + optional Node targets)
+- Build matrix strategy for discovered targets
+- Variant testing across Ubuntu and Windows
 - Caching mechanism and performance
 - Complete build process steps
 - Testing integration
-- Coverage reporting
+- Variant coverage reporting
 - Artifact handling
 - Performance optimization tips
 
@@ -120,26 +120,23 @@ Workflow File: .github/workflows/build-all-modules.yml
 Trigger: Push/PR on code changes
 Duration: 10-15 minutes
 Runner: ubuntu-latest
-Parallelism: 5 modules
-Modules: core, modules, registry, cli, ui
+Parallelism: Dynamic target matrix
+Targets: Repository-owned .NET solutions + optional Node plugin target
 ```
 
-### Modules
+### Target Model
 
-| Module | Purpose | Dependencies |
+| Target Type | Discovery Rule | Build/Test Behavior |
 |--------|---------|---|
-| core | Core platform engine | None |
-| modules | Feature modules | core |
-| registry | Module registry | core, modules |
-| cli | Command-line interface | core, registry |
-| ui | User interface | core, modules |
+| .NET solutions | `.sln` and `.slnx` in repository-owned paths | `dotnet restore` + `dotnet build` + `dotnet test` |
+| Node module (optional) | `plugins/openai/helios-mcp/package.json` | `npm install/ci` + `npm run lint/build/test --if-present` |
 
 ### Use Cases
 
-- Understanding multi-module builds
+- Understanding hybrid build targeting
 - Optimizing build performance
-- Configuring module caching
-- Adding new modules to build matrix
+- Configuring cache behavior
+- Adding new buildable targets safely
 
 ---
 

@@ -2,7 +2,7 @@ name: Status Dashboard
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Every hour
+    - cron: '0 * * * *'
   workflow_dispatch:
   push:
     branches:
@@ -11,216 +11,168 @@ on:
       - '.github/workflows/status-dashboard.yml'
 
 permissions:
-  contents: write
-  checks: read
-  pull-requests: read
+  contents: read
+  actions: read
 
 jobs:
   collect-status:
     name: Collect Workflow Status
     runs-on: ubuntu-latest
-    outputs:
-      status_report: ${{ steps.report.outputs.report }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Build workflow status report
+        id: collect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
 
-      - name: Fetch Workflow Runs
-        id: workflows
-        run: |
-          echo "Fetching workflow status..."
-          
-          # Create status report
-          cat > status-report.json << 'EOF'
-          {
-            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
-            "workflows": [
-              {
-                "name": "Multi-Repo Sync",
-                "status": "✓ Passing",
-                "last_run": "2024-01-15T10:30:00Z",
-                "runs": 156,
-                "success_rate": 98.7
-              },
-              {
-                "name": "Component Version Check",
-                "status": "✓ Passing",
-                "last_run": "2024-01-15T10:15:00Z",
-                "runs": 234,
-                "success_rate": 99.1
-              },
-              {
-                "name": "Build All Modules",
-                "status": "✓ Passing",
-                "last_run": "2024-01-15T09:45:00Z",
-                "runs": 567,
-                "success_rate": 96.5
-              },
-              {
-                "name": "Build Variant Tests",
-                "status": "✓ Passing",
-                "last_run": "2024-01-15T09:20:00Z",
-                "runs": 345,
-                "success_rate": 97.8
-              },
-              {
-                "name": "Code Registry Update",
-                "status": "✓ Passing",
-                "last_run": "2024-01-15T08:00:00Z",
-                "runs": 89,
-                "success_rate": 99.0
+            const monitoredWorkflows = [
+              'Multi-Repo Sync',
+              'Component Version Check',
+              'Build All Modules',
+              'Build Variant Tests',
+              'Code Registry Update'
+            ];
+
+            const { data: workflowData } = await github.rest.actions.listRepoWorkflows({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 200
+            });
+
+            const workflows = workflowData.workflows || [];
+            const reportWorkflows = [];
+            let completedRunsTotal = 0;
+            let completedRunsSuccess = 0;
+
+            for (const workflowName of monitoredWorkflows) {
+              const workflow = workflows.find(item => item.name === workflowName);
+              if (!workflow) {
+                reportWorkflows.push({
+                  name: workflowName,
+                  status: 'not-found',
+                  lastRunAt: null,
+                  runCount: 0,
+                  completedRunCount: 0,
+                  successRate: null
+                });
+                continue;
               }
-            ]
-          }
-          EOF
 
-      - name: Generate Status Report
-        id: report
-        run: |
-          REPORT=$(cat status-report.json)
-          echo "report=$REPORT" >> $GITHUB_OUTPUT
+              const { data: runData } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: workflow.id,
+                per_page: 50
+              });
 
-      - name: Upload Report
+              const runs = runData.workflow_runs || [];
+              const completedRuns = runs.filter(run => run.status === 'completed');
+              const successfulRuns = completedRuns.filter(run => run.conclusion === 'success');
+              const latest = runs[0];
+              const successRate = completedRuns.length > 0
+                ? Number(((successfulRuns.length / completedRuns.length) * 100).toFixed(2))
+                : null;
+
+              completedRunsTotal += completedRuns.length;
+              completedRunsSuccess += successfulRuns.length;
+
+              reportWorkflows.push({
+                name: workflowName,
+                status: latest ? (latest.conclusion || latest.status) : 'no-runs',
+                lastRunAt: latest ? latest.updated_at : null,
+                runCount: runs.length,
+                completedRunCount: completedRuns.length,
+                successRate
+              });
+            }
+
+            const overallSuccessRate = completedRunsTotal > 0
+              ? Number(((completedRunsSuccess / completedRunsTotal) * 100).toFixed(2))
+              : null;
+
+            const report = {
+              generatedAtUtc: new Date().toISOString(),
+              repository: `${context.repo.owner}/${context.repo.repo}`,
+              monitoredWorkflowCount: monitoredWorkflows.length,
+              completedRunsTotal,
+              completedRunsSuccess,
+              overallSuccessRate,
+              workflows: reportWorkflows
+            };
+
+            fs.writeFileSync('status-report.json', JSON.stringify(report, null, 2));
+
+      - name: Upload status report artifact
         uses: actions/upload-artifact@v4
         with:
           name: status-report
           path: status-report.json
-          retention-days: 90
+          retention-days: 30
 
   generate-dashboard:
     name: Generate Dashboard
     runs-on: ubuntu-latest
     needs: collect-status
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Download status report
+        uses: actions/download-artifact@v4
+        with:
+          name: status-report
+          path: status
 
-      - name: Create Dashboard Markdown
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Create dashboard markdown
         run: |
-          mkdir -p status
-          cat > status/dashboard.md << 'MDEOF'
-          # HELIOS Platform - CI/CD Status Dashboard
-          
-          ## 📊 Overall Platform Health
-          
-          | Metric | Value | Status |
-          |--------|-------|--------|
-          | Overall Health | 98.5% | ✓ Healthy |
-          | Total Workflow Runs | 1,391 | ✓ Tracked |
-          | Success Rate | 98.2% | ✓ Excellent |
-          | Active Workflows | 5 | ✓ Running |
-          
-          ## 🔄 Workflow Status
-          
-          ### Multi-Repo Sync
-          - **Status**: ✓ Passing
-          - **Last Run**: 2024-01-15 10:30 UTC
-          - **Success Rate**: 98.7%
-          - **Total Runs**: 156
-          - **Description**: Synchronizes all submodules to latest remote versions
-          
-          ### Component Version Check
-          - **Status**: ✓ Passing
-          - **Last Run**: 2024-01-15 10:15 UTC
-          - **Success Rate**: 99.1%
-          - **Total Runs**: 234
-          - **Description**: Validates component versioning and dependencies
-          
-          ### Build All Modules
-          - **Status**: ✓ Passing
-          - **Last Run**: 2024-01-15 09:45 UTC
-          - **Success Rate**: 96.5%
-          - **Total Runs**: 567
-          - **Description**: CI/CD build pipeline for all platform components
-          
-          ### Build Variant Tests
-          - **Status**: ✓ Passing
-          - **Last Run**: 2024-01-15 09:20 UTC
-          - **Success Rate**: 97.8%
-          - **Total Runs**: 345
-          - **Description**: Tests multiple build variants and platforms
-          
-          ### Code Registry Update
-          - **Status**: ✓ Passing
-          - **Last Run**: 2024-01-15 08:00 UTC
-          - **Success Rate**: 99.0%
-          - **Total Runs**: 89
-          - **Description**: Updates and compresses code snippet registry
-          
-          ## 📈 Performance Trends
-          
-          ### Success Rate Trend
-          ```
-          Week 1:  95.2% ▲
-          Week 2:  96.8% ▲
-          Week 3:  97.5% ▲
-          Week 4:  98.2% ▲ (Current)
-          ```
-          
-          ### Workflow Duration Trends
-          | Workflow | Avg Duration | Trend |
-          |----------|--------------|-------|
-          | Multi-Repo Sync | 2m 15s | ▼ -5% |
-          | Component Version Check | 1m 45s | ▼ -3% |
-          | Build All Modules | 8m 30s | ▲ +2% |
-          | Build Variant Tests | 15m 45s | ▼ -8% |
-          | Code Registry Update | 3m 20s | ▼ -12% |
-          
-          ## 🎯 Service Level Objectives (SLOs)
-          
-          - **Build Success Rate**: Target 99% (Current: 98.2%)
-          - **Build Latency**: Target <15 minutes (Current: 8m 30s)
-          - **Dashboard Uptime**: Target 99.9% (Current: 99.95%)
-          - **Workflow Availability**: Target 99.5% (Current: 98.5%)
-          
-          ## 🛠️ Recent Changes
-          
-          - **2024-01-15**: Optimized registry compression (-12% duration)
-          - **2024-01-14**: Added multi-platform variant testing
-          - **2024-01-13**: Improved component version validation
-          - **2024-01-12**: Enhanced submodule sync efficiency
-          
-          ## 📞 Support & Issues
-          
-          For issues or questions:
-          1. Check the [status dashboard](./dashboard.md)
-          2. Review recent workflow logs
-          3. Open an issue on GitHub
-          4. Contact the platform team
-          
-          ---
-          
-          Last Updated: 2024-01-15 10:35 UTC
-          Dashboard Version: 1.0
-          MDEOF
+          python << 'PYTHON_EOF'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
 
-      - name: Upload Dashboard
+          report_path = Path("status/status-report.json")
+          report = json.loads(report_path.read_text(encoding="utf-8"))
+
+          def format_time(value: str | None) -> str:
+              if value is None:
+                  return "n/a"
+              return value.replace("T", " ").replace("Z", " UTC")
+
+          lines = [
+              "# HELIOS Platform CI/CD Status Dashboard",
+              "",
+              f"- Generated: `{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}`",
+              f"- Repository: `{report['repository']}`",
+              f"- Monitored workflows: `{report['monitoredWorkflowCount']}`",
+              f"- Completed runs sampled: `{report['completedRunsTotal']}`",
+              f"- Overall success rate: `{report['overallSuccessRate'] if report['overallSuccessRate'] is not None else 'n/a'}%`",
+              "",
+              "## Workflow Status",
+              "",
+              "| Workflow | Latest Status | Last Run (UTC) | Completed Runs | Success Rate |",
+              "| --- | --- | --- | ---: | ---: |",
+          ]
+
+          for workflow in report["workflows"]:
+              success_rate = "n/a" if workflow["successRate"] is None else f"{workflow['successRate']}%"
+              lines.append(
+                  f"| {workflow['name']} | {workflow['status']} | {format_time(workflow['lastRunAt'])} | {workflow['completedRunCount']} | {success_rate} |"
+              )
+
+          output_dir = Path("status")
+          output_dir.mkdir(parents=True, exist_ok=True)
+          (output_dir / "dashboard.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PYTHON_EOF
+
+      - name: Upload dashboard artifact
         uses: actions/upload-artifact@v4
         with:
           name: status-dashboard
           path: status/
-          retention-days: 365
+          retention-days: 90
 
-  report-generation:
-    name: Generate Comprehensive Report
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create Status Summary
-        run: |
-          echo "## HELIOS Platform - Status Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Generated**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Workflow Status" >> $GITHUB_STEP_SUMMARY
-          echo "| Workflow | Status | Last Run | Success Rate |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|--------|----------|--------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Multi-Repo Sync | ✓ Passing | 10:30 UTC | 98.7% |" >> $GITHUB_STEP_SUMMARY
-          echo "| Component Version Check | ✓ Passing | 10:15 UTC | 99.1% |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build All Modules | ✓ Passing | 09:45 UTC | 96.5% |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build Variant Tests | ✓ Passing | 09:20 UTC | 97.8% |" >> $GITHUB_STEP_SUMMARY
-          echo "| Code Registry Update | ✓ Passing | 08:00 UTC | 99.0% |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Platform Health" >> $GITHUB_STEP_SUMMARY
-          echo "- Overall: **Healthy** ✓" >> $GITHUB_STEP_SUMMARY
-          echo "- Success Rate: **98.2%**" >> $GITHUB_STEP_SUMMARY
-          echo "- Total Runs: **1,391**" >> $GITHUB_STEP_SUMMARY
+      - name: Publish dashboard summary
+        run: cat status/dashboard.md >> "$GITHUB_STEP_SUMMARY"

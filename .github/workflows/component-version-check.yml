@@ -3,8 +3,12 @@ name: Component Version Check
 on:
   workflow_dispatch:
     inputs:
+      strict:
+        description: 'Fail when invalid or missing versions are found'
+        required: false
+        default: 'true'
       verbose:
-        description: 'Enable verbose output'
+        description: 'Include a full component table in the run summary'
         required: false
         default: 'false'
   pull_request:
@@ -12,181 +16,205 @@ on:
       - main
       - develop
     paths:
+      - '**/*.csproj'
       - '**/package.json'
-      - '**/manifest.json'
       - '**/version.json'
       - '.github/workflows/component-version-check.yml'
   push:
     branches:
       - main
     paths:
+      - '**/*.csproj'
       - '**/package.json'
-      - '**/manifest.json'
       - '**/version.json'
+      - '.github/workflows/component-version-check.yml'
 
 permissions:
   contents: read
-  checks: write
   pull-requests: write
 
 jobs:
-  discover-components:
-    name: Discover Components
-    runs-on: ubuntu-latest
-    outputs:
-      components: ${{ steps.discover.outputs.components }}
-      component_count: ${{ steps.discover.outputs.count }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          fetch-depth: 0
-          submodules: true
-          persist-credentials: false
-
-      - name: Discover All Components
-        id: discover
-        run: |
-          set -euo pipefail
-          echo "Discovering components..."
-          COMPONENTS=$(find . -type f \( -name "package.json" -o -name "manifest.json" -o -name "version.json" \) \
-            -not -path '*/node_modules/*' -not -path '*/.git/*' -print \
-            | sed 's#^./##' | sort -u | jq -R 'select(length > 0)' | jq -cs .)
-          COMPONENT_COUNT=$(jq 'length' <<<"${COMPONENTS}")
-          echo "components=${COMPONENTS}" >> "${GITHUB_OUTPUT}"
-          echo "count=${COMPONENT_COUNT}" >> "${GITHUB_OUTPUT}"
-          echo "Found ${COMPONENT_COUNT} components"
-
   validate-versions:
     name: Validate Component Versions
     runs-on: ubuntu-latest
-    needs: discover-components
-    strategy:
-      matrix:
-        component: ${{ fromJson(needs.discover-components.outputs.components) }}
-      fail-fast: false
+    outputs:
+      component_count: ${{ steps.validate.outputs.component_count }}
+      invalid_count: ${{ steps.validate.outputs.invalid_count }}
+      status: ${{ steps.validate.outputs.status }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
-          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '22'
+          python-version: '3.12'
 
-      - name: Extract Version Info
-        id: version-info
+      - name: Validate version manifests
+        id: validate
+        env:
+          STRICT_MODE: ${{ github.event.inputs.strict || 'true' }}
+          VERBOSE_MODE: ${{ github.event.inputs.verbose || 'false' }}
         run: |
-          VERSION_FILE="${{ matrix.component }}"
-          if [ ! -f "$VERSION_FILE" ]; then
-            echo "::error::Version file not found: $VERSION_FILE"
-            exit 1
-          fi
+          python << 'PYTHON_EOF'
+          import json
+          import os
+          import re
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
 
-          VERSION=$(jq -r '.version // empty' "$VERSION_FILE")
-          COMPONENT_NAME=$(jq -r '
-            if (.name | type) == "string" then .name
-            elif (.name | type) == "object" then (.name.short // .name.full // empty)
-            else (.packageName // empty)
-            end
-          ' "$VERSION_FILE")
-          COMPONENT_DIR=$(dirname "$VERSION_FILE")
+          ROOT = Path(".")
+          IGNORE_SEGMENTS = {".git", "node_modules", "bin", "obj"}
+          VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 
-          if [ -z "$VERSION" ]; then
-            echo "::error::No version value found in $VERSION_FILE"
-            exit 1
-          fi
-          if [ -z "$COMPONENT_NAME" ]; then
-            COMPONENT_NAME=$(basename "$COMPONENT_DIR")
-          fi
+          strict_mode = os.environ.get("STRICT_MODE", "true").lower() == "true"
+          verbose_mode = os.environ.get("VERBOSE_MODE", "false").lower() == "true"
 
-          echo "name=$COMPONENT_NAME" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "component=$COMPONENT_DIR" >> "$GITHUB_OUTPUT"
-          echo "version_file=$VERSION_FILE" >> "$GITHUB_OUTPUT"
+          def should_ignore(path: Path) -> bool:
+              return any(segment in IGNORE_SEGMENTS for segment in path.parts)
 
-      - name: Validate Version Format
-        run: |
-          VERSION="${{ steps.version-info.outputs.version }}"
-          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
-            echo "::error::Invalid version format: $VERSION"
-            exit 1
-          fi
-          echo "✓ Version format valid: $VERSION"
+          def discover_files() -> list[Path]:
+              files: list[Path] = []
+              for pattern in ("**/*.csproj", "**/package.json", "**/version.json"):
+                  for candidate in ROOT.glob(pattern):
+                      if candidate.is_file() and not should_ignore(candidate):
+                          files.append(candidate)
+              files = sorted(set(files))
+              return files
 
-      - name: Check for Conflicts
-        run: |
-          VERSION_FILE="${{ steps.version-info.outputs.version_file }}"
-          VERSION="${{ steps.version-info.outputs.version }}"
+          def local_name(tag: str) -> str:
+              return tag.rsplit("}", 1)[-1]
 
-          if [ "$(basename "$VERSION_FILE")" != "package.json" ]; then
-            echo "Skipping npm publication lookup for non-package manifest: $VERSION_FILE"
-            exit 0
-          fi
+          def read_csproj_version(path: Path) -> tuple[str | None, str]:
+              tree = ET.parse(path)
+              root = tree.getroot()
+              for key in ("Version", "PackageVersion", "AssemblyVersion"):
+                  for node in root.iter():
+                      if local_name(node.tag) == key and node.text and node.text.strip():
+                          return node.text.strip(), path.stem
+              return None, path.stem
 
-          PACKAGE_NAME="${{ steps.version-info.outputs.name }}"
-          if npm view "$PACKAGE_NAME@$VERSION" > /dev/null 2>&1; then
-            echo "::warning::Version $VERSION already published"
-          else
-            echo "Version $VERSION is not published"
-          fi
+          def read_json_version(path: Path) -> tuple[str | None, str]:
+              payload = json.loads(path.read_text(encoding="utf-8"))
+              component_name = payload.get("name")
+              if not isinstance(component_name, str) or not component_name.strip():
+                  component_name = path.parent.name
+              version_value = payload.get("version")
+              if isinstance(version_value, str):
+                  version_value = version_value.strip()
+              else:
+                  version_value = None
+              return version_value, component_name
 
-      - name: Verify Dependencies
-        run: |
-          COMPONENT="${{ steps.version-info.outputs.component }}"
-          if [ -f "$COMPONENT/package.json" ]; then
-            echo "Checking dependencies for $COMPONENT..."
-            jq '.dependencies, .devDependencies' "$COMPONENT/package.json" || true
-          fi
+          components: list[dict[str, str]] = []
+          errors: list[str] = []
+          warnings: list[str] = []
+          for manifest in discover_files():
+              rel_path = manifest.relative_to(ROOT).as_posix()
+              if manifest.suffix == ".csproj":
+                  version, name = read_csproj_version(manifest)
+                  if not version:
+                      warnings.append(f"{rel_path}: no explicit version metadata found (skipped)")
+                      continue
+              else:
+                  version, name = read_json_version(manifest)
+                  if not version:
+                      errors.append(f"{rel_path}: missing version value")
+                      continue
 
-      - name: Report Version Info
-        if: github.event.inputs.verbose == 'true'
-        run: |
-          echo "Component: ${{ steps.version-info.outputs.name }}"
-          echo "Version: ${{ steps.version-info.outputs.version }}"
-          echo "Location: ${{ steps.version-info.outputs.component }}"
+              if VERSION_PATTERN.match(version) is None:
+                  errors.append(f"{rel_path}: invalid semantic version '{version}'")
+                  continue
 
-  generate-report:
-    name: Generate Version Report
+              components.append(
+                  {
+                      "component": name,
+                      "path": rel_path,
+                      "version": version,
+                  }
+              )
+
+          report = {
+              "ok": len(errors) == 0,
+              "strictMode": strict_mode,
+              "componentCount": len(components),
+              "invalidCount": len(errors),
+              "warningCount": len(warnings),
+              "errors": errors,
+              "warnings": warnings,
+              "components": components,
+          }
+
+          Path("artifacts").mkdir(parents=True, exist_ok=True)
+          Path("artifacts/component-version-report.json").write_text(
+              json.dumps(report, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"component_count={len(components)}\n")
+              output.write(f"invalid_count={len(errors)}\n")
+              output.write(f"status={'success' if len(errors) == 0 else 'failure'}\n")
+
+          with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+              summary.write("## Component Version Validation\n\n")
+              summary.write(f"- Strict mode: `{strict_mode}`\n")
+              summary.write(f"- Valid components: `{len(components)}`\n")
+              summary.write(f"- Invalid components: `{len(errors)}`\n")
+              summary.write(f"- Warnings: `{len(warnings)}`\n")
+              if errors:
+                  summary.write("\n### Errors\n")
+                  for error in errors:
+                      summary.write(f"- {error}\n")
+              if warnings and verbose_mode:
+                  summary.write("\n### Warnings\n")
+                  for warning in warnings:
+                      summary.write(f"- {warning}\n")
+              if verbose_mode and components:
+                  summary.write("\n### Validated Components\n")
+                  summary.write("| Component | Version | Manifest |\n")
+                  summary.write("| --- | --- | --- |\n")
+                  for item in components:
+                      summary.write(
+                          f"| {item['component']} | {item['version']} | `{item['path']}` |\n"
+                      )
+
+          if errors and strict_mode:
+              raise SystemExit(1)
+          PYTHON_EOF
+
+      - name: Upload validation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: component-version-report
+          path: artifacts/component-version-report.json
+          retention-days: 14
+
+  comment-on-pr:
+    name: Comment Version Status
+    if: github.event_name == 'pull_request' && always()
+    needs: validate-versions
     runs-on: ubuntu-latest
-    needs: [discover-components, validate-versions]
-    if: always()
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          submodules: true
-          persist-credentials: false
-
-      - name: Build Summary
-        run: |
-          echo "## Component Version Check Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Total Components**: ${{ needs.discover-components.outputs.component_count }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
-          echo "**Status**: ${{ needs.validate-versions.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Validation Results" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ needs.validate-versions.result }}" = "success" ]; then
-            echo "- Version format validation: ✓ Passed" >> $GITHUB_STEP_SUMMARY
-            echo "- Dependency checks: ✓ Completed" >> $GITHUB_STEP_SUMMARY
-            echo "- Conflict detection: ✓ Completed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "- Component validation: ✗ ${{ needs.validate-versions.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Comment on PR
-        if: github.event_name == 'pull_request' && needs.discover-components.result == 'success' && needs.validate-versions.result == 'success'
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+      - name: Comment validation outcome
+        uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
+            const status = '${{ needs.validate-versions.result }}' === 'success' ? '✅' : '❌';
+            const body = [
+              `## ${status} Component Version Validation`,
+              '',
+              `- Result: **${{ needs.validate-versions.result }}**`,
+              `- Valid components: **${{ needs.validate-versions.outputs.component_count }}**`,
+              `- Invalid components: **${{ needs.validate-versions.outputs.invalid_count }}**`,
+              '',
+              `[Open run details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            ].join('\n');
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ✓ Component Version Validation\n\n- Total components validated: ${{ needs.discover-components.outputs.component_count }}\n- All version formats valid\n- No conflicts detected\n\n[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
-            })
+              body
+            });

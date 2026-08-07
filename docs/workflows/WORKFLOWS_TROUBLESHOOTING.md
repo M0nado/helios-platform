@@ -4,8 +4,8 @@
 
 This guide provides solutions for common workflow issues, debugging procedures, and recovery steps.
 
-**Version**: 1.0  
-**Last Updated**: 2024  
+**Version**: 1.1  
+**Last Updated**: 2026-08  
 **Scope**: All HELIOS Platform workflows
 
 ---
@@ -21,6 +21,68 @@ This guide provides solutions for common workflow issues, debugging procedures, 
 ---
 
 ## Common Issues & Solutions
+
+### Issue: Build workflow reports no discovered targets
+
+**Symptoms**:
+- `build-all-modules.yml` shows "No build targets discovered"
+- Build matrix jobs are skipped
+
+**Root Causes**:
+- No `.sln` / `.slnx` files under repository-owned scan paths
+- Solutions moved under excluded directories (`modules/`, `submodules/`)
+- Trigger path filters did not include the changed files
+
+**Solutions**:
+
+```bash
+# 1. Confirm expected solutions exist
+Get-ChildItem -Path . -Filter *.sln* -Recurse
+
+# 2. Confirm workflow discovery scope
+Get-Content .github/workflows/build-all-modules.yml
+
+# 3. Validate workflow syntax after edits
+python scripts/control/validate_workflows.py
+```
+
+**Recovery**:
+- Add/move solution files into repository-owned build paths.
+- Re-run workflow manually with `clean_build=true`.
+
+---
+
+### Issue: Component version validation fails in CI
+
+**Symptoms**:
+- `component-version-check.yml` fails with missing/invalid semver
+- PR receives failing version validation comment
+
+**Root Causes**:
+- Missing `<Version>` / `<PackageVersion>` in `.csproj`
+- Invalid `version` field in `package.json` or `version.json`
+- Non-semantic version strings (for example `1.0` or `v1`)
+
+**Solutions**:
+
+```xml
+<!-- Preferred in .csproj -->
+<PropertyGroup>
+  <Version>1.2.3</Version>
+</PropertyGroup>
+```
+
+```json
+{
+  "version": "1.2.3"
+}
+```
+
+**Recovery**:
+- Download `component-version-report` artifact.
+- Correct invalid manifests and push a follow-up commit.
+
+---
 
 ### Issue: Workflow Timeout
 

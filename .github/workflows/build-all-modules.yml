@@ -8,231 +8,262 @@ on:
       - 'feature/**'
     paths-ignore:
       - 'docs/**'
-      - '**.md'
+      - '**/*.md'
   pull_request:
     branches:
       - main
       - develop
     paths-ignore:
       - 'docs/**'
-      - '**.md'
+      - '**/*.md'
   workflow_dispatch:
     inputs:
       clean_build:
-        description: 'Clean build (no cache)'
+        description: 'Skip dependency caches'
         required: false
         default: 'false'
+      include_node_targets:
+        description: 'Include optional Node.js module builds'
+        required: false
+        default: 'true'
 
 permissions:
   contents: read
   checks: write
   pull-requests: write
 
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
 jobs:
-  setup:
-    name: Setup Build Matrix
+  discover-targets:
+    name: Discover Build Targets
     runs-on: ubuntu-latest
     outputs:
-      modules: ${{ steps.setup.outputs.modules }}
-      node-version: ${{ steps.setup.outputs.node-version }}
-      has-modules: ${{ steps.setup.outputs.has-modules }}
+      dotnet_targets: ${{ steps.discover.outputs.dotnet_targets }}
+      has_dotnet_targets: ${{ steps.discover.outputs.has_dotnet_targets }}
+      node_targets: ${{ steps.discover.outputs.node_targets }}
+      has_node_targets: ${{ steps.discover.outputs.has_node_targets }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
 
-      - name: Setup Build Configuration
-        id: setup
+      - name: Discover .NET and Node targets
+        id: discover
+        env:
+          INCLUDE_NODE_TARGETS: ${{ github.event.inputs.include_node_targets || 'true' }}
         run: |
-          # Discover buildable Node.js modules instead of assuming fixed top-level directories.
-          mapfile -t MODULE_DIRS < <(find . -maxdepth 3 -name package.json -not -path './node_modules/*' -printf '%h\n' | sed 's#^./##' | sort)
+          set -euo pipefail
 
-          if [ ${#MODULE_DIRS[@]} -eq 0 ]; then
-            MODULES='["__no_node_modules__"]'
-            HAS_MODULES=false
-            echo "No Node.js modules with package.json were found; build matrix will be skipped."
+          DOTNET_TARGETS=$(find . -maxdepth 4 \( -name "*.sln" -o -name "*.slnx" \) \
+            -not -path "./.git/*" \
+            -not -path "./modules/*" \
+            -not -path "./submodules/*" \
+            | sed 's#^./##' | sort -u | jq -R 'select(length > 0)' | jq -cs .)
+          DOTNET_COUNT=$(jq 'length' <<< "$DOTNET_TARGETS")
+          if [ "$DOTNET_COUNT" -gt 0 ]; then
+            HAS_DOTNET_TARGETS=true
           else
-            MODULES=$(printf '%s\n' "${MODULE_DIRS[@]}" | jq -R . | jq -cs .)
-            HAS_MODULES=true
-            echo "Discovered Node.js modules: $MODULES"
+            HAS_DOTNET_TARGETS=false
           fi
 
-          echo "modules=$MODULES" >> $GITHUB_OUTPUT
-          echo "node-version=18" >> $GITHUB_OUTPUT
-          echo "has-modules=$HAS_MODULES" >> $GITHUB_OUTPUT
-          echo "Build matrix configured"
+          NODE_TARGETS='[]'
+          if [ "$INCLUDE_NODE_TARGETS" = "true" ] && [ -f "plugins/openai/helios-mcp/package.json" ]; then
+            NODE_TARGETS='["plugins/openai/helios-mcp"]'
+          fi
+          NODE_COUNT=$(jq 'length' <<< "$NODE_TARGETS")
+          if [ "$NODE_COUNT" -gt 0 ]; then
+            HAS_NODE_TARGETS=true
+          else
+            HAS_NODE_TARGETS=false
+          fi
 
-  build:
-    name: Build ${{ matrix.module }}
+          echo "dotnet_targets=$DOTNET_TARGETS" >> "$GITHUB_OUTPUT"
+          echo "has_dotnet_targets=$HAS_DOTNET_TARGETS" >> "$GITHUB_OUTPUT"
+          echo "node_targets=$NODE_TARGETS" >> "$GITHUB_OUTPUT"
+          echo "has_node_targets=$HAS_NODE_TARGETS" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Build Target Discovery"
+            echo ""
+            echo "- .NET targets: $DOTNET_COUNT"
+            echo "- Node targets: $NODE_COUNT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build-dotnet-targets:
+    name: Build .NET - ${{ matrix.target }}
     runs-on: ubuntu-latest
-    needs: setup
-    if: needs.setup.outputs.has-modules == 'true'
+    needs: discover-targets
+    if: needs.discover-targets.outputs.has_dotnet_targets == 'true'
     strategy:
-      matrix:
-        module: ${{ fromJson(needs.setup.outputs.modules) }}
       fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.discover-targets.outputs.dotnet_targets) }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Prepare artifact metadata
+        id: metadata
+        run: |
+          SAFE_NAME=$(echo "${{ matrix.target }}" | tr '/.' '-_')
+          echo "artifact_name=$SAFE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Restore NuGet cache
+        if: github.event.inputs.clean_build != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', 'global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore target dependencies
+        run: dotnet restore "${{ matrix.target }}"
+
+      - name: Build target
+        run: dotnet build "${{ matrix.target }}" --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+
+      - name: Test target
+        run: |
+          TARGET_NAME=$(echo "${{ matrix.target }}" | tr '/.' '__')
+          mkdir -p artifacts/test-results
+          dotnet test "${{ matrix.target }}" \
+            --configuration Release \
+            --no-build \
+            --results-directory artifacts/test-results \
+            --logger "trx;LogFileName=${TARGET_NAME}.trx"
+
+      - name: Upload .NET target artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-results-${{ steps.metadata.outputs.artifact_name }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+  build-node-targets:
+    name: Build Node - ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    needs: discover-targets
+    if: needs.discover-targets.outputs.has_node_targets == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(needs.discover-targets.outputs.node_targets) }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ needs.setup.outputs.node-version }}
+          node-version: '22'
 
-      - name: Setup NPM Build Cache
-        if: github.event.inputs.clean_build != 'true' && hashFiles(format('{0}/package-lock.json', matrix.module)) != ''
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ matrix.module }}/node_modules
-            ${{ matrix.module }}/dist
-            ${{ matrix.module }}/build
-            ~/.npm
-          key: ${{ runner.os }}-npm-${{ matrix.module }}-${{ hashFiles(format('{0}/package-lock.json', matrix.module)) }}
-          restore-keys: |
-            ${{ runner.os }}-npm-${{ matrix.module }}-
-            ${{ runner.os }}-npm-
-
-      - name: Display Environment
+      - name: Prepare artifact metadata
+        id: metadata
         run: |
-          echo "Node version: $(node --version)"
-          echo "NPM version: $(npm --version)"
-          echo "Module: ${{ matrix.module }}"
-          echo "Clean build: ${{ github.event.inputs.clean_build }}"
+          SAFE_NAME=$(echo "${{ matrix.target }}" | tr '/.' '-_')
+          echo "artifact_name=$SAFE_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          cd ${{ matrix.module }}
+          cd "${{ matrix.target }}"
           if [ -f package-lock.json ]; then
-            npm ci --prefer-offline --no-audit
+            npm ci --no-audit
           else
-            npm install --prefer-offline --no-audit
+            npm install --no-audit
           fi
 
-      - name: Lint Code
-        continue-on-error: true
+      - name: Lint, build, and test
         run: |
-          cd ${{ matrix.module }}
-          if [ -f "package.json" ] && grep -q '"lint"' package.json; then
-            npm run lint
-          else
-            echo "No lint script found"
-          fi
+          cd "${{ matrix.target }}"
+          npm run lint --if-present
+          npm run build --if-present
+          npm test --if-present
 
-      - name: Build Module
-        run: |
-          cd ${{ matrix.module }}
-          if [ -f "package.json" ] && grep -q '"build"' package.json; then
-            npm run build
-          else
-            echo "No build script found"
-          fi
-
-      - name: Run Tests
-        run: |
-          cd ${{ matrix.module }}
-          if [ -f "package.json" ] && grep -q '"test"' package.json; then
-            npm test -- --coverage --passWithNoTests
-          else
-            echo "No test script found"
-          fi
-
-      - name: Generate Coverage Report
-        if: always()
-        run: |
-          cd ${{ matrix.module }}
-          if [ -d "coverage" ]; then
-            echo "Coverage report generated"
-            find coverage -name "*.json" -o -name "*.html" | head -10
-          fi
-
-      - name: Upload Build Artifacts
+      - name: Upload Node target artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-${{ matrix.module }}
+          name: node-results-${{ steps.metadata.outputs.artifact_name }}
           path: |
-            ${{ matrix.module }}/dist/
-            ${{ matrix.module }}/build/
+            ${{ matrix.target }}/dist/
+            ${{ matrix.target }}/build/
+            ${{ matrix.target }}/coverage/
           if-no-files-found: warn
-          retention-days: 7
-
-      - name: Upload Coverage Reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.module }}
-          path: ${{ matrix.module }}/coverage/
-          if-no-files-found: warn
-          retention-days: 7
+          retention-days: 14
 
   verify-builds:
-    name: Verify Build Integrity
+    name: Verify Build Results
     runs-on: ubuntu-latest
-    needs: [setup, build]
     if: always()
+    needs:
+      - discover-targets
+      - build-dotnet-targets
+      - build-node-targets
     steps:
-      - name: Download All Artifacts
-        if: needs.setup.outputs.has-modules == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          path: build-results
-
-      - name: Verify Artifacts
+      - name: Generate build summary
         run: |
-          if [ "${{ needs.setup.outputs.has-modules }}" != "true" ]; then
-            echo "No Node.js module artifacts to verify."
-            exit 0
-          fi
-          echo "Verifying build artifacts..."
-          find build-results -type f \( -name "*.json" -o -name "*.js" \) | wc -l
-          echo "✓ Build verification complete"
+          DOTNET_RESULT="${{ needs.build-dotnet-targets.result }}"
+          NODE_RESULT="${{ needs.build-node-targets.result }}"
+          HAS_DOTNET="${{ needs.discover-targets.outputs.has_dotnet_targets }}"
+          HAS_NODE="${{ needs.discover-targets.outputs.has_node_targets }}"
 
-      - name: Generate Build Report
-        run: |
-          echo "## Build All Modules Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
-          echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Modules Built" >> $GITHUB_STEP_SUMMARY
-          echo '${{ needs.setup.outputs.modules }}' | jq -r '.[] | select(. != "__no_node_modules__") | "- " + .' >> $GITHUB_STEP_SUMMARY
+          echo "## Build All Modules Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- .NET targets detected: $HAS_DOTNET" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Node targets detected: $HAS_NODE" >> "$GITHUB_STEP_SUMMARY"
+          echo "- .NET build result: $DOTNET_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Node build result: $NODE_RESULT" >> "$GITHUB_STEP_SUMMARY"
 
-  report-status:
-    name: Report Build Status
-    runs-on: ubuntu-latest
-    needs: [setup, build, verify-builds]
-    if: always()
-    steps:
-      - name: Check Build Status
-        run: |
-          if [ "${{ needs.setup.outputs.has-modules }}" != "true" ]; then
-            echo "✓ No Node.js modules were found, so the module build matrix was skipped"
-            exit 0
-          elif [ "${{ needs.build.result }}" == "success" ]; then
-            echo "✓ All modules built successfully"
-            exit 0
-          else
-            echo "✗ Build failed for one or more modules"
+          if [ "$HAS_DOTNET" = "true" ] && [ "$DOTNET_RESULT" != "success" ]; then
+            echo "One or more .NET targets failed."
             exit 1
           fi
 
+          if [ "$HAS_NODE" = "true" ] && [ "$NODE_RESULT" != "success" ]; then
+            echo "One or more Node targets failed."
+            exit 1
+          fi
+
+          if [ "$HAS_DOTNET" != "true" ] && [ "$HAS_NODE" != "true" ]; then
+            echo "No build targets discovered."
+          fi
+
+  report-pr-status:
+    name: Report PR Build Status
+    if: github.event_name == 'pull_request' && always()
+    runs-on: ubuntu-latest
+    needs: verify-builds
+    steps:
       - name: Comment on PR
-        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
-            const hasModules = '${{ needs.setup.outputs.has-modules }}' === 'true';
-            const status = !hasModules || '${{ needs.build.result }}' === 'success' ? '✓' : '✗';
-            github.rest.issues.createComment({
+            const status = '${{ needs.verify-builds.result }}' === 'success' ? '✅' : '❌';
+            const body = [
+              `## ${status} Build All Modules`,
+              '',
+              `- Workflow result: **${{ needs.verify-builds.result }}**`,
+              `[View run details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            ].join('\n');
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ${status} Build All Modules\n\n**Status**: ${{ needs.setup.outputs.has-modules != 'true' && 'skipped - no Node.js modules found' || needs.build.result }}\n\n[View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
-            })
+              body
+            });

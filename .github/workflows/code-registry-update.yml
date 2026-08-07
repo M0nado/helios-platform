@@ -6,267 +6,217 @@ on:
       - main
     paths:
       - 'src/**'
-      - 'lib/**'
-      - 'modules/**'
+      - 'scripts/**'
+      - 'monado/**'
+      - 'plugins/**'
+      - '.github/workflows/code-registry-update.yml'
   workflow_dispatch:
     inputs:
-      force_update:
-        description: 'Force registry update'
+      apply_changes:
+        description: 'Commit and push updated .registry artifacts'
         required: false
         default: 'false'
       compression_level:
-        description: 'Compression level (1-9)'
+        description: 'Gzip compression level (1-9)'
         required: false
         default: '6'
 
 permissions:
   contents: write
-  pull-requests: write
-  packages: write
 
 jobs:
-  scan-code:
-    name: Scan Code Snippets
+  build-registry:
+    name: Build Registry Artifacts
     runs-on: ubuntu-latest
     outputs:
-      snippets_count: ${{ steps.scan.outputs.count }}
-      registry_hash: ${{ steps.scan.outputs.hash }}
+      snippets_count: ${{ steps.extract.outputs.snippets_count }}
+      registry_hash: ${{ steps.extract.outputs.registry_hash }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Scan Code Snippets
-        id: scan
-        run: |
-          echo "Scanning for code snippets..."
-          
-          # Find all source files
-          FILES=$(find src lib modules -type f \( -name "*.js" -o -name "*.ts" -o -name "*.jsx" -o -name "*.tsx" \) 2>/dev/null | wc -l)
-          echo "count=$FILES" >> $GITHUB_OUTPUT
-          
-          # Calculate registry hash
-          HASH=$(find src lib modules -type f \( -name "*.js" -o -name "*.ts" \) 2>/dev/null | xargs cat | md5sum | awk '{print $1}')
-          echo "hash=$HASH" >> $GITHUB_OUTPUT
-          
-          echo "Found $FILES source files"
-          echo "Registry hash: $HASH"
-
-      - name: Create Snippet Index
-        run: |
-          mkdir -p .registry
-          cat > .registry/index.json << 'EOF'
-          {
-            "version": "1.0",
-            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
-            "snippets": [],
-            "metadata": {
-              "total_count": 0,
-              "compressed_size": 0,
-              "compression_ratio": 0
-            }
-          }
-          EOF
-
-  extract-snippets:
-    name: Extract Code Snippets
-    runs-on: ubuntu-latest
-    needs: scan-code
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: true
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Install Extraction Tools
+      - name: Extract snippets from repository sources
+        id: extract
         run: |
-          pip install --upgrade pip
-          pip install pyyaml jsonschema
-
-      - name: Extract Snippets
-        run: |
-          mkdir -p .registry/snippets
           python << 'PYTHON_EOF'
-          import os
-          import json
           import hashlib
+          import json
+          import os
+          from datetime import datetime, timezone
           from pathlib import Path
-          
+
+          ROOT = Path(".")
+          SOURCE_ROOTS = [Path("src"), Path("scripts"), Path("monado"), Path("plugins")]
+          EXTENSIONS = {".cs", ".fs", ".fsx", ".csproj", ".js", ".jsx", ".ts", ".tsx", ".ps1", ".py", ".json", ".yml", ".yaml"}
+          EXCLUDED_SEGMENTS = {".git", "node_modules", "bin", "obj", ".registry", "artifacts"}
+
+          def should_skip(path: Path) -> bool:
+              return any(segment in EXCLUDED_SEGMENTS for segment in path.parts)
+
           snippets = []
-          
-          for root, dirs, files in os.walk('src'):
-              for file in files:
-                  if file.endswith(('.js', '.ts', '.jsx', '.tsx')):
-                      filepath = os.path.join(root, file)
-                      try:
-                          with open(filepath, 'r', encoding='utf-8') as f:
-                              content = f.read()
-                              snippet = {
-                                  'id': hashlib.md5(filepath.encode()).hexdigest()[:12],
-                                  'path': filepath,
-                                  'language': filepath.split('.')[-1],
-                                  'size': len(content),
-                                  'hash': hashlib.md5(content.encode()).hexdigest()
-                              }
-                              snippets.append(snippet)
-                      except Exception as e:
-                          print(f"Error processing {filepath}: {e}")
-          
-          with open('.registry/snippets.json', 'w') as f:
-              json.dump(snippets, f, indent=2)
-          
-          print(f"Extracted {len(snippets)} snippets")
+          for source_root in SOURCE_ROOTS:
+              if not source_root.exists():
+                  continue
+              for candidate in source_root.rglob("*"):
+                  if not candidate.is_file() or candidate.suffix.lower() not in EXTENSIONS:
+                      continue
+                  if should_skip(candidate):
+                      continue
+
+                  relative_path = candidate.relative_to(ROOT).as_posix()
+                  content = candidate.read_bytes()
+                  content_hash = hashlib.sha256(content).hexdigest()
+                  snippets.append(
+                      {
+                          "id": hashlib.sha256(relative_path.encode("utf-8")).hexdigest()[:16],
+                          "path": relative_path,
+                          "language": candidate.suffix.lower().lstrip("."),
+                          "size": len(content),
+                          "hash": content_hash,
+                      }
+                  )
+
+          snippets.sort(key=lambda item: item["path"])
+          registry_hash_source = "".join(item["hash"] for item in snippets).encode("utf-8")
+          registry_hash = hashlib.sha256(registry_hash_source).hexdigest()
+
+          Path(".registry").mkdir(parents=True, exist_ok=True)
+          Path(".registry/snippets.json").write_text(json.dumps(snippets, indent=2) + "\n", encoding="utf-8")
+          Path(".registry/index.json").write_text(
+              json.dumps(
+                  {
+                      "schemaVersion": "1.0",
+                      "generatedAtUtc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                      "snippetsCount": len(snippets),
+                      "registryHash": registry_hash,
+                  },
+                  indent=2,
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"snippets_count={len(snippets)}\n")
+              output.write(f"registry_hash={registry_hash}\n")
           PYTHON_EOF
 
-      - name: Upload Snippet Registry
-        uses: actions/upload-artifact@v4
-        with:
-          name: snippet-registry
-          path: .registry/
-          retention-days: 30
-
-  compress-registry:
-    name: Compress Registry
-    runs-on: ubuntu-latest
-    needs: extract-snippets
-    steps:
-      - name: Download Registry
-        uses: actions/download-artifact@v4
-        with:
-          name: snippet-registry
-          path: registry-work
-
-      - name: Compress Registry
+      - name: Compress registry payload
+        env:
+          COMPRESSION_LEVEL: ${{ github.event.inputs.compression_level || '6' }}
         run: |
           mkdir -p .registry-compressed
-          COMPRESSION_LEVEL="${{ github.event.inputs.compression_level || '6' }}"
-          
-          # Create compressed archive
-          tar -czf .registry-compressed/registry-$(date +%Y%m%d_%H%M%S).tar.gz registry-work/
-          
-          # Generate compressed index
-          gzip -c registry-work/snippets.json > .registry-compressed/snippets.json.gz
-          
-          echo "Compression level: $COMPRESSION_LEVEL"
-          echo "Original size: $(du -sh registry-work/ | cut -f1)"
-          echo "Compressed size: $(du -sh .registry-compressed/ | cut -f1)"
-
-      - name: Generate Compression Report
-        run: |
-          ORIGINAL=$(du -sb registry-work/ | cut -f1)
-          COMPRESSED=$(du -sb .registry-compressed/ | cut -f1)
-          RATIO=$(echo "scale=2; $ORIGINAL / $COMPRESSED" | bc)
-          
-          echo "## Registry Compression Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Original Size**: $(numfmt --to=iec-i --suffix=B $ORIGINAL)" >> $GITHUB_STEP_SUMMARY
-          echo "**Compressed Size**: $(numfmt --to=iec-i --suffix=B $COMPRESSED)" >> $GITHUB_STEP_SUMMARY
-          echo "**Compression Ratio**: ${RATIO}x" >> $GITHUB_STEP_SUMMARY
-
-      - name: Upload Compressed Registry
-        uses: actions/upload-artifact@v4
-        with:
-          name: registry-compressed
-          path: .registry-compressed/
-          retention-days: 30
-
-  publish-registry:
-    name: Publish Registry
-    runs-on: ubuntu-latest
-    needs: [scan-code, compress-registry]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Download Compressed Registry
-        uses: actions/download-artifact@v4
-        with:
-          name: registry-compressed
-          path: registry-dist
-
-      - name: Create Registry Release
-        run: |
-          mkdir -p .registry
-          cp -r registry-dist/* .registry/
-          
-          # Create registry metadata
-          cat > .registry/registry-metadata.json << EOF
-          {
-            "version": "1.0",
-            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
-            "snippets_count": ${{ needs.scan-code.outputs.snippets_count }},
-            "registry_hash": "${{ needs.scan-code.outputs.registry_hash }}",
-            "build_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          }
-          EOF
-
-      - name: Update Registry Index
-        run: |
-          git config --global user.email "helios-registry@platform.local"
-          git config --global user.name "HELIOS Registry Bot"
-          git add .registry/
-          git commit -m "chore: update code registry [skip ci]" || true
-          git push origin HEAD:${{ github.ref }} || true
-
-      - name: Generate Publish Report
-        run: |
-          echo "## Code Registry Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Snippets**: ${{ needs.scan-code.outputs.snippets_count }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Registry Hash**: ${{ needs.scan-code.outputs.registry_hash }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
-
-  validate-registry:
-    name: Validate Registry Integrity
-    runs-on: ubuntu-latest
-    needs: publish-registry
-    if: always()
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Verify Registry Files
-        run: |
-          echo "Verifying registry integrity..."
-          
-          if [ -d ".registry" ]; then
-            echo "✓ Registry directory exists"
-            find .registry -type f | while read file; do
-              echo "  - $file"
-            done
-          else
-            echo "✗ Registry directory not found"
+          if ! [[ "$COMPRESSION_LEVEL" =~ ^[1-9]$ ]]; then
+            echo "Invalid compression level '$COMPRESSION_LEVEL'. Use 1-9."
             exit 1
           fi
 
-      - name: Validate Registry Metadata
+          tar -czf .registry-compressed/registry.tar.gz .registry
+          gzip -"$COMPRESSION_LEVEL" -c .registry/snippets.json > .registry-compressed/snippets.json.gz
+
+          python << 'PYTHON_EOF'
+          import json
+          from pathlib import Path
+
+          original_size = sum(path.stat().st_size for path in Path(".registry").rglob("*") if path.is_file())
+          compressed_size = sum(path.stat().st_size for path in Path(".registry-compressed").rglob("*") if path.is_file())
+          compression_ratio = round((original_size / compressed_size), 3) if compressed_size else 0
+
+          Path(".registry-compressed/compression-report.json").write_text(
+              json.dumps(
+                  {
+                      "originalSizeBytes": original_size,
+                      "compressedSizeBytes": compressed_size,
+                      "compressionRatio": compression_ratio,
+                  },
+                  indent=2,
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          PYTHON_EOF
+
+      - name: Upload registry artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-registry
+          path: |
+            .registry/
+            .registry-compressed/
+          retention-days: 30
+
+      - name: Publish registry summary
         run: |
-          if [ -f ".registry/registry-metadata.json" ]; then
-            jq . .registry/registry-metadata.json > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-              echo "✓ Registry metadata is valid JSON"
-            else
-              echo "✗ Registry metadata is invalid"
-              exit 1
-            fi
+          echo "## Code Registry Build" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Snippets indexed: ${{ steps.extract.outputs.snippets_count }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Registry hash: \`${{ steps.extract.outputs.registry_hash }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Apply mode: ${{ github.event.inputs.apply_changes || 'false' }}" >> "$GITHUB_STEP_SUMMARY"
+
+  publish-registry:
+    name: Publish Registry Snapshot
+    runs-on: ubuntu-latest
+    needs: build-registry
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.apply_changes == 'true' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download registry artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: code-registry
+          path: registry-artifacts
+
+      - name: Stage registry outputs
+        run: |
+          rm -rf .registry .registry-compressed
+          cp -R registry-artifacts/.registry .registry
+          cp -R registry-artifacts/.registry-compressed .registry-compressed
+
+          cat > .registry/registry-metadata.json << EOF
+          {
+            "version": "1.0",
+            "generatedAtUtc": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "snippetsCount": ${{ needs.build-registry.outputs.snippets_count }},
+            "registryHash": "${{ needs.build-registry.outputs.registry_hash }}",
+            "buildUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
+
+      - name: Detect staged changes
+        id: detect
+        run: |
+          git add .registry .registry-compressed
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Report Registry Status
+      - name: Commit registry update
+        if: steps.detect.outputs.has_changes == 'true'
         run: |
-          echo "Registry validation complete"
-          echo "Status: Success"
+          git config user.email "helios-registry@platform.local"
+          git config user.name "HELIOS Registry Bot"
+          git commit -m "chore: update code registry [skip ci]"
+
+      - name: Push registry update
+        if: steps.detect.outputs.has_changes == 'true'
+        run: git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Publish update summary
+        run: |
+          echo "## Code Registry Publish" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Changes committed: ${{ steps.detect.outputs.has_changes }}" >> "$GITHUB_STEP_SUMMARY"

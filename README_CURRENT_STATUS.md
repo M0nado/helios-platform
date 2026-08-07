@@ -102,14 +102,13 @@ helios-platform/
 ### Build the Project
 
 ```powershell
-cd src
-dotnet build HELIOS.Platform.sln -c Release
+dotnet build HELIOS.Platform.slnx -c Release
 ```
 
 ### Run Tests
 
 ```powershell
-dotnet test HELIOS.Platform.sln --verbosity normal
+dotnet test HELIOS.Platform.slnx --verbosity normal
 ```
 
 ### Run CLI
