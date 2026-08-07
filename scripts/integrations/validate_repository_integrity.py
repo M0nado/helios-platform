@@ -113,6 +113,11 @@ def validate(root: Path = ROOT) -> list[str]:
     except (OSError, configparser.Error) as exc:
         return [*errors, f"{gitmodules}: cannot read valid Git configuration: {exc}"]
 
+    if parser.defaults():
+        errors.append(".gitmodules DEFAULT section is not allowed")
+    if not parser.sections():
+        errors.append(".gitmodules must declare at least one submodule section")
+
     declared: dict[str, str] = {}
     for section in parser.sections():
         if not section.startswith('submodule "') or not section.endswith('"'):

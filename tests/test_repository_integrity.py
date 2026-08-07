@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest import mock
+import unittest.mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,7 +64,7 @@ class RepositoryIntegrityTests(unittest.TestCase):
         self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
         if links is None:
             links = {"modules/module": "a" * 40}
-        with mock.patch.object(validator, "gitlinks", return_value=links):
+        with unittest.mock.patch.object(validator, "gitlinks", return_value=links):
             return validator.validate(self.root)
 
     def test_accepts_consistent_repository_metadata(self):
@@ -103,6 +103,19 @@ class RepositoryIntegrityTests(unittest.TestCase):
         )
 
         self.assertTrue(any("unapproved .gitmodules repository" in error for error in self.validate()))
+
+    def test_rejects_default_section_in_gitmodules(self):
+        self.gitmodules.write_text(
+            '[DEFAULT]\n'
+            "\tpath = modules/default\n"
+            "\turl = https://github.com/Example/default.git\n"
+            '[submodule "modules/module"]\n'
+            "\tpath = modules/module\n"
+            "\turl = https://github.com/Example/module.git\n",
+            encoding="utf-8",
+        )
+
+        self.assertTrue(any("DEFAULT section" in error for error in self.validate()))
 
     def test_rejects_declared_submodule_without_gitlink(self):
         self.assertTrue(

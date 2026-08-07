@@ -8,6 +8,7 @@ on:
       - develop
     paths:
       - '.gitmodules'
+      - 'modules/**'
       - 'config/integrations/repositories.json'
       - 'scripts/integrations/validate_repository_integrity.py'
       - 'tests/test_repository_integrity.py'
@@ -15,6 +16,7 @@ on:
   pull_request:
     paths:
       - '.gitmodules'
+      - 'modules/**'
       - 'config/integrations/repositories.json'
       - 'scripts/integrations/validate_repository_integrity.py'
       - 'tests/test_repository_integrity.py'
