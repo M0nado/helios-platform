@@ -8,6 +8,18 @@ ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "eng/test/test-ownership.json"
 LAYERS = {"portable", "windows", "privileged", "integration", "performance", "end-to-end"}
 
+def canonical_tests(items):
+    normalized = []
+    for item in items:
+        normalized.append(
+            {
+                "path": item.get("path", ""),
+                "project": item.get("project", ""),
+                "layer": item.get("layer", ""),
+            }
+        )
+    return sorted(normalized, key=lambda item: (item["path"], item["project"], item["layer"]))
+
 def sources():
     roots = [ROOT / "tests", ROOT / "src/tests", ROOT / "monado/helios-control/tests"]
     found = {p.relative_to(ROOT).as_posix() for root in roots for ext in ("*.cs", "*.fs") for p in root.rglob(ext)}
@@ -20,6 +32,7 @@ def owner(path):
     if path.startswith("src/core/HELIOS.Platform/Phase10/Users/Tests/"): return "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj"
     if path.startswith("src/tests/"): return "src/tests/HELIOS.Platform.Tests.csproj"
     if path.startswith("tests/analytics/"): return "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
+    if path.startswith("tests/contracts/"): return "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj"
     if path == "tests/SecurityValidationTests.cs": return "tests/SecurityValidationTests.csproj"
     if path.startswith("tests/HELIOS.Platform.Tests/Phase10/Quarantine/"): return "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj"
     return "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj"
@@ -29,12 +42,16 @@ def layer(path):
     if "performance" in p or "scalingtest" in p: return "performance"
     if "endtoend" in p or "/system/" in p or "e2etest" in p: return "end-to-end"
     if "integration" in p or p.startswith("monado/helios-control/tests/"): return "integration"
+    if p.startswith("tests/contracts/"): return "portable"
     if any(x in p for x in ("security", "vault", "driver", "quarantine", "malware", "/users/tests/", "deploymenttests")): return "privileged"
     if p.endswith(".fs") or p.startswith("tests/analytics/"): return "portable"
     return "windows"
 
 def generated():
-    return {"schemaVersion": 1, "tests": [{"path": p, "project": owner(p), "layer": layer(p)} for p in sources()]}
+    return {
+        "schemaVersion": 1,
+        "tests": canonical_tests([{"path": p, "project": owner(p), "layer": layer(p)} for p in sources()]),
+    }
 
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument("--write", action="store_true"); args=ap.parse_args()
@@ -43,11 +60,25 @@ def main():
         MANIFEST.write_text(json.dumps(expected, indent=2) + "\n")
         print(f"wrote {len(expected['tests'])} test ownership records")
         return
-    actual=json.loads(MANIFEST.read_text())
+    actual_raw=json.loads(MANIFEST.read_text())
+    actual={"schemaVersion": actual_raw.get("schemaVersion"), "tests": canonical_tests(actual_raw.get("tests", []))}
     errors=[]
     paths=[x.get("path") for x in actual.get("tests", [])]
     if len(paths) != len(set(paths)): errors.append("a test file is mapped more than once")
-    if actual != expected: errors.append("manifest is stale; run: python3 eng/test/validate_test_ownership.py --write")
+    if actual != expected:
+        errors.append("manifest is stale; run: python3 eng/test/validate_test_ownership.py --write")
+        expected_map = {x["path"]: (x["project"], x["layer"]) for x in expected["tests"]}
+        actual_map = {x["path"]: (x["project"], x["layer"]) for x in actual["tests"]}
+        missing = sorted(expected_map.keys() - actual_map.keys())
+        extra = sorted(actual_map.keys() - expected_map.keys())
+        if missing:
+            errors.append(f"missing entries ({len(missing)}): {', '.join(missing[:10])}")
+        if extra:
+            errors.append(f"unexpected entries ({len(extra)}): {', '.join(extra[:10])}")
+        reassigned = [path for path in sorted(expected_map.keys() & actual_map.keys()) if expected_map[path] != actual_map[path]]
+        if reassigned:
+            details = [f"{path} -> expected {expected_map[path][0]} [{expected_map[path][1]}], found {actual_map[path][0]} [{actual_map[path][1]}]" for path in reassigned[:10]]
+            errors.extend(details)
     for item in actual.get("tests", []):
         if item.get("layer") not in LAYERS: errors.append(f"invalid layer: {item}")
         if not (ROOT/item.get("project", "")).is_file(): errors.append(f"missing project: {item}")
