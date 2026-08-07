@@ -15,6 +15,10 @@
     "dedicatedTargets"
   ],
   "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
     "schemaVersion": {
       "const": "3.0.0"
     },
