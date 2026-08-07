@@ -10,4 +10,14 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <ProjectReference Include="../Helios.Connect.Contracts/Helios.Connect.Contracts.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\config\agent-core-policy.json">
+      <Link>config\agent-core-policy.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\config\agent-core-policy.schema.json">
+      <Link>config\agent-core-policy.schema.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
