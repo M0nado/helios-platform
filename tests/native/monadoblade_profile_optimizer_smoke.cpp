@@ -45,13 +45,17 @@ int main() {
   }
 
   constexpr auto features = extract_read_only_features(stable);
-  static_assert(features.values.size() == 10);
+  static_assert(features.values.size() == 11);
   if (require(features.values[0] > 0.0 && features.values[0] <= 1.0,
               "cpu feature must be normalized")) {
     return 1;
   }
   if (require(std::abs(features.values[9] - 1.0) < 1e-9,
               "zero x-runs should map to max audio confidence")) {
+    return 1;
+  }
+  if (require(features.values[10] > 0.0 && features.values[10] <= 1.0,
+              "frame-time feature must be normalized")) {
     return 1;
   }
 

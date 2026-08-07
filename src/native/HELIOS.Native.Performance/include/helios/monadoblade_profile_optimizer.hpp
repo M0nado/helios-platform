@@ -40,7 +40,7 @@ struct OptimizationResult {
 };
 
 struct ReadOnlyFeatureSnapshot {
-  std::array<double, 10> values{};
+  std::array<double, 11> values{};
 };
 
 [[nodiscard]] constexpr double clamp01(const double value) noexcept {
@@ -136,6 +136,7 @@ struct ReadOnlyFeatureSnapshot {
           normalized_percent(signals.vmMemoryPressure),
           inverse_normalized(250.0, signals.modelLatencyMs),
           inverse_normalized(10.0, signals.audioXruns),
+          inverse_normalized(33.4, signals.frameTimeMs),
       },
   };
 }

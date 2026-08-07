@@ -74,5 +74,25 @@
         "reference": { "type": ["string", "null"] }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "actionType": {
+            "enum": ["privileged-proposal", "deployment-proposal", "rollback-proposal"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "approval": {
+            "properties": {
+              "required": { "const": true }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

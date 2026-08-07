@@ -38,6 +38,30 @@ EXPECTED_PROFILES = {
 }
 
 XML_NS = {"m": "https://helios-platform.dev/schemas/monado-profile-v2"}
+EXPECTED_CONTRACT_KEYS = {
+    "storage",
+    "profileCatalog",
+    "profileExperience",
+    "chromaWyvern",
+    "alvisBudget",
+    "repositoryOwnership",
+    "synchronization",
+    "openAiProposalSchema",
+    "profileXmlSchema",
+}
+EXPECTED_AZURE_DEVOPS_MODE = "read-only-mirror-until-separate-approved-identity"
+EXPECTED_ENVELOPE_FIELDS = {
+    "eventId",
+    "source",
+    "eventType",
+    "repository",
+    "correlationId",
+    "environment",
+    "occurredAt",
+    "dataClassification",
+    "links",
+    "payload",
+}
 
 
 def _load_json(path: Path) -> dict:
@@ -51,6 +75,13 @@ def _load_json(path: Path) -> dict:
 def _require(condition: bool, message: str, errors: list[str]) -> None:
     if not condition:
         errors.append(message)
+
+
+def _resolve_contract_path(base: Path, relative_path: str) -> Path:
+    normalized = Path(relative_path.replace("\\", "/"))
+    if normalized.parts[:3] == ("config", "monadoblade", "experience-fabric"):
+        return base / Path(*normalized.parts[3:])
+    return base / normalized
 
 
 def validate_contracts(base: Path = BASE) -> list[str]:
@@ -69,11 +100,45 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require(isinstance(execution, Mapping), "root execution must be an object", errors)
     _require(execution.get("destructiveApplyDefault") is False, "destructive apply must be disabled by default", errors)
     _require(execution.get("runtimeSideEffectsAllowed") is False, "runtime side effects must be disabled", errors)
+    contracts = root.get("contracts", {})
+    _require(isinstance(contracts, Mapping), "root contracts must be an object", errors)
+    if isinstance(contracts, Mapping):
+        _require(EXPECTED_CONTRACT_KEYS.issubset(contracts.keys()), "root contracts mapping is incomplete", errors)
+        for key in EXPECTED_CONTRACT_KEYS:
+            path = contracts.get(key)
+            _require(isinstance(path, str) and path.strip() != "", f"root contracts.{key} must be a non-empty path", errors)
+            if isinstance(path, str) and path.strip() != "":
+                _require(_resolve_contract_path(base, path).is_file(), f"root contracts.{key} points to a missing file", errors)
 
     storage = _load_json(base / "storage.contract.v2.json")
     _require(storage.get("destructiveApplyDefault") is False, "storage destructiveApplyDefault must be false", errors)
     _require(storage.get("requireWhatIf") is True, "storage requireWhatIf must be true", errors)
     _require(storage.get("executionMode") == "proposal-only", "storage executionMode must be proposal-only", errors)
+    exact_size_lock = storage.get("exactSizeLock", {})
+    _require(isinstance(exact_size_lock, Mapping), "storage exactSizeLock must be an object", errors)
+    _require(
+        isinstance(exact_size_lock, Mapping) and exact_size_lock.get("status") == "unresolved",
+        "storage exactSizeLock.status must remain unresolved",
+        errors,
+    )
+    _require(
+        isinstance(exact_size_lock, Mapping) and exact_size_lock.get("allowMutationBeforeResolution") is False,
+        "storage exactSizeLock must deny mutation before resolution",
+        errors,
+    )
+    guardrails = storage.get("guardrails", {})
+    _require(isinstance(guardrails, Mapping), "storage guardrails must be an object", errors)
+    for key in (
+        "denyBlindDiskSelection",
+        "denyDirectDiskMutationFromRuntime",
+        "requireBackupEvidenceBeforeAnyApply",
+        "requireRollbackPlanBeforeAnyApply",
+    ):
+        _require(
+            isinstance(guardrails, Mapping) and guardrails.get(key) is True,
+            f"storage guardrail {key} must be true",
+            errors,
+        )
     topology = storage.get("topology", {})
     _require(isinstance(topology, Mapping), "storage topology must be an object", errors)
     disk0 = topology.get("disk0", {})
@@ -93,9 +158,23 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     profiles = catalog.get("profiles", [])
     ids = {entry.get("id") for entry in profiles if isinstance(entry, Mapping)}
     _require(ids == EXPECTED_PROFILES, f"profile set mismatch: {sorted(ids)}", errors)
+    administrators = [entry for entry in profiles if isinstance(entry, Mapping) and entry.get("administrator") is True]
+    _require(
+        len(administrators) == 1 and administrators[0].get("id") == "sysadmin",
+        "sysadmin must be the sole administrator profile",
+        errors,
+    )
     sysadmin = next((entry for entry in profiles if isinstance(entry, Mapping) and entry.get("id") == "sysadmin"), None)
     _require(sysadmin is not None and sysadmin.get("administrator") is True, "sysadmin must be administrator", errors)
     _require(sysadmin is not None and sysadmin.get("hidden") is True and sysadmin.get("enabledByDefault") is False, "sysadmin hidden/disabled boundary is required", errors)
+    activation = sysadmin.get("activation", {}) if isinstance(sysadmin, Mapping) else {}
+    _require(isinstance(activation, Mapping), "sysadmin activation must be an object", errors)
+    if isinstance(activation, Mapping):
+        _require(activation.get("physicalPresenceRequired") is True, "sysadmin activation requires physical presence", errors)
+        _require(activation.get("remoteActivationDenied") is True, "sysadmin activation must deny remote activation", errors)
+        _require(activation.get("cloudActivationDenied") is True, "sysadmin activation must deny cloud activation", errors)
+        _require(activation.get("aiActivationDenied") is True, "sysadmin activation must deny AI activation", errors)
+        _require(activation.get("minimumFactors", 0) >= 2, "sysadmin activation requires at least two local factors", errors)
     states = set(catalog.get("states", []))
     overlays = set(catalog.get("overlays", []))
     _require({"recovery", "quarantine"}.issubset(states), "recovery and quarantine must be states", errors)
@@ -110,6 +189,18 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require(common_core.get("profileLinksOnly") is True, "common core must use profile links only", errors)
 
     chroma = _load_json(base / "chroma-wyvern.contract.v2.json")
+    safe_default = chroma.get("safeDefault", {})
+    _require(isinstance(safe_default, Mapping), "chroma safeDefault must be an object", errors)
+    _require(
+        isinstance(safe_default, Mapping) and safe_default.get("deviceWritesDeniedWithoutApproval") is True,
+        "chroma safeDefault must deny device writes without approval",
+        errors,
+    )
+    _require(
+        isinstance(safe_default, Mapping) and safe_default.get("persistentKernelDriverInstallDeniedAtRuntime") is True,
+        "chroma safeDefault must deny runtime kernel driver installs",
+        errors,
+    )
     chroma_profiles = chroma.get("profiles", {})
     _require(isinstance(chroma_profiles, Mapping), "chroma profiles must be an object", errors)
     _require(set(chroma_profiles.keys()) == EXPECTED_PROFILES, "chroma contract must define every expected profile", errors)
@@ -120,16 +211,42 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     alvis_profiles = alvis.get("profiles", {})
     _require(isinstance(alvis_profiles, Mapping), "ALVIS profiles must be an object", errors)
     _require(set(alvis_profiles.keys()) == EXPECTED_PROFILES, "ALVIS profiles must match expected profile set", errors)
+    if isinstance(alvis_profiles, Mapping):
+        for profile_id in EXPECTED_PROFILES:
+            policy = alvis_profiles.get(profile_id)
+            _require(isinstance(policy, Mapping), f"ALVIS profile {profile_id} must define a policy object", errors)
+            if not isinstance(policy, Mapping):
+                continue
+            max_calls = policy.get("maxToolCallsPerPlan")
+            _require(
+                isinstance(max_calls, int) and max_calls > 0,
+                f"ALVIS profile {profile_id} maxToolCallsPerPlan must be a positive integer",
+                errors,
+            )
+            _require(
+                isinstance(policy.get("allowPrivilegedProposal"), bool),
+                f"ALVIS profile {profile_id} allowPrivilegedProposal must be boolean",
+                errors,
+            )
+            if profile_id == "sysadmin":
+                _require(
+                    policy.get("applyDeniedWithoutExplicitApproval") is True,
+                    "ALVIS sysadmin applyDeniedWithoutExplicitApproval must be true",
+                    errors,
+                )
 
     sync = _load_json(base / "synchronization.contract.v2.json")
     _require(sync.get("defaultMode") == "propose-and-validate-only", "synchronization defaultMode must remain propose-and-validate-only", errors)
     systems = sync.get("systems", {})
     _require(isinstance(systems, Mapping), "synchronization systems must be an object", errors)
     devops = systems.get("azure-devops", {})
-    _require(isinstance(devops, Mapping) and str(devops.get("mode", "")).startswith("read-only"), "azure-devops must remain read-only", errors)
-    required_envelope = {"eventId", "source", "eventType", "repository", "correlationId", "occurredAt", "payload"}
+    _require(
+        isinstance(devops, Mapping) and devops.get("mode") == EXPECTED_AZURE_DEVOPS_MODE,
+        "azure-devops mode must match the approved read-only mirror mode",
+        errors,
+    )
     envelope_fields = set(sync.get("envelope", {}).get("requiredFields", []))
-    _require(required_envelope.issubset(envelope_fields), "synchronization envelope is missing required normalized fields", errors)
+    _require(EXPECTED_ENVELOPE_FIELDS.issubset(envelope_fields), "synchronization envelope is missing required normalized fields", errors)
 
     ownership = _load_json(base / "repository-ownership.contract.v2.json")
     _require(ownership.get("canonicalPlatform") == "M0nado/helios-platform", "repository ownership canonicalPlatform mismatch", errors)
@@ -141,6 +258,8 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require(openai_schema.get("additionalProperties") is False, "OpenAI proposal schema must fail closed on additional properties", errors)
     required = set(openai_schema.get("required", []))
     _require({"proposalId", "correlationId", "approval", "rollbackPlan", "expiresAtUtc"}.issubset(required), "OpenAI proposal schema must require proposal/approval/rollback fields", errors)
+    schema_guards = openai_schema.get("allOf", [])
+    _require(isinstance(schema_guards, list) and len(schema_guards) > 0, "OpenAI proposal schema must define conditional safety guards", errors)
 
     return errors
 
@@ -169,6 +288,11 @@ def validate_profile_xml(base: Path = BASE) -> list[str]:
             errors.append(f"{path}: invalid XML: {exc}")
             continue
         root = tree.getroot()
+        _require(
+            root.tag == "{https://helios-platform.dev/schemas/monado-profile-v2}ProfileManifest",
+            f"{path}: root element must be ProfileManifest in the monado-profile-v2 namespace",
+            errors,
+        )
         profile_id = root.attrib.get("profileId")
         schema_version = root.attrib.get("schemaVersion")
         seen_ids.add(profile_id or "")
@@ -178,6 +302,13 @@ def validate_profile_xml(base: Path = BASE) -> list[str]:
         for element in ("SemanticUi", "ServiceMode", "NetworkMode", "TelemetryClass", "AlvisMaxToolCallsPerPlan"):
             node = root.find(f"m:{element}", XML_NS)
             _require(node is not None and (node.text or "").strip() != "", f"{path}: missing {element}", errors)
+        max_calls_node = root.find("m:AlvisMaxToolCallsPerPlan", XML_NS)
+        max_calls_text = (max_calls_node.text or "").strip() if max_calls_node is not None else ""
+        _require(
+            max_calls_text.isdigit() and int(max_calls_text) > 0,
+            f"{path}: AlvisMaxToolCallsPerPlan must be a positive integer",
+            errors,
+        )
 
     _require(seen_ids == EXPECTED_PROFILES, f"XML profile set mismatch: {sorted(seen_ids)}", errors)
     return errors
