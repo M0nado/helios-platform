@@ -56,11 +56,19 @@ Invoke-Codex `
 . .\scripts\coordinate-ai.ps1
 
 # Coordinate responses
-Invoke-AICoordination `
+$result = Invoke-AICoordination `
     -ChatGPTResponse $gptResponse `
     -CodexResponse $codexResponse `
     -ConflictResolution $true `
+    -MergeSimilarRecommendations $true `
+    -SimilarityThreshold 0.7 `
     -GenerateReport $true
+
+# Review merged recommendation set
+$result.MergedRecommendations
+
+# Merges include only overlapping guidance from both sources.
+# Pass prose/JSON recommendations for Codex when code generation output is used.
 
 # Get statistics
 Get-AICoordinationStats -Days 30

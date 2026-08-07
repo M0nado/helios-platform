@@ -40,7 +40,14 @@ function Invoke-AICoordination {
         [bool]$ConflictResolution = $true,
         
         [Parameter(Mandatory=$false)]
-        [bool]$GenerateReport = $false
+        [bool]$GenerateReport = $false,
+
+        [Parameter(Mandatory=$false)]
+        [bool]$MergeSimilarRecommendations = $true,
+
+        [Parameter(Mandatory=$false)]
+        [ValidateRange(0.1, 1.0)]
+        [double]$SimilarityThreshold = 0.7
     )
     
     # Detect conflicts
@@ -57,11 +64,22 @@ function Invoke-AICoordination {
     # Generate unified recommendation
     $unified = Generate-UnifiedRecommendation -ChatGPT $ChatGPTResponse `
         -Codex $CodexResponse -Resolution $resolution
+
+    $mergedRecommendations = @()
+    if ($MergeSimilarRecommendations) {
+        $mergedRecommendations = Merge-SimilarAIRecommendations `
+            -ChatGPT $ChatGPTResponse `
+            -Codex $CodexResponse `
+            -SimilarityThreshold $SimilarityThreshold
+    }
+
+    $unified.MergedRecommendations = $mergedRecommendations.Count
     
     # Generate report if requested
     if ($GenerateReport) {
         $report = Generate-CoordinationReport -Conflicts $conflicts `
-            -Resolution $resolution -Unified $unified
+            -Resolution $resolution -Unified $unified `
+            -MergedRecommendations $mergedRecommendations
         Write-Host $report
     }
     
@@ -73,6 +91,7 @@ function Invoke-AICoordination {
         Conflicts = $conflicts
         Resolution = $resolution
         Unified = $unified
+        MergedRecommendations = $mergedRecommendations
         Timestamp = Get-Date
     }
 }
@@ -90,8 +109,8 @@ function Detect-AIConflicts {
     $conflicts = @()
     
     # Convert responses to strings for comparison
-    $gptText = $ChatGPT | ConvertTo-Json -Compress
-    $codexText = $Codex | ConvertTo-Json -Compress
+    $gptText = $ChatGPT | ConvertTo-Json -Depth 10 -Compress
+    $codexText = $Codex | ConvertTo-Json -Depth 10 -Compress
     
     # Pattern matching for known conflict types
     $conflictPatterns = @{
@@ -220,13 +239,500 @@ and integrated into a single coherent approach.
 
 <#
 .SYNOPSIS
+Extract response text from heterogeneous AI payloads
+#>
+function Get-AIResponseText {
+    param([PSObject]$Response)
+
+    if ($null -eq $Response) {
+        return ""
+    }
+
+    if ($Response -is [string]) {
+        return $Response
+    }
+
+    if ($Response.PSObject.Properties.Name -contains "choices") {
+        $choices = @($Response.choices)
+        $firstChoice = if ($choices.Count -gt 0) { $choices[0] } else { $null }
+
+        if ($null -ne $firstChoice) {
+            if ($firstChoice.PSObject.Properties.Name -contains "message") {
+                $message = $firstChoice.message
+                if ($null -ne $message -and ($message.PSObject.Properties.Name -contains "content")) {
+                    $content = $message.content
+
+                    if ($content -is [string] -and -not [string]::IsNullOrWhiteSpace($content)) {
+                        return [string]$content
+                    }
+
+                    if (($content -is [System.Collections.IEnumerable]) -and -not ($content -is [string])) {
+                        $contentParts = @()
+                        foreach ($part in $content) {
+                            if ($part -and $part.type -eq "text" -and $part.text) {
+                                $contentParts += [string]$part.text
+                            }
+                        }
+
+                        if ($contentParts.Count -gt 0) {
+                            return ($contentParts -join "`n")
+                        }
+                    }
+                }
+
+                # Message-shaped payloads with no text are metadata-only.
+                return ""
+            }
+
+            if (($firstChoice.PSObject.Properties.Name -contains "text") -and
+                -not [string]::IsNullOrWhiteSpace([string]$firstChoice.text)) {
+                return [string]$firstChoice.text
+            }
+
+            return ""
+        }
+    }
+
+    if ($Response.PSObject.Properties.Name -contains "content") {
+        $content = $Response.content
+
+        if ($content -is [string] -and -not [string]::IsNullOrWhiteSpace($content)) {
+            return [string]$content
+        }
+
+        if (($content -is [System.Collections.IEnumerable]) -and -not ($content -is [string])) {
+            $contentParts = @()
+            foreach ($part in $content) {
+                if ($part -and $part.type -eq "text" -and $part.text) {
+                    $contentParts += [string]$part.text
+                }
+            }
+
+            if ($contentParts.Count -gt 0) {
+                return ($contentParts -join "`n")
+            }
+        }
+
+        return ""
+    }
+
+    return ($Response | ConvertTo-Json -Depth 10 -Compress)
+}
+
+<#
+.SYNOPSIS
+Normalize recommendation text to support fuzzy similarity comparison
+#>
+function Normalize-RecommendationText {
+    param([string]$Text)
+
+    if (-not $Text) {
+        return ""
+    }
+
+    $normalized = $Text.ToLowerInvariant()
+
+    # Preserve language-significant punctuation by canonicalizing known tokens.
+    $normalized = $normalized -replace "(?<!\w)c\+\+(?!\w)", " cpp "
+    $normalized = $normalized -replace "(?<!\w)c#(?!\w)", " csharp "
+
+    # Keep Unicode letters and numbers for non-Latin recommendations.
+    $normalized = $normalized -replace "[^\p{L}\p{N}\s]", " "
+    $normalized = $normalized -replace "\s+", " "
+
+    return $normalized.Trim()
+}
+
+<#
+.SYNOPSIS
+Tokenize normalized recommendation text for similarity checks
+#>
+function Get-RecommendationTokens {
+    param([string]$Text)
+
+    if (-not $Text) {
+        return @()
+    }
+
+    return $Text.Split(" ", [System.StringSplitOptions]::RemoveEmptyEntries) |
+        Where-Object { $_.Length -gt 1 } |
+        Select-Object -Unique
+}
+
+<#
+.SYNOPSIS
+Calculate Jaccard similarity between two recommendation texts
+#>
+function Get-TextSimilarity {
+    param(
+        [string]$LeftText,
+        [string]$RightText
+    )
+
+    if (-not $LeftText -or -not $RightText) {
+        return 0.0
+    }
+
+    if ($LeftText -eq $RightText) {
+        return 1.0
+    }
+
+    $leftWords = Get-RecommendationTokens -Text $LeftText
+    $rightWords = Get-RecommendationTokens -Text $RightText
+
+    if ($leftWords.Count -eq 0 -or $rightWords.Count -eq 0) {
+        return 0.0
+    }
+
+    $leftSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$leftWords)
+    $rightSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$rightWords)
+    $intersection = [System.Collections.Generic.HashSet[string]]::new($leftSet)
+    $null = $intersection.IntersectWith($rightSet)
+    $union = [System.Collections.Generic.HashSet[string]]::new($leftSet)
+    $null = $union.UnionWith($rightSet)
+
+    if ($union.Count -eq 0) {
+        return 0.0
+    }
+
+    return [double]$intersection.Count / [double]$union.Count
+}
+
+<#
+.SYNOPSIS
+Detect if text looks like source code rather than recommendation prose
+#>
+function Test-CodeLikeRecommendationText {
+    param([string]$Text)
+
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return $false
+    }
+
+    $codePatterns = @(
+        '(?m)^\s*```',
+        '(?m)^\s*(using|namespace|class|interface|enum|record)\b',
+        '(?m)^\s*(public|private|internal|protected)\s+',
+        '(?m)^\s*(function|param\s*\(|foreach\s*\(|switch\s*\(|return\b)',
+        '(?m)^\s*(import|from|def|const|let|var)\b',
+        '(?m)^\s*#include\b'
+    )
+
+    foreach ($pattern in $codePatterns) {
+        if ($Text -match $pattern) {
+            return $true
+        }
+    }
+
+    $lineCount = ([regex]::Matches($Text, "(`r`n|`n|`r)")).Count + 1
+    $symbolCount = ([regex]::Matches($Text, "[\{\};]")).Count
+    return ($lineCount -ge 6 -and $symbolCount -ge 8)
+}
+
+<#
+.SYNOPSIS
+Recursively extract recommendation-like text fields from structured payloads
+#>
+function Get-StructuredRecommendationStrings {
+    param(
+        [object]$Value,
+        [string]$PropertyName = ""
+    )
+
+    if ($null -eq $Value) {
+        return @()
+    }
+
+    $results = [System.Collections.Generic.List[string]]::new()
+
+    if ($Value -is [string]) {
+        $candidate = $Value.Trim()
+        if ($candidate.Length -lt 12) {
+            return @()
+        }
+
+        if ([string]::IsNullOrWhiteSpace($PropertyName) -or
+            $PropertyName -match "(?i)(recommend|description|summary|guidance|action|advice|text|content|title|message|rationale|note)") {
+            $results.Add($candidate)
+        }
+
+        return $results.ToArray()
+    }
+
+    if (($Value -is [System.Collections.IEnumerable]) -and -not ($Value -is [string])) {
+        foreach ($entry in $Value) {
+            $texts = Get-StructuredRecommendationStrings -Value $entry -PropertyName $PropertyName
+            foreach ($text in $texts) {
+                if (-not $results.Contains($text)) {
+                    $results.Add($text)
+                }
+            }
+        }
+
+        return $results.ToArray()
+    }
+
+    if ($Value.PSObject) {
+        foreach ($property in $Value.PSObject.Properties) {
+            $texts = Get-StructuredRecommendationStrings -Value $property.Value -PropertyName $property.Name
+            foreach ($text in $texts) {
+                if (-not $results.Contains($text)) {
+                    $results.Add($text)
+                }
+            }
+        }
+    }
+
+    return $results.ToArray()
+}
+
+<#
+.SYNOPSIS
+Parse structured JSON payloads into recommendation candidates
+#>
+function Get-StructuredRecommendationCandidates {
+    param(
+        [string]$Text,
+        [string]$Source
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return @()
+    }
+
+    $trimmed = $Text.Trim()
+    if (-not ($trimmed.StartsWith("{") -or $trimmed.StartsWith("["))) {
+        return @()
+    }
+
+    try {
+        $parsed = $trimmed | ConvertFrom-Json -Depth 20 -ErrorAction Stop
+    } catch {
+        return @()
+    }
+
+    $structuredTexts = Get-StructuredRecommendationStrings -Value $parsed
+    if (-not $structuredTexts -or $structuredTexts.Count -eq 0) {
+        return @()
+    }
+
+    $candidates = [System.Collections.Generic.List[object]]::new()
+    foreach ($candidateText in ($structuredTexts | Select-Object -Unique)) {
+        $normalized = Normalize-RecommendationText -Text $candidateText
+        if (-not $normalized) {
+            continue
+        }
+
+        $candidates.Add([PSCustomObject]@{
+            Source = $Source
+            Text = $candidateText.Trim()
+            Normalized = $normalized
+        })
+    }
+
+    return $candidates
+}
+
+<#
+.SYNOPSIS
+Detect potentially contradictory recommendations with opposite polarity
+#>
+function Test-PolarityConflict {
+    param(
+        [string]$LeftText,
+        [string]$RightText
+    )
+
+    if (-not $LeftText -or -not $RightText) {
+        return $false
+    }
+
+    $negationTokenPattern = "\b(no|not|never|disable|disabled|avoid|forbid|forbidden|deny|denied|without|dont|cannot)\b"
+    $leftHasNegation = ($LeftText -match $negationTokenPattern) -or ($LeftText -match "\bdo\s+not\b")
+    $rightHasNegation = ($RightText -match $negationTokenPattern) -or ($RightText -match "\bdo\s+not\b")
+
+    if ($leftHasNegation -eq $rightHasNegation) {
+        return $false
+    }
+
+    $leftTokens = Get-RecommendationTokens -Text $LeftText
+    $rightTokens = Get-RecommendationTokens -Text $RightText
+
+    if ($leftTokens.Count -eq 0 -or $rightTokens.Count -eq 0) {
+        return $false
+    }
+
+    $leftSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$leftTokens)
+    $rightSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$rightTokens)
+    $intersection = [System.Collections.Generic.HashSet[string]]::new($leftSet)
+    $null = $intersection.IntersectWith($rightSet)
+
+    $largestSet = [Math]::Max($leftSet.Count, $rightSet.Count)
+    if ($largestSet -eq 0) {
+        return $false
+    }
+
+    $overlap = [double]$intersection.Count / [double]$largestSet
+    return $overlap -ge 0.6
+}
+
+<#
+.SYNOPSIS
+Extract candidate recommendation lines/sentences from AI response text
+#>
+function Get-RecommendationCandidates {
+    param(
+        [string]$Text,
+        [string]$Source
+    )
+
+    if (-not $Text) {
+        return @()
+    }
+
+    $structuredCandidates = Get-StructuredRecommendationCandidates -Text $Text -Source $Source
+    if ($structuredCandidates.Count -gt 0) {
+        return $structuredCandidates | Select-Object -Unique -Property Source, Text, Normalized
+    }
+
+    # Codex commonly returns source code, which should not be interpreted as prose guidance.
+    if (Test-CodeLikeRecommendationText -Text $Text) {
+        return @()
+    }
+
+    $candidates = [System.Collections.Generic.List[object]]::new()
+    $rawLines = $Text -split "(`r`n|`n|`r)"
+
+    foreach ($line in $rawLines) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed) {
+            continue
+        }
+
+        if ($trimmed -match "^(\-|\*|\d+\.)\s+") {
+            $normalizedLine = $trimmed -replace "^(\-|\*|\d+\.)\s+", ""
+            $candidates.Add([PSCustomObject]@{
+                Source = $Source
+                Text = $normalizedLine.Trim()
+                Normalized = Normalize-RecommendationText -Text $normalizedLine
+            })
+        }
+    }
+
+    if ($candidates.Count -eq 0) {
+        $sentences = $Text -split "(?<=[\.\!\?])\s+"
+        foreach ($sentence in $sentences) {
+            $trimmedSentence = $sentence.Trim()
+            if ($trimmedSentence.Length -lt 25) {
+                continue
+            }
+
+            $candidates.Add([PSCustomObject]@{
+                Source = $Source
+                Text = $trimmedSentence
+                Normalized = Normalize-RecommendationText -Text $trimmedSentence
+            })
+        }
+    }
+
+    return $candidates | Where-Object { $_.Normalized } | Select-Object -Unique -Property Source, Text, Normalized
+}
+
+<#
+.SYNOPSIS
+Merge semantically similar recommendations across AI responses
+#>
+function Merge-SimilarAIRecommendations {
+    param(
+        [PSObject]$ChatGPT,
+        [PSObject]$Codex,
+        [double]$SimilarityThreshold = 0.7
+    )
+
+    $chatGPTText = Get-AIResponseText -Response $ChatGPT
+    $codexText = Get-AIResponseText -Response $Codex
+
+    $items = @()
+    $items += Get-RecommendationCandidates -Text $chatGPTText -Source "ChatGPT"
+    $items += Get-RecommendationCandidates -Text $codexText -Source "Codex"
+
+    if (-not $items -or $items.Count -eq 0) {
+        return @()
+    }
+
+    $clusters = [System.Collections.Generic.List[object]]::new()
+    foreach ($item in $items) {
+        if (-not $item.Normalized) {
+            continue
+        }
+
+        $bestCluster = $null
+        $bestScore = 0.0
+
+        foreach ($cluster in $clusters) {
+            $score = Get-TextSimilarity -LeftText $item.Normalized -RightText $cluster.Normalized
+            if ($score -gt $bestScore) {
+                $bestScore = $score
+                $bestCluster = $cluster
+            }
+        }
+
+        if ($bestCluster -and $bestScore -ge $SimilarityThreshold -and
+            -not ($bestCluster.Sources -contains $item.Source) -and
+            -not (Test-PolarityConflict -LeftText $item.Normalized -RightText $bestCluster.Normalized)) {
+            if (-not ($bestCluster.Sources -contains $item.Source)) {
+                $bestCluster.Sources += $item.Source
+            }
+            if (-not ($bestCluster.Variants -contains $item.Text)) {
+                $bestCluster.Variants += $item.Text
+            }
+            $bestCluster.ScoreTotal += $bestScore
+            $bestCluster.ScoreCount += 1
+            $bestCluster.MergeCount += 1
+            continue
+        }
+
+        $clusters.Add([PSCustomObject]@{
+            Recommendation = $item.Text
+            Normalized = $item.Normalized
+            Sources = @($item.Source)
+            Variants = @($item.Text)
+            ScoreTotal = 0.0
+            ScoreCount = 0
+            MergeCount = 0
+        })
+    }
+
+    return $clusters |
+        Where-Object {
+            ($_.Sources | Select-Object -Unique).Count -gt 1 -and $_.MergeCount -gt 0
+        } |
+        ForEach-Object {
+            $similarity = if ($_.ScoreCount -gt 0) {
+                [Math]::Round(($_.ScoreTotal / $_.ScoreCount), 2)
+            } else {
+                $null
+            }
+
+        [PSCustomObject]@{
+            Recommendation = $_.Recommendation
+            Sources = ($_.Sources | Select-Object -Unique) -join ", "
+            VariantCount = $_.Variants.Count
+            Similarity = $similarity
+        }
+    }
+}
+
+<#
+.SYNOPSIS
 Generate coordination report
 #>
 function Generate-CoordinationReport {
     param(
         [array]$Conflicts,
         [array]$Resolution,
-        [PSObject]$Unified
+        [PSObject]$Unified,
+        [array]$MergedRecommendations
     )
     
     $report = @"
@@ -239,6 +745,7 @@ COORDINATION SUMMARY
 ───────────────────────────────────────────────────────────────────────────
 - Conflicts Detected: $(if ($Conflicts) { $Conflicts.Count } else { "0" })
 - Resolutions Applied: $(if ($Resolution) { $Resolution.Count } else { "0" })
+- Similar Recommendations Merged: $(if ($MergedRecommendations) { $MergedRecommendations.Count } else { "0" })
 - Status: $($Unified.Status)
 
 CONFLICT ANALYSIS
@@ -268,6 +775,21 @@ $(@(
         }
     } else {
         "• No resolutions needed"
+    }
+) -join "`n")
+
+MERGED RECOMMENDATIONS
+───────────────────────────────────────────────────────────────────────────
+$(@(
+    if ($MergedRecommendations) {
+        foreach ($item in $MergedRecommendations) {
+            "• $($item.Recommendation)"
+            "  Sources: $($item.Sources)"
+            "  Variants: $($item.VariantCount) Similarity: $($item.Similarity)"
+            ""
+        }
+    } else {
+        "• No merge candidates detected"
     }
 ) -join "`n")
 
@@ -345,9 +867,11 @@ function Get-AICoordinationStats {
     return $stats
 }
 
-# Export functions
-Export-ModuleMember -Function @(
-    'Invoke-AICoordination'
-    'Detect-AIConflicts'
-    'Get-AICoordinationStats'
-)
+# Export functions only when loaded as a module.
+if ($ExecutionContext.SessionState.Module) {
+    Export-ModuleMember -Function @(
+        'Invoke-AICoordination'
+        'Detect-AIConflicts'
+        'Get-AICoordinationStats'
+    )
+}

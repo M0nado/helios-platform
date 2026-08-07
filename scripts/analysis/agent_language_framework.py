@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 import json, subprocess
+import shutil
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,7 +48,9 @@ def run(args):
  return p.stdout.splitlines()
 
 def files():
- return run(['rg','--files'])
+ if shutil.which('rg'):
+  return run(['rg','--files'])
+ return run(['git','ls-files'])
 
 def lang(path):
  if path.endswith('CMakeLists.txt'): return 'cpp'
