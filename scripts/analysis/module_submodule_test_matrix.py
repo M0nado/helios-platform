@@ -58,7 +58,7 @@ def hermes_xcore_flags(paths: list[str]) -> list[str]:
 
 def command_for(module: str, langs: dict, flags: list[str]) -> list[str]:
     cmds=[]
-    if langs.get('csharp'): cmds.append('dotnet build HELIOS.Platform.slnx')
+    if langs.get('csharp'): cmds.append('dotnet build HELIOS.Platform.sln')
     if langs.get('fsharp'): cmds.append('dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj')
     if langs.get('cpp') or 'xcore/native/performance' in flags: cmds.append('cmake -S src/native/HELIOS.Native.Performance -B .build/native')
     if langs.get('python'): cmds.append('python3 -m py_compile scripts/build_graph/build_graph.py scripts/agents/branch_fix_agents.py')

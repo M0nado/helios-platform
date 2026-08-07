@@ -28,7 +28,7 @@ AUTO_CONNECT_PLAN=[
 ]
 
 SPECIALTIES={
- 'csharp-gui-core':{'agent':'hermes-csharp-orchestrator','language':'C#','checks':['dotnet build HELIOS.Platform.slnx'],'fixStyle':'typed contracts, GUI/UX, secure orchestration'},
+ 'csharp-gui-core':{'agent':'hermes-csharp-orchestrator','language':'C#','checks':['dotnet build HELIOS.Platform.sln'],'fixStyle':'typed contracts, GUI/UX, secure orchestration'},
  'cpp-native-xcore':{'agent':'xcore-native-optimizer','language':'C++','checks':['cmake -S src/native/HELIOS.Native.Performance -B .build/native','cmake --build .build/native'],'fixStyle':'hot paths, memory, rendering, C ABI'},
  'fsharp-learning':{'agent':'xcore-learning-scorer','language':'F#','checks':['dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj'],'fixStyle':'scoring, async queries, prediction, ranking'},
  'python-aihub':{'agent':'hermes-python-aihub','language':'Python','checks':['python3 -m py_compile scripts/agents/branch_test_autofix_plan.py scripts/build_graph/build_graph.py'],'fixStyle':'AIHub glue, reports, setup, agents'},

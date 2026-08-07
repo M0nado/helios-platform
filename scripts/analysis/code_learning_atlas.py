@@ -11,10 +11,10 @@ DOMAINS = [
     {
         'id': 'csharp-system-gui-server-vault',
         'title': 'C# system: GUI, core, server, vault, contracts',
-        'patterns': ['.cs', '.csproj', '.slnx', 'src/core/', 'src/gui/', 'src/Security/'],
+        'patterns': ['.cs', '.csproj', '.sln', '.slnx', 'src/core/', 'src/gui/', 'src/Security/'],
         'bestFor': 'WinUI/MAUI-style UI, backend orchestration, contracts, security/vault boundaries, cloud sync, plugins, themes.',
         'learn': ['ViewModels and Views in src/gui/MonadoBlade.GUI', 'BackendServices and Integration in src/core/HELIOS.Platform', 'SecurityValidator and tests', 'Contracts separation', 'wwwroot/dashboard integration'],
-        'commands': ['dotnet build HELIOS.Platform.slnx', 'dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj'],
+        'commands': ['dotnet build HELIOS.Platform.sln', 'dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj'],
     },
     {
         'id': 'cpp-xcore-performance',

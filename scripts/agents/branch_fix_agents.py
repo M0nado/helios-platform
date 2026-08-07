@@ -36,7 +36,7 @@ SPECIALISTS = {
     'dashboard-server': 'Super GUI/local server specialist',
 }
 CHECKS = {
-    'csharp-gui': ['dotnet build HELIOS.Platform.slnx'],
+    'csharp-gui': ['dotnet build HELIOS.Platform.sln'],
     'csharp-core-vault': ['dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj'],
     'cpp-xcore': ['cmake -S src/native/HELIOS.Native.Performance -B .build/native'],
     'fsharp-analytics': ['dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj'],

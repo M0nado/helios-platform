@@ -30,7 +30,7 @@ DOMAINS = {
     'dashboard-super-gui': ['scripts/dashboard/', 'status-site/', 'scripts/web/'],
 }
 PLANS = {
-    'csharp-gui': ['dotnet build HELIOS.Platform.slnx', 'python3 scripts/integrations/full_integration_matrix.py'],
+    'csharp-gui': ['dotnet build HELIOS.Platform.sln', 'python3 scripts/integrations/full_integration_matrix.py'],
     'csharp-core-server-vault': ['dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj', 'python3 scripts/security/apply_gate_preflight.py'],
     'cpp-xcore-performance': ['cmake -S src/native/HELIOS.Native.Performance -B .build/native', 'python3 scripts/build_graph/build_graph.py run --tag native --max-workers 2'],
     'fsharp-analytics-prediction': ['dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj'],

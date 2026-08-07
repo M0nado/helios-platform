@@ -14,7 +14,7 @@ This plan pulls the repo's existing C#, F#, C++, Python, Azure, GitHub, AI, dash
 
 | Lane | Current assets | Next upgrade |
 | --- | --- | --- |
-| C# / GUI / Visual Studio / MAUI | `*.csproj`, `HELIOS.Platform.slnx`, `docs/integration/VISUAL_STUDIO_MAUI_SETUP.md` | Add solution filters and MAUI-ready shell project once UI target is chosen. |
+| C# / GUI / Visual Studio / MAUI | `*.csproj`, `HELIOS.Platform.sln`, `docs/integration/VISUAL_STUDIO_MAUI_SETUP.md` | Add solution filters and MAUI-ready shell project once UI target is chosen. |
 | F# analytics | `src/analytics/HELIOS.Analytics.FSharp` | Use analytics scoring in branch intelligence and gap analysis. |
 | C++ / XCore | `src/native/HELIOS.Native.Performance` | Add native benchmark and interop ABI plan. |
 | Python automation | `scripts/analysis`, `scripts/control`, `scripts/github`, `scripts/azure` | Normalize all safe actions into `helios.sh` and build graph nodes. |

@@ -10,7 +10,7 @@ RANKER=ROOT/'reports/learning/document-code-absorption-ranker.json'
 ENGINES={
  'csharp-orchestrator': {
   'shape':'secure AI-access framework, GUI shell, contracts, plugin host, cross-language orchestrator',
-  'tests':['dotnet build HELIOS.Platform.slnx','dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj'],
+  'tests':['dotnet build HELIOS.Platform.sln','dotnet test src/tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj'],
   'capabilities':['secure AI access gateway','GUI shell and MVVM','service orchestration','contract and DTO boundary','plugin host lifecycle','cloud sync control','vault access facade','authentication boundary','authorization checks','safe config modeling','dependency injection graph','observability/logging facade','error isolation','sandbox policy','cross-language adapters','C++ native bridge facade','F# analytics bridge facade','Python AIHub bridge facade','workflow status display','dashboard host','theme/state shell','device control facade','audio control facade','system tray shell','settings management','profile selection','remote console host','API compatibility boundary','database migration owner','EF/SQLite state store','test harness owner','mock provider host','agent command router','LLM provider access policy','failure recovery orchestration','background service host','extension registry','marketplace shell','telemetry DTOs','release gates','security audit surface','secret-safe settings','Azure control facade','GitHub control facade','branch repair UI surface','knowledge report viewer','runner command launcher','Codespaces UX shell','documentation link hub','typed integration contracts','long-term maintainability anchor']
  },
  'cpp-native-performance': {
