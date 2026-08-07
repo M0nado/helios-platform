@@ -139,6 +139,44 @@ class PinnedSubmoduleApprovalTests(unittest.TestCase):
         self.assertEqual(2, result)
         self.assertIn("missing required fields: contractEvidence", output)
 
+    def test_extra_top_level_field_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            result, output = self._run_validator(
+                root,
+                {"approved": True, "submodules": [self._entry()], "unexpected": "value"},
+            )
+
+        self.assertEqual(2, result)
+        self.assertIn("unsupported top-level fields: unexpected", output)
+
+    def test_extra_submodule_field_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry = self._entry(extraField="value")
+            result, output = self._run_validator(root, {"approved": True, "submodules": [entry]})
+
+        self.assertEqual(2, result)
+        self.assertIn("unsupported fields: extraField", output)
+
+    def test_invalid_evidence_url_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry = self._entry(evidenceUrl="not-a-uri")
+            result, output = self._run_validator(root, {"approved": True, "submodules": [entry]})
+
+        self.assertEqual(2, result)
+        self.assertIn("evidenceUrl must be a valid HTTP(S) URI", output)
+
+    def test_invalid_repository_url_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry = self._entry(url="git@github.com:M0nado/example.git")
+            result, output = self._run_validator(root, {"approved": True, "submodules": [entry]})
+
+        self.assertEqual(2, result)
+        self.assertIn("url must match https://github.com/<owner>/<repo>.git", output)
+
     def test_valid_manifest_and_git_state_pass(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

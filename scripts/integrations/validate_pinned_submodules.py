@@ -8,12 +8,14 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "config/integrations/approved-submodules.json"
 MANIFEST_SCHEMA = ROOT / "config/integrations/approved-submodules.schema.json"
 EXPECTED_SCHEMA_ID = "https://helios-platform.dev/schemas/approved-submodules-v1.schema.json"
 SHA = re.compile(r"^[0-9a-f]{40}$")
+GITHUB_REPO_URL = re.compile(r"^https://github\.com/[^\s]+\.git$")
 SUBMODULE_FIELDS = (
     "path",
     "url",
@@ -53,6 +55,11 @@ def _non_empty_text(value: object) -> bool:
     return isinstance(value, str) and value.strip() != ""
 
 
+def _is_http_uri(value: str) -> bool:
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
 def _validate_manifest_schema() -> list[str]:
     data, error = _load_json(MANIFEST_SCHEMA)
     if error:
@@ -87,6 +94,10 @@ def _normalize_manifest(data: object) -> tuple[list[dict[str, str]], list[str]]:
         return [], ["manifest root must be a JSON object"]
 
     errors: list[str] = []
+    allowed_root_fields = {"approved", "submodules"}
+    extra_root_fields = sorted(set(data) - allowed_root_fields)
+    if extra_root_fields:
+        errors.append(f"unsupported top-level fields: {', '.join(extra_root_fields)}")
     if data.get("approved") is not True:
         errors.append("approved must be boolean true")
 
@@ -103,18 +114,31 @@ def _normalize_manifest(data: object) -> tuple[list[dict[str, str]], list[str]]:
             errors.append(f"{prefix}: entry must be an object")
             continue
 
+        unsupported = sorted(set(entry) - set(SUBMODULE_FIELDS))
+        if unsupported:
+            errors.append(f"{prefix}: unsupported fields: {', '.join(unsupported)}")
+            continue
+
         missing = [field for field in SUBMODULE_FIELDS if not _non_empty_text(entry.get(field))]
         if missing:
             errors.append(f"{prefix}: missing required fields: {', '.join(missing)}")
             continue
 
-        path = entry["path"].strip()
+        normalized_entry = {field: entry[field].strip() for field in SUBMODULE_FIELDS}
+        path = normalized_entry["path"]
         if path in seen_paths:
             errors.append(f"{prefix}: duplicate path '{path}'")
             continue
 
+        if not GITHUB_REPO_URL.fullmatch(normalized_entry["url"]):
+            errors.append(f"{prefix}: url must match https://github.com/<owner>/<repo>.git")
+            continue
+        if not _is_http_uri(normalized_entry["evidenceUrl"]):
+            errors.append(f"{prefix}: evidenceUrl must be a valid HTTP(S) URI")
+            continue
+
         seen_paths.add(path)
-        normalized.append({field: entry[field].strip() for field in SUBMODULE_FIELDS})
+        normalized.append(normalized_entry)
     return normalized, errors
 
 

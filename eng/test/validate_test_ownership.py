@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the exhaustive, one-owner HELIOS test inventory."""
+"""Validate one-owner inventory for HELIOS .NET test source files."""
 from __future__ import annotations
 
 import argparse
@@ -102,7 +102,7 @@ def main() -> None:
             errors.append(f"missing project: {item}")
     if errors:
         raise SystemExit("\n".join(errors))
-    print(f"validated {len(paths)} test files: one project and one layer each")
+    print(f"validated {len(paths)} .NET test source files: one project and one layer each")
 
 
 if __name__ == "__main__":
