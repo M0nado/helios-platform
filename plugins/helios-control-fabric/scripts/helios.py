@@ -254,11 +254,7 @@ def release_plan(environment: str) -> dict[str, Any]:
         ],
         "commands": [
             "pwsh ./monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1",
-            "python plugins/helios-control-fabric/scripts/helios.py doctor --json",
-            "python plugins/helios-control-fabric/scripts/helios.py oidc --environment "
-            + environment
-            + " --json",
-            "python plugins/helios-control-fabric/scripts/helios.py edge --environment "
+            "python plugins/helios-control-fabric/scripts/helios.py all --environment "
             + environment
             + " --json",
             "GitHub Actions: HELIOS Azure → what-if",
@@ -327,8 +323,76 @@ def edge_plan(environment: str) -> dict[str, Any]:
     }
 
 
+def full_setup(environment: str, skip_oidc: bool = False) -> dict[str, Any]:
+    validate_environment(environment)
+    doctor_result = doctor()
+    required_tools_ready = bool(doctor_result.get("requiredToolsReady"))
+    oidc_required = not skip_oidc
+    oidc_ready = not oidc_required
+
+    steps: dict[str, Any] = {
+        "doctor": doctor_result,
+        "targets": read_targets(),
+        "plan": release_plan(environment),
+        "edge": edge_plan(environment),
+        "devopsSync": devops_sync_plan(),
+        "runners": runner_plan(),
+    }
+    blocked: list[dict[str, str]] = []
+
+    if oidc_required:
+        try:
+            steps["oidc"] = oidc_contract(environment)
+            oidc_ready = True
+        except RuntimeError as error:
+            steps["oidc"] = {
+                "executionMode": "blocked",
+                "reason": str(error),
+            }
+            blocked.append({"step": "oidc", "reason": str(error)})
+            oidc_ready = False
+    else:
+        steps["oidc"] = {
+            "executionMode": "skipped",
+            "reason": "Skipped by --skip-oidc.",
+        }
+
+    return {
+        "mode": "read-only",
+        "command": "all",
+        "environment": environment,
+        "ready": required_tools_ready and oidc_ready and not blocked,
+        "requiredToolsReady": required_tools_ready,
+        "oidcRequired": oidc_required,
+        "oidcReady": oidc_ready,
+        "blocked": blocked,
+        "steps": steps,
+    }
+
+
 def print_human(payload: dict[str, Any]) -> None:
-    if "tools" in payload:
+    if payload.get("command") == "all" and "steps" in payload:
+        print(f"HELIOS full setup ({payload['environment']})")
+        print(
+            "  required tools: "
+            + ("ready" if payload.get("requiredToolsReady") else "missing")
+        )
+        if payload.get("oidcRequired", False):
+            print(
+                "  oidc contract: "
+                + ("ready" if payload.get("oidcReady") else "blocked")
+            )
+        else:
+            print("  oidc contract: skipped (--skip-oidc)")
+        print("  targets/plan/edge/devops-sync/runners: prepared")
+        for blocked in payload.get("blocked", []):
+            print(f"  blocked {blocked['step']}: {blocked['reason']}")
+        print(
+            "  overall ready: "
+            + ("true" if payload.get("ready", False) else "false")
+        )
+        print("  No cloud mutation was performed.")
+    elif "tools" in payload:
         print("HELIOS doctor (read-only)")
         for tool in payload["tools"]:
             mark = "OK" if tool["available"] and tool.get("healthy", False) else (
@@ -382,6 +446,13 @@ def add_environment_argument(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="HELIOS plan-first setup helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    all_parser = subparsers.add_parser("all", help="Run the full read-only setup sequence")
+    add_environment_argument(all_parser)
+    all_parser.add_argument(
+        "--skip-oidc",
+        action="store_true",
+        help="Skip live GitHub OIDC subject resolution when gh authentication is unavailable",
+    )
     doctor_parser = subparsers.add_parser("doctor", help="Check local prerequisites")
     doctor_parser.add_argument("--json", action="store_true")
     targets_parser = subparsers.add_parser("targets", help="Show canonical authorities")
@@ -402,7 +473,9 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        if args.command == "doctor":
+        if args.command == "all":
+            payload = full_setup(args.environment, skip_oidc=args.skip_oidc)
+        elif args.command == "doctor":
             payload = doctor()
         elif args.command == "targets":
             payload = read_targets()
@@ -423,6 +496,8 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
         print_human(payload)
+    if args.command == "all" and not payload.get("ready", False):
+        return 2
     return 0
 
 

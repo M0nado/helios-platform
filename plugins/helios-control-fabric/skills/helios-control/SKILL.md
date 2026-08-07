@@ -54,16 +54,15 @@ evidence.
 
 ## Easy setup
 
-Run the plugin doctor, then generate a plan:
+Run the unified setup sweep:
 
 ```bash
-python plugins/helios-control-fabric/scripts/helios.py doctor
-python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
-python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
-python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
-python plugins/helios-control-fabric/scripts/helios.py devops-sync
-python plugins/helios-control-fabric/scripts/helios.py runners
+python plugins/helios-control-fabric/scripts/helios.py all --environment azure-dev
 ```
+
+`all` runs doctor, targets, plan, oidc, edge, devops-sync, and runner checks in
+one read-only pass. If GitHub CLI authentication is unavailable, run
+`all --skip-oidc` and execute `oidc` after `gh auth login`.
 
 The `oidc` command is a read-only live resolution and therefore requires an
 authenticated GitHub CLI. It must use GitHub's effective default/immutable
