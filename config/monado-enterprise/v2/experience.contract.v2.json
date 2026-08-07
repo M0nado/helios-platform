@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v2/experience.contract.v2.schema.json",
   "schemaVersion": "2.0.0",
   "contractId": "monado-enterprise-experience-v2",
   "commonCoreInstall": {

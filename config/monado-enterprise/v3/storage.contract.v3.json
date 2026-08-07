@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v3/storage.contract.v3.schema.json",
   "schemaVersion": "3.0.0",
   "contractId": "monadoblade-storage-contract-v3",
   "executionPolicy": {
@@ -101,7 +100,7 @@
   },
   "forbiddenRuntimeActions": [
     "physical-usb-write",
-    "disk-or-vhdx-apply-from-runtime",
+    "storage-or-vhdx-apply-from-runtime",
     "sysadmin-activation-without-local-two-factor",
     "tenant-authorization-change-without-approval"
   ]

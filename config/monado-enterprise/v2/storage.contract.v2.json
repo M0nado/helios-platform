@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v2/storage.contract.v2.schema.json",
   "schemaVersion": "2.0.0",
   "contractId": "monado-enterprise-storage-v2",
   "executionPolicy": {
@@ -111,7 +110,7 @@
   },
   "forbiddenRuntimeActions": [
     "physical-usb-write",
-    "disk-or-vhdx-create-without-approval",
+    "storage-or-vhdx-create-without-approval",
     "sysadmin-activation-without-local-two-factor",
     "production-tenant-change"
   ]

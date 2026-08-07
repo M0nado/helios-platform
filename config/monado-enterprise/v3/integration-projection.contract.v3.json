@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v3/integration-projection.contract.v3.schema.json",
   "schemaVersion": "3.0.0",
   "contractId": "monadoblade-integration-projection-v3",
   "executionMode": "projection-only",

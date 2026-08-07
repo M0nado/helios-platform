@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v3/experience.contract.v3.schema.json",
   "schemaVersion": "3.0.0",
   "contractId": "monadoblade-experience-contract-v3",
   "commonCoreInstall": {

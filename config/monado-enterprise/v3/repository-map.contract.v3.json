@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v3/repository-map.contract.v3.schema.json",
   "schemaVersion": "3.0.0",
   "contractId": "monadoblade-repository-map-v3",
   "canonicalRepository": "M0nado/helios-platform",
