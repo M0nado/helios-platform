@@ -23,6 +23,7 @@ jobs:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           set -euo pipefail
@@ -60,7 +61,17 @@ jobs:
           api_url = os.environ["GITHUB_API_URL"].rstrip("/")
           repository = os.environ["GITHUB_REPOSITORY"]
           pr_number = os.environ["PR_NUMBER"]
+          pr_head_sha = os.environ["PR_HEAD_SHA"]
           placeholder_values = {"", "n/a", "na", "todo", "tbd", "none"}
+          allowed_protected_workflow_paths = {
+              ".github/workflows/helios-cloud-deploy.yml",
+              ".github/workflows/enterprise-bicep.yml",
+          }
+          protected_job_markers = (
+              "validate deployment request",
+              "reviewed azure what-if",
+              "deploy after second approval",
+          )
           top_level_field_labels = (
               "Correlation ID:",
               "Evidence links:",
@@ -213,6 +224,7 @@ jobs:
               r"^tools/",
               r"^monado/helios-control/tools/",
               r"(?:^|/)tools/.*\.(?:ps1|psm1|sh|bash|cmd|bat|py)$",
+              r"\.(?:ps1|psm1|sh|bash|cmd|bat|py)$",
               r"^\.github/workflows/.*\.ya?ml$",
           ]
 
@@ -275,9 +287,33 @@ jobs:
                       file=sys.stderr,
                   )
                   raise SystemExit(1)
+              workflow_path = str(run_payload.get("path") or "").split("@", maxsplit=1)[0]
+              if workflow_path.lower() not in allowed_protected_workflow_paths:
+                  print(
+                      "Protected approval workflow run must come from an allowed protected workflow.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
               if run_payload.get("status") != "completed" or run_payload.get("conclusion") != "success":
                   print(
                       "Protected approval workflow run must be completed with a success conclusion.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              if str(run_payload.get("head_sha") or "").lower() != pr_head_sha.lower():
+                  print(
+                      "Protected approval workflow run must target the current pull request head SHA.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              run_pr_numbers = [
+                  str(pull_request.get("number"))
+                  for pull_request in (run_payload.get("pull_requests") or [])
+                  if pull_request.get("number") is not None
+              ]
+              if str(pr_number) not in run_pr_numbers:
+                  print(
+                      "Protected approval workflow run must be associated with the current pull request.",
                       file=sys.stderr,
                   )
                   raise SystemExit(1)
@@ -294,19 +330,19 @@ jobs:
                   raise SystemExit(1)
 
               jobs = jobs_payload.get("jobs", []) if isinstance(jobs_payload, dict) else []
-              approval_jobs = [
+              protected_jobs = [
                   job
                   for job in jobs
-                  if "approval" in str(job.get("name") or "").lower()
+                  if any(marker in str(job.get("name") or "").lower() for marker in protected_job_markers)
               ]
               approved_jobs = [
                   job
-                  for job in approval_jobs
+                  for job in protected_jobs
                   if job.get("status") == "completed" and job.get("conclusion") == "success"
               ]
               if not approved_jobs:
                   print(
-                      "Protected approval workflow run must include at least one successful approval job.",
+                      "Protected approval workflow run must include a successful protected validation job.",
                       file=sys.stderr,
                   )
                   raise SystemExit(1)

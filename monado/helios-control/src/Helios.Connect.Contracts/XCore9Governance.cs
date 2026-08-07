@@ -371,6 +371,7 @@ public sealed class XCore9SpecializationRegistry
         {
             return Deny("missing-evidence-links", "At least one evidence link is required.");
         }
+        var frozenEvidence = Array.AsReadOnly(evidence.ToArray());
 
         var deniedTools = ToSet(pack.DeniedTools);
         if (deniedTools.Contains(invocation.Tool))
@@ -432,7 +433,7 @@ public sealed class XCore9SpecializationRegistry
                 $"Coordinator fan-in exceeds maxFanIn ({_globalPolicy.MaxFanIn}).");
         }
 
-        var provenance = NormalizeProvenance(invocation.Provenance, normalizedCorrelationId, evidence);
+        var provenance = NormalizeProvenance(invocation.Provenance, normalizedCorrelationId, frozenEvidence);
         var requiredProvenance = RequiredProvenanceForModalities(invocation.InputModality, invocation.OutputModality);
         var missingProvenance = requiredProvenance
             .Where(required => !provenance.ContainsKey(required))
@@ -448,7 +449,7 @@ public sealed class XCore9SpecializationRegistry
             normalizedCorrelationId,
             invocation.InputModality,
             invocation.OutputModality,
-            evidence,
+            frozenEvidence,
             provenance,
             pack.TimeoutSeconds);
         return new XCore9SpecializationDecision(true, "allowed", "Invocation is allowed.", routingEvidence);

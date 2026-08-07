@@ -76,6 +76,11 @@ public sealed class XCore9GovernanceTests
             command => !string.IsNullOrWhiteSpace(command)
                 && command.Contains("Start-Process dotnet", StringComparison.Ordinal)
                 && command.Contains("Helios.Connect.Api.csproj", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            hybridCommands,
+            command => !string.IsNullOrWhiteSpace(command)
+                && command.Contains("Start-Process dotnet", StringComparison.Ordinal)
+                && command.Contains("--no-build", StringComparison.Ordinal));
         Assert.Contains("pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Status", hybridCommands);
     }
 
@@ -361,6 +366,18 @@ public sealed class XCore9GovernanceTests
         Assert.NotNull(decision.Evidence);
         var mutableView = Assert.IsAssignableFrom<IDictionary<string, string>>(decision.Evidence!.Provenance);
         Assert.Throws<NotSupportedException>(() => mutableView["correlationId"] = "tampered");
+    }
+
+    [Fact]
+    public void Specialization_registry_exposes_read_only_evidence_links()
+    {
+        var registry = CreateRegistry();
+        var decision = registry.Evaluate(CreateInvocation());
+
+        Assert.True(decision.Allowed);
+        Assert.NotNull(decision.Evidence);
+        var mutableView = Assert.IsAssignableFrom<IList<string>>(decision.Evidence!.EvidenceLinks);
+        Assert.Throws<NotSupportedException>(() => mutableView[0] = "https://example.test/evidence/tampered");
     }
 
     [Fact]

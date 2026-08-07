@@ -145,7 +145,7 @@
       "startupContract": {
         "deterministicCommands": [
           "pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Plan",
-          "pwsh -Command \"$p = Start-Process dotnet -ArgumentList @('run','--project','monado/helios-control/src/Helios.Connect.Api/Helios.Connect.Api.csproj','--configuration','Release','--no-build','--','--urls','http://127.0.0.1:8080') -PassThru; Start-Sleep -Seconds 15; if ($p.HasExited) { throw 'Helios Connect API exited before hybrid health checks.' }\"",
+          "pwsh -Command \"$p = Start-Process dotnet -ArgumentList @('run','--project','monado/helios-control/src/Helios.Connect.Api/Helios.Connect.Api.csproj','--configuration','Release','--','--urls','http://127.0.0.1:8080') -PassThru; Start-Sleep -Seconds 15; if ($p.HasExited) { throw 'Helios Connect API exited before hybrid health checks.' }\"",
           "pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Status",
           "dotnet test monado/helios-control/Helios.Connect.sln --configuration Release --filter \"FullyQualifiedName~XCore9GovernanceTests\""
         ],
