@@ -305,7 +305,7 @@ def validate_storage_contract(storage_contract: dict) -> list[str]:
 
     forbidden = storage_contract.get("forbiddenRuntimeActions", [])
     _append(errors, isinstance(forbidden, list) and "physical-usb-write" in forbidden, "storage forbiddenRuntimeActions must include physical-usb-write")
-    _append(errors, isinstance(forbidden, list) and "disk-or-vhdx-apply-from-runtime" in forbidden, "storage forbiddenRuntimeActions must include disk-or-vhdx-apply-from-runtime")
+    _append(errors, isinstance(forbidden, list) and "storage-or-vhdx-apply-from-runtime" in forbidden, "storage forbiddenRuntimeActions must include storage-or-vhdx-apply-from-runtime")
     return errors
 
 
