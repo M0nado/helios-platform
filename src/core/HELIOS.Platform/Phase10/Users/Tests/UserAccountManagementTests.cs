@@ -180,29 +180,53 @@ namespace HELIOS.Platform.Phase10.Users.Tests
         [Fact]
         public async Task CreateDocumentFoldersAsync_ReturnsTrue()
         {
-            var result = await _setup.CreateDocumentFoldersAsync(Environment.UserName);
             var documentsPath = Path.Combine(_setup.GetUserProfilePath(Environment.UserName), "Documents");
-            Assert.True(result || !CanCreateDirectoryUnder(documentsPath));
+            var canWriteDocuments = CanCreateDirectoryUnder(documentsPath);
+
+            var result = await _setup.CreateDocumentFoldersAsync(Environment.UserName);
+
+            Assert.True(result || !canWriteDocuments);
+            if (result && canWriteDocuments)
+            {
+                Assert.All(new[] { "Work", "Personal", "Projects", "Archive", "Templates" },
+                    folder => Assert.True(Directory.Exists(Path.Combine(documentsPath, folder))));
+            }
         }
 
         [Fact]
         public async Task CreateMediaFoldersAsync_ReturnsTrue()
         {
-            var result = await _setup.CreateMediaFoldersAsync(Environment.UserName);
             var userProfile = _setup.GetUserProfilePath(Environment.UserName);
             var canWriteMediaPaths =
                 CanCreateDirectoryUnder(Path.Combine(userProfile, "Pictures")) &&
                 CanCreateDirectoryUnder(Path.Combine(userProfile, "Videos")) &&
                 CanCreateDirectoryUnder(Path.Combine(userProfile, "Music"));
 
+            var result = await _setup.CreateMediaFoldersAsync(Environment.UserName);
+
             Assert.True(result || !canWriteMediaPaths);
+            if (result && canWriteMediaPaths)
+            {
+                Assert.True(Directory.Exists(Path.Combine(userProfile, "Pictures", "Screenshots")));
+                Assert.True(Directory.Exists(Path.Combine(userProfile, "Videos", "Recordings")));
+                Assert.True(Directory.Exists(Path.Combine(userProfile, "Music", "Artists")));
+            }
         }
 
         [Fact]
         public async Task SetupHELIOSFoldersAsync_ReturnsTrue()
         {
+            var heliosBase = Path.Combine(_setup.GetUserProfilePath(Environment.UserName), ".helios");
+            var canWriteProfile = CanCreateDirectoryUnder(heliosBase);
+
             var result = await _setup.SetupHELIOSFoldersAsync(Environment.UserName);
-            Assert.True(result || !CanCreateDirectoryUnder(_setup.GetUserProfilePath(Environment.UserName)));
+
+            Assert.True(result || !canWriteProfile);
+            if (result && canWriteProfile)
+            {
+                Assert.All(new[] { "config", "data", "cache", "vault", "logs", "temp" },
+                    folder => Assert.True(Directory.Exists(Path.Combine(heliosBase, folder))));
+            }
         }
 
         [Fact]
@@ -221,14 +245,20 @@ namespace HELIOS.Platform.Phase10.Users.Tests
 
         private static bool CanCreateDirectoryUnder(string path)
         {
-            if (!Directory.Exists(path))
+            var probeBase = path;
+            while (!string.IsNullOrWhiteSpace(probeBase) && !Directory.Exists(probeBase))
+            {
+                probeBase = Path.GetDirectoryName(probeBase);
+            }
+
+            if (string.IsNullOrWhiteSpace(probeBase) || !Directory.Exists(probeBase))
             {
                 return false;
             }
 
             try
             {
-                var probePath = Path.Combine(path, $".helios_write_probe_{Guid.NewGuid():N}");
+                var probePath = Path.Combine(probeBase, $".helios_write_probe_{Guid.NewGuid():N}");
                 Directory.CreateDirectory(probePath);
                 Directory.Delete(probePath);
                 return true;

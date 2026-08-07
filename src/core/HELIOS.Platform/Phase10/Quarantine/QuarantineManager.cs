@@ -248,6 +248,7 @@ namespace HELIOS.Platform.Phase10.Quarantine
 
                     string threatDbPath = Path.Combine(_quarantinePath, "threat-database");
                     Directory.CreateDirectory(threatDbPath);
+                    Directory.CreateDirectory(_activeThreatDir);
 
                     var updateInfo = new StringBuilder();
                     updateInfo.AppendLine($"[{DateTime.UtcNow:u}] Threat Intelligence Update");
