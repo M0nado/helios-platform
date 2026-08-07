@@ -447,11 +447,38 @@ jobs:
                       raise SystemExit(f'Typed adapter rule {source_profile}->{target_profile} is missing {field}')
               if not isinstance(rule['dashboardWidgets'], list) or not rule['dashboardWidgets']:
                   raise SystemExit(f'Typed adapter rule {source_profile}->{target_profile} must define dashboardWidgets as a non-empty list')
+          typed_contract_path = Path(typed_adapter.get('targetTypedContract', ''))
+          if not typed_contract_path.exists():
+              raise SystemExit(f'Typed adapter target contract path is missing: {typed_contract_path}')
+          typed_contract_source = typed_contract_path.read_text(encoding='utf-8')
+          if 'OfflineOnly' not in typed_contract_source:
+              raise SystemExit('Typed profile activation contract must expose OfflineOnly to preserve sysadmin-offline boundaries')
+          sysadmin_rule = next(
+              (
+                  rule
+                  for rule in projection_rules
+                  if rule.get('sourceProfile') == 'sysadmin-offline' and rule.get('targetTypedProfile') == 'sysadmin'
+              ),
+              None,
+          )
+          if sysadmin_rule is None:
+              raise SystemExit('Typed adapter must include a sysadmin-offline -> sysadmin projection rule')
+          expected_sysadmin_activation_overrides = {
+              'physicalPresenceRequired': True,
+              'minimumFactors': 2,
+              'remoteActivationDenied': True,
+              'cloudActivationDenied': True,
+              'aiActivationDenied': True,
+              'offlineOnly': True,
+          }
+          if sysadmin_rule.get('activationPolicyOverrides') != expected_sysadmin_activation_overrides:
+              raise SystemExit('Sysadmin typed adapter projection must preserve offline-only activation boundaries')
           adapter_invariants = typed_adapter.get('safetyInvariants', {})
           expected_adapter_invariants = [
               'allLegacyTypedProfilesProjected',
               'requiresDeterministicOneToOneRulePerTarget',
               'forbidRemoteActivationForSysadminTarget',
+              'preserveOfflineOnlyForSysadminTarget',
               'denySecretValueProjection',
           ]
           if not all(adapter_invariants.get(key) is True for key in expected_adapter_invariants):
@@ -525,6 +552,30 @@ jobs:
               raise SystemExit(f'Projection requires fields not defined by schema: {unknown_projection_fields}')
           if projection.get('requireSchemaValidationBeforeProjection') is not True:
               raise SystemExit('Integration projection must require schema validation before projection')
+          payload_projection_policy = projection.get('payloadProjectionPolicy', {})
+          if payload_projection_policy.get('mode') != 'sanitized-link-only':
+              raise SystemExit('Projection payload policy must enforce sanitized-link-only mode')
+          if payload_projection_policy.get('allowRawPayloadForwarding') is not False:
+              raise SystemExit('Projection payload policy must deny raw payload forwarding')
+          if payload_projection_policy.get('denySecretValues') is not True:
+              raise SystemExit('Projection payload policy must deny secret values')
+          if payload_projection_policy.get('redactUnknownFields') is not True:
+              raise SystemExit('Projection payload policy must redact unknown fields')
+          if payload_projection_policy.get('maxPayloadBytes') != 8192:
+              raise SystemExit('Projection payload policy must cap payload size at 8192 bytes')
+          expected_allowed_payload_fields = ['summary', 'evidenceReference', 'artifactUri', 'artifactDigest', 'status', 'changeScope']
+          if payload_projection_policy.get('allowedFields') != expected_allowed_payload_fields:
+              raise SystemExit('Projection payload policy allowed fields are not deterministic')
+          expected_classification_routing = {
+              'public': ['linear', 'slack', 'teams', 'sharepoint', 'azure-devops'],
+              'internal': ['linear', 'teams', 'sharepoint', 'azure-devops'],
+              'confidential': ['sharepoint', 'azure-devops'],
+              'restricted': ['sharepoint'],
+          }
+          if projection.get('classificationRouting') != expected_classification_routing:
+              raise SystemExit('Projection classification routing must enforce confidential/restricted target boundaries')
+          if projection.get('requireClassificationRoutingEnforcement') is not True:
+              raise SystemExit('Projection must require classification routing enforcement')
           if projection.get('allowExecutionFromProjectedSystems') is not False:
               raise SystemExit('Projected systems cannot trigger execution')
           print('six-profile delivery-fabric invariants passed')

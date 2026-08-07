@@ -67,13 +67,22 @@
       "soundCue": "sealed-vault",
       "background": "sealed-vault-night",
       "aihubMode": "offline-recovery-and-approval-only",
-      "dashboardWidgets": ["integrity", "secureboot", "tpm", "bitlocker", "driver-trust", "firewall", "recovery"]
+      "dashboardWidgets": ["integrity", "secureboot", "tpm", "bitlocker", "driver-trust", "firewall", "recovery"],
+      "activationPolicyOverrides": {
+        "physicalPresenceRequired": true,
+        "minimumFactors": 2,
+        "remoteActivationDenied": true,
+        "cloudActivationDenied": true,
+        "aiActivationDenied": true,
+        "offlineOnly": true
+      }
     }
   ],
   "safetyInvariants": {
     "allLegacyTypedProfilesProjected": true,
     "requiresDeterministicOneToOneRulePerTarget": true,
     "forbidRemoteActivationForSysadminTarget": true,
+    "preserveOfflineOnlyForSysadminTarget": true,
     "denySecretValueProjection": true
   }
 }
