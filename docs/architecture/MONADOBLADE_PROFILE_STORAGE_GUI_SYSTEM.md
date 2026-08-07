@@ -115,7 +115,7 @@ The installer must compute sizes from available capacity using policy percentage
 
 Every managed volume contains a signed `MONADO_VOLUME.json` manifest and a versioned root layout. Applications must use the manifest instead of guessing drive letters.
 
-Legacy workspace names (for example SysOps, Personal, and ServerBackground paths) remain on disk as compatibility roots and are mapped through `config/profiles/monadoblade-profiles.migration.v1-to-v2.json`.
+Legacy workspace names (for example SysOps, Personal, and ServerBackground paths) remain on disk as compatibility roots; `config/profiles/monadoblade-profiles.migration.v1-to-v2.json` defines profile identity migration, while root compatibility is preserved by storage/folder-hierarchy contracts.
 
 Canonical roots include:
 

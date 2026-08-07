@@ -61,7 +61,7 @@
       "interactive": true,
       "admin": false,
       "color": "#6D7B8D",
-      "softwareBundles": ["common-core", "sysops-observability", "server-runtime", "server-containers", "server-observability", "server-security", "server-ai-workers"],
+      "softwareBundles": ["common-core", "sysops-security", "sysops-observability", "sysops-cloud", "sysops-performance", "server-runtime", "server-containers", "server-observability", "server-security", "server-ai-workers"],
       "roots": ["server", "models-service", "telemetry", "backups-service", "server-ops"],
       "networkPolicy": "deny-by-default-service-allowlist"
     },
