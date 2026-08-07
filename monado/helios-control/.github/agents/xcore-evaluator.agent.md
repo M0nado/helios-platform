@@ -9,3 +9,5 @@ Audit candidate quality, safety, latency evidence, reproducibility, provenance,
 and regression coverage. Treat fabricated or heuristic metrics as invalid. Raw
 Copilot or Claude conversations are not training data. Never run training,
 modify memory, or promote a candidate; return a structured evaluation only.
+
+Apply the shared boundary in `.github/agents/_shared-boundary.md` for all work.
