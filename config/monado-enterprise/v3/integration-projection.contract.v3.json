@@ -1,0 +1,116 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v3/integration-projection.contract.v3.schema.json",
+  "schemaVersion": "3.0.0",
+  "contractId": "monadoblade-integration-projection-v3",
+  "executionMode": "projection-only",
+  "directExternalDeliveryEnabled": false,
+  "executionTriggersAllowed": false,
+  "normalizedEnvelope": {
+    "schemaReference": "config/integrations/event-contract.schema.json",
+    "requiredFields": [
+      "schemaVersion",
+      "eventId",
+      "source",
+      "eventType",
+      "repository",
+      "correlationId",
+      "environment",
+      "occurredAt",
+      "dataClassification",
+      "links",
+      "payload"
+    ]
+  },
+  "idempotency": {
+    "algorithm": "sha256",
+    "normalization": "nfc+trim+length-prefixed-utf8",
+    "inputFields": [
+      "routeId",
+      "source.eventId",
+      "target.system",
+      "operation"
+    ],
+    "keyTemplate": "sha256(normalized-length-prefixed:{routeId}:{source.eventId}:{target.system}:{operation})"
+  },
+  "surfaces": {
+    "linear": {
+      "authority": "work-tracking",
+      "mode": "approved-link-projection-only",
+      "projectionOnly": true,
+      "triggersExecution": false
+    },
+    "slack": {
+      "authority": "operational-notification",
+      "mode": "approved-link-projection-only",
+      "projectionOnly": true,
+      "triggersExecution": false
+    },
+    "teams": {
+      "authority": "operational-notification",
+      "mode": "approved-link-projection-only",
+      "projectionOnly": true,
+      "triggersExecution": false
+    },
+    "sharepoint": {
+      "authority": "governed-evidence",
+      "mode": "approved-link-projection-only",
+      "projectionOnly": true,
+      "triggersExecution": false
+    },
+    "azure-devops": {
+      "authority": "enterprise-delivery-bridge",
+      "mode": "approved-link-projection-only",
+      "projectionOnly": true,
+      "triggersExecution": false
+    }
+  },
+  "projectionRules": [
+    {
+      "routeId": "approved-pr-links-to-collaboration-surfaces-v3",
+      "source": "github",
+      "eventType": "pull_request.closed",
+      "targets": [
+        "linear",
+        "slack",
+        "teams",
+        "sharepoint",
+        "azure-devops"
+      ],
+      "operation": "approved-pr-link-projection",
+      "linkTypes": [
+        "pull-request",
+        "check-suite",
+        "artifact",
+        "evidence-record"
+      ],
+      "requiresApproval": true,
+      "payloadMode": "links-only"
+    },
+    {
+      "routeId": "approved-evidence-links-to-collaboration-surfaces-v3",
+      "source": "github",
+      "eventType": "workflow_run.completed",
+      "targets": [
+        "linear",
+        "slack",
+        "teams",
+        "sharepoint",
+        "azure-devops"
+      ],
+      "operation": "approved-evidence-link-projection",
+      "linkTypes": [
+        "artifact",
+        "evidence-record",
+        "governed-document"
+      ],
+      "requiresApproval": true,
+      "payloadMode": "links-only"
+    }
+  ],
+  "prohibitions": [
+    "surface-triggered-execution",
+    "raw-command-or-script-projection",
+    "secret-material-in-projection-payload",
+    "unapproved-link-projection"
+  ]
+}
