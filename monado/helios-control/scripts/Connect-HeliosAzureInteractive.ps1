@@ -70,6 +70,7 @@ $script:RequiredProviders = @(
     'Microsoft.OperationalInsights'
 )
 $script:LegacyGitHubEnvironmentNames = @('azure-dev', 'azure-test', 'azure-prod', 'dev', 'test', 'preview', 'prod')
+$script:ResolvedResourceNameEnvironment = $null
 
 function Protect-DiagnosticText {
     param([AllowEmptyString()] [string] $Text)
@@ -1059,7 +1060,7 @@ function Resolve-LegacyEnvironmentAlias {
     }
 }
 
-function Resolve-ResourceNameEnvironment {
+function Resolve-DefaultResourceNameEnvironment {
     param([Parameter(Mandatory)] [string] $CanonicalEnvironmentName)
 
     switch ($CanonicalEnvironmentName) {
@@ -1068,6 +1069,48 @@ function Resolve-ResourceNameEnvironment {
         'x-tier-prod' { return 'prod' }
         default { throw "Unsupported canonical environment '$CanonicalEnvironmentName'." }
     }
+}
+
+function Resolve-ResourceNameEnvironment {
+    param([Parameter(Mandatory)] [string] $CanonicalEnvironmentName)
+
+    if ($CanonicalEnvironmentName -ceq 'x-tier-xcore' -and
+        -not [string]::IsNullOrWhiteSpace($script:ResolvedResourceNameEnvironment)) {
+        return $script:ResolvedResourceNameEnvironment
+    }
+    return Resolve-DefaultResourceNameEnvironment -CanonicalEnvironmentName $CanonicalEnvironmentName
+}
+
+function Resolve-ResourceNameEnvironmentForResourceGroup {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
+
+    $default = Resolve-DefaultResourceNameEnvironment -CanonicalEnvironmentName $EnvironmentName
+    if ($EnvironmentName -cne 'x-tier-xcore') {
+        return $default
+    }
+
+    $current = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
+    if (-not [string]::IsNullOrWhiteSpace($current)) {
+        $normalized = $current.Trim().ToLowerInvariant()
+        if ($normalized -ceq 'preview') { return 'preview' }
+        if ($normalized -ceq 'test') { return 'test' }
+    }
+
+    $identities = @(Invoke-AzJson `
+        -Arguments @('identity', 'list', '--subscription', $Context.SubscriptionId, '--resource-group', $ResourceGroupName) `
+        -Operation "Inspecting existing x-tier-xcore naming lane in resource group '$ResourceGroupName'")
+    $hasPreview = @($identities | Where-Object name -eq 'helios-connector-preview-id').Count -gt 0
+    $hasTest = @($identities | Where-Object name -eq 'helios-connector-test-id').Count -gt 0
+    if ($hasPreview -and $hasTest) {
+        throw "Resource group '$ResourceGroupName' contains both preview and test Helios identity names. Set one canonical lane by removing one set or migrating explicitly before continuing."
+    }
+    if ($hasPreview) { return 'preview' }
+    if ($hasTest) { return 'test' }
+
+    return $default
 }
 
 function Get-ResourceGroupEnvironmentTag {
@@ -1093,6 +1136,7 @@ function Ensure-GovernedResourceGroupEnvironmentTag {
     if ($current -and $current -cne $EnvironmentName -and $legacyMapped -ne $EnvironmentName) {
         throw "Resource group '$ResourceGroupName' is already governed as environment '$current'; refusing to reclassify it as '$EnvironmentName'."
     }
+
     if ($current -ceq $EnvironmentName) { return }
 
     $resourceGroupId = "/subscriptions/$($Context.SubscriptionId)/resourceGroups/$ResourceGroupName"
@@ -1107,6 +1151,35 @@ function Ensure-GovernedResourceGroupEnvironmentTag {
     $verified = Get-ResourceGroupEnvironmentTag -Context $Context -ResourceGroupName $ResourceGroupName
     if ($verified -cne $EnvironmentName) {
         throw "Resource group '$ResourceGroupName' did not retain the required helios-environment tag."
+    }
+}
+
+function Ensure-ResourceNameEnvironmentTag {
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName,
+        [Parameter(Mandatory)] [string] $ResourceNameEnvironment
+    )
+
+    if ($ResourceNameEnvironment -cnotin @('dev', 'test', 'preview', 'prod')) {
+        throw "Unsupported resource naming lane '$ResourceNameEnvironment'."
+    }
+
+    $resourceGroupId = "/subscriptions/$($Context.SubscriptionId)/resourceGroups/$ResourceGroupName"
+    [void] (Invoke-AzJson `
+        -Arguments @(
+            'tag', 'update',
+            '--resource-id', $resourceGroupId,
+            '--operation', 'Merge',
+            '--tags', "helios-resource-name-environment=$ResourceNameEnvironment"
+        ) `
+        -Operation "Persisting Helios resource naming lane '$ResourceNameEnvironment' on resource group '$ResourceGroupName'")
+    $group = Invoke-AzJson `
+        -Arguments @('group', 'show', '--subscription', $Context.SubscriptionId, '--name', $ResourceGroupName) `
+        -Operation "Verifying Helios resource naming lane on resource group '$ResourceGroupName'"
+    $verified = Get-TagValue -Resource $group -Name 'helios-resource-name-environment'
+    if ($verified -cne $ResourceNameEnvironment) {
+        throw "Resource group '$ResourceGroupName' did not retain helios-resource-name-environment=$ResourceNameEnvironment."
     }
 }
 
@@ -1560,7 +1633,8 @@ function Assert-DedicatedHeliosRegistry {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Registry,
         [Parameter(Mandatory)] [pscustomobject] $Context,
-        [Parameter(Mandatory)] [string] $ResourceGroupName
+        [Parameter(Mandatory)] [string] $ResourceGroupName,
+        [switch] $ApplyLegacyTagMigration
     )
 
     $systemTag = Get-TagValue -Resource $Registry -Name 'system'
@@ -1575,6 +1649,10 @@ function Assert-DedicatedHeliosRegistry {
         if ($legacyMapped -ceq $EnvironmentName) {
             if ($Mode -ne 'Configure') {
                 throw "Registry '$($Registry.name)' is still tagged with legacy environment '$environmentTag'. Run -Mode Configure once to migrate the registry tag to '$EnvironmentName' before publish."
+            }
+            if (-not $ApplyLegacyTagMigration) {
+                Write-Warning "Registry '$($Registry.name)' is tagged with legacy environment '$environmentTag'. It will be migrated only after explicit Configure confirmation."
+                return $Registry
             }
             [void] (Invoke-AzJson `
                 -Arguments @(
@@ -1788,12 +1866,14 @@ function Invoke-BicepPreview {
         [Parameter(Mandatory)] [string] $PrincipalObjectId,
         [Parameter(Mandatory)] [string] $ImmutableImage,
         [Parameter(Mandatory)] [string] $RegistryName,
+        [Parameter(Mandatory)] [string] $ResourceNameEnvironment,
         [Parameter(Mandatory)] [string] $TemplatePath
     )
 
     $isPreviewPlaceholder = $ImmutableImage.EndsWith('@sha256:' + ('0' * 64), [StringComparison]::OrdinalIgnoreCase)
     $parameters = @(
         "environmentName=$EnvironmentName",
+        "resourceNameEnvironment=$ResourceNameEnvironment",
         "containerImage=$ImmutableImage",
         "containerRegistryName=$RegistryName",
         "allowPreviewPlaceholder=$($isPreviewPlaceholder.ToString().ToLowerInvariant())",
@@ -1904,6 +1984,9 @@ try {
     $selectedGroup = Select-ResourceGroup -Context $azureContext
     $selectedResourceGroup = [string] $selectedGroup.name
     $selectedLocation = [string] $selectedGroup.location
+    $script:ResolvedResourceNameEnvironment = Resolve-ResourceNameEnvironmentForResourceGroup `
+        -Context $azureContext `
+        -ResourceGroupName $selectedResourceGroup
 
     if ($Mode -eq 'Publish' -and -not [string]::IsNullOrWhiteSpace($ImageReference)) {
         throw 'Publish does not accept ImageReference. The protected GitHub workflow builds the exact checked-out GITHUB_SHA and resolves its digest.'
@@ -1921,6 +2004,7 @@ try {
         Write-Host "  Azure: $($azureContext.SubscriptionName) / tenant $($azureContext.TenantId)"
         Write-Host "  resource group: $selectedResourceGroup ($selectedLocation)"
         Write-Host "  container registry binding: $resolvedRegistryName"
+        Write-Host "  resource naming lane: $script:ResolvedResourceNameEnvironment"
         Write-Host "  Entra apps: '$ConnectorAppName' and '$GitHubOidcAppName'"
         Write-Host "  GitHub OIDC subject: $($githubOidcTrust.Subject)"
         Write-Host '  CI RBAC: Contributor at the selected resource-group scope only (no role-assignment authority)'
@@ -1928,6 +2012,22 @@ try {
         Write-Host "  GitHub environment: $GitHubOwner/$GitHubRepository / $GitHubEnvironment; reviewer-gated; branch $GitHubDeploymentBranch"
         Assert-ExactConfirmation -Expected 'CONFIGURE HELIOS AZURE' -Purpose 'Configuring Helios Entra, OIDC, RBAC, and GitHub bindings'
         Ensure-GovernedResourceGroupEnvironmentTag -Context $azureContext -ResourceGroupName $selectedResourceGroup
+        Ensure-ResourceNameEnvironmentTag `
+            -Context $azureContext `
+            -ResourceGroupName $selectedResourceGroup `
+            -ResourceNameEnvironment $script:ResolvedResourceNameEnvironment
+        if ($registrySelection.Exists) {
+            $migratedRegistry = Assert-DedicatedHeliosRegistry `
+                -Registry $registrySelection.Resource `
+                -Context $azureContext `
+                -ResourceGroupName $selectedResourceGroup `
+                -ApplyLegacyTagMigration
+            $registrySelection = [pscustomobject]@{
+                Name = $resolvedRegistryName
+                Exists = $true
+                Resource = $migratedRegistry
+            }
+        }
         Ensure-RequiredResourceProviders -Context $azureContext
     }
 
@@ -2052,6 +2152,7 @@ try {
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID = $principalObjectId
             HELIOS_REQUIRED_REVIEWER_ID = $RequiredReviewerId
             HELIOS_OIDC_SUBJECT = $githubOidcTrust.Subject
+            HELIOS_RESOURCE_NAME_ENVIRONMENT = $script:ResolvedResourceNameEnvironment
         }
         Set-GitHubEnvironmentVariables `
             -Values $githubValues `
@@ -2087,6 +2188,7 @@ try {
     Write-Host "  resource group: $selectedResourceGroup ($selectedLocation)"
     Write-Host "  container registry: $resolvedRegistryName"
     Write-Host "  environment: $EnvironmentName"
+    Write-Host "  resource naming lane: $script:ResolvedResourceNameEnvironment"
     Write-Host "  GitHub trust environment: $GitHubEnvironment"
     Write-Host '  runtime: Azure Container Apps only; local runtime disabled'
 
@@ -2112,6 +2214,7 @@ try {
             -PrincipalObjectId $principalObjectId `
             -ImmutableImage $immutableImage `
             -RegistryName $resolvedRegistryName `
+            -ResourceNameEnvironment $script:ResolvedResourceNameEnvironment `
             -TemplatePath $template)
     }
 

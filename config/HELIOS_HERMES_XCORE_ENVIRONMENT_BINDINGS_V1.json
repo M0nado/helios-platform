@@ -6,18 +6,21 @@
     {
       "name": "x-tier-dev",
       "tier": "development",
+      "eventEnvironment": "development",
       "deploymentWorkflow": "helios-cloud-deploy.yml",
       "approvalRequired": true
     },
     {
       "name": "x-tier-xcore",
       "tier": "evaluation",
+      "eventEnvironment": "test",
       "deploymentWorkflow": "helios-cloud-deploy.yml",
       "approvalRequired": true
     },
     {
       "name": "x-tier-prod",
       "tier": "production",
+      "eventEnvironment": "production",
       "deploymentWorkflow": "helios-cloud-deploy.yml",
       "approvalRequired": true
     }

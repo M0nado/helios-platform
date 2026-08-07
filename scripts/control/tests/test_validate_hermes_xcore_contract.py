@@ -81,6 +81,17 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             "must bind x-tier-dev to tier development",
         )
 
+    def test_environment_event_binding_mismatch_fails_closed(self) -> None:
+        candidate = copy.deepcopy(self.environment)
+        candidate["environments"][1]["eventEnvironment"] = "staging"
+        self.assert_has_error(
+            candidate,
+            self.capability,
+            self.event,
+            self.approval,
+            "must bind x-tier-xcore to normalized event environment test",
+        )
+
     def test_chaos_policy_never_allows_production(self) -> None:
         candidate = copy.deepcopy(self.environment)
         candidate["chaosAndRegressionPolicy"]["forbidProductionChaos"] = False

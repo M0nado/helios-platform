@@ -28,14 +28,17 @@ EXPECTED_ENVIRONMENTS = {"x-tier-dev", "x-tier-xcore", "x-tier-prod"}
 EXPECTED_ENVIRONMENT_BINDINGS = {
     "x-tier-dev": {
         "tier": "development",
+        "eventEnvironment": "development",
         "deploymentWorkflow": "helios-cloud-deploy.yml",
     },
     "x-tier-xcore": {
         "tier": "evaluation",
+        "eventEnvironment": "test",
         "deploymentWorkflow": "helios-cloud-deploy.yml",
     },
     "x-tier-prod": {
         "tier": "production",
+        "eventEnvironment": "production",
         "deploymentWorkflow": "helios-cloud-deploy.yml",
     },
 }
@@ -127,6 +130,12 @@ def validate_environment_contract(contract: object) -> list[str]:
                     "environment contract: "
                     f"environments[{index}] must bind {name} to tier "
                     f"{expected_binding['tier']}"
+                )
+            if environment.get("eventEnvironment") != expected_binding["eventEnvironment"]:
+                errors.append(
+                    "environment contract: "
+                    f"environments[{index}] must bind {name} to normalized event environment "
+                    f"{expected_binding['eventEnvironment']}"
                 )
             if environment.get("deploymentWorkflow") != expected_binding["deploymentWorkflow"]:
                 errors.append(

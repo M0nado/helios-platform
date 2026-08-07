@@ -141,6 +141,7 @@
       "required": [
         "name",
         "tier",
+        "eventEnvironment",
         "deploymentWorkflow",
         "approvalRequired"
       ],
@@ -158,6 +159,16 @@
           "enum": [
             "development",
             "evaluation",
+            "production"
+          ]
+        },
+        "eventEnvironment": {
+          "type": "string",
+          "enum": [
+            "local",
+            "development",
+            "test",
+            "staging",
             "production"
           ]
         },
