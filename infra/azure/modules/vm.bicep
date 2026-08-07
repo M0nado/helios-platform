@@ -7,9 +7,11 @@ param adminUsername string = 'heliosadmin'
 @secure()
 param adminPublicKey string
 param vmSize string = 'Standard_B2s'
+param allowedSshSourcePrefix string = '10.0.0.0/8'
 
 var publicIpName = take(toLower('${namePrefix}-${environmentName}-vm-pip'), 80)
 var networkInterfaceName = take(toLower('${namePrefix}-${environmentName}-vm-nic'), 80)
+var networkSecurityGroupName = take(toLower('${namePrefix}-${environmentName}-vm-nsg'), 80)
 var vmName = take(toLower('${namePrefix}-${environmentName}-vm'), 64)
 
 resource publicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
@@ -23,10 +25,35 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   }
 }
 
+resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
+  name: networkSecurityGroupName
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'allow-ssh-from-approved-sources'
+        properties: {
+          access: 'Allow'
+          direction: 'Inbound'
+          priority: 1000
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '22'
+          sourceAddressPrefix: allowedSshSourcePrefix
+          destinationAddressPrefix: '*'
+        }
+      }
+    ]
+  }
+}
+
 resource networkInterface 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   name: networkInterfaceName
   location: location
   properties: {
+    networkSecurityGroup: {
+      id: networkSecurityGroup.id
+    }
     ipConfigurations: [
       {
         name: 'ipconfig1'
