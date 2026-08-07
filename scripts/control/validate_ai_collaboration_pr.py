@@ -80,10 +80,17 @@ def strip_checkbox_lines(section: str) -> str:
 
 
 def extract_branch_exception_reason(section: str) -> str:
-    for raw in section.splitlines():
+    lines = section.splitlines()
+    for index, raw in enumerate(lines):
         line = raw.strip()
         if line.lower().startswith("branch naming notes:"):
-            return line.split(":", 1)[1].strip()
+            inline_reason = line.split(":", 1)[1].strip()
+            if inline_reason:
+                return inline_reason
+            following_reason = "\n".join(
+                candidate.strip() for candidate in lines[index + 1 :] if candidate.strip()
+            ).strip()
+            return following_reason
     return strip_checkbox_lines(section)
 
 

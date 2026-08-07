@@ -183,6 +183,19 @@ class ValidateAiCollaborationPrTests(unittest.TestCase):
             any("Branch Naming exception is checked but no reason was provided." in item for item in errors)
         )
 
+    def test_branch_exception_allows_multiline_reason(self):
+        body = build_body(
+            standard_branch=False,
+            branch_exception_notes="\nThis workspace branch is pre-provisioned by the session system.",
+        )
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            body,
+            "feature/preprovisioned-branch-name",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertEqual(errors, [])
+
     def test_correlation_id_must_match_linked_issue(self):
         body = build_body(
             correlation_id="hc-999-governed-ai-collab-contract",
