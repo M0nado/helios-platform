@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonadoProfileManifest version="3.0.0" profileId="studio">
+  <DisplayName>Studio</DisplayName>
+  <Glyph>響</Glyph>
+  <SemanticUi>audio-render-cockpit</SemanticUi>
+  <Theme>studio-violet-wave</Theme>
+  <ChromaProfile>studio-spatial</ChromaProfile>
+  <WyvernAudioProfile>studio-harmonic</WyvernAudioProfile>
+  <ServiceBudget alwaysOnMax="7" backgroundPriority="audio-critical" />
+  <ProcessBudget maxHighPriorityProcesses="5" />
+  <NetworkPolicy>plugin-and-cloud-approved</NetworkPolicy>
+  <TelemetryPolicy>audio-and-render-focused</TelemetryPolicy>
+  <AlvisToolBudget maxConcurrentTools="3" denyAutonomousApply="true" />
+  <StateModel recoveryWorkflow="false" quarantineWorkflow="false" postAuthShellEnabled="true" />
+</MonadoProfileManifest>
