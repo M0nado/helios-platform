@@ -4,6 +4,7 @@ using System.IO;
 using System.Xml;
 using System.Xml.Schema;
 using HELIOS.Platform.Contracts.MonadoEnterprise.V2;
+using Xunit;
 
 namespace HELIOS.Platform.Contracts.Tests;
 

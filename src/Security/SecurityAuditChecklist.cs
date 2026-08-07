@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Win32;
 
 namespace Helios.Security.Validation
 {
@@ -127,12 +128,22 @@ namespace Helios.Security.Validation
         }
 
         // Validation implementations
+        private static RegistryKey? OpenLocalMachineSubKey(string path)
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return null;
+            }
+
+            return Registry.LocalMachine.OpenSubKey(path);
+        }
+
         private static ValidationResult ValidateSecureBootEnabled()
         {
             try
             {
                 // Check Windows Registry for Secure Boot status
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Control\SecureBoot\State"))
                 {
                     if (key != null)
@@ -180,7 +191,7 @@ namespace Helios.Security.Validation
             try
             {
                 // Check Windows Registry for BitLocker status on C: drive
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Services\EhStorTcgDrv"))
                 {
                     if (key != null)
@@ -231,7 +242,7 @@ namespace Helios.Security.Validation
             try
             {
                 // Check Windows Registry for Windows Defender service status
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Services\WinDefend"))
                 {
                     if (key != null)
@@ -281,7 +292,7 @@ namespace Helios.Security.Validation
         {
             try
             {
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile"))
                 {
                     if (key != null)
@@ -333,7 +344,7 @@ namespace Helios.Security.Validation
         {
             try
             {
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Control\Lsa"))
                 {
                     if (key != null)
@@ -383,7 +394,7 @@ namespace Helios.Security.Validation
         {
             try
             {
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.3\Server"))
                 {
                     if (key != null)
@@ -431,7 +442,7 @@ namespace Helios.Security.Validation
             try
             {
                 // Check for TPM 2.0 service
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Services\TBS"))
                 {
                     if (key != null)
@@ -440,7 +451,7 @@ namespace Helios.Security.Validation
                         int serviceStart = startValue != null ? (int)startValue : -1;
 
                         // Check TPM sealing info
-                        using (var tpmKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                        using (var tpmKey = OpenLocalMachineSubKey(
                             @"SYSTEM\CurrentControlSet\Services\Tpm"))
                         {
                             bool tpmActive = tpmKey != null;
@@ -488,7 +499,7 @@ namespace Helios.Security.Validation
         {
             try
             {
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SOFTWARE\Policies\Microsoft\Windows\System"))
                 {
                     if (key != null)
@@ -536,12 +547,12 @@ namespace Helios.Security.Validation
             try
             {
                 // Check network boot policies
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Control\BootVerificationProgram"))
                 {
                     bool networkLocked = key != null;
 
-                    using (var netKey = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    using (var netKey = OpenLocalMachineSubKey(
                         @"SYSTEM\CurrentControlSet\Services\NetLogon\Parameters"))
                     {
                         if (netKey != null)
@@ -595,7 +606,7 @@ namespace Helios.Security.Validation
                 int validationTiersFound = 0;
 
                 // Tier 1: BIOS/UEFI
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Control\SecureBoot\State"))
                 {
                     if (key != null && key.GetValue("UEFISecureBootEnabled") != null)
@@ -603,7 +614,7 @@ namespace Helios.Security.Validation
                 }
 
                 // Tier 2: VTL0 (Virtual Trust Level)
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"))
                 {
                     if (key != null && key.GetValue("Enabled") != null)
@@ -611,7 +622,7 @@ namespace Helios.Security.Validation
                 }
 
                 // Tier 3: Kernel mode
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Control\CI\Policy"))
                 {
                     if (key != null)
@@ -619,7 +630,7 @@ namespace Helios.Security.Validation
                 }
 
                 // Tier 4: Runtime signatures
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                using (var key = OpenLocalMachineSubKey(
                     @"SYSTEM\CurrentControlSet\Services\Code Integrity"))
                 {
                     if (key != null)
