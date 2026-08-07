@@ -3,6 +3,11 @@
   "executionMode": "dry-run",
   "runtimeBindings": "cosmos-leased-control-runs-with-inline-signed-relay-dispatcher",
   "routingState": "control-run-executable-provider-events-still-disabled",
+  "agentCorePolicy": {
+    "contract": "config/agent-core-policy.json",
+    "schema": "config/agent-core-policy.schema.json",
+    "enforcement": "fail-closed"
+  },
   "identity": {
     "azureCredential": "managed-identity",
     "secretStore": "key-vault"

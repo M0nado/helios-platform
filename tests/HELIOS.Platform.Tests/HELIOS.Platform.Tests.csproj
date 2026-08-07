@@ -1,25 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows10.0.19041</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNETTestSdkVersion)" />
+    <PackageReference Include="xunit" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVisualStudioVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Moq" Version="$(MoqVersion)" />
     <!-- NOTE: coverlet.collector 6.0.0 → 10.0.0 is a major version bump - NOT updated -->
-    <PackageReference Include="coverlet.collector" Version="6.0.0">
+    <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Phase10/Quarantine/**/*.cs" />
+    <Compile Include="../Phase3Phase5IntegrationTests.cs" Link="Imported/Phase3Phase5IntegrationTests.cs" />
+    <Compile Include="../SandboxTests.cs" Link="Imported/SandboxTests.cs" />
+    <Compile Include="../Plugins/**/*.cs" Link="Imported/Plugins/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../unit/**/*.cs" Link="Imported/Unit/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../src/core/HELIOS.Platform/**/Tests/**/*.cs" Exclude="../../src/core/HELIOS.Platform/Phase10/Users/Tests/**/*.cs" Link="Imported/Core/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../src/core/HELIOS.Platform/**/*Tests.cs" Exclude="../../src/core/HELIOS.Platform/**/Tests/**/*.cs" Link="Imported/Core/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,6 +5,7 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
+    <StartupObject>HELIOS.Platform.Program</StartupObject>
     <UseWPF>true</UseWPF>
     <RootNamespace>HELIOS.Platform</RootNamespace>
     <AssemblyName>HELIOS.Platform</AssemblyName>
@@ -66,8 +67,8 @@
 
   <!-- Package Resources -->
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="\" />
-    <None Include="../../LICENSE" Pack="true" PackagePath="\" />
+    <None Include="../../../README.md" Pack="true" PackagePath="\" />
+    <None Include="../../../LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <!-- NuGet Dependencies -->
@@ -103,8 +104,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
-    
     <!-- Logging -->
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
@@ -171,12 +170,6 @@
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     
     <!-- Testing -->
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="Moq" Version="4.20.70" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
   <!-- Exclude broken Phase 10 BootEnvironment files from compilation -->
@@ -185,6 +178,8 @@
   <ItemGroup>
     <Compile Remove="Phase10/BootEnvironment/Channel3USBBootInstallation.cs" />
     <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
+    <Compile Remove="**/obj/**/*.cs" />
+    <Compile Remove="**/bin/**/*.cs" />
     <Compile Remove="**/Tests/**/*.cs" />
     <Compile Remove="**/*Tests.cs" />
   </ItemGroup>
