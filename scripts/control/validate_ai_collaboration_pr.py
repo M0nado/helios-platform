@@ -18,7 +18,7 @@ CORRELATION_PATTERN = re.compile(
     r"\bhc-(?P<issue>\d+)-(?P<scope>[a-z0-9]+(?:-[a-z0-9]+)*)\b"
 )
 ISSUE_REF_PATTERN = re.compile(r"#(?P<issue>\d+)")
-SECTION_PATTERN = re.compile(r"^###\s+(.+?)\s*$")
+SECTION_PATTERN = re.compile(r"^#{2,3}\s+(.+?)\s*$")
 URL_OR_REF_PATTERN = re.compile(r"https?://|#\d+|/actions/runs/\d+")
 
 PLACEHOLDER_VALUES = {

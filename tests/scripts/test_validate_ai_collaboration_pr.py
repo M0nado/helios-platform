@@ -38,7 +38,9 @@ def build_body(
     approval_link: str = "N/A",
     rollback_plan: str = "N/A",
     security_checks: bool = True,
+    security_heading_level: int = 3,
 ) -> str:
+    security_heading = "#" * security_heading_level
     return f"""## Summary
 Contract validation test payload.
 
@@ -87,7 +89,7 @@ Branch naming notes: {branch_exception_notes}
 ### Rollback Plan
 {rollback_plan}
 
-### Security and Data Handling
+{security_heading} Security and Data Handling
 - [{mark(security_checks)}] No credentials, tokens, recovery keys, private endpoint keys, or tenant secrets were committed
 - [{mark(security_checks)}] No prohibited data flows were introduced (including secret leakage to docs, PR text, or logs)
 """
@@ -206,6 +208,18 @@ class ValidateAiCollaborationPrTests(unittest.TestCase):
         self.assertTrue(
             any("PR title must follow" in item for item in errors)
         )
+
+    def test_security_section_accepts_h2_heading(self):
+        body = build_body(
+            security_heading_level=2,
+        )
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertEqual(errors, [])
 
 
 if __name__ == "__main__":
