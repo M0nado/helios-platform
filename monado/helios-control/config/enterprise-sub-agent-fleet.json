@@ -1,0 +1,884 @@
+{
+  "schemaVersion": 1,
+  "registryId": "helios-azure-enterprise-sub-agent-fleet",
+  "sourceIssue": "https://github.com/M0nado/helios-platform/issues/165",
+  "parentIssue": "https://github.com/M0nado/helios-platform/issues/148",
+  "coordinatedIssues": [
+    "https://github.com/M0nado/helios-platform/issues/153",
+    "https://github.com/M0nado/helios-platform/issues/154",
+    "https://github.com/M0nado/helios-platform/issues/155",
+    "https://github.com/M0nado/helios-platform/issues/156",
+    "https://github.com/M0nado/helios-platform/issues/157",
+    "https://github.com/M0nado/helios-platform/issues/158",
+    "https://github.com/M0nado/helios-platform/issues/162"
+  ],
+  "defaultExecutionMode": "what-if-only",
+  "productionGate": {
+    "automaticApplyAllowed": false,
+    "protectedEnvironmentRequired": true,
+    "immutableImageDigestRequired": true,
+    "whatIfEvidenceRequired": true,
+    "rollbackPlanRequired": true
+  },
+  "integrityGate": {
+    "blockingIssue": 162,
+    "status": "blocked",
+    "productionProvisioningAllowed": false,
+    "blockingReason": "External binding integrity coverage and Bicep-output alignment must pass before production provisioning."
+  },
+  "eventContract": {
+    "schemaPath": "../../config/integrations/event-contract.schema.json",
+    "correlationIdRequired": true,
+    "evidenceLinksRequired": true,
+    "secretsInPayloadAllowed": false
+  },
+  "connectors": [
+    {
+      "id": "azure",
+      "provider": "microsoft",
+      "adapter": "managed-identity-rest",
+      "mode": "read-only",
+      "requiredAgentIds": [
+        "deployment-supervisor-agent",
+        "azure-cli-azd-bootstrap-agent",
+        "bicep-infrastructure-agent",
+        "container-apps-functions-broker-agent",
+        "validation-observability-agent",
+        "rollback-agent"
+      ]
+    },
+    {
+      "id": "entra",
+      "provider": "microsoft",
+      "adapter": "graph-identity-governed",
+      "mode": "approval-gated",
+      "requiredAgentIds": [
+        "entra-identity-agent",
+        "github-oidc-agent",
+        "microsoft-graph-agent"
+      ]
+    },
+    {
+      "id": "microsoft-graph",
+      "provider": "microsoft",
+      "adapter": "least-privilege-delegated",
+      "mode": "approval-gated",
+      "requiredAgentIds": [
+        "microsoft-graph-agent",
+        "teams-operations-agent",
+        "sharepoint-onedrive-publisher-agent"
+      ]
+    },
+    {
+      "id": "teams",
+      "provider": "microsoft",
+      "adapter": "signed-relay",
+      "mode": "dry-run",
+      "requiredAgentIds": [
+        "teams-operations-agent",
+        "compliance-evidence-agent"
+      ]
+    },
+    {
+      "id": "sharepoint-onedrive",
+      "provider": "microsoft",
+      "adapter": "signed-relay",
+      "mode": "dry-run",
+      "requiredAgentIds": [
+        "sharepoint-onedrive-publisher-agent",
+        "compliance-evidence-agent"
+      ]
+    },
+    {
+      "id": "azure-ai-foundry",
+      "provider": "microsoft",
+      "adapter": "managed-identity-integration",
+      "mode": "planned",
+      "requiredAgentIds": [
+        "azure-ai-foundry-agent",
+        "hermes-registration-agent",
+        "aihub-registration-agent"
+      ]
+    },
+    {
+      "id": "application-insights",
+      "provider": "microsoft",
+      "adapter": "otel-exporter",
+      "mode": "read-only",
+      "requiredAgentIds": [
+        "validation-observability-agent",
+        "compliance-evidence-agent"
+      ]
+    },
+    {
+      "id": "github",
+      "provider": "github",
+      "adapter": "gh-cli-and-oidc",
+      "mode": "branch-and-pr-only",
+      "requiredAgentIds": [
+        "deployment-supervisor-agent",
+        "github-oidc-agent",
+        "validation-observability-agent",
+        "compliance-evidence-agent",
+        "custom-plugin-mcp-connection-agent"
+      ]
+    },
+    {
+      "id": "linear",
+      "provider": "linear",
+      "adapter": "signed-relay",
+      "mode": "dry-run",
+      "requiredAgentIds": [
+        "linear-synchronization-agent",
+        "compliance-evidence-agent",
+        "custom-plugin-mcp-connection-agent"
+      ]
+    },
+    {
+      "id": "slack",
+      "provider": "slack",
+      "adapter": "signed-relay",
+      "mode": "dry-run",
+      "requiredAgentIds": [
+        "slack-operations-agent",
+        "compliance-evidence-agent",
+        "custom-plugin-mcp-connection-agent"
+      ]
+    },
+    {
+      "id": "openai",
+      "provider": "openai",
+      "adapter": "responses-provider-key-vault-reference",
+      "mode": "disabled-until-approved",
+      "requiredAgentIds": [
+        "openai-provider-agent",
+        "validation-observability-agent"
+      ]
+    },
+    {
+      "id": "custom-mcp-connector-plane",
+      "provider": "helios",
+      "adapter": "streamable-http-mcp",
+      "mode": "read-only",
+      "requiredAgentIds": [
+        "custom-plugin-mcp-connection-agent",
+        "deployment-supervisor-agent"
+      ]
+    }
+  ],
+  "customMcpConnectorPlane": {
+    "contractFile": "config/custom-mcp-connector-plane.json",
+    "explicitToolAllowlistRequired": true,
+    "dynamicToolDiscoveryAllowed": false,
+    "defaultConnectorMode": "read-only"
+  },
+  "agents": [
+    {
+      "id": "deployment-supervisor-agent",
+      "displayName": "Deployment Supervisor",
+      "permissionTier": 3,
+      "writeBoundary": "task-branch-and-draft-pull-request-only",
+      "identity": {
+        "type": "github-oidc-workflow",
+        "scope": "protected-github-environment",
+        "leastPrivilegeRoles": [
+          "Contributor at reviewed resource-group scope"
+        ],
+        "credentialSource": "workload-identity-federation"
+      },
+      "allowedTools": [
+        "helios_plan_automation",
+        "helios_get_run",
+        "helios_list_connectors",
+        "gh pr create --draft"
+      ],
+      "deniedOperations": [
+        "direct-main-write",
+        "automatic-merge",
+        "unreviewed-deploy"
+      ],
+      "requiredApprovals": [
+        "protected-preview-environment-approval",
+        "protected-deploy-environment-approval"
+      ],
+      "evidenceOutputs": [
+        "control-run-correlation-id",
+        "what-if-digest",
+        "pull-request-link"
+      ],
+      "healthChecks": [
+        "gh auth status",
+        "dotnet test Helios.Connect.sln --no-build"
+      ]
+    },
+    {
+      "id": "azure-cli-azd-bootstrap-agent",
+      "displayName": "Azure CLI and azd Bootstrap Agent",
+      "permissionTier": 2,
+      "writeBoundary": "plan-and-readiness-report-only",
+      "identity": {
+        "type": "interactive-operator-session",
+        "scope": "selected-tenant-subscription-resource-group",
+        "leastPrivilegeRoles": [
+          "Reader",
+          "Subscription metadata read"
+        ],
+        "credentialSource": "azure-cli-device-login"
+      },
+      "allowedTools": [
+        "az account show",
+        "az group show",
+        "azd auth login --check-status",
+        "Invoke-HeliosCliMatrix.ps1"
+      ],
+      "deniedOperations": [
+        "az deployment group create",
+        "azd provision",
+        "azd deploy"
+      ],
+      "requiredApprovals": [
+        "operator-confirmed-target-context"
+      ],
+      "evidenceOutputs": [
+        "azure-context-summary",
+        "toolchain-readiness-report"
+      ],
+      "healthChecks": [
+        "az version",
+        "azd version"
+      ]
+    },
+    {
+      "id": "bicep-infrastructure-agent",
+      "displayName": "Bicep Infrastructure Agent",
+      "permissionTier": 2,
+      "writeBoundary": "compile-and-what-if-only",
+      "identity": {
+        "type": "github-oidc-workflow",
+        "scope": "reviewed-bicep-template-and-parameters",
+        "leastPrivilegeRoles": [
+          "Reader",
+          "Custom role: Bicep validate and what-if only (no create/update/delete)"
+        ],
+        "credentialSource": "workload-identity-federation"
+      },
+      "allowedTools": [
+        "az bicep build",
+        "az deployment group validate",
+        "az deployment group what-if"
+      ],
+      "deniedOperations": [
+        "az deployment group create",
+        "template-inline-secret-values"
+      ],
+      "requiredApprovals": [
+        "what-if-hash-review",
+        "bicep-parameter-hash-review"
+      ],
+      "evidenceOutputs": [
+        "compiled-template-sha256",
+        "parameter-file-sha256",
+        "what-if-json-sha256"
+      ],
+      "healthChecks": [
+        "az bicep version",
+        "what-if-output-has-fullresourcepayloads"
+      ]
+    },
+    {
+      "id": "entra-identity-agent",
+      "displayName": "Entra Identity Agent",
+      "permissionTier": 3,
+      "writeBoundary": "identity-bootstrap-through-reviewed-script-only",
+      "identity": {
+        "type": "tenant-admin-approved-session",
+        "scope": "specific-app-registrations-and-federated-credentials",
+        "leastPrivilegeRoles": [
+          "Application Administrator"
+        ],
+        "credentialSource": "interactive-admin-consent"
+      },
+      "allowedTools": [
+        "Connect-HeliosAzureInteractive.ps1 -Mode Configure",
+        "az ad app show",
+        "az ad app federated-credential list"
+      ],
+      "deniedOperations": [
+        "tenant-wide-consent-without-ticket",
+        "broad-directory-readwrite"
+      ],
+      "requiredApprovals": [
+        "tenant-admin-approval",
+        "exact-confirmation-CONFIGURE HELIOS AZURE"
+      ],
+      "evidenceOutputs": [
+        "entra-app-client-id",
+        "federated-subject-proof",
+        "reviewer-and-branch-policy-proof"
+      ],
+      "healthChecks": [
+        "federated-credential-subject-matches-protected-environment",
+        "no-client-secret-created"
+      ]
+    },
+    {
+      "id": "github-oidc-agent",
+      "displayName": "GitHub OIDC Agent",
+      "permissionTier": 3,
+      "writeBoundary": "environment-bound-federation-only",
+      "identity": {
+        "type": "github-api-read-plus-reviewed-environment-gates",
+        "scope": "M0nado/helios-platform protected environment",
+        "leastPrivilegeRoles": [
+          "Repository read",
+          "Environment variable write (non-secret)"
+        ],
+        "credentialSource": "gh-cli-session-and-workload-identity"
+      },
+      "allowedTools": [
+        "gh api repos/M0nado/helios-platform/actions/oidc/customization/sub",
+        "helios.py oidc --environment azure-dev",
+        "Connect-HeliosAzureInteractive.ps1 -Mode Configure"
+      ],
+      "deniedOperations": [
+        "custom-oidc-subject-guessing",
+        "fallback-to-name-only-subject"
+      ],
+      "requiredApprovals": [
+        "required-reviewer-id-confirmed",
+        "protected-environment-branch-policy-confirmed"
+      ],
+      "evidenceOutputs": [
+        "resolved-oidc-subject",
+        "owner-id",
+        "repository-id"
+      ],
+      "healthChecks": [
+        "gh auth status",
+        "oidc-use-default-and-use-immutable-subject-verified"
+      ]
+    },
+    {
+      "id": "key-vault-secret-broker-agent",
+      "displayName": "Key Vault and Secret Broker Agent",
+      "permissionTier": 3,
+      "writeBoundary": "key-vault-reference-management-only",
+      "identity": {
+        "type": "managed-identity-and-key-vault-rbac",
+        "scope": "selected-key-vault-secret-references",
+        "leastPrivilegeRoles": [
+          "Key Vault Secrets Officer (approved secret scope only)"
+        ],
+        "credentialSource": "managed-identity"
+      },
+      "allowedTools": [
+        "az keyvault show",
+        "az keyvault secret set --name <approved>",
+        "Container App secret reference update through reviewed workflow"
+      ],
+      "deniedOperations": [
+        "plaintext-secret-in-repository",
+        "plaintext-secret-in-logs"
+      ],
+      "requiredApprovals": [
+        "secret-owner-approval",
+        "protected-deployment-approval"
+      ],
+      "evidenceOutputs": [
+        "secret-reference-name",
+        "vault-rbac-proof",
+        "no-plaintext-secret-proof"
+      ],
+      "healthChecks": [
+        "key-vault-rbac-mode-enabled",
+        "container-app-uses-secret-reference"
+      ]
+    },
+    {
+      "id": "azure-ai-foundry-agent",
+      "displayName": "Azure AI Foundry Agent",
+      "permissionTier": 2,
+      "writeBoundary": "project-selection-and-readiness-only",
+      "identity": {
+        "type": "managed-identity",
+        "scope": "selected-foundry-project-and-model-deployments",
+        "leastPrivilegeRoles": [
+          "Foundry Agent Consumer"
+        ],
+        "credentialSource": "managed-identity"
+      },
+      "allowedTools": [
+        "azure_list_foundry_resources",
+        "az resource list --resource-type Microsoft.CognitiveServices/accounts"
+      ],
+      "deniedOperations": [
+        "automatic-model-deployment",
+        "unreviewed-agent-publication"
+      ],
+      "requiredApprovals": [
+        "foundry-project-owner-approval"
+      ],
+      "evidenceOutputs": [
+        "foundry-project-id",
+        "model-deployment-name"
+      ],
+      "healthChecks": [
+        "foundry-resource-discovery-succeeds",
+        "managed-identity-access-validated"
+      ]
+    },
+    {
+      "id": "container-apps-functions-broker-agent",
+      "displayName": "Container Apps and Functions Broker Agent",
+      "permissionTier": 3,
+      "writeBoundary": "protected-workflow-deploy-only",
+      "identity": {
+        "type": "github-oidc-workflow",
+        "scope": "container-apps-resource-group",
+        "leastPrivilegeRoles": [
+          "Contributor at resource-group scope",
+          "AcrPull or Container Registry Repository Reader"
+        ],
+        "credentialSource": "workload-identity-federation"
+      },
+      "allowedTools": [
+        "helios-cloud-deploy workflow",
+        "az containerapp show",
+        "Test-HeliosCloudConnection.ps1"
+      ],
+      "deniedOperations": [
+        "direct-local-az-containerapp-update",
+        "function-key-exposure"
+      ],
+      "requiredApprovals": [
+        "preview-environment-approval",
+        "deploy-environment-approval"
+      ],
+      "evidenceOutputs": [
+        "container-image-digest",
+        "container-app-fqdn",
+        "health-check-evidence"
+      ],
+      "healthChecks": [
+        "health-ready-endpoint-returns-200",
+        "entra-auth-fails-closed-without-token"
+      ]
+    },
+    {
+      "id": "microsoft-graph-agent",
+      "displayName": "Microsoft Graph Agent",
+      "permissionTier": 3,
+      "writeBoundary": "selected-site-and-channel-scopes-only",
+      "identity": {
+        "type": "delegated-graph-permissions",
+        "scope": "selected-site-and-team",
+        "leastPrivilegeRoles": [
+          "Sites.Selected",
+          "Resource-specific consent: ChannelMessage.Send.Group (approved team/channel only)"
+        ],
+        "credentialSource": "interactive-admin-consent"
+      },
+      "allowedTools": [
+        "approved-graph-connector-api",
+        "graph-site-permission-audit"
+      ],
+      "deniedOperations": [
+        "tenant-wide-sites-fullcontrol",
+        "application-permission-bypass"
+      ],
+      "requiredApprovals": [
+        "tenant-admin-consent",
+        "security-review-for-graph-scope"
+      ],
+      "evidenceOutputs": [
+        "granted-graph-scopes",
+        "selected-site-ids"
+      ],
+      "healthChecks": [
+        "graph-token-has-only-approved-scopes",
+        "selected-site-request-succeeds"
+      ]
+    },
+    {
+      "id": "teams-operations-agent",
+      "displayName": "Teams Operations Agent",
+      "permissionTier": 2,
+      "writeBoundary": "sideload-and-staged-publication-only",
+      "identity": {
+        "type": "teams-sso-delegated",
+        "scope": "approved-teams-team-and-channel",
+        "leastPrivilegeRoles": [
+          "Teams app manager for target tenant"
+        ],
+        "credentialSource": "microsoft-365-admin-session"
+      },
+      "allowedTools": [
+        "New-HeliosTeamsPackage.ps1",
+        "manifest validation workflow",
+        "teams connector dry-run relay"
+      ],
+      "deniedOperations": [
+        "tenant-wide-app-publish-without-approval",
+        "automatic-live-relay-enable"
+      ],
+      "requiredApprovals": [
+        "tenant-app-catalog-approval"
+      ],
+      "evidenceOutputs": [
+        "teams-package-version",
+        "manifest-validation-report",
+        "test-event-correlation-id"
+      ],
+      "healthChecks": [
+        "teams-package-icons-validated",
+        "teams-webhook-challenge-validation-configured"
+      ]
+    },
+    {
+      "id": "sharepoint-onedrive-publisher-agent",
+      "displayName": "SharePoint and OneDrive Publisher Agent",
+      "permissionTier": 2,
+      "writeBoundary": "governed-document-library-only",
+      "identity": {
+        "type": "sites-selected-delegated",
+        "scope": "approved-sharepoint-library",
+        "leastPrivilegeRoles": [
+          "Lists.SelectedOperations.Selected (approved library only)"
+        ],
+        "credentialSource": "graph-delegated-session"
+      },
+      "allowedTools": [
+        "sharepoint relay dry-run event",
+        "governance-document publication checks"
+      ],
+      "deniedOperations": [
+        "tenant-wide-library-write",
+        "onedrive-personal-root-write"
+      ],
+      "requiredApprovals": [
+        "sharepoint-site-owner-approval"
+      ],
+      "evidenceOutputs": [
+        "published-document-link",
+        "release-evidence-link"
+      ],
+      "healthChecks": [
+        "selected-library-access-verified",
+        "correlated-sharepoint-test-event-recorded"
+      ]
+    },
+    {
+      "id": "linear-synchronization-agent",
+      "displayName": "Linear Synchronization Agent",
+      "permissionTier": 2,
+      "writeBoundary": "tracked-issue-and-project-sync-only",
+      "identity": {
+        "type": "linear-token-from-key-vault-reference",
+        "scope": "approved-team-and-project",
+        "leastPrivilegeRoles": [
+          "Issue read/write for selected project"
+        ],
+        "credentialSource": "key-vault-secret-reference"
+      },
+      "allowedTools": [
+        "linear relay dry-run",
+        "issue link synchronization"
+      ],
+      "deniedOperations": [
+        "cross-team-ticket-modification",
+        "silent-priority-changes"
+      ],
+      "requiredApprovals": [
+        "project-owner-approval"
+      ],
+      "evidenceOutputs": [
+        "linear-issue-link",
+        "correlation-id-with-github-pr"
+      ],
+      "healthChecks": [
+        "linear-team-binding-configured",
+        "dry-run-receipt-recorded"
+      ]
+    },
+    {
+      "id": "slack-operations-agent",
+      "displayName": "Slack Operations Agent",
+      "permissionTier": 2,
+      "writeBoundary": "approved-channel-notifications-only",
+      "identity": {
+        "type": "slack-signing-and-relay-secret-reference",
+        "scope": "approved-workspace-and-channel",
+        "leastPrivilegeRoles": [
+          "Webhook send for approved channel"
+        ],
+        "credentialSource": "key-vault-secret-reference"
+      },
+      "allowedTools": [
+        "slack relay dry-run",
+        "status message formatter"
+      ],
+      "deniedOperations": [
+        "workspace-admin-actions",
+        "secret-posting"
+      ],
+      "requiredApprovals": [
+        "ops-channel-owner-approval"
+      ],
+      "evidenceOutputs": [
+        "slack-thread-link",
+        "correlated-test-event"
+      ],
+      "healthChecks": [
+        "slack-signature-verification-enabled",
+        "dry-run-receipt-recorded"
+      ]
+    },
+    {
+      "id": "hermes-registration-agent",
+      "displayName": "Hermes Registration Agent",
+      "permissionTier": 2,
+      "writeBoundary": "candidate-registration-only",
+      "identity": {
+        "type": "managed-identity",
+        "scope": "hermes-candidate-registry",
+        "leastPrivilegeRoles": [
+          "Candidate metadata contributor"
+        ],
+        "credentialSource": "managed-identity"
+      },
+      "allowedTools": [
+        "candidate metadata publish",
+        "evaluation job submission"
+      ],
+      "deniedOperations": [
+        "automatic-production-promotion",
+        "training-on-raw-conversations"
+      ],
+      "requiredApprovals": [
+        "xcore-evaluation-pass",
+        "human-governor-approval"
+      ],
+      "evidenceOutputs": [
+        "candidate-version-id",
+        "evaluation-input-summary"
+      ],
+      "healthChecks": [
+        "candidate-store-write-succeeds",
+        "promotion-gate-blocks-without-approval"
+      ]
+    },
+    {
+      "id": "aihub-registration-agent",
+      "displayName": "AIHub Registration Agent",
+      "permissionTier": 2,
+      "writeBoundary": "provider-adapter-registration-only",
+      "identity": {
+        "type": "managed-identity",
+        "scope": "aihub-adapter-registry",
+        "leastPrivilegeRoles": [
+          "Adapter metadata contributor"
+        ],
+        "credentialSource": "managed-identity"
+      },
+      "allowedTools": [
+        "adapter contract publish",
+        "provider capability inventory"
+      ],
+      "deniedOperations": [
+        "unbounded-provider-access",
+        "cross-provider-credential-sharing"
+      ],
+      "requiredApprovals": [
+        "adapter-contract-review"
+      ],
+      "evidenceOutputs": [
+        "adapter-contract-version",
+        "provider-capability-report"
+      ],
+      "healthChecks": [
+        "adapter-schema-validation-pass",
+        "provider-isolation-policy-pass"
+      ]
+    },
+    {
+      "id": "openai-provider-agent",
+      "displayName": "OpenAI Provider Agent",
+      "permissionTier": 2,
+      "writeBoundary": "provider-plan-and-evaluation-only",
+      "identity": {
+        "type": "key-vault-secret-reference",
+        "scope": "openai-provider-configuration",
+        "leastPrivilegeRoles": [
+          "Key Vault Secrets User for approved secret name"
+        ],
+        "credentialSource": "managed-identity-plus-key-vault-reference"
+      },
+      "allowedTools": [
+        "OpenAI Responses provider adapter",
+        "model selection validation",
+        "response quality evaluation"
+      ],
+      "deniedOperations": [
+        "committing-openai-api-key",
+        "logging-provider-secret",
+        "automatic-production-provider-enable"
+      ],
+      "requiredApprovals": [
+        "key-vault-reference-approval",
+        "security-review-for-model-selection"
+      ],
+      "evidenceOutputs": [
+        "provider-configuration-hash",
+        "evaluation-result-link"
+      ],
+      "healthChecks": [
+        "provider-credential-fail-closed-when-missing",
+        "no-plaintext-key-in-repository"
+      ]
+    },
+    {
+      "id": "validation-observability-agent",
+      "displayName": "Validation and Observability Agent",
+      "permissionTier": 2,
+      "writeBoundary": "tests-telemetry-and-reporting-only",
+      "identity": {
+        "type": "read-only-monitoring-identity",
+        "scope": "application-insights-and-log-analytics",
+        "leastPrivilegeRoles": [
+          "Monitoring Reader"
+        ],
+        "credentialSource": "managed-identity"
+      },
+      "allowedTools": [
+        "dotnet test",
+        "Test-HeliosCloudConnection.ps1",
+        "application insights query"
+      ],
+      "deniedOperations": [
+        "telemetry-delete",
+        "metrics-fabrication"
+      ],
+      "requiredApprovals": [
+        "release-readiness-review"
+      ],
+      "evidenceOutputs": [
+        "test-run-id",
+        "readiness-check-report",
+        "observability-query-link"
+      ],
+      "healthChecks": [
+        "critical-tests-pass",
+        "health-ready-and-mcp-initialize-pass"
+      ]
+    },
+    {
+      "id": "rollback-agent",
+      "displayName": "Rollback Agent",
+      "permissionTier": 3,
+      "writeBoundary": "reviewed-rollback-plan-only",
+      "identity": {
+        "type": "protected-workflow-identity",
+        "scope": "container-app-revision-and-deployment-history",
+        "leastPrivilegeRoles": [
+          "Contributor at rollback scope"
+        ],
+        "credentialSource": "workload-identity-federation"
+      },
+      "allowedTools": [
+        "rollback-plan-generation",
+        "revision-health-comparison",
+        "protected rollback workflow dispatch"
+      ],
+      "deniedOperations": [
+        "unreviewed-roll-forward",
+        "rollback-without-evidence"
+      ],
+      "requiredApprovals": [
+        "incident-commander-approval",
+        "protected-environment-approval"
+      ],
+      "evidenceOutputs": [
+        "rollback-target-revision",
+        "pre-and-post-health-evidence",
+        "incident-correlation-id"
+      ],
+      "healthChecks": [
+        "rollback-target-exists",
+        "rollback-workflow-requires-typed-confirmation"
+      ]
+    },
+    {
+      "id": "compliance-evidence-agent",
+      "displayName": "Compliance Evidence Agent",
+      "permissionTier": 2,
+      "writeBoundary": "evidence-aggregation-and-publication-only",
+      "identity": {
+        "type": "read-only-audit-identity",
+        "scope": "github-artifacts-sharepoint-evidence-library",
+        "leastPrivilegeRoles": [
+          "Reader",
+          "Selected-site contributor"
+        ],
+        "credentialSource": "managed-identity-and-delegated-site-permission"
+      },
+      "allowedTools": [
+        "evidence digest generation",
+        "event contract validation",
+        "cross-system evidence linking"
+      ],
+      "deniedOperations": [
+        "evidence-redaction-bypass",
+        "secret-material-in-evidence"
+      ],
+      "requiredApprovals": [
+        "security-review",
+        "release-manager-signoff"
+      ],
+      "evidenceOutputs": [
+        "compliance-bundle-sha256",
+        "event-envelope-validation-report",
+        "sharepoint-evidence-link"
+      ],
+      "healthChecks": [
+        "all-events-have-correlation-id-and-links",
+        "restricted-data-not-present-in-evidence"
+      ]
+    },
+    {
+      "id": "custom-plugin-mcp-connection-agent",
+      "displayName": "Custom Plugin and MCP Connection Agent",
+      "permissionTier": 2,
+      "writeBoundary": "manifest-and-tool-contract-management-only",
+      "identity": {
+        "type": "configuration-repository-writer",
+        "scope": "plugin-manifests-and-mcp-contracts",
+        "leastPrivilegeRoles": [
+          "Pull-request writer"
+        ],
+        "credentialSource": "github-session"
+      },
+      "allowedTools": [
+        "plugins/helios-control-fabric/.mcp.json",
+        "config/custom-mcp-connector-plane.json",
+        "mcp tools/list verification"
+      ],
+      "deniedOperations": [
+        "implicit-tool-exposure",
+        "wildcard-write-tools",
+        "unapproved-external-endpoint-registration"
+      ],
+      "requiredApprovals": [
+        "connector-contract-review",
+        "security-review-for-new-tool-surface"
+      ],
+      "evidenceOutputs": [
+        "mcp-tool-contract-diff",
+        "connector-origin-allowlist-proof"
+      ],
+      "healthChecks": [
+        "tool-allowlist-is-explicit",
+        "write-tools-remain-disabled-by-default"
+      ]
+    }
+  ]
+}

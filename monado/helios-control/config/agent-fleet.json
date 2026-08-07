@@ -14,7 +14,9 @@
     "localMcp": "http://127.0.0.1:5080/runtime/webhooks/mcp",
     "azureConnectorEnvironment": "HELIOS_AZURE_CONNECTOR_URL",
     "stateDirectory": "runtime/fleet",
-    "evidenceDirectory": "artifacts/fleet-evidence"
+    "evidenceDirectory": "artifacts/fleet-evidence",
+    "enterpriseRegistry": "config/enterprise-sub-agent-fleet.json",
+    "customMcpConnectorPlane": "config/custom-mcp-connector-plane.json"
   },
   "providers": [
     {

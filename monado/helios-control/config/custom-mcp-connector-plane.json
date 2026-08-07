@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "contractId": "helios-custom-mcp-connector-plane",
+  "defaultAccess": "deny-by-default",
+  "explicitToolAllowlistRequired": true,
+  "dynamicToolDiscoveryAllowed": false,
+  "servers": [
+    {
+      "id": "helios-azure",
+      "sourceManifest": "monado/helios-control/.mcp.json",
+      "mode": "read-only",
+      "writeToolsAllowed": false,
+      "allowedToolContracts": [
+        "search",
+        "fetch",
+        "helios_get_control_plane_status",
+        "helios_render_control_center",
+        "azure_get_context",
+        "azure_list_resources",
+        "azure_list_foundry_resources",
+        "helios_plan_automation",
+        "helios_propose_upgrade",
+        "helios_get_run",
+        "helios_list_connectors"
+      ],
+      "deniedToolContracts": [
+        "*create*",
+        "*update*",
+        "*delete*",
+        "*assign*",
+        "*grant*"
+      ]
+    },
+    {
+      "id": "azure-mcp-readonly",
+      "sourceManifest": "monado/helios-control/.mcp.json",
+      "mode": "read-only",
+      "writeToolsAllowed": false,
+      "allowedToolContracts": [
+        "subscription.read",
+        "group.read",
+        "containerapps.read",
+        "applicationinsights.read",
+        "monitor.read",
+        "foundryextensions.read",
+        "quota.read",
+        "pricing.read"
+      ],
+      "deniedToolContracts": [
+        "*write*",
+        "*create*",
+        "*update*",
+        "*delete*"
+      ]
+    },
+    {
+      "id": "azure-devops-readonly",
+      "sourceManifest": "plugins/helios-control-fabric/.mcp.json",
+      "mode": "read-only",
+      "writeToolsAllowed": false,
+      "allowedToolContracts": [
+        "repos.read",
+        "wit.read",
+        "pipelines.read",
+        "wiki.read"
+      ],
+      "deniedToolContracts": [
+        "*create*",
+        "*update*",
+        "*delete*",
+        "*queue*"
+      ]
+    },
+    {
+      "id": "github",
+      "sourceManifest": "plugins/helios-control-fabric/.mcp.json",
+      "mode": "read-only",
+      "writeToolsAllowed": false,
+      "allowedToolContracts": [
+        "github.search",
+        "github.fetch"
+      ],
+      "deniedToolContracts": [
+        "*merge*",
+        "*push*",
+        "*delete*"
+      ]
+    },
+    {
+      "id": "linear",
+      "sourceManifest": "plugins/helios-control-fabric/.mcp.json",
+      "mode": "read-only",
+      "writeToolsAllowed": false,
+      "allowedToolContracts": [
+        "linear.search",
+        "linear.fetch"
+      ],
+      "deniedToolContracts": [
+        "*archive*",
+        "*delete*",
+        "*admin*"
+      ]
+    },
+    {
+      "id": "slack",
+      "sourceManifest": "plugins/helios-control-fabric/.mcp.json",
+      "mode": "read-only",
+      "writeToolsAllowed": false,
+      "allowedToolContracts": [
+        "slack.search",
+        "slack.fetch"
+      ],
+      "deniedToolContracts": [
+        "*delete*",
+        "*admin*",
+        "*token*"
+      ]
+    },
+    {
+      "id": "foundry",
+      "sourceManifest": "plugins/helios-control-fabric/.mcp.json",
+      "mode": "read-only",
+      "writeToolsAllowed": false,
+      "allowedToolContracts": [
+        "foundry.search",
+        "foundry.fetch"
+      ],
+      "deniedToolContracts": [
+        "*deploy*",
+        "*publish*",
+        "*grant*"
+      ]
+    }
+  ]
+}

@@ -162,6 +162,61 @@ class HeliosCliTests(unittest.TestCase):
         self.assertFalse(plan["automaticApply"])
         self.assertEqual(plan["workflow"]["apply"], "separate protected-environment approval")
 
+    def test_enterprise_fleet_contract_is_complete_and_blocked(self) -> None:
+        plan = HELIOS.enterprise_fleet_plan()
+        self.assertEqual(plan["defaultExecutionMode"], "what-if-only")
+        self.assertEqual(plan["agentCount"], 20)
+        self.assertEqual(plan["connectorCount"], 12)
+        self.assertFalse(plan["productionProvisioningAllowed"])
+        self.assertEqual(plan["blockingIssue"], 162)
+
+    def test_enterprise_fleet_contract_supports_explicit_repository_root(self) -> None:
+        repository_root = Path(__file__).resolve().parents[3]
+        with patch.dict(
+            os.environ,
+            {"HELIOS_REPOSITORY_ROOT": str(repository_root)},
+            clear=False,
+        ):
+            plan = HELIOS.enterprise_fleet_plan()
+        self.assertEqual(plan["defaultExecutionMode"], "what-if-only")
+        self.assertEqual(plan["agentCount"], 20)
+
+    def test_enterprise_fleet_contract_fails_for_missing_explicit_registry(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"HELIOS_ENTERPRISE_FLEET_REGISTRY": "does-not-exist.json"},
+            clear=False,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "HELIOS_ENTERPRISE_FLEET_REGISTRY points to a missing file",
+            ):
+                HELIOS.enterprise_fleet_plan()
+
+    def test_enterprise_fleet_contract_fails_for_invalid_explicit_repository_root(self) -> None:
+        invalid_root = Path(__file__).resolve().parent
+        with patch.dict(
+            os.environ,
+            {"HELIOS_REPOSITORY_ROOT": str(invalid_root)},
+            clear=False,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "HELIOS_REPOSITORY_ROOT did not contain enterprise fleet registry",
+            ):
+                HELIOS.enterprise_fleet_plan()
+
+    def test_mcp_manifest_applies_read_only_toolset_headers(self) -> None:
+        manifest_path = SCRIPT.parents[1] / ".mcp.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        servers = manifest["mcpServers"]
+
+        for server_id in ("github", "linear", "slack", "foundry"):
+            with self.subTest(server=server_id):
+                headers = servers[server_id].get("headers", {})
+                self.assertEqual(headers.get("X-MCP-Toolsets"), "search,fetch")
+                self.assertEqual(headers.get("X-MCP-Readonly"), "true")
+
     def test_all_assets_are_json(self) -> None:
         for name in (
             "connections.json",

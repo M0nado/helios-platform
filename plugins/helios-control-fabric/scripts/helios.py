@@ -20,6 +20,9 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 TARGETS_FILE = ASSETS / "connections.json"
+ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH = Path(
+    "monado/helios-control/config/enterprise-sub-agent-fleet.json"
+)
 
 TOOLS: tuple[tuple[str, tuple[str, ...], bool], ...] = (
     ("az", ("version",), True),
@@ -327,6 +330,86 @@ def edge_plan(environment: str) -> dict[str, Any]:
     }
 
 
+def resolve_enterprise_fleet_registry_file() -> Path:
+    explicit_file = os.environ.get("HELIOS_ENTERPRISE_FLEET_REGISTRY", "").strip()
+    if explicit_file:
+        candidate = Path(explicit_file).expanduser().resolve(strict=False)
+        if candidate.is_file():
+            return candidate
+        raise RuntimeError(
+            "HELIOS_ENTERPRISE_FLEET_REGISTRY points to a missing file: "
+            f"{candidate}"
+        )
+
+    explicit_root = os.environ.get("HELIOS_REPOSITORY_ROOT", "").strip()
+    if explicit_root:
+        candidate = (
+            Path(explicit_root).expanduser().resolve(strict=False)
+            / ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH
+        )
+        if candidate.is_file():
+            return candidate
+        raise RuntimeError(
+            "HELIOS_REPOSITORY_ROOT did not contain enterprise fleet registry at: "
+            f"{candidate}"
+        )
+
+    candidates: list[Path] = []
+    search_roots = [Path.cwd(), ROOT, *Path.cwd().parents, *ROOT.parents]
+    for base in search_roots:
+        candidates.append(
+            (base / ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH).resolve(strict=False)
+        )
+
+    seen: set[str] = set()
+    ordered_candidates: list[Path] = []
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered_candidates.append(candidate)
+
+    for candidate in ordered_candidates:
+        if candidate.is_file():
+            return candidate
+
+    searched = "\n  - ".join(str(candidate) for candidate in ordered_candidates)
+    raise RuntimeError(
+        "Enterprise sub-agent fleet registry was not found. "
+        "Set HELIOS_REPOSITORY_ROOT or HELIOS_ENTERPRISE_FLEET_REGISTRY.\n"
+        f"Searched:\n  - {searched}"
+    )
+
+
+def enterprise_fleet_plan() -> dict[str, Any]:
+    registry_path = resolve_enterprise_fleet_registry_file()
+    payload = json.loads(registry_path.read_text(encoding="utf-8"))
+    agents = payload.get("agents", [])
+    connectors = payload.get("connectors", [])
+    return {
+        "registryId": payload.get("registryId", ""),
+        "sourceIssue": payload.get("sourceIssue", ""),
+        "defaultExecutionMode": payload.get("defaultExecutionMode", ""),
+        "registrySource": str(registry_path),
+        "blockingIssue": payload.get("integrityGate", {}).get("blockingIssue"),
+        "productionProvisioningAllowed": payload.get("integrityGate", {}).get(
+            "productionProvisioningAllowed"
+        ),
+        "agentCount": len(agents),
+        "connectorCount": len(connectors),
+        "agents": [
+            {
+                "id": agent.get("id", ""),
+                "permissionTier": agent.get("permissionTier"),
+                "writeBoundary": agent.get("writeBoundary", ""),
+            }
+            for agent in agents
+        ],
+        "executionMode": "plan-only",
+    }
+
+
 def print_human(payload: dict[str, Any]) -> None:
     if "tools" in payload:
         print("HELIOS doctor (read-only)")
@@ -348,6 +431,18 @@ def print_human(payload: dict[str, Any]) -> None:
         print(f"  subject: {payload['selectedSubject']}")
         print(f"  immutable subject: {str(payload['useImmutableSubject']).lower()}")
         print("  No identity or RBAC mutation was performed.")
+    elif "registryId" in payload and "agentCount" in payload:
+        print("HELIOS enterprise sub-agent fleet")
+        print(f"  registry: {payload['registryId']}")
+        print(f"  source issue: {payload['sourceIssue']}")
+        print(f"  execution mode: {payload['defaultExecutionMode']}")
+        print(f"  agents: {payload['agentCount']}")
+        print(f"  connectors: {payload['connectorCount']}")
+        print(
+            "  production provisioning allowed: "
+            f"{str(payload['productionProvisioningAllowed']).lower()}"
+        )
+        print(f"  blocking issue: {payload['blockingIssue']}")
     elif "sourceOfTruth" in payload:
         print("HELIOS Azure DevOps sync plan")
         print(f"  source: {payload['sourceOfTruth']}")
@@ -394,6 +489,8 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser.add_argument("--json", action="store_true")
     runner_parser = subparsers.add_parser("runners", help="Show the governed GitHub runner topology")
     runner_parser.add_argument("--json", action="store_true")
+    fleet_parser = subparsers.add_parser("fleet", help="Show the enterprise sub-agent registry plan")
+    fleet_parser.add_argument("--json", action="store_true")
     edge_parser = subparsers.add_parser("edge", help="Show the Azure Front Door private-edge activation plan")
     add_environment_argument(edge_parser)
     return parser
@@ -414,6 +511,8 @@ def main(argv: list[str] | None = None) -> int:
             payload = devops_sync_plan()
         elif args.command == "runners":
             payload = runner_plan()
+        elif args.command == "fleet":
+            payload = enterprise_fleet_plan()
         else:
             payload = edge_plan(args.environment)
     except (RuntimeError, ValueError) as error:

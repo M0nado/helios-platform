@@ -25,6 +25,10 @@
 - Pinned, namespace-scoped Azure MCP with enforced read-only startup.
 - Concurrent PowerShell and Bash CLI inventory checks with non-reporting auth probes.
 - Four bounded local agent definitions and a provider-neutral dry-run fleet contract.
+- Typed enterprise sub-agent registry for issue #165 with 20 bounded agents,
+  connector/approval/evidence/health contracts, and CI validation hooks.
+- Explicit custom MCP connector-plane contract with deny-by-default access and
+  declared tool allowlists.
 - An isolated VS Code Insiders profile launcher requiring explicit local confirmation.
 - Cloud-runtime contract that removes workstation dependencies from production.
 - Immutable-image Container Apps deployment, liveness/readiness probes, and a

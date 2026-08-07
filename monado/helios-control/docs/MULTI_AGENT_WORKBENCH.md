@@ -13,6 +13,10 @@ They exchange only reviewed files, MCP results, and evidence artifacts.
 - `.github/agents` defines four scoped agents that VS Code discovers.
 - `config/agent-fleet.json` defines provider preference, concurrency, workflow,
   and forbidden actions.
+- `config/enterprise-sub-agent-fleet.json` defines the complete governed
+  20-agent enterprise roster for issue #165.
+- `config/custom-mcp-connector-plane.json` defines explicit MCP connector tool
+  contracts with deny-by-default access.
 - `config/cli-matrix.json` is the source of truth for concurrent CLI checks.
 
 ## Start safely
@@ -20,6 +24,9 @@ They exchange only reviewed files, MCP results, and evidence artifacts.
 ```powershell
 # Show the fleet without starting providers.
 pwsh ./scripts/Start-HeliosLocalFleet.ps1 -Mode Plan
+
+# Show the full enterprise sub-agent roster and production gates.
+pwsh ./scripts/Start-HeliosLocalFleet.ps1 -Mode EnterprisePlan
 
 # Check tool versions and authentication concurrently; command output is discarded
 # for auth probes so tokens and account details are not reported.
