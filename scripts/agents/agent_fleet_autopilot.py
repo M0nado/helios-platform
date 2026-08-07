@@ -83,8 +83,12 @@ def load(path, default):
  except Exception: return default
 
 def rg_files():
- p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
- return p.stdout.splitlines()
+ if shutil.which('rg'):
+  p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
+  if p.returncode==0: return p.stdout.splitlines()
+ p=subprocess.run(['git','ls-files'],cwd=ROOT,text=True,capture_output=True)
+ if p.returncode==0: return p.stdout.splitlines()
+ return [str(path.relative_to(ROOT)).replace('\\','/') for path in ROOT.rglob('*') if path.is_file()]
 
 def score_domains(files):
  text=' '.join(files).lower(); scores={}
