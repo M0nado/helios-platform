@@ -1,4 +1,4 @@
-name: Component Version Check
+name: Repository-local Component Version Check
 
 on:
   workflow_dispatch:
@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   discover-components:
-    name: Discover Components
+    name: Discover Repository-local Components
     runs-on: ubuntu-latest
     outputs:
       components: ${{ steps.discover.outputs.components }}
@@ -41,16 +41,16 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-          submodules: true
+          submodules: false
           persist-credentials: false
 
       - name: Discover All Components
         id: discover
         run: |
           set -euo pipefail
-          echo "Discovering components..."
+          echo "Discovering repository-local components..."
           COMPONENTS=$(find . -type f \( -name "package.json" -o -name "manifest.json" -o -name "version.json" \) \
-            -not -path '*/node_modules/*' -not -path '*/.git/*' -print \
+            -not -path './modules/*' -not -path '*/node_modules/*' -not -path '*/.git/*' -print \
             | sed 's#^./##' | sort -u | jq -R 'select(length > 0)' | jq -cs .)
           COMPONENT_COUNT=$(jq 'length' <<<"${COMPONENTS}")
           echo "components=${COMPONENTS}" >> "${GITHUB_OUTPUT}"
@@ -70,7 +70,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-          submodules: true
+          submodules: false
           persist-credentials: false
 
       - name: Setup Node.js
@@ -159,12 +159,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          submodules: true
+          submodules: false
           persist-credentials: false
 
       - name: Build Summary
         run: |
-          echo "## Component Version Check Report" >> $GITHUB_STEP_SUMMARY
+          echo "## Repository-local Component Version Check Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Total Components**: ${{ needs.discover-components.outputs.component_count }}" >> $GITHUB_STEP_SUMMARY
           echo "**Timestamp**: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_STEP_SUMMARY
@@ -188,5 +188,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ✓ Component Version Validation\n\n- Total components validated: ${{ needs.discover-components.outputs.component_count }}\n- All version formats valid\n- No conflicts detected\n\n[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+              body: `## ✓ Repository-local Component Version Validation\n\n- Total components validated: ${{ needs.discover-components.outputs.component_count }}\n- All version formats valid\n- No conflicts detected\n\n[View detailed report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
             })
