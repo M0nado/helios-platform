@@ -42,7 +42,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
-
       - name: Initialize Submodules (best effort)
         run: |
           if [ -f .gitmodules ]; then
@@ -86,7 +85,6 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
-
       - name: Initialize Submodules (best effort)
         run: |
           if [ -f .gitmodules ]; then
