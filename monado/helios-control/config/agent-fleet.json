@@ -16,6 +16,12 @@
     "stateDirectory": "runtime/fleet",
     "evidenceDirectory": "artifacts/fleet-evidence"
   },
+  "xcore9Contracts": {
+    "runtimeMatrix": "config/xcore9-runtime-matrix.v1.json",
+    "knaaModel": "config/xcore9-knaa-model.v1.json",
+    "specializationPacks": "config/xcore9-specialization-packs.v1.json",
+    "advisoryOnlyByDefault": true
+  },
   "providers": [
     {
       "id": "github-copilot-vscode",

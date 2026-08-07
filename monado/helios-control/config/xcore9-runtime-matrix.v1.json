@@ -1,0 +1,172 @@
+{
+  "schemaVersion": "1.0.0",
+  "matrixVersion": "2026-08-06",
+  "defaultMode": "local-windows",
+  "nonDestructiveDefault": true,
+  "productionMutationRequiresProtectedApproval": true,
+  "modes": [
+    {
+      "id": "local-windows",
+      "displayName": "Local Windows execution",
+      "identity": {
+        "type": "interactive-user-or-managed-identity",
+        "crossTenantReuseAllowed": false
+      },
+      "network": {
+        "ingress": "loopback-only",
+        "egress": "approved-host-allowlist",
+        "crossTenantRoutingAllowed": false
+      },
+      "storage": {
+        "stateScope": "local-profile-only",
+        "durability": "operator-managed",
+        "sharedAcrossModes": false
+      },
+      "toolAccess": {
+        "allowed": ["dotnet", "pwsh", "git", "gh", "docker-read-only"],
+        "denied": ["az-role-assignment-create", "az-keyvault-secret-set", "disk-format", "wdac-enable"]
+      },
+      "secrets": {
+        "source": "environment-or-user-secrets",
+        "plaintextInRepoAllowed": false,
+        "crossTenantTokenReuseAllowed": false
+      },
+      "startupContract": {
+        "deterministicCommands": [
+          "dotnet restore monado/helios-control/Helios.Connect.sln",
+          "dotnet test monado/helios-control/Helios.Connect.sln --configuration Release"
+        ],
+        "healthProbe": "GET /healthz returns 200",
+        "startupTimeoutSeconds": 180
+      },
+      "artifactPinning": {
+        "binaryHashRequired": true,
+        "imageDigestRequired": false
+      },
+      "resourceEnvelope": {
+        "maxParallelEvaluations": 2,
+        "maxCpuPercent": 70,
+        "maxMemoryMb": 4096
+      },
+      "rollback": {
+        "strategy": "git-revert-and-config-restore",
+        "failureDomainIsolation": "single-workstation",
+        "requiresHumanApproval": true
+      },
+      "denyList": [
+        "production-mutation-without-protected-approval",
+        "cross-tenant-secret-token-reuse",
+        "background-self-expanding-agent-runs"
+      ]
+    },
+    {
+      "id": "local-docker",
+      "displayName": "Local Docker execution",
+      "identity": {
+        "type": "local-workload-identity-boundary",
+        "crossTenantReuseAllowed": false
+      },
+      "network": {
+        "ingress": "localhost-published-port-only",
+        "egress": "approved-host-allowlist",
+        "crossTenantRoutingAllowed": false
+      },
+      "storage": {
+        "stateScope": "container-volume",
+        "durability": "ephemeral-default",
+        "sharedAcrossModes": false
+      },
+      "toolAccess": {
+        "allowed": ["docker", "dotnet", "jq", "gh"],
+        "denied": ["docker-privileged-mode", "host-network", "az-keyvault-secret-set", "git-push-main"]
+      },
+      "secrets": {
+        "source": "docker-secret-or-managed-reference",
+        "plaintextInRepoAllowed": false,
+        "crossTenantTokenReuseAllowed": false
+      },
+      "startupContract": {
+        "deterministicCommands": [
+          "docker image inspect <immutableDigest>",
+          "docker run --rm --read-only <immutableDigest> --health-check"
+        ],
+        "healthProbe": "container health status is healthy",
+        "startupTimeoutSeconds": 240
+      },
+      "artifactPinning": {
+        "binaryHashRequired": true,
+        "imageDigestRequired": true
+      },
+      "resourceEnvelope": {
+        "maxParallelEvaluations": 3,
+        "maxCpuPercent": 80,
+        "maxMemoryMb": 6144
+      },
+      "rollback": {
+        "strategy": "revert-to-previous-image-digest",
+        "failureDomainIsolation": "single-host-container-runtime",
+        "requiresHumanApproval": true
+      },
+      "denyList": [
+        "unsigned-image-execution",
+        "production-mutation-without-protected-approval",
+        "cross-tenant-secret-token-reuse"
+      ]
+    },
+    {
+      "id": "hybrid-fleet",
+      "displayName": "Hybrid Windows + container fleet execution",
+      "identity": {
+        "type": "per-node-managed-identity-or-workload-identity",
+        "crossTenantReuseAllowed": false
+      },
+      "network": {
+        "ingress": "broker-orchestrated-only",
+        "egress": "approved-host-allowlist",
+        "crossTenantRoutingAllowed": false
+      },
+      "storage": {
+        "stateScope": "partitioned-by-correlation-id",
+        "durability": "cosmos-control-runs-and-approved-artifact-store",
+        "sharedAcrossModes": true
+      },
+      "toolAccess": {
+        "allowed": ["dotnet", "docker", "gh", "az-resource-read"],
+        "denied": ["tenant-admin-consent", "rbac-write", "secret-readback", "direct-production-deploy"]
+      },
+      "secrets": {
+        "source": "key-vault-references-and-workload-identity",
+        "plaintextInRepoAllowed": false,
+        "crossTenantTokenReuseAllowed": false
+      },
+      "startupContract": {
+        "deterministicCommands": [
+          "validate-runtime-profile-signature",
+          "verify-image-digest-and-binary-hash",
+          "perform-read-only-health-inventory"
+        ],
+        "healthProbe": "all participating nodes report healthy with shared correlation id",
+        "startupTimeoutSeconds": 300
+      },
+      "artifactPinning": {
+        "binaryHashRequired": true,
+        "imageDigestRequired": true
+      },
+      "resourceEnvelope": {
+        "maxParallelEvaluations": 4,
+        "maxCpuPercent": 85,
+        "maxMemoryMb": 8192
+      },
+      "rollback": {
+        "strategy": "drain-fleet-and-replay-last-approved-plan",
+        "failureDomainIsolation": "per-node-and-per-replica",
+        "requiresHumanApproval": true
+      },
+      "denyList": [
+        "unreviewed-cross-node-write-fanout",
+        "production-mutation-without-protected-approval",
+        "cross-tenant-secret-token-reuse"
+      ]
+    }
+  ]
+}

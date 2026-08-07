@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1.0.0",
+  "registryVersion": "2026-08-06",
+  "globalPolicy": {
+    "maxFanOut": 4,
+    "maxFanIn": 4,
+    "defaultTimeoutSeconds": 900,
+    "cancelOnCoordinatorTimeout": true,
+    "requireCorrelationId": true,
+    "requireEvidenceLinks": true,
+    "defaultFailureHandling": "partial-failure-review-required"
+  },
+  "pluginBindings": {
+    "requiresCapabilityContracts": true,
+    "allowUndeclaredPlugins": false
+  },
+  "multimodalRouting": {
+    "emitNormalizedEvidenceMetadata": true,
+    "lanes": [
+      {
+        "id": "text",
+        "requiredProvenance": ["correlationId", "evidenceLinks", "sourceEventId"]
+      },
+      {
+        "id": "code",
+        "requiredProvenance": ["correlationId", "evidenceLinks", "sourceCommit"]
+      },
+      {
+        "id": "docs",
+        "requiredProvenance": ["correlationId", "evidenceLinks", "documentId"]
+      },
+      {
+        "id": "telemetry",
+        "requiredProvenance": ["correlationId", "evidenceLinks", "traceParent"]
+      },
+      {
+        "id": "media",
+        "requiredProvenance": ["correlationId", "evidenceLinks", "mediaDigest"]
+      }
+    ]
+  },
+  "packs": [
+    {
+      "id": "xcore9-code-analysis",
+      "role": "Static analysis and bounded test synthesis",
+      "inputs": ["code", "telemetry", "text"],
+      "outputs": ["code", "telemetry", "text"],
+      "allowedTools": ["repo.read", "dotnet.test", "plugin.lint"],
+      "deniedTools": ["git.push", "az.deployment.apply", "az.role.assignment.create"],
+      "requiredCapabilityContracts": ["capability.repo.read-only", "capability.tests.non-destructive"],
+      "maxParallelism": 2,
+      "timeoutSeconds": 900,
+      "requireIdempotencyKey": true
+    },
+    {
+      "id": "xcore9-doc-governance",
+      "role": "Governed documentation synthesis",
+      "inputs": ["docs", "text", "telemetry"],
+      "outputs": ["docs", "text"],
+      "allowedTools": ["repo.read", "repo.write.branch", "plugin.schema-check"],
+      "deniedTools": ["git.merge.main", "az.keyvault.secret.set", "teams.publish.live"],
+      "requiredCapabilityContracts": ["capability.docs.edit", "capability.no-production-mutation"],
+      "maxParallelism": 3,
+      "timeoutSeconds": 600,
+      "requireIdempotencyKey": true
+    },
+    {
+      "id": "xcore9-multimodal-triage",
+      "role": "Multimodal incident triage",
+      "inputs": ["telemetry", "media", "text"],
+      "outputs": ["text", "docs", "telemetry"],
+      "allowedTools": ["repo.read", "plugin.trace-correlate", "plugin.timeline-build"],
+      "deniedTools": ["disk.format", "wdac.enable", "tenant.admin.consent"],
+      "requiredCapabilityContracts": ["capability.trace.read-only", "capability.incident.timeline"],
+      "maxParallelism": 4,
+      "timeoutSeconds": 1200,
+      "requireIdempotencyKey": true
+    }
+  ]
+}

@@ -32,8 +32,9 @@ Key Vault references, signing secrets, outbound workers, and destination
 allowlists are implemented and reviewed. Providers without an implemented
 verifier remain fail-closed.
 
-See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`, and
-`config/integrations.json`.
+See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`,
+`docs/XCORE9_RUNTIME_MATRIX.md`, `docs/XCORE9_KNAA_MODEL.md`,
+`docs/XCORE9_SPECIALIZATION_PACKS.md`, and `config/integrations.json`.
 
 ## Edge and Copilot setup wizard
 

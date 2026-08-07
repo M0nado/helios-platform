@@ -25,6 +25,12 @@ This is feedback-driven improvement, not unrestricted recursive self-modificatio
 Copilot conversations are not silently harvested as training data. Only approved,
 sanitized sources enter the learning loop.
 
+## Contract surfaces
+
+- Runtime matrix: `config/xcore9-runtime-matrix.v1.json`
+- KNAA value model: `config/xcore9-knaa-model.v1.json`
+- Specialization packs: `config/xcore9-specialization-packs.v1.json`
+
 ## Microsoft applications
 
 - Microsoft Foundry Agent Service: Hosted and prompt agents, Responses API, tools, memory, tracing, evaluations, optimizer, stable endpoints.
