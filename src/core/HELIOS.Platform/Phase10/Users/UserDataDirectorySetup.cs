@@ -116,6 +116,50 @@ namespace HELIOS.Platform.Phase10.Users
             });
         }
 
+        private async Task<bool> EnsureWritableDirectoryAsync(string path)
+        {
+            if (!await CreateDirectoryAsync(path))
+            {
+                return false;
+            }
+
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    string probePath = Path.Combine(path, $".helios-probe-{Guid.NewGuid():N}");
+                    Directory.CreateDirectory(probePath);
+                    Directory.Delete(probePath);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    LogMessage($"Directory is not writable: {path}. {ex.Message}", LogLevel.Warning);
+                    return false;
+                }
+            });
+        }
+
+        private async Task<string?> ResolveWritableUserFolderAsync(string username, string preferredFolderName, string fallbackFolderName)
+        {
+            string userProfile = GetUserProfilePath(username);
+            string preferredPath = Path.Combine(userProfile, preferredFolderName);
+            if (await EnsureWritableDirectoryAsync(preferredPath))
+            {
+                return preferredPath;
+            }
+
+            string fallbackPath = Path.Combine(userProfile, ".helios", fallbackFolderName);
+            if (await EnsureWritableDirectoryAsync(fallbackPath))
+            {
+                LogMessage($"Using fallback writable directory for {preferredFolderName}: {fallbackPath}", LogLevel.Warning);
+                return fallbackPath;
+            }
+
+            LogMessage($"Unable to provision writable directory for {preferredFolderName}", LogLevel.Error);
+            return null;
+        }
+
         /// <summary>
         /// Sets up AppData directory structure with Local, Roaming, and LocalLow.
         /// </summary>
@@ -216,7 +260,11 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    string documentsPath = Path.Combine(GetUserProfilePath(username), "Documents");
+                    string? documentsPath = await ResolveWritableUserFolderAsync(username, "Documents", "Documents");
+                    if (documentsPath == null)
+                    {
+                        return false;
+                    }
 
                     var subfolders = new[]
                     {
@@ -255,13 +303,19 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    string userProfile = GetUserProfilePath(username);
+                    string? picturesPath = await ResolveWritableUserFolderAsync(username, "Pictures", "Pictures");
+                    string? videosPath = await ResolveWritableUserFolderAsync(username, "Videos", "Videos");
+                    string? musicPath = await ResolveWritableUserFolderAsync(username, "Music", "Music");
+                    if (picturesPath == null || videosPath == null || musicPath == null)
+                    {
+                        return false;
+                    }
 
                     var mediaFolders = new Dictionary<string, string[]>
                     {
-                        { Path.Combine(userProfile, "Pictures"), new[] { "Screenshots", "Wallpapers", "Screenshots", "Saved" } },
-                        { Path.Combine(userProfile, "Videos"), new[] { "Recordings", "Movies", "TV Shows", "Edited" } },
-                        { Path.Combine(userProfile, "Music"), new[] { "Artists", "Albums", "Playlists", "Downloaded" } }
+                        { picturesPath, new[] { "Screenshots", "Wallpapers", "Saved" } },
+                        { videosPath, new[] { "Recordings", "Movies", "TV Shows", "Edited" } },
+                        { musicPath, new[] { "Artists", "Albums", "Playlists", "Downloaded" } }
                     };
 
                     bool allSuccess = true;
