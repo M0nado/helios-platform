@@ -144,7 +144,10 @@ jobs:
   publish-github:
     needs: package
     runs-on: windows-latest
-    if: always()
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Download package
