@@ -273,7 +273,7 @@
     },
     {
       "path": "tests/HELIOS.Platform.Tests/PerformanceTests.cs",
-      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Performance.Tests.csproj",
       "layer": "performance"
     },
     {
@@ -333,7 +333,7 @@
     },
     {
       "path": "tests/HELIOS.Platform.Tests/ScalingTestTools.cs",
-      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Performance.Tests.csproj",
       "layer": "performance"
     },
     {
@@ -388,7 +388,7 @@
     },
     {
       "path": "tests/HELIOS.Platform.Tests/System/PerformanceReportE2ETests.cs",
-      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Performance.Tests.csproj",
       "layer": "performance"
     },
     {

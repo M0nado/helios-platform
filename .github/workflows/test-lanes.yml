@@ -70,7 +70,7 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
+        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Performance.Tests.csproj --configuration Release
 
   end-to-end:
     name: Tests / End-to-End

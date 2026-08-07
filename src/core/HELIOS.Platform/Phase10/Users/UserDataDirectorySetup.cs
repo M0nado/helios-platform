@@ -271,16 +271,31 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    var mediaFolders = new Dictionary<string, string[]>
+                    var mediaFolderSpecs = new[]
                     {
-                        { ResolveWritableUserFolder(username, Environment.SpecialFolder.MyPictures, "Pictures"), new[] { "Screenshots", "Wallpapers", "Saved" } },
-                        { ResolveWritableUserFolder(username, Environment.SpecialFolder.MyVideos, "Videos"), new[] { "Recordings", "Movies", "TV Shows", "Edited" } },
-                        { ResolveWritableUserFolder(username, Environment.SpecialFolder.MyMusic, "Music"), new[] { "Artists", "Albums", "Playlists", "Downloaded" } }
+                        (Path: ResolveWritableUserFolder(username, Environment.SpecialFolder.MyPictures, "Pictures"), Subfolders: new[] { "Screenshots", "Wallpapers", "Saved" }),
+                        (Path: ResolveWritableUserFolder(username, Environment.SpecialFolder.MyVideos, "Videos"), Subfolders: new[] { "Recordings", "Movies", "TV Shows", "Edited" }),
+                        (Path: ResolveWritableUserFolder(username, Environment.SpecialFolder.MyMusic, "Music"), Subfolders: new[] { "Artists", "Albums", "Playlists", "Downloaded" })
                     };
+                    var mediaFolders = mediaFolderSpecs
+                        .GroupBy(spec => spec.Path, StringComparer.OrdinalIgnoreCase)
+                        .Select(group => (
+                            mediaDir: group.Key,
+                            subfolders: group
+                                .SelectMany(spec => spec.Subfolders)
+                                .Distinct(StringComparer.OrdinalIgnoreCase)
+                                .ToArray()))
+                        .ToArray();
 
                     bool allSuccess = true;
                     foreach (var (mediaDir, subfolders) in mediaFolders)
                     {
+                        if (string.IsNullOrWhiteSpace(mediaDir))
+                        {
+                            allSuccess = false;
+                            continue;
+                        }
+
                         if (!await CreateDirectoryAsync(mediaDir))
                         {
                             allSuccess = false;
