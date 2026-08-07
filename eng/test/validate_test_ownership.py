@@ -10,9 +10,21 @@ LAYERS = {"portable", "windows", "privileged", "integration", "performance", "en
 
 def sources():
     roots = [ROOT / "tests", ROOT / "src/tests", ROOT / "monado/helios-control/tests"]
-    found = {p.relative_to(ROOT).as_posix() for root in roots for ext in ("*.cs", "*.fs") for p in root.rglob(ext)}
+    found = set()
+    for root in roots:
+        for ext in ("*.cs", "*.fs"):
+            for path in root.rglob(ext):
+                relative_path = path.relative_to(ROOT)
+                if "obj" in relative_path.parts or "bin" in relative_path.parts:
+                    continue
+                found.add(relative_path.as_posix())
     core = ROOT / "src/core/HELIOS.Platform"
-    found |= {p.relative_to(ROOT).as_posix() for p in core.rglob("*.cs") if "Tests" in p.parts or p.name.endswith("Tests.cs")}
+    for path in core.rglob("*.cs"):
+        relative_path = path.relative_to(ROOT)
+        if "obj" in relative_path.parts or "bin" in relative_path.parts:
+            continue
+        if "Tests" in path.parts or path.name.endswith("Tests.cs"):
+            found.add(relative_path.as_posix())
     return sorted(found)
 
 def owner(path):

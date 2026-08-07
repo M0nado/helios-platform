@@ -84,8 +84,8 @@ jobs:
       - name: Fleet pre-absorption test lane
         continue-on-error: true
         run: |
-          dotnet build HELIOS.Platform.slnx -v minimal
-          dotnet test HELIOS.Platform.slnx -v minimal
+          dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj -v minimal
+          dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj -v minimal
       - name: Dual-repo learning preflight
         run: |
           python3 scripts/analysis/dual_repo_learning_preflight.py --primary "$PRIMARY_REPO_COPY" --secondary "$LEARNING_REPO_COPY"

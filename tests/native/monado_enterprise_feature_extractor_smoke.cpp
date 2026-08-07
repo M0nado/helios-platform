@@ -1,5 +1,6 @@
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <string_view>
 
 #include "helios/monado_enterprise_feature_extractor.hpp"
@@ -66,6 +67,17 @@ int main() {
   if (require(
           activation_label(stressed) == std::string_view{"proposal-only-review-required"},
           "stressed activation label mismatch")) {
+    return 1;
+  }
+
+  RuntimeSignals nonFinite = stable;
+  nonFinite.securityRisk = std::numeric_limits<double>::quiet_NaN();
+  if (require(requires_operator_review(nonFinite), "non-finite telemetry must fail closed to review-required")) {
+    return 1;
+  }
+  if (require(
+          activation_label(nonFinite) == std::string_view{"proposal-only-review-required"},
+          "non-finite telemetry label must be review-required")) {
     return 1;
   }
   return 0;

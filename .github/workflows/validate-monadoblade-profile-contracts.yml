@@ -21,6 +21,7 @@ on:
       - 'schemas/monado-enterprise/v2/**'
       - 'scripts/contracts/validate_monado_enterprise_v2.py'
       - 'scripts/contracts/tests/test_validate_monado_enterprise_v2.py'
+      - 'src/core/HELIOS.Platform.Contracts.Tests/**'
       - 'tests/contracts/HELIOS.Platform.Contracts.Tests/**'
       - 'tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs'
       - 'src/analytics/HELIOS.Analytics.FSharp/Optimization/MonadoEnterpriseProfileScoringV2.fs'
@@ -54,6 +55,7 @@ on:
       - 'schemas/monado-enterprise/v2/**'
       - 'scripts/contracts/validate_monado_enterprise_v2.py'
       - 'scripts/contracts/tests/test_validate_monado_enterprise_v2.py'
+      - 'src/core/HELIOS.Platform.Contracts.Tests/**'
       - 'tests/contracts/HELIOS.Platform.Contracts.Tests/**'
       - 'tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs'
       - 'src/analytics/HELIOS.Analytics.FSharp/Optimization/MonadoEnterpriseProfileScoringV2.fs'
@@ -338,6 +340,10 @@ jobs:
       - name: Run C# v2 contract tests
         shell: bash
         run: dotnet test tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release -p:ContinuousIntegrationBuild=true
+
+      - name: Run core C# v2 contract tests
+        shell: bash
+        run: dotnet test src/core/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release -p:ContinuousIntegrationBuild=true
 
       - name: Run F# bounded scoring tests
         shell: bash

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <string_view>
 
 namespace helios::monado_enterprise {
@@ -18,16 +19,31 @@ struct RuntimeSignals {
   double modelLatencyMs{};
 };
 
+[[nodiscard]] constexpr bool is_finite(const double value) noexcept {
+  return value == value &&
+         value != std::numeric_limits<double>::infinity() &&
+         value != -std::numeric_limits<double>::infinity();
+}
+
 [[nodiscard]] constexpr double clamp01(const double value) noexcept {
+  if (!is_finite(value)) {
+    return 1.0;
+  }
   return std::clamp(value, 0.0, 1.0);
 }
 
 [[nodiscard]] constexpr double normalized_percent(const double value) noexcept {
+  if (!is_finite(value)) {
+    return 1.0;
+  }
   return clamp01(value / 100.0);
 }
 
 [[nodiscard]] constexpr double inverse_normalized(const double maximum, const double value) noexcept {
-  return maximum <= 0.0 ? 0.0 : 1.0 - clamp01(value / maximum);
+  if (maximum <= 0.0 || !is_finite(maximum) || !is_finite(value)) {
+    return 0.0;
+  }
+  return 1.0 - clamp01(value / maximum);
 }
 
 /// Read-only feature extraction for profile-scoring and routing.
@@ -59,7 +75,11 @@ struct RuntimeSignals {
 }
 
 [[nodiscard]] constexpr bool requires_operator_review(const RuntimeSignals& signals) noexcept {
-  return signals.securityRisk >= 60.0 || signals.thermalPressure >= 85.0 || profile_activation_pressure(signals) >= 0.70;
+  const auto pressure = profile_activation_pressure(signals);
+  if (!is_finite(signals.securityRisk) || !is_finite(signals.thermalPressure) || !is_finite(pressure)) {
+    return true;
+  }
+  return signals.securityRisk >= 60.0 || signals.thermalPressure >= 85.0 || pressure >= 0.70;
 }
 
 [[nodiscard]] constexpr std::string_view activation_label(const RuntimeSignals& signals) noexcept {

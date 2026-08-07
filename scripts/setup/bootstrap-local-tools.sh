@@ -50,6 +50,8 @@ if [ ! -x "$RG_DIR/bin/rg" ]; then
   rm -rf "$TOOLS_DIR/ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl" "$RG_DIR"
   tar -xzf "$tmp" -C "$TOOLS_DIR"
   mv "$TOOLS_DIR/ripgrep-${RG_VERSION}-x86_64-unknown-linux-musl" "$RG_DIR"
+  mkdir -p "$RG_DIR/bin"
+  mv "$RG_DIR/rg" "$RG_DIR/bin/rg"
 else
   echo "ripgrep already installed at $RG_DIR"
 fi

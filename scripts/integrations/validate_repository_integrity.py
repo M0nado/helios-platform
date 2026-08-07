@@ -24,6 +24,10 @@ def github_name(url: str) -> str:
     return path.casefold()
 
 
+def expected_submodule_path(repository_name: str) -> str:
+    return f"modules/{repository_name.rsplit('/', 1)[-1]}"
+
+
 def gitlinks(root: Path) -> dict[str, str]:
     result = subprocess.run(
         ["git", "ls-files", "--stage"],
@@ -87,6 +91,11 @@ def validate(root: Path = ROOT) -> list[str]:
         except ValueError as exc:
             errors.append(str(exc))
             continue
+        expected_path = expected_submodule_path(name)
+        if path != expected_path:
+            errors.append(
+                f"submodule path must be '{expected_path}' for repository {name}, got: {path}"
+            )
         if path in declared:
             errors.append(f"duplicate submodule path: {path}")
         declared[path] = name
