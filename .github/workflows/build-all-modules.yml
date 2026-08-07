@@ -47,7 +47,7 @@ jobs:
         id: setup
         run: |
           # Discover buildable Node.js modules instead of assuming fixed top-level directories.
-          mapfile -t MODULE_DIRS < <(find . -maxdepth 3 -name package.json -not -path './node_modules/*' -printf '%h\n' | sed 's#^./##' | sort)
+          mapfile -t MODULE_DIRS < <(find . -maxdepth 6 -name package.json -not -path './node_modules/*' -printf '%h\n' | sed 's#^./##' | sort)
 
           if [ ${#MODULE_DIRS[@]} -eq 0 ]; then
             MODULES='["__no_node_modules__"]'

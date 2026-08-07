@@ -37,6 +37,7 @@ def owner(path):
     if path.startswith("monado/helios-control/tests/"): return "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj"
     if path.startswith("src/core/HELIOS.Platform/Phase10/Users/Tests/"): return "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj"
     if path.startswith("src/tests/"): return "src/tests/HELIOS.Platform.Tests.csproj"
+    if path.startswith("tests/contracts/HELIOS.Platform.Contracts.Tests/"): return "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj"
     if path.startswith("tests/analytics/"): return "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
     if path == "tests/SecurityValidationTests.cs": return "tests/SecurityValidationTests.csproj"
     if path.startswith("tests/HELIOS.Platform.Tests/Phase10/Quarantine/"): return "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj"
@@ -44,6 +45,7 @@ def owner(path):
 
 def layer(path):
     p = path.lower()
+    if p.startswith("tests/contracts/helios.platform.contracts.tests/"): return "portable"
     if "performance" in p or "scalingtest" in p: return "performance"
     if "endtoend" in p or "/system/" in p or "e2etest" in p: return "end-to-end"
     if "integration" in p or p.startswith("monado/helios-control/tests/"): return "integration"

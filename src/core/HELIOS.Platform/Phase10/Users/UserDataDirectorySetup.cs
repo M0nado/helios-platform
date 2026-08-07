@@ -125,38 +125,86 @@ namespace HELIOS.Platform.Phase10.Users
 
             return await Task.Run(() =>
             {
+                string probeDirectoryName = $".helios-probe-{Guid.NewGuid():N}";
+                if (Path.IsPathRooted(probeDirectoryName))
+                {
+                    LogMessage($"Invalid probe directory name generated for {path}", LogLevel.Warning);
+                    return false;
+                }
+
+                string probePath = Path.Combine(path, probeDirectoryName);
                 try
                 {
-                    string probePath = Path.Combine(path, $".helios-probe-{Guid.NewGuid():N}");
                     Directory.CreateDirectory(probePath);
-                    Directory.Delete(probePath);
-                    return true;
                 }
-                catch (Exception ex)
+                catch (UnauthorizedAccessException ex)
                 {
                     LogMessage($"Directory is not writable: {path}. {ex.Message}", LogLevel.Warning);
                     return false;
                 }
+                catch (IOException ex)
+                {
+                    LogMessage($"Directory is not writable: {path}. {ex.Message}", LogLevel.Warning);
+                    return false;
+                }
+                catch (System.Security.SecurityException ex)
+                {
+                    LogMessage($"Directory is not writable: {path}. {ex.Message}", LogLevel.Warning);
+                    return false;
+                }
+
+                try
+                {
+                    Directory.Delete(probePath);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    LogMessage($"Directory is writable but probe cleanup failed for {path}. {ex.Message}", LogLevel.Warning);
+                }
+                catch (IOException ex)
+                {
+                    LogMessage($"Directory is writable but probe cleanup failed for {path}. {ex.Message}", LogLevel.Warning);
+                }
+                catch (System.Security.SecurityException ex)
+                {
+                    LogMessage($"Directory is writable but probe cleanup failed for {path}. {ex.Message}", LogLevel.Warning);
+                }
+
+                return true;
             });
         }
 
         private async Task<string?> ResolveWritableUserFolderAsync(string username, string preferredFolderName, string fallbackFolderName)
         {
+            if (Path.IsPathRooted(preferredFolderName) || Path.IsPathRooted(fallbackFolderName))
+            {
+                LogMessage($"Refusing rooted folder names for writable folder resolution: preferred='{preferredFolderName}', fallback='{fallbackFolderName}'", LogLevel.Error);
+                return null;
+            }
+
+            string safePreferredFolderName = Path.GetFileName(preferredFolderName);
+            string safeFallbackFolderName = Path.GetFileName(fallbackFolderName);
+            if (string.IsNullOrWhiteSpace(safePreferredFolderName) || string.IsNullOrWhiteSpace(safeFallbackFolderName))
+            {
+                LogMessage($"Invalid folder names for writable folder resolution: preferred='{preferredFolderName}', fallback='{fallbackFolderName}'", LogLevel.Error);
+                return null;
+            }
+
             string userProfile = GetUserProfilePath(username);
-            string preferredPath = Path.Combine(userProfile, preferredFolderName);
+            string preferredPath = Path.Combine(userProfile, safePreferredFolderName);
             if (await EnsureWritableDirectoryAsync(preferredPath))
             {
                 return preferredPath;
             }
 
-            string fallbackPath = Path.Combine(userProfile, ".helios", fallbackFolderName);
+            string fallbackPath = Path.Combine(userProfile, ".helios", safeFallbackFolderName);
             if (await EnsureWritableDirectoryAsync(fallbackPath))
             {
-                LogMessage($"Using fallback writable directory for {preferredFolderName}: {fallbackPath}", LogLevel.Warning);
+                LogMessage($"Using fallback writable directory for {safePreferredFolderName}: {fallbackPath}", LogLevel.Warning);
                 return fallbackPath;
             }
 
-            LogMessage($"Unable to provision writable directory for {preferredFolderName}", LogLevel.Error);
+            LogMessage($"Unable to provision writable directory for {safePreferredFolderName}", LogLevel.Error);
             return null;
         }
 
