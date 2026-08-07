@@ -32,9 +32,10 @@ clients, and governed agent workflows.
    `access_as_user` scope. Its Application ID URI must be
    `api://<app-client-id>`.
 3. The app registration client ID and tenant ID.
-4. One or more allowed OAuth client application IDs (for example Azure CLI's
-   `04b07795-8ddb-461a-bbee-02f9e1bf7b46`) configured in
-   `HELIOS_ALLOWED_CLIENT_IDS`.
+4. One or more allowed OAuth client application IDs configured in
+   `HELIOS_ALLOWED_CLIENT_IDS`, including every production host client the
+   connector should trust (for example Teams/Copilot host clients) in addition
+   to Azure CLI's `04b07795-8ddb-461a-bbee-02f9e1bf7b46`.
 5. At least one allowed user or service-principal object ID.
 6. An interactive administrator allowed to register the required providers and
    create the narrow bootstrap role assignments.
@@ -86,14 +87,17 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -EnvironmentName dev `
   -ResourceGroup rg-helios-dev `
   -ContainerRegistryName '<globally-unique-acr-name>' `
+  -AllowedClientIds '<approved-host-client-guid[,approved-host-client-guid]>' `
   -RequiredReviewerId '<github-user-id>'
 ```
 
 The wizard never accepts an OpenAI key, never retrieves Azure OpenAI account
 keys, and never prints secret values. The Key Vault is created empty with RBAC
-enabled and a deny-by-default network ACL. Select a Foundry/Azure OpenAI project,
-model deployment, and identity assignment separately after confirming regional
-availability and quota.
+enabled and a deny-by-default network ACL. `OPENAI_API_KEY` binding is disabled
+by default and must be explicitly enabled only after an administrator provisions
+the reviewed `helios-openai-api-key` secret and completes governed RBAC readiness.
+Select a Foundry/Azure OpenAI project, model deployment, and identity assignment
+separately after confirming regional availability and quota.
 
 The protected workflow builds the exact clean `GITHUB_SHA` into the dedicated
 Azure Container Registry named by `containerRegistryName`, then passes only its
@@ -104,8 +108,9 @@ references but never mutates that registry.
 Preview compiles the template with the pinned Bicep version, canonicalizes it,
 and binds its SHA-256 plus every resolved deployment parameter into the evidence
 manifest. What-if uses `FullResourcePayloads`; a property-level canonical hash
-is re-created immediately before deploy. Both the redacted review copy and the
-full canonical payload are uploaded as immutable artifact evidence.
+is re-created immediately before deploy. The immutable artifact keeps the
+review-safe redacted payload plus request metadata and canonical hashes; the
+unredacted payload is not published.
 
 The Bash compatibility script is preview-only. Its legacy `--apply` path is
 retired and fails closed with directions to the interactive wizard.

@@ -43,12 +43,13 @@ header.
 A user-initiated same-origin popup is the fallback for interactive consent; no
 token is returned through the popup result.
 
-The deployed Bicep creates an RBAC-enabled Key Vault, grants the runtime
-identity Key Vault Secrets User, and wires the `helios-openai-api-key` secret
-reference into `OPENAI_API_KEY`. Automation never writes secret values, so
-online OpenAI still fails closed until an administrator provisions that secret
-and completes the reviewed deployment path. Repository scripts never accept or
-persist a plaintext provider key.
+The deployed Bicep creates an RBAC-enabled Key Vault and keeps
+`OPENAI_API_KEY` secret binding disabled by default behind an explicit
+`enableOpenAiApiKeyBinding` deployment gate. Automation never writes secret
+values, so online OpenAI still fails closed until an administrator provisions
+`helios-openai-api-key`, completes governed Key Vault RBAC readiness for the
+runtime identity, and then enables the binding. Repository scripts never accept
+or persist a plaintext provider key.
 
 Run `scripts/Invoke-HeliosCliMatrix.ps1` to check independent CLI installations
 in parallel. The command reports versions only; optional authentication probes

@@ -16,10 +16,11 @@ permissions, never credential values.
    targets and do not exist in the current deployment definition.
 5. Microsoft 365 user actions use OAuth on-behalf-of so the agent cannot exceed the person’s access.
 6. The OpenAI provider can read `OPENAI_API_KEY` only in an explicitly configured
-   deployment. The Azure deployment wires `OPENAI_API_KEY` to the Key Vault
-   secret reference `helios-openai-api-key` and grants the runtime identity the
-   Key Vault Secrets User role. Automation does not write secret values, so
-   online OpenAI still fails closed until an administrator populates the secret.
+   deployment. The Azure deployment keeps this binding disabled by default and
+   exposes an explicit `enableOpenAiApiKeyBinding` gate. Automation does not
+   write secret values, so online OpenAI still fails closed until an
+   administrator provisions `helios-openai-api-key`, enables the binding, and
+   completes governed Key Vault RBAC readiness.
 
 ## Secret references
 
@@ -36,9 +37,10 @@ or private deployment parameters—not the public repository.
 
 No automation creates tenant-wide consent, Conditional Access policy, production
 credentials, or organization-wide Copilot publication without explicit approval.
-The current Bicep creates the RBAC-enabled vault, grants the runtime identity the
-narrow Key Vault Secrets User data-plane role, and wires reviewed Container Apps
-secret references. An administrator must still choose the secret-ingestion path
-and populate secret values before live provider calls can succeed. Plaintext
+The current Bicep creates the RBAC-enabled vault and supports reviewed Container
+Apps secret references behind explicit parameter gating. An administrator must
+choose the secret-ingestion path, complete Key Vault RBAC readiness for the
+runtime identity, and populate secret values before live provider calls can
+succeed. Plaintext
 secrets must never be supplied as Bicep, CLI, GitHub, or checked-in environment-file
 values.

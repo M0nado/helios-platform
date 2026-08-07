@@ -52,6 +52,7 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -EnvironmentName dev `
   -ResourceGroup rg-helios-dev `
   -ContainerRegistryName '<globally-unique-acr-name>' `
+  -AllowedClientIds '<approved-host-client-guid[,approved-host-client-guid]>' `
   -RequiredReviewerId '<github-user-id>' `
   -GitHubDeploymentBranch main
 ```
@@ -85,6 +86,7 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -EnvironmentName dev `
   -ResourceGroup rg-helios-dev `
   -ContainerRegistryName '<globally-unique-acr-name>' `
+  -AllowedClientIds '<approved-host-client-guid[,approved-host-client-guid]>' `
   -RequiredReviewerId '<github-user-id>'
 ```
 
@@ -103,8 +105,8 @@ its hashes, rechecks drift, and applies the same immutable image digest.
 The evidence contract contains the exact source SHA, canonical compiled-template
 SHA-256, deployment scope, and every resolved Bicep parameter. ARM what-if uses
 `FullResourcePayloads`, so property-level changes are reviewable and participate
-in the drift hash. Both the review-safe redacted payload and the full canonical
-payload are artifacted and hash-bound in the request manifest.
+in the drift hash. The artifact keeps the review-safe redacted payload plus the
+canonical hash metadata; the unredacted payload is not published.
 
 The operator wizard has no direct deployment mode. Run the protected workflow
 in two stages on the approved branch:

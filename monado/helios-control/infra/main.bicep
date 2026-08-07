@@ -41,6 +41,9 @@ param allowedPrincipalObjectId string
 @minLength(36)
 param allowedClientIds string
 
+@description('Enable OPENAI_API_KEY Key Vault binding only after governed secret and RBAC readiness is complete.')
+param enableOpenAiApiKeyBinding bool = false
+
 @description('Optional canonical HTTPS origin for Edge/custom DNS. Leave empty to use the Container Apps FQDN.')
 param publicBaseUrl string = ''
 
@@ -67,6 +70,7 @@ module connector './connector.bicep' = {
     entraTenantId: entraTenantId
     allowedPrincipalObjectId: allowedPrincipalObjectId
     allowedClientIds: allowedClientIds
+    enableOpenAiApiKeyBinding: enableOpenAiApiKeyBinding
     publicBaseUrl: publicBaseUrl
     sourceCommitSha: sourceCommitSha
     commonTags: commonTags

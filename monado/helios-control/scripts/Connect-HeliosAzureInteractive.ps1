@@ -254,9 +254,12 @@ function Resolve-AllowedOAuthClientIds {
 
     $resolved = [System.Collections.Generic.List[string]]::new()
     $defaultClientId = ([guid] $script:AzureCliClientId).ToString().ToLowerInvariant()
+    $requiresHostClientSelection = $Mode -in @('Configure', 'Publish')
+    $configuredHostClientProvided = $false
     [void] $resolved.Add($defaultClientId)
 
     if (-not [string]::IsNullOrWhiteSpace($ConfiguredClientIds)) {
+        $configuredHostClientProvided = $true
         $candidates = $ConfiguredClientIds.Split(
             [char[]] @(',', ';', ' ', "`t", "`r", "`n"),
             [System.StringSplitOptions]::RemoveEmptyEntries)
@@ -272,6 +275,12 @@ function Resolve-AllowedOAuthClientIds {
         }
     }
 
+    if ($requiresHostClientSelection -and -not $configuredHostClientProvided) {
+        throw 'Configure and Publish require -AllowedClientIds with at least one approved host client ID in addition to Azure CLI.'
+    }
+    if ($requiresHostClientSelection -and $resolved.Count -eq 1 -and $resolved[0] -eq $defaultClientId) {
+        throw '-AllowedClientIds must include at least one approved non-Azure-CLI host client ID (for example the Teams/Copilot host app used in your tenant).'
+    }
     if ($resolved.Count -eq 0) {
         throw 'At least one OAuth client ID must be allowlisted.'
     }

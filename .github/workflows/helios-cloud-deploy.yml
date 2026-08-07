@@ -37,6 +37,14 @@ on:
         required: false
         type: string
         default: ""
+      enableOpenAiSecretBinding:
+        description: Set true only after a governed Key Vault secret + RBAC readiness review
+        required: false
+        type: choice
+        default: "false"
+        options:
+          - "false"
+          - "true"
 
 permissions:
   actions: read
@@ -104,8 +112,13 @@ jobs:
           DEPLOYMENT_MODE: ${{ inputs.mode || 'what-if' }}
           REVIEWED_RUN_ID: ${{ inputs.reviewedRunId || '' }}
           DEPLOYMENT_CONFIRMATION: ${{ inputs.confirmDeployment || '' }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
         run: |
           set -euo pipefail
+          if [[ "${ENABLE_OPENAI_SECRET_BINDING}" != "false" && "${ENABLE_OPENAI_SECRET_BINDING}" != "true" ]]; then
+            echo "enableOpenAiSecretBinding must be true or false." >&2
+            exit 1
+          fi
           if [[ "${DEPLOYMENT_MODE}" == "deploy" ]]; then
             if [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
               echo "A deploy run requires confirmDeployment=DEPLOY." >&2
@@ -194,7 +207,19 @@ jobs:
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
             exit 1
           fi
-
+          mapfile -t allowed_clients < <(
+            tr ',; \t\r\n' '\n' <<<"${HELIOS_ALLOWED_CLIENT_IDS}" | sed '/^$/d'
+          )
+          if [[ "${#allowed_clients[@]}" -eq 0 ]]; then
+            echo "HELIOS_ALLOWED_CLIENT_IDS must include at least one GUID client ID." >&2
+            exit 1
+          fi
+          for client_id in "${allowed_clients[@]}"; do
+            if [[ ! "${client_id}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+              echo "HELIOS_ALLOWED_CLIENT_IDS contains invalid GUID value: ${client_id}" >&2
+              exit 1
+            fi
+          done
       - name: Azure login with GitHub OIDC
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
         with:
@@ -350,6 +375,20 @@ jobs:
             echo "ACR did not return an immutable digest for GITHUB_SHA ${GITHUB_SHA}." >&2
             exit 1
           fi
+          az acr repository update \
+            --name "${REGISTRY_NAME}" \
+            --image "${repository}@${digest}" \
+            --write-enabled false \
+            --delete-enabled false \
+            --output none
+          locked_manifest_json="$(az acr repository show \
+            --name "${REGISTRY_NAME}" \
+            --image "${repository}@${digest}" \
+            --output json)"
+          if ! jq --exit-status '.changeableAttributes.writeEnabled == false and .changeableAttributes.deleteEnabled == false' <<<"${locked_manifest_json}" > /dev/null; then
+            echo "The reviewed digest could not be locked (writeEnabled/deleteEnabled must both be false)." >&2
+            exit 1
+          fi
           immutable_reference="${REGISTRY_SERVER}/${repository}@${digest}"
           if [[ ! "${immutable_reference}" =~ ^[a-z0-9]{5,50}\.azurecr\.io/helios-connect@sha256:[0-9a-f]{64}$ ]]; then
             echo "The workflow produced an invalid immutable ACR reference." >&2
@@ -365,6 +404,7 @@ jobs:
         env:
           PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
           IMAGE_REFERENCE: ${{ steps.image.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ steps.registry.outputs.registry_name }}
           RESOURCE_GROUP_LOCATION: ${{ steps.registry.outputs.resource_group_location }}
@@ -400,6 +440,7 @@ jobs:
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedClientIds="${HELIOS_ALLOWED_CLIENT_IDS}" \
+              enableOpenAiApiKeyBinding="${ENABLE_OPENAI_SECRET_BINDING}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \
@@ -408,7 +449,6 @@ jobs:
           full_what_if="${RUNNER_TEMP}/helios-what-if.full.canonical.json"
           jq --sort-keys . "${raw_what_if}" > "${full_what_if}"
           what_if_sha256="$(sha256sum "${full_what_if}" | cut -d' ' -f1)"
-          cp "${full_what_if}" "${artifact_dir}/what-if.full.json"
           jq --sort-keys '
             walk(
               if type == "object" then
@@ -430,6 +470,10 @@ jobs:
             )
           ' "${raw_what_if}" > "${artifact_dir}/what-if.json"
           review_sha256="$(sha256sum "${artifact_dir}/what-if.json" | cut -d' ' -f1)"
+          enable_openai_secret_binding=false
+          if [[ "${ENABLE_OPENAI_SECRET_BINDING}" == "true" ]]; then
+            enable_openai_secret_binding=true
+          fi
           jq --null-input \
             --arg runId "${GITHUB_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
@@ -445,12 +489,13 @@ jobs:
             --arg entraClientId "${HELIOS_ENTRA_CLIENT_ID}" \
             --arg entraTenantId "${AZURE_TENANT_ID}" \
             --arg allowedClientIds "${HELIOS_ALLOWED_CLIENT_IDS}" \
+            --argjson enableOpenAiApiKeyBinding "${enable_openai_secret_binding}" \
             --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedClientIds: $allowedClientIds, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedClientIds: $allowedClientIds, enableOpenAiApiKeyBinding: $enableOpenAiApiKeyBinding, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -463,6 +508,7 @@ jobs:
             echo "- Compiled template SHA-256: \`${TEMPLATE_SHA256}\`"
             echo "- Full canonical what-if SHA-256: \`${what_if_sha256}\`"
             echo "- Review-safe artifact content SHA-256: \`${review_sha256}\`"
+            echo "- OpenAI Key Vault binding enabled: \`${ENABLE_OPENAI_SECRET_BINDING}\`"
             echo "- Deploy inputs after approval: \`mode=deploy\`, \`reviewedRunId=${GITHUB_RUN_ID}\`, \`confirmDeployment=DEPLOY\`"
             echo "- A deploy request now requires a second protected-environment approval."
           } >> "${GITHUB_STEP_SUMMARY}"
@@ -539,6 +585,19 @@ jobs:
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
             exit 1
           fi
+          mapfile -t allowed_clients < <(
+            tr ',; \t\r\n' '\n' <<<"${HELIOS_ALLOWED_CLIENT_IDS}" | sed '/^$/d'
+          )
+          if [[ "${#allowed_clients[@]}" -eq 0 ]]; then
+            echo "HELIOS_ALLOWED_CLIENT_IDS must include at least one GUID client ID." >&2
+            exit 1
+          fi
+          for client_id in "${allowed_clients[@]}"; do
+            if [[ ! "${client_id}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+              echo "HELIOS_ALLOWED_CLIENT_IDS contains invalid GUID value: ${client_id}" >&2
+              exit 1
+            fi
+          done
 
       - name: Azure login with GitHub OIDC after second approval
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
@@ -629,6 +688,7 @@ jobs:
           REVIEWED_RUN_ID: ${{ inputs.reviewedRunId }}
           ACTUAL_TEMPLATE_SHA256: ${{ steps.template.outputs.template_sha256 }}
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
@@ -643,10 +703,9 @@ jobs:
           evidence_dir="${RUNNER_TEMP}/approved-what-if"
           request_path="${evidence_dir}/request.json"
           review_path="${evidence_dir}/what-if.json"
-          full_what_if_path="${evidence_dir}/what-if.full.json"
           environment_name="${TARGET_ENVIRONMENT#azure-}"
 
-          for required_file in "${request_path}" "${review_path}" "${full_what_if_path}"; do
+          for required_file in "${request_path}" "${review_path}"; do
             if [[ ! -f "${required_file}" ]]; then
               echo "Reviewed what-if artifact is missing ${required_file##*/}." >&2
               exit 1
@@ -654,15 +713,14 @@ jobs:
           done
 
           actual_review_sha256="$(sha256sum "${review_path}" | cut -d' ' -f1)"
-          actual_full_what_if_sha256="$(sha256sum "${full_what_if_path}" | cut -d' ' -f1)"
           expected_review_sha256="$(jq --raw-output '.reviewSha256' "${request_path}")"
           expected_full_what_if_sha256="$(jq --raw-output '.whatIfSha256' "${request_path}")"
           if [[ "${actual_review_sha256}" != "${expected_review_sha256}" ]]; then
             echo "Downloaded review-safe what-if evidence does not match its recorded digest." >&2
             exit 1
           fi
-          if [[ "${actual_full_what_if_sha256}" != "${expected_full_what_if_sha256}" ]]; then
-            echo "Downloaded full canonical what-if evidence does not match its recorded digest." >&2
+          if [[ ! "${expected_full_what_if_sha256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "Reviewed request metadata does not contain a valid canonical what-if digest." >&2
             exit 1
           fi
 
@@ -680,6 +738,10 @@ jobs:
             exit 1
           fi
 
+          enable_openai_secret_binding=false
+          if [[ "${ENABLE_OPENAI_SECRET_BINDING}" == "true" ]]; then
+            enable_openai_secret_binding=true
+          fi
           jq --exit-status \
             --arg runId "${REVIEWED_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
@@ -695,12 +757,13 @@ jobs:
             --arg entraClientId "${HELIOS_ENTRA_CLIENT_ID}" \
             --arg entraTenantId "${AZURE_TENANT_ID}" \
             --arg allowedClientIds "${HELIOS_ALLOWED_CLIENT_IDS}" \
+            --argjson enableOpenAiApiKeyBinding "${enable_openai_secret_binding}" \
             --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
-            --arg whatIfSha256 "${actual_full_what_if_sha256}" \
+            --arg whatIfSha256 "${expected_full_what_if_sha256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedClientIds: $allowedClientIds, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedClientIds: $allowedClientIds, enableOpenAiApiKeyBinding: $enableOpenAiApiKeyBinding, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${request_path}" > /dev/null
 
           echo "image_reference=${image_reference}" >> "${GITHUB_OUTPUT}"
@@ -708,7 +771,7 @@ jobs:
           echo "resource_group_location=${resource_group_location}" >> "${GITHUB_OUTPUT}"
           echo "environment_name=${environment_name}" >> "${GITHUB_OUTPUT}"
           echo "service_name=${service_name}" >> "${GITHUB_OUTPUT}"
-          echo "what_if_sha256=${actual_full_what_if_sha256}" >> "${GITHUB_OUTPUT}"
+          echo "what_if_sha256=${expected_full_what_if_sha256}" >> "${GITHUB_OUTPUT}"
 
       - name: Re-verify configured registry and published digest
         id: registry
@@ -795,6 +858,7 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_CLIENT_IDS: ${{ vars.HELIOS_ALLOWED_CLIENT_IDS }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
         run: |
@@ -816,6 +880,7 @@ jobs:
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedClientIds="${HELIOS_ALLOWED_CLIENT_IDS}" \
+              enableOpenAiApiKeyBinding="${ENABLE_OPENAI_SECRET_BINDING}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \
@@ -841,6 +906,7 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_CLIENT_IDS: ${{ vars.HELIOS_ALLOWED_CLIENT_IDS }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
         run: |
@@ -859,6 +925,7 @@ jobs:
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedClientIds="${HELIOS_ALLOWED_CLIENT_IDS}" \
+              enableOpenAiApiKeyBinding="${ENABLE_OPENAI_SECRET_BINDING}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \

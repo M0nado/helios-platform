@@ -28,6 +28,9 @@ param allowedPrincipalObjectId string
 @minLength(36)
 param allowedClientIds string
 
+@description('Enable OPENAI_API_KEY Key Vault binding only after an administrator has provisioned helios-openai-api-key and granted Key Vault Secrets User through a governed RBAC step.')
+param enableOpenAiApiKeyBinding bool = false
+
 @description('Optional canonical HTTPS origin exposed to Edge, such as a reviewed Front Door or custom DNS hostname. It must be an origin with no path, query, fragment, or trailing slash. Leave empty to use the Container Apps FQDN.')
 param publicBaseUrl string = ''
 @description('Exact Git commit used to build the immutable connector image and pin generated setup scripts.')
@@ -110,17 +113,6 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     sku: { family: 'A', name: 'standard' }
     publicNetworkAccess: 'Enabled'
     networkAcls: { bypass: 'AzureServices', defaultAction: 'Deny' }
-  }
-}
-
-var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
-resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(vault.id, identity.properties.principalId, keyVaultSecretsUserRoleId)
-  scope: vault
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
-    principalId: identity.properties.principalId
-    principalType: 'ServicePrincipal'
   }
 }
 
@@ -208,13 +200,13 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
         transport: 'auto'
         allowInsecure: false
       }
-      secrets: [
+      secrets: enableOpenAiApiKeyBinding ? [
         {
           name: 'helios-openai-api-key'
           keyVaultUrl: 'https://${vault.name}.vault.azure.net/secrets/helios-openai-api-key'
           identity: identity.id
         }
-      ]
+      ] : []
       registries: [{
         server: containerRegistryServer
         identity: identity.id
@@ -224,7 +216,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [{
         name: 'api'
         image: validatedContainerImage
-        env: [
+        env: concat([
           { name: 'HELIOS_EXECUTION_MODE', value: 'dry-run' }
           { name: 'HELIOS_REQUIRE_ENTRA_AUTH', value: 'true' }
           { name: 'HELIOS_CLOUD_RUNTIME_ONLY', value: 'true' }
@@ -244,9 +236,10 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
           { name: 'HELIOS_COSMOS_DATABASE', value: controlDatabase.name }
           { name: 'HELIOS_COSMOS_CONTAINER', value: controlRuns.name }
           { name: 'HELIOS_CONNECTOR_DELIVERY_MODE', value: 'dry-run' }
-          { name: 'OPENAI_API_KEY', secretRef: 'helios-openai-api-key' }
           { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
-        ]
+        ], enableOpenAiApiKeyBinding ? [
+          { name: 'OPENAI_API_KEY', secretRef: 'helios-openai-api-key' }
+        ] : [])
         resources: { cpu: json('0.5'), memory: '1Gi' }
         probes: [
           {

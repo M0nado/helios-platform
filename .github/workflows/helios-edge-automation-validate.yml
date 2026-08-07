@@ -123,13 +123,26 @@ jobs:
           grep -Fq 'HELIOS_ALLOWED_CLIENT_IDS' monado/helios-control/infra/connector.bicep
           grep -Fq 'HELIOS_DEPLOY_ENABLED' monado/helios-control/infra/connector.bicep
           grep -Fq 'HELIOS_CONNECTOR_DELIVERY_ENABLED' monado/helios-control/infra/connector.bicep
-          grep -Fq "OPENAI_API_KEY', secretRef: 'helios-openai-api-key'" monado/helios-control/infra/connector.bicep
-          grep -Fq "'Microsoft.Authorization/roleAssignments@2022-04-01'" monado/helios-control/infra/connector.bicep
-          grep -Fq "keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'" monado/helios-control/infra/connector.bicep
+          grep -Fq 'param enableOpenAiApiKeyBinding bool = false' monado/helios-control/infra/connector.bicep
+          grep -Fq "secrets: enableOpenAiApiKeyBinding ? [" monado/helios-control/infra/connector.bicep
+          grep -Fq "enableOpenAiApiKeyBinding ? [" monado/helios-control/infra/connector.bicep
+          if grep -Fq "'Microsoft.Authorization/roleAssignments@2022-04-01'" monado/helios-control/infra/connector.bicep; then
+            echo 'Connector template must not create Key Vault role assignments in CI deployments.' >&2
+            exit 1
+          fi
 
           cloud_workflow='.github/workflows/helios-cloud-deploy.yml'
           grep -Fq 'reviewedRunId' "${cloud_workflow}"
-          grep -Fq 'what-if.full.json' "${cloud_workflow}"
+          if grep -Fq 'what-if.full.json' "${cloud_workflow}"; then
+            echo 'The workflow must not upload unredacted what-if payloads as artifacts.' >&2
+            exit 1
+          fi
+          grep -Fq 'enableOpenAiSecretBinding' "${cloud_workflow}"
+          grep -Fq 'enableOpenAiApiKeyBinding=' "${cloud_workflow}"
+          grep -Fq 'az acr repository update' "${cloud_workflow}"
+          grep -Fq -- '--write-enabled false' "${cloud_workflow}"
+          grep -Fq -- '--delete-enabled false' "${cloud_workflow}"
+          grep -Fq 'HELIOS_ALLOWED_CLIENT_IDS contains invalid GUID value' "${cloud_workflow}"
           if [[ "$(grep -F -c 'commonTags="${COMMON_TAGS_JSON}"' "${cloud_workflow}")" -ne 3 ]]; then
             echo 'Canonical organization tags must be bound identically in preview, drift check, and deploy.' >&2
             exit 1

@@ -21,6 +21,9 @@
     "allowPreviewPlaceholder": {
       "value": false
     },
+    "enableOpenAiApiKeyBinding": {
+      "value": false
+    },
     "entraClientId": {
       "value": "${HELIOS_ENTRA_CLIENT_ID}"
     },
