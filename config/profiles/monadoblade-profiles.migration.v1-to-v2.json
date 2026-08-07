@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "fromVersion": "config/profiles/monadoblade-profiles.v1.json",
   "toVersion": "config/profiles/monadoblade-profiles.v2.json",
   "preserveLegacyInput": true,
@@ -52,9 +52,31 @@
       "gamer": ["Gamer"],
       "ai-server": ["SysOps", "ServerBackground"],
       "sysadmin-offline": ["SysAdmin"]
+    },
+    "resourcePolicies": {
+      "core": ["personal"],
+      "developer": ["developer"],
+      "studio": ["studio"],
+      "gamer": ["gamer"],
+      "ai-server": ["sysops", "server-background"],
+      "sysadmin-offline": ["sysadmin"]
     }
   },
   "deterministicResolution": {
+    "aihubPolicies": {
+      "core": { "strategy": "single-source", "source": "personal" },
+      "developer": { "strategy": "single-source", "source": "developer" },
+      "studio": { "strategy": "single-source", "source": "studio" },
+      "gamer": { "strategy": "single-source", "source": "gamer" },
+      "ai-server": {
+        "strategy": "field-level-union",
+        "sources": ["sysops", "server-background"],
+        "unionFields": ["primaryObjectives", "learningSignals", "automaticActions", "approvalActions"],
+        "precedenceForConflictScalars": ["sysops", "server-background"],
+        "requireApprovalActions": ["service-restart", "rollback", "external-message", "data-removal"]
+      },
+      "sysadmin-offline": { "strategy": "single-source", "source": "sysadmin" }
+    },
     "guiThemes": {
       "core": { "strategy": "single-source", "source": "personal" },
       "developer": { "strategy": "single-source", "source": "developer" },
@@ -84,6 +106,37 @@
         "source": "SysAdmin",
         "requiresManagedRootPath": "04_ProfileWorkspaces/SysAdmin"
       }
+    },
+    "resourcePolicies": {
+      "core": { "strategy": "single-source", "source": "personal" },
+      "developer": { "strategy": "single-source", "source": "developer" },
+      "studio": { "strategy": "single-source", "source": "studio" },
+      "gamer": { "strategy": "single-source", "source": "gamer" },
+      "ai-server": {
+        "strategy": "field-level-merge",
+        "sources": ["sysops", "server-background"],
+        "scalarPrecedence": {
+          "cpuMode": "sysops",
+          "gpuMode": "server-background",
+          "backgroundPriority": "server-background"
+        },
+        "numericMerge": {
+          "memoryReserveGb": "max",
+          "containerBudgetGb": "max",
+          "vmBudgetGb": "max",
+          "modelBudgetGb": "max"
+        },
+        "materializedPolicy": {
+          "cpuMode": "observability-responsive",
+          "gpuMode": "worker-scheduled",
+          "memoryReserveGb": 10,
+          "containerBudgetGb": 48,
+          "vmBudgetGb": 48,
+          "modelBudgetGb": 32,
+          "backgroundPriority": "service-controlled"
+        }
+      },
+      "sysadmin-offline": { "strategy": "single-source", "source": "sysadmin" }
     }
   },
   "notes": [
@@ -91,7 +144,9 @@
     "SysOps and ServerBackground responsibilities are folded into AI/Server in v2.",
     "Personal is consolidated into Core in v2.",
     "Recovery and Quarantine remain Sysadmin workflows and are not independent profiles.",
-    "Legacy software, AIHub, shell-theme, and storage workspace scopes stay v1-labeled until their dedicated v2 manifests ship.",
-    "AI/Server theme resolution is deterministic: SysOps provides scalar appearance, and ServerBackground metrics are appended."
+    "Legacy software, AIHub, shell-theme, storage workspace, and resource-policy scopes stay v1-labeled until their dedicated v2 manifests ship.",
+    "AI/Server theme resolution is deterministic: SysOps provides scalar appearance, and ServerBackground metrics are appended.",
+    "AI/Server AIHub policy resolution is deterministic: union policy arrays, retain SysOps scalar precedence, and preserve approval gates from both SysOps and ServerBackground.",
+    "AI/Server resource policy resolution is deterministic: scalar precedence plus max-merge for numeric budgets with a pinned materialized policy."
   ]
 }

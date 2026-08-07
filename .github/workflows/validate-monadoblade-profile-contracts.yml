@@ -19,7 +19,9 @@ on:
       - 'config/usb/monadoblade-usb-wizard.v1.json'
       - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
       - 'docs/WIKI/README.md'
+      - 'docs/WIKI/INDEX.md'
       - 'docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md'
+      - 'scripts/utilities/wiki/generate-wiki.ps1'
       - '.github/workflows/validate-monadoblade-profile-contracts.yml'
   push:
     branches:
@@ -41,7 +43,9 @@ on:
       - 'config/usb/monadoblade-usb-wizard.v1.json'
       - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
       - 'docs/WIKI/README.md'
+      - 'docs/WIKI/INDEX.md'
       - 'docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md'
+      - 'scripts/utilities/wiki/generate-wiki.ps1'
       - '.github/workflows/validate-monadoblade-profile-contracts.yml'
   workflow_dispatch:
 
@@ -173,6 +177,36 @@ jobs:
           missing_bundles = sorted(required_ai_server_bundles - ai_server_bundles)
           if missing_bundles:
               raise SystemExit(f'AI/Server software bundle set is incomplete: {missing_bundles}')
+          ai_server_roots = set(by_id['ai-server'].get('roots', []))
+          required_ai_server_roots = {
+              'server',
+              'models-service',
+              'telemetry',
+              'backups-service',
+              'server-ops',
+              'dev-read',
+              'common',
+              'crosspartition',
+              'quarantine-read',
+          }
+          missing_roots = sorted(required_ai_server_roots - ai_server_roots)
+          if missing_roots:
+              raise SystemExit(f'AI/Server roots must retain SysOps and ServerBackground access: {missing_roots}')
+          for profile_id in expected:
+              resource_policy = by_id[profile_id].get('resourcePolicy')
+              if not isinstance(resource_policy, dict):
+                  raise SystemExit(f'{profile_id} must define a resourcePolicy object in v2')
+          expected_ai_server_resource_policy = {
+              'cpuMode': 'observability-responsive',
+              'gpuMode': 'worker-scheduled',
+              'memoryReserveGb': 10,
+              'containerBudgetGb': 48,
+              'vmBudgetGb': 48,
+              'modelBudgetGb': 32,
+              'backgroundPriority': 'service-controlled',
+          }
+          if by_id['ai-server'].get('resourcePolicy') != expected_ai_server_resource_policy:
+              raise SystemExit('AI/Server v2 resourcePolicy must match deterministic merged budgets')
 
           migration = json.loads(Path('config/profiles/monadoblade-profiles.migration.v1-to-v2.json').read_text(encoding='utf-8'))
           map_v1_to_v2 = migration['mapV1ToV2']
@@ -203,7 +237,7 @@ jobs:
                   raise SystemExit(f'Missing legacy surface contract: {path}')
 
           surface_mappings = migration.get('surfaceMappings', {})
-          required_surface_keys = {'softwareScopes', 'aihubPolicies', 'guiThemes', 'storageWorkspaces'}
+          required_surface_keys = {'softwareScopes', 'aihubPolicies', 'guiThemes', 'storageWorkspaces', 'resourcePolicies'}
           if set(surface_mappings.keys()) != required_surface_keys:
               raise SystemExit(f'Unexpected migration surface keys: {set(surface_mappings.keys())}')
           expected_set = set(expected)
@@ -219,8 +253,21 @@ jobs:
               raise SystemExit('ai-server software scope migration must include sysops and server-background')
           if surface_mappings['softwareScopes']['sysadmin-offline'] != ['sysadmin']:
               raise SystemExit('sysadmin-offline software scope migration must map from sysadmin')
+          if surface_mappings['resourcePolicies']['ai-server'] != ['sysops', 'server-background']:
+              raise SystemExit('ai-server resource policy migration must include sysops and server-background')
 
           resolution = migration.get('deterministicResolution', {})
+          ai_server_aihub = resolution.get('aihubPolicies', {}).get('ai-server', {})
+          if ai_server_aihub.get('strategy') != 'field-level-union':
+              raise SystemExit('AI/Server aihubPolicies resolution must use field-level-union')
+          if ai_server_aihub.get('sources') != ['sysops', 'server-background']:
+              raise SystemExit('AI/Server aihubPolicies must merge sysops and server-background')
+          if ai_server_aihub.get('unionFields') != ['primaryObjectives', 'learningSignals', 'automaticActions', 'approvalActions']:
+              raise SystemExit('AI/Server aihubPolicies union fields are not deterministic')
+          if ai_server_aihub.get('precedenceForConflictScalars') != ['sysops', 'server-background']:
+              raise SystemExit('AI/Server aihubPolicies precedence must remain deterministic')
+          if ai_server_aihub.get('requireApprovalActions') != ['service-restart', 'rollback', 'external-message', 'data-removal']:
+              raise SystemExit('AI/Server aihubPolicies must preserve both SysOps and ServerBackground approval gates')
           ai_server_gui = resolution.get('guiThemes', {}).get('ai-server', {})
           if ai_server_gui.get('strategy') != 'precedence-merge':
               raise SystemExit('AI/Server guiThemes resolution must use precedence-merge')
@@ -236,6 +283,26 @@ jobs:
               raise SystemExit('sysadmin-offline storage workspace source must be SysAdmin')
           if sysadmin_workspace.get('requiresManagedRootPath') != '04_ProfileWorkspaces/SysAdmin':
               raise SystemExit('sysadmin-offline storage workspace path requirement is missing')
+          ai_server_resource_resolution = resolution.get('resourcePolicies', {}).get('ai-server', {})
+          if ai_server_resource_resolution.get('strategy') != 'field-level-merge':
+              raise SystemExit('AI/Server resource policy resolution must use field-level-merge')
+          if ai_server_resource_resolution.get('sources') != ['sysops', 'server-background']:
+              raise SystemExit('AI/Server resource policy sources must include sysops and server-background')
+          if ai_server_resource_resolution.get('scalarPrecedence') != {
+              'cpuMode': 'sysops',
+              'gpuMode': 'server-background',
+              'backgroundPriority': 'server-background',
+          }:
+              raise SystemExit('AI/Server resource policy scalar precedence is not deterministic')
+          if ai_server_resource_resolution.get('numericMerge') != {
+              'memoryReserveGb': 'max',
+              'containerBudgetGb': 'max',
+              'vmBudgetGb': 'max',
+              'modelBudgetGb': 'max',
+          }:
+              raise SystemExit('AI/Server resource policy numeric merge rules are incomplete')
+          if ai_server_resource_resolution.get('materializedPolicy') != expected_ai_server_resource_policy:
+              raise SystemExit('AI/Server resource policy materialized result must match the v2 contract')
 
           hierarchy = json.loads(Path('config/storage/monadoblade-folder-hierarchy.v1.json').read_text(encoding='utf-8'))
           dev_roots = hierarchy['managedRoots']['MONADO_DEV']
@@ -273,6 +340,42 @@ jobs:
               raise SystemExit(f'Unexpected shell v2 readiness checks: {shell.get("readinessChecks")}')
 
           runtime = json.loads(Path('config/runtime/helios-fabric-services.v2.json').read_text(encoding='utf-8'))
+          if runtime.get('inheritsFrom') != 'config/runtime/helios-fabric-services.v1.json':
+              raise SystemExit('Runtime v2 must declare v1 inheritance for continuity')
+          if not Path(runtime['inheritsFrom']).exists():
+              raise SystemExit(f'Runtime v2 inheritance contract is missing: {runtime["inheritsFrom"]}')
+          if runtime.get('defaultTransport') != 'local-grpc':
+              raise SystemExit('Runtime v2 default transport must remain local-grpc')
+          if not runtime.get('services'):
+              raise SystemExit('Runtime v2 must retain a non-empty service graph')
+          required_message_requirements = [
+              'typedContracts',
+              'correlationId',
+              'causationId',
+              'idempotencyKey',
+              'profileId',
+              'securityClassification',
+              'schemaVersion',
+              'createdAtUtc',
+              'evidenceReference',
+              'secretValuesDenied',
+          ]
+          message_requirements = runtime.get('messageRequirements', {})
+          if not all(message_requirements.get(key) is True for key in required_message_requirements):
+              raise SystemExit('Runtime v2 message requirements are incomplete')
+          required_auth_requirements = [
+              'denyByDefault',
+              'managedIdentityInAzure',
+              'localServiceIdentityOnWindows',
+              'perToolPolicy',
+              'perProfilePolicy',
+              'externalWritesNeedApproval',
+              'productionNeedsProtectedEnvironment',
+              'sysAdminNeedsPhysicalTwoFactor',
+          ]
+          auth = runtime.get('authorization', {})
+          if not all(auth.get(key) is True for key in required_auth_requirements):
+              raise SystemExit('Runtime v2 authorization requirements are incomplete')
           expected_profile_contracts = {
               'active': 'config/profiles/monadoblade-profiles.v2.json',
               'legacyInput': 'config/profiles/monadoblade-profiles.v1.json',
@@ -330,21 +433,23 @@ jobs:
               raise SystemExit('Integration projection source of truth must be GitHub')
           if projection.get('eventContractSchema') != 'config/integrations/event-contract.schema.json':
               raise SystemExit('Integration projection must pin the normalized event-contract schema')
-          if projection.get('requiredEnvelopeFields') != [
-              'schemaVersion',
-              'eventId',
-              'source',
-              'eventType',
-              'repository',
-              'correlationId',
-              'environment',
-              'occurredAt',
-              'dataClassification',
-              'actor',
-              'links',
-              'payload',
-          ]:
-              raise SystemExit('Integration projection required envelope fields are incomplete')
+          schema_path = Path(projection['eventContractSchema'])
+          if not schema_path.exists():
+              raise SystemExit(f'Referenced integration event schema is missing: {schema_path}')
+          schema = json.loads(schema_path.read_text(encoding='utf-8'))
+          schema_properties = schema.get('properties', {})
+          schema_required = schema.get('required', [])
+          projection_required = projection.get('requiredEnvelopeFields', [])
+          if not isinstance(projection_required, list) or not projection_required:
+              raise SystemExit('Integration projection requiredEnvelopeFields must be a non-empty list')
+          if len(projection_required) != len(set(projection_required)):
+              raise SystemExit('Integration projection requiredEnvelopeFields cannot contain duplicates')
+          missing_schema_required = sorted(set(schema_required) - set(projection_required))
+          if missing_schema_required:
+              raise SystemExit(f'Projection is missing schema-required envelope fields: {missing_schema_required}')
+          unknown_projection_fields = sorted(set(projection_required) - set(schema_properties))
+          if unknown_projection_fields:
+              raise SystemExit(f'Projection requires fields not defined by schema: {unknown_projection_fields}')
           if projection.get('requireSchemaValidationBeforeProjection') is not True:
               raise SystemExit('Integration projection must require schema validation before projection')
           if projection.get('allowExecutionFromProjectedSystems') is not False:

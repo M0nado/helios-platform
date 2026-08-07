@@ -290,6 +290,13 @@ This wiki provides comprehensive documentation for the Helios Platform, includin
 - [Dependency Graph](./DEPENDENCY_GRAPH.md)
 - [Orphaned Files Report](./ORPHANED_FILES.md)
 
+## Monadoblade delivery fabric
+
+- [Architecture contract](../architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md)
+- [Six-profile contract](../../config/profiles/monadoblade-profiles.v2.json)
+- [Legacy v1 profile](../../config/profiles/monadoblade-profiles.v1.json) and [v1 to v2 migration](../../config/profiles/monadoblade-profiles.migration.v1-to-v2.json)
+- [Runtime and surface linkage](../../config/runtime/helios-fabric-services.v2.json)
+
 ## 🚀 Getting Started
 
 1. **Start with Categories** - Browse by functional area
