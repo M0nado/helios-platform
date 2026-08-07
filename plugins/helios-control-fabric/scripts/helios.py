@@ -331,31 +331,44 @@ def edge_plan(environment: str) -> dict[str, Any]:
 
 
 def resolve_enterprise_fleet_registry_file() -> Path:
-    candidates: list[Path] = []
-
     explicit_file = os.environ.get("HELIOS_ENTERPRISE_FLEET_REGISTRY", "").strip()
     if explicit_file:
-        candidates.append(Path(explicit_file).expanduser())
+        candidate = Path(explicit_file).expanduser().resolve(strict=False)
+        if candidate.is_file():
+            return candidate
+        raise RuntimeError(
+            "HELIOS_ENTERPRISE_FLEET_REGISTRY points to a missing file: "
+            f"{candidate}"
+        )
 
     explicit_root = os.environ.get("HELIOS_REPOSITORY_ROOT", "").strip()
     if explicit_root:
-        candidates.append(
-            Path(explicit_root).expanduser() / ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH
+        candidate = (
+            Path(explicit_root).expanduser().resolve(strict=False)
+            / ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH
+        )
+        if candidate.is_file():
+            return candidate
+        raise RuntimeError(
+            "HELIOS_REPOSITORY_ROOT did not contain enterprise fleet registry at: "
+            f"{candidate}"
         )
 
+    candidates: list[Path] = []
     search_roots = [Path.cwd(), ROOT, *Path.cwd().parents, *ROOT.parents]
     for base in search_roots:
-        candidates.append(base / ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH)
+        candidates.append(
+            (base / ENTERPRISE_FLEET_REPOSITORY_RELATIVE_PATH).resolve(strict=False)
+        )
 
     seen: set[str] = set()
     ordered_candidates: list[Path] = []
     for candidate in candidates:
-        normalized = candidate.resolve(strict=False)
-        key = str(normalized)
+        key = str(candidate)
         if key in seen:
             continue
         seen.add(key)
-        ordered_candidates.append(normalized)
+        ordered_candidates.append(candidate)
 
     for candidate in ordered_candidates:
         if candidate.is_file():

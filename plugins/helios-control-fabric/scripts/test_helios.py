@@ -181,6 +181,31 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(plan["defaultExecutionMode"], "what-if-only")
         self.assertEqual(plan["agentCount"], 20)
 
+    def test_enterprise_fleet_contract_fails_for_missing_explicit_registry(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"HELIOS_ENTERPRISE_FLEET_REGISTRY": "does-not-exist.json"},
+            clear=False,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "HELIOS_ENTERPRISE_FLEET_REGISTRY points to a missing file",
+            ):
+                HELIOS.enterprise_fleet_plan()
+
+    def test_enterprise_fleet_contract_fails_for_invalid_explicit_repository_root(self) -> None:
+        invalid_root = Path(__file__).resolve().parent
+        with patch.dict(
+            os.environ,
+            {"HELIOS_REPOSITORY_ROOT": str(invalid_root)},
+            clear=False,
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "HELIOS_REPOSITORY_ROOT did not contain enterprise fleet registry",
+            ):
+                HELIOS.enterprise_fleet_plan()
+
     def test_all_assets_are_json(self) -> None:
         for name in (
             "connections.json",

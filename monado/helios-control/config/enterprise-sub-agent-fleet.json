@@ -258,7 +258,7 @@
         "scope": "reviewed-bicep-template-and-parameters",
         "leastPrivilegeRoles": [
           "Reader",
-          "Deployment Stack Contributor"
+          "Custom role: Bicep validate and what-if only (no create/update/delete)"
         ],
         "credentialSource": "workload-identity-federation"
       },
@@ -474,7 +474,7 @@
         "scope": "selected-site-and-team",
         "leastPrivilegeRoles": [
           "Sites.Selected",
-          "TeamsActivity.Send (delegated, approved team only)"
+          "Resource-specific consent: ChannelMessage.Send.Group (approved team/channel only)"
         ],
         "credentialSource": "interactive-admin-consent"
       },
@@ -543,7 +543,7 @@
         "type": "sites-selected-delegated",
         "scope": "approved-sharepoint-library",
         "leastPrivilegeRoles": [
-          "Sites.Selected"
+          "Lists.SelectedOperations.Selected (approved library only)"
         ],
         "credentialSource": "graph-delegated-session"
       },
