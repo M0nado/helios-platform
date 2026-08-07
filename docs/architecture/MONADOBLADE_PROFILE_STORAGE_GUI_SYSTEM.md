@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Monadoblade is a local-first, Azure-extended Windows platform built around seven isolated operating profiles, strict SSD partitioning, deterministic folder hierarchies, governed cross-partition transfers, and an AIHub control brain. The system must remain useful when cloud services are unavailable and must never make administrator, security, disk, identity, or production changes without an explicit policy gate.
+Monadoblade is a local-first, Azure-extended Windows platform built around a governed six-profile delivery fabric (with legacy seven-profile input compatibility), strict SSD partitioning, deterministic folder hierarchies, governed cross-partition transfers, and an AIHub control brain. The system must remain useful when cloud services are unavailable and must never make administrator, security, disk, identity, or production changes without an explicit policy gate.
 
 > Versioning note: `config/profiles/monadoblade-profiles.v1.json` remains the legacy seven-profile input. The active six-profile delivery-fabric contract is defined in `docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md` with migration map `config/profiles/monadoblade-profiles.migration.v1-to-v2.json`.
 
@@ -42,15 +42,21 @@ DevHub supports project templates for:
 
 ## Profile model
 
-The supported profiles are:
+The active delivery-fabric profiles are:
 
-1. Developer
-2. SysAdmin
-3. SysOps
-4. Gamer
-5. Studio
-6. Personal
-7. ServerBackground
+1. Core (`core`, `核`)
+2. Developer (`developer`, `創`)
+3. Studio (`studio`, `響`)
+4. Gamer (`gamer`, `迅`)
+5. AI/Server (`ai-server`, `智`)
+6. SysAdmin (Local / Offline) (`sysadmin-offline`, `統`)
+
+Legacy v1 identifiers remain accepted and are migrated deterministically:
+
+- `personal` -> `core`
+- `sysops` -> `ai-server`
+- `server-background` -> `ai-server`
+- `sysadmin` -> `sysadmin-offline`
 
 Each profile owns a policy object containing:
 
@@ -64,18 +70,18 @@ Each profile owns a policy object containing:
 - UI theme, background, lighting, animation, sound, and dashboard widgets
 - CrossPartition import and export permissions
 
-Developer is powerful but not an administrator. SysAdmin is the only interactive administrator profile. ServerBackground is a non-interactive service identity.
+Core, Developer, Studio, Gamer, and AI/Server are bounded non-admin profiles. SysAdmin (Local / Offline) is the only administrator profile and remains hidden/disabled until explicit local authorization.
 
-## SysAdmin security boundary
+## SysAdmin (Local / Offline) security boundary
 
-SysAdmin must be local-only, hidden from normal profile switching, and disabled by default. Activation requires physical presence and an approved local factor such as:
+SysAdmin (Local / Offline) must be local-only, hidden from normal profile switching, and disabled by default. Activation requires physical presence and an approved local factor such as:
 
 - FIDO2 or hardware security key
 - Encrypted USB authorization token
 - Windows Hello plus a local approval secret
 - Recovery authorization stored offline
 
-High-risk operations require two gates: an active SysAdmin session and a separate physical/local authorization. Examples include disk layout changes, driver promotion, Defender or firewall policy changes, vault recovery, certificate trust changes, TPM or Secure Boot operations, Azure production deployment, Entra/RBAC changes, and removal of quarantined evidence.
+High-risk operations require two gates: an active SysAdmin (Local / Offline) session and a separate physical/local authorization. Examples include disk layout changes, driver promotion, Defender or firewall policy changes, vault recovery, certificate trust changes, TPM or Secure Boot operations, Azure production deployment, Entra/RBAC changes, and removal of quarantined evidence.
 
 Cloud identity, chat commands, AI recommendations, and remote API requests may never activate SysAdmin by themselves.
 
@@ -106,6 +112,8 @@ The installer must compute sizes from available capacity using policy percentage
 ## Strict folder hierarchy
 
 Every managed volume contains a signed `MONADO_VOLUME.json` manifest and a versioned root layout. Applications must use the manifest instead of guessing drive letters.
+
+Legacy workspace names (for example SysOps, Personal, and ServerBackground paths) remain on disk as compatibility roots and are mapped through `config/profiles/monadoblade-profiles.migration.v1-to-v2.json`.
 
 Canonical roots include:
 
@@ -189,15 +197,9 @@ Visual Studio, VS Code, GitHub Desktop, GitHub Copilot, Azure CLI, Azure Develop
 
 Developer optimization prioritizes compilation throughput, Dev Drive caches, container startup, local model inference, parallel tests, and incremental builds while reserving resources for the UI and security services.
 
-### SysAdmin
+### Core
 
-Only signed system administration, recovery, firmware, security, disk, driver, certificate, identity, and policy tools. Browsers, mail, games, media libraries, and everyday development tools are excluded unless required for a reviewed repair procedure.
-
-### SysOps
-
-Broad security and performance operations: observability, event correlation, Defender and firewall dashboards, network diagnostics, performance tracing, VM/container health, Azure Monitor, Application Insights, Log Analytics, GitHub Actions, Azure DevOps, incident evidence, backup status, service lifecycle, and policy drift.
-
-SysOps may operate bounded services and development environments but cannot obtain unrestricted administrator rights.
+Office/productivity, communication, browsing, document, finance, legal, photo, and note applications with quiet telemetry and conservative automation. Core is the default daily-use profile and maps from legacy `personal`.
 
 ### Gamer
 
@@ -207,13 +209,15 @@ Approved launchers, games, controller/peripheral utilities, capture tools, overl
 
 DAWs, audio interfaces and ASIO tools, plugins, sample managers, video editors, Blender, Unreal, visual tools, color management, media codecs, and rendering utilities. AIHub prioritizes low audio latency, stable CPU scheduling, disk streaming, GPU render queues, and plugin quarantine checks.
 
-### Personal
+### AI/Server
 
-Office/productivity, communication, browsing, document, finance, legal, photo, and note applications with quiet telemetry and conservative automation.
+Broad security and performance operations plus bounded service runtime responsibilities: observability, event correlation, Defender and firewall dashboards, network diagnostics, VM/container health, Azure Monitor, Application Insights, Log Analytics, GitHub and Azure delivery telemetry, and queued worker/service lifecycle management.
 
-### ServerBackground
+AI/Server consolidates legacy `sysops` and `server-background` responsibilities while remaining policy-bounded and non-admin.
 
-.NET Worker Services, Windows services, Docker services, reverse proxy, databases, message bus, AIHub workers, Hermes/XCore workers, monitoring, backup, and scheduled security services. No interactive desktop dependency is required.
+### SysAdmin (Local / Offline)
+
+Only signed system administration, recovery, firmware, security, disk, driver, certificate, identity, and policy tools. Browsers, mail, games, media libraries, and everyday development tools are excluded unless required for a reviewed repair procedure.
 
 ## CrossPartition and air-gap workflow
 
@@ -282,7 +286,7 @@ The custom shell runs after Windows authentication; it does not replace Windows 
 
 1. A fully rendered windswept grass environment appears with depth, lighting, fog, and grass blades that bend subtly toward cursor movement.
 2. The dormant Monadoblade rests in the center. Cursor proximity activates a low-energy glow and lightweight particle response.
-3. Selection opens a circular profile wheel. Seven holographic glyph sectors represent Developer, SysAdmin, SysOps, Gamer, Studio, Personal, and ServerBackground.
+3. Selection opens a circular profile wheel. Six holographic glyph sectors represent Core, Developer, Studio, Gamer, AI/Server, and SysAdmin (Local / Offline).
 4. Rotating the wheel changes profile color, ambience, sound cue, telemetry preview, and blade material response.
 5. The blade extends as the selected profile prepares. A central abstract kanji-inspired glyph illuminates through the core aperture while the outer mechanical ring spins in counter-rotating segments.
 6. The system performs a fast policy, storage, services, and security readiness check.
@@ -292,13 +296,12 @@ The animation must degrade gracefully. Low-power mode uses static or reduced-mot
 
 ## Profile UI differentiation
 
+- Core: calm silver/blue environment, low-noise notifications, privacy and backup status
 - Developer: cyan/teal code-grid overlays, build graph, model router, repository and container metrics
-- SysAdmin: muted red/gold vault interface, minimal network surface, integrity and recovery evidence
-- SysOps: blue/amber operations cockpit, service graph, security posture, latency, VM/container and network metrics
-- Gamer: electric green/blue low-latency overlay, frame time, GPU, CPU, storage, network and background-throttle metrics
 - Studio: violet/magenta waveform and spatial-grid UI, ASIO, buffer, plugin, disk-stream and render metrics
-- Personal: calm silver/blue environment, low-noise notifications, privacy and backup status
-- ServerBackground: dark graphite daemon view, uptime, queues, services, firewall, health, power and model-worker metrics
+- Gamer: electric green/blue low-latency overlay, frame time, GPU, CPU, storage, network and background-throttle metrics
+- AI/Server: dark graphite operations/daemon view, service graph, security posture, latency, queues, VM/container and network metrics
+- SysAdmin (Local / Offline): muted red/gold vault interface, minimal network surface, integrity and recovery evidence
 
 ## Azure boundary
 
