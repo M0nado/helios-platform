@@ -25,6 +25,8 @@
 - Pinned, namespace-scoped Azure MCP with enforced read-only startup.
 - Concurrent PowerShell and Bash CLI inventory checks with non-reporting auth probes.
 - Four bounded local agent definitions and a provider-neutral dry-run fleet contract.
+- Versioned XCore9 runtime matrix, KNAA evaluator contract, and specialization
+  registry with bounded parallelism and deny-list policy surfaces.
 - An isolated VS Code Insiders profile launcher requiring explicit local confirmation.
 - Cloud-runtime contract that removes workstation dependencies from production.
 - Immutable-image Container Apps deployment, liveness/readiness probes, and a

@@ -46,6 +46,16 @@
       "writes": "pull-request-only"
     }
   ],
+  "xcore9": {
+    "runtimeMatrix": "config/xcore9-runtime-matrix.v1.json",
+    "knaaModel": "config/xcore9-knaa-model.v1.json",
+    "specializationPacks": "config/xcore9-specialization-packs.v1.json",
+    "policy": {
+      "evaluationAuthority": "advisory-only-by-default",
+      "promotionAuthority": "human-approval-via-pull-request",
+      "allowConservativeAutoBlock": true
+    }
+  },
   "learningPolicy": {
     "rawCopilotConversationsAsTrainingData": false,
     "allowedSources": ["approved-tests", "synthetic-curriculum", "reviewed-documents", "sanitized-telemetry"],

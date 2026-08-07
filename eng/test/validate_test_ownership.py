@@ -7,18 +7,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "eng/test/test-ownership.json"
 LAYERS = {"portable", "windows", "privileged", "integration", "performance", "end-to-end"}
+IGNORED_PARTS = {"bin", "obj", ".git", "node_modules", ".vs", "TestResults"}
+
+def include_path(path: Path) -> bool:
+    return not any(part in IGNORED_PARTS for part in path.parts)
 
 def sources():
     roots = [ROOT / "tests", ROOT / "src/tests", ROOT / "monado/helios-control/tests"]
-    found = {p.relative_to(ROOT).as_posix() for root in roots for ext in ("*.cs", "*.fs") for p in root.rglob(ext)}
+    found = {
+        p.relative_to(ROOT).as_posix()
+        for root in roots
+        for ext in ("*.cs", "*.fs")
+        for p in root.rglob(ext)
+        if include_path(p)
+    }
     core = ROOT / "src/core/HELIOS.Platform"
-    found |= {p.relative_to(ROOT).as_posix() for p in core.rglob("*.cs") if "Tests" in p.parts or p.name.endswith("Tests.cs")}
+    found |= {
+        p.relative_to(ROOT).as_posix()
+        for p in core.rglob("*.cs")
+        if include_path(p) and ("Tests" in p.parts or p.name.endswith("Tests.cs"))
+    }
     return sorted(found)
 
 def owner(path):
     if path.startswith("monado/helios-control/tests/"): return "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj"
     if path.startswith("src/core/HELIOS.Platform/Phase10/Users/Tests/"): return "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj"
     if path.startswith("src/tests/"): return "src/tests/HELIOS.Platform.Tests.csproj"
+    if path.startswith("tests/contracts/HELIOS.Platform.Contracts.Tests/"): return "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj"
     if path.startswith("tests/analytics/"): return "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
     if path == "tests/SecurityValidationTests.cs": return "tests/SecurityValidationTests.csproj"
     if path.startswith("tests/HELIOS.Platform.Tests/Phase10/Quarantine/"): return "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj"
@@ -29,6 +44,7 @@ def layer(path):
     if "performance" in p or "scalingtest" in p: return "performance"
     if "endtoend" in p or "/system/" in p or "e2etest" in p: return "end-to-end"
     if "integration" in p or p.startswith("monado/helios-control/tests/"): return "integration"
+    if p.startswith("tests/contracts/"): return "portable"
     if any(x in p for x in ("security", "vault", "driver", "quarantine", "malware", "/users/tests/", "deploymenttests")): return "privileged"
     if p.endswith(".fs") or p.startswith("tests/analytics/"): return "portable"
     return "windows"

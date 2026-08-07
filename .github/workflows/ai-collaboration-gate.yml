@@ -1,0 +1,380 @@
+name: AI Collaboration Gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  enforce-contract:
+    name: Enforce Codex + Claude collaboration contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Validate required PR evidence fields
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+
+          body="${PR_BODY:-}"
+          required_markers=(
+            "## AI collaboration evidence"
+            "Correlation ID:"
+            "Evidence links:"
+            "Codex scope:"
+            "Claude scope:"
+            "Privileged operations touched:"
+            "Proposal-only controls acknowledged:"
+            "Protected approval workflow link:"
+            "Rollback plan:"
+          )
+
+          for marker in "${required_markers[@]}"; do
+            if ! grep -Fq "${marker}" <<<"${body}"; then
+              echo "Missing required pull request body marker: ${marker}" >&2
+              exit 1
+            fi
+          done
+
+          PR_BODY_TEXT="${body}" python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          import urllib.error
+          import urllib.request
+
+          body = os.environ.get("PR_BODY_TEXT", "")
+          token = os.environ["GH_TOKEN"]
+          api_url = os.environ["GITHUB_API_URL"].rstrip("/")
+          repository = os.environ["GITHUB_REPOSITORY"]
+          pr_number = os.environ["PR_NUMBER"]
+          pr_head_sha = os.environ["PR_HEAD_SHA"]
+          placeholder_values = {"", "n/a", "na", "todo", "tbd", "none"}
+          protected_workflow_requirements = {
+              ".github/workflows/helios-cloud-deploy.yml": {
+                  "job_name_patterns": (
+                      r"^reviewed azure what-if \(azure-(dev|test|prod)\)$",
+                      r"^deploy after second approval \(azure-(dev|test|prod)\)$",
+                  ),
+              },
+              ".github/workflows/enterprise-bicep.yml": {
+                  "job_name_patterns": (
+                      r"^what-if (dev|test)$",
+                      r"^deploy (dev|test)$",
+                  ),
+              },
+          }
+          top_level_field_labels = (
+              "Correlation ID:",
+              "Evidence links:",
+              "Codex scope:",
+              "Claude scope:",
+              "Privileged operations touched:",
+              "Proposal-only controls acknowledged:",
+              "Protected approval workflow link:",
+              "Rollback plan:",
+          )
+          top_level_field_keys = {
+              label.rstrip(":").strip().lower()
+              for label in top_level_field_labels
+          }
+          parsed_fields = {}
+
+          def api_get(url):
+              request = urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  payload = json.load(response)
+                  link_header = response.headers.get("Link", "")
+              return payload, link_header
+
+          def next_page(link_header):
+              for section in link_header.split(","):
+                  segment = section.strip()
+                  if 'rel="next"' in segment and segment.startswith("<"):
+                      end_index = segment.find(">")
+                      if end_index != -1:
+                          return segment[1:end_index]
+              return None
+
+          def extract_workflow_run_id(value):
+              pattern = rf"^https://github\.com/{re.escape(repository)}/actions/runs/(\d+)(?:[/?#].*)?$"
+              match = re.match(pattern, value.strip(), flags=re.IGNORECASE)
+              if not match:
+                  return None
+              return match.group(1)
+
+          def fetch_changed_files():
+              files = []
+              url = f"{api_url}/repos/{repository}/pulls/{pr_number}/files?per_page=100&page=1"
+              while url:
+                  page_files, link_header = api_get(url)
+                  files.extend(page_files)
+                  url = next_page(link_header)
+              return files
+
+          for match in re.finditer(r"(?im)^\s*-\s*([^:\n]+):\s*(.*)$", body):
+              key = match.group(1).strip().lower()
+              value = match.group(2).strip()
+              parsed_fields.setdefault(key, []).append(value)
+
+          def extract_field_values(label):
+              key = label.rstrip(":").strip().lower()
+              return parsed_fields.get(key, [])
+
+          def require_single_field(label):
+              values = extract_field_values(label)
+              if len(values) != 1:
+                  print(
+                      f"Field '{label}' must appear exactly once (found {len(values)}).",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              return values[0]
+
+          def extract_evidence_links():
+              links = []
+              lines = body.splitlines()
+              start_index = None
+              for index, line in enumerate(lines):
+                  if re.match(r"^\s*-\s*Evidence links:\s*$", line, flags=re.IGNORECASE):
+                      start_index = index + 1
+                      break
+
+              if start_index is None:
+                  return links
+
+              for line in lines[start_index:]:
+                  top_level_match = re.match(r"^\s*-\s*([^:\n]+):\s*(.*)$", line)
+                  if top_level_match and top_level_match.group(1).strip().lower() in top_level_field_keys:
+                      break
+                  link_match = re.match(r"^\s{2,}-\s*(.+?)\s*$", line)
+                  if link_match:
+                      value = link_match.group(1).strip()
+                      if value:
+                          links.append(value)
+                      continue
+                  if not line.strip():
+                      continue
+                  break
+              return links
+
+          def is_placeholder(value):
+              return value.strip().lower() in placeholder_values
+
+          required_inline_fields = (
+              "Correlation ID:",
+              "Codex scope:",
+              "Claude scope:",
+              "Rollback plan:",
+          )
+          missing_inline_fields = []
+          for field_name in required_inline_fields:
+              value = require_single_field(field_name)
+              if is_placeholder(value):
+                  missing_inline_fields.append(field_name)
+          if missing_inline_fields:
+              print(
+                  "Missing required AI collaboration evidence values: "
+                  + ", ".join(missing_inline_fields),
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          evidence_links = [
+              link for link in extract_evidence_links() if not is_placeholder(link)
+          ]
+          if not evidence_links:
+              print("Evidence links must include at least one populated value.", file=sys.stderr)
+              raise SystemExit(1)
+          if not any("http://" in link.lower() or "https://" in link.lower() for link in evidence_links):
+              print("Evidence links must include at least one URL.", file=sys.stderr)
+              raise SystemExit(1)
+
+          files = fetch_changed_files()
+          touched_files = sorted(
+              {
+                  path
+                  for entry in files
+                  for path in (entry.get("filename"), entry.get("previous_filename"))
+                  if path
+              }
+          )
+
+          privileged_patterns = [
+              r"^infra/",
+              r"^monado/helios-control/infra/",
+              r"^scripts/",
+              r"^monado/helios-control/scripts/",
+              r"(?:^|/)scripts/.*\.(?:ps1|psm1|sh|bash|cmd|bat|py)$",
+              r"^tools/",
+              r"^monado/helios-control/tools/",
+              r"(?:^|/)tools/.*\.(?:ps1|psm1|sh|bash|cmd|bat|py)$",
+              r"\.(?:ps1|psm1|sh|bash|cmd|bat|py)$",
+              r"^\.github/workflows/.*\.ya?ml$",
+          ]
+
+          privileged_files = [
+              path
+              for path in touched_files
+              if any(re.search(pattern, path, flags=re.IGNORECASE) for pattern in privileged_patterns)
+          ]
+
+          if privileged_files:
+              privileged_operations = require_single_field("Privileged operations touched:")
+              proposal_only = require_single_field("Proposal-only controls acknowledged:")
+              if privileged_operations.strip().lower() != "yes" or proposal_only.strip().lower() != "yes":
+                  print(
+                      "Privileged file changes require explicit proposal-only acknowledgement.",
+                      file=sys.stderr,
+                  )
+                  print(
+                      "Required fields:\n- Privileged operations touched: yes\n- Proposal-only controls acknowledged: yes",
+                      file=sys.stderr,
+                  )
+                  print(
+                      "Privileged files:\n- " + "\n- ".join(privileged_files),
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+
+              protected_approval = require_single_field("Protected approval workflow link:")
+              if is_placeholder(protected_approval):
+                  print(
+                      "Privileged changes require a protected approval workflow link.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              run_id = extract_workflow_run_id(protected_approval)
+              if not run_id:
+                  print(
+                      "Protected approval workflow link must target a same-repository GitHub Actions run URL.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+
+              try:
+                  run_payload, _ = api_get(
+                      f"{api_url}/repos/{repository}/actions/runs/{run_id}"
+                  )
+              except urllib.error.HTTPError as exc:
+                  print(
+                      f"Could not retrieve protected approval workflow run '{run_id}': HTTP {exc.code}.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+
+              run_repository = (
+                  (run_payload.get("repository") or {}).get("full_name") or ""
+              )
+              if run_repository.lower() != repository.lower():
+                  print(
+                      "Protected approval workflow run must belong to this repository.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              workflow_path = str(run_payload.get("path") or "").split("@", maxsplit=1)[0]
+              workflow_requirements = protected_workflow_requirements.get(workflow_path.lower())
+              if workflow_requirements is None:
+                  print(
+                      "Protected approval workflow run must come from an allowed protected workflow.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              run_status = str(run_payload.get("status") or "").lower()
+              run_conclusion = str(run_payload.get("conclusion") or "").lower()
+              if run_status not in {"requested", "pending", "queued", "waiting", "in_progress", "completed"}:
+                  print(
+                      "Protected approval workflow run is not in an acceptable execution state.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              if run_status == "completed" and run_conclusion != "success":
+                  print(
+                      "Protected approval workflow run completed without success.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              if str(run_payload.get("head_sha") or "").lower() != pr_head_sha.lower():
+                  print(
+                      "Protected approval workflow run must target the current pull request head SHA.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              run_pr_numbers = [
+                  str(pull_request.get("number"))
+                  for pull_request in (run_payload.get("pull_requests") or [])
+                  if pull_request.get("number") is not None
+              ]
+              if str(pr_number) not in run_pr_numbers:
+                  print(
+                      "Protected approval workflow run must be associated with the current pull request.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+
+              try:
+                  jobs_payload, _ = api_get(
+                      f"{api_url}/repos/{repository}/actions/runs/{run_id}/jobs?per_page=100"
+                  )
+              except urllib.error.HTTPError as exc:
+                  print(
+                      f"Could not retrieve jobs for protected approval workflow run '{run_id}': HTTP {exc.code}.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+
+              jobs = jobs_payload.get("jobs", []) if isinstance(jobs_payload, dict) else []
+              protected_job_patterns = tuple(
+                  pattern
+                  for pattern in workflow_requirements.get("job_name_patterns", ())
+                  if pattern
+              )
+              if run_status in {"requested", "pending", "queued"} and not jobs:
+                  protected_jobs = [dict(name="pending-protected-run")]
+              else:
+                  protected_jobs = []
+                  for job in jobs:
+                      job_name = str(job.get("name") or "").lower()
+                      if not any(
+                          re.match(pattern, job_name, flags=re.IGNORECASE)
+                          for pattern in protected_job_patterns
+                      ):
+                          continue
+
+                      status = str(job.get("status") or "").lower()
+                      conclusion = str(job.get("conclusion") or "").lower()
+                      if status not in {"waiting", "in_progress"} and not (
+                          status == "completed" and conclusion == "success"
+                      ):
+                          continue
+
+                      protected_jobs.append(job)
+              if not protected_jobs:
+                  print(
+                      "Protected approval workflow run must include a protected-environment approval/deployment job that is waiting, in progress, or successful.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+
+          print(f"Validated AI collaboration contract for {len(touched_files)} changed files.")
+          PY

@@ -1,8 +1,3 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
   branches:
     include:
@@ -17,6 +12,38 @@ pr:
 pool:
   vmImage: ubuntu-latest
 
+variables:
+  BuildConfiguration: Release
+  DotNetSdkVersion: 8.0.423
+
 steps:
 - checkout: self
   clean: true
+
+- task: UseDotNet@2
+  displayName: Use pinned .NET SDK
+  inputs:
+    packageType: sdk
+    version: $(DotNetSdkVersion)
+
+- script: |
+    set -euo pipefail
+    if [ -f "Helios.Connect.sln" ]; then
+      project_dir="."
+    elif [ -f "monado/helios-control/Helios.Connect.sln" ]; then
+      project_dir="monado/helios-control"
+    else
+      echo "Helios.Connect.sln was not found." >&2
+      exit 1
+    fi
+    echo "##vso[task.setvariable variable=HeliosProjectDir]${project_dir}"
+  displayName: Locate Helios Connect solution
+
+- script: dotnet restore "$(HeliosProjectDir)/Helios.Connect.sln"
+  displayName: Restore
+
+- script: dotnet build "$(HeliosProjectDir)/Helios.Connect.sln" --configuration $(BuildConfiguration) --no-restore
+  displayName: Build
+
+- script: dotnet test "$(HeliosProjectDir)/Helios.Connect.sln" --configuration $(BuildConfiguration) --no-build
+  displayName: Test

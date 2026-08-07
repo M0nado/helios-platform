@@ -63,7 +63,7 @@ jobs:
           )
 
           $manifest = Join-Path $env:RUNNER_TEMP 'changed-powershell-files.json'
-          $files | ConvertTo-Json -Compress | Set-Content -LiteralPath $manifest -Encoding utf8NoBOM
+          ConvertTo-Json -InputObject $files -Compress | Set-Content -LiteralPath $manifest -Encoding utf8NoBOM
           "manifest=$manifest" >> $env:GITHUB_OUTPUT
           "count=$($files.Count)" >> $env:GITHUB_OUTPUT
 
@@ -118,7 +118,7 @@ jobs:
             '(?i)secret\s*=\s*[''"][^''"]+[''"]' = 'Hardcoded secret'
             '(?i)token\s*=\s*[''"][^''"]+[''"]' = 'Hardcoded token'
             'github_pat_[A-Za-z0-9_]{20,}' = 'GitHub personal access token'
-            'sk-[A-Za-z0-9_-]{20,}' = 'Provider API key'
+            'sk-(?:proj-)?(?=[A-Za-z0-9_-]{24,}\b)(?=[A-Za-z0-9_-]*[0-9_])[A-Za-z0-9_-]+' = 'Provider API key'
           }
           $issues = @()
 

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0.0",
+  "modelVersion": "knaa-2026-08-06",
+  "termDefinition": {
+    "acronym": "KNAA",
+    "meaning": "Knowledge, Novelty, Actionability, Alignment",
+    "dimensions": [
+      {
+        "id": "knowledge",
+        "label": "Knowledge",
+        "range": [0.0, 1.0],
+        "normalization": "clamp-to-unit-interval",
+        "missingDataState": "unknown"
+      },
+      {
+        "id": "novelty",
+        "label": "Novelty",
+        "range": [0.0, 1.0],
+        "normalization": "clamp-to-unit-interval",
+        "missingDataState": "unknown"
+      },
+      {
+        "id": "actionability",
+        "label": "Actionability",
+        "range": [0.0, 1.0],
+        "normalization": "clamp-to-unit-interval",
+        "missingDataState": "unknown"
+      },
+      {
+        "id": "alignment",
+        "label": "Alignment",
+        "range": [0.0, 1.0],
+        "normalization": "clamp-to-unit-interval",
+        "missingDataState": "unknown"
+      }
+    ]
+  },
+  "aggregation": {
+    "method": "weighted-mean",
+    "weights": {
+      "knowledge": 0.3,
+      "novelty": 0.2,
+      "actionability": 0.3,
+      "alignment": 0.2
+    },
+    "minimumKnownDimensions": 2
+  },
+  "thresholds": {
+    "blockBelow": 0.35,
+    "warnBelow": 0.55,
+    "reviewBelow": 0.75
+  },
+  "uncertainty": {
+    "insufficientEvidenceState": "unknown",
+    "confidenceFormula": "knownDimensionCount/4"
+  },
+  "governance": {
+    "outputsAreAdvisoryByDefault": true,
+    "allowConservativeAutoBlock": true,
+    "promotionAuthority": "none",
+    "thresholdChangeRequiresPullRequest": true,
+    "thresholdRollbackProcedure": "docs/XCORE9_KNAA_MODEL.md#threshold-rollback-procedure"
+  },
+  "auditPayloadRequiredFields": [
+    "modelVersion",
+    "thresholds",
+    "evidenceLinks",
+    "recommendation",
+    "confidence",
+    "policyMode"
+  ],
+  "examples": [
+    {
+      "name": "insufficient-evidence",
+      "vector": {
+        "knowledge": 0.7,
+        "novelty": null,
+        "actionability": null,
+        "alignment": null
+      },
+      "expectedRecommendation": "unknown"
+    },
+    {
+      "name": "review-required-advisory",
+      "vector": {
+        "knowledge": 0.2,
+        "novelty": 0.3,
+        "actionability": 0.2,
+        "alignment": 0.4
+      },
+      "expectedRecommendation": "review-required"
+    }
+  ]
+}
