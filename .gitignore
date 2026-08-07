@@ -68,6 +68,7 @@ coverage/
 node_modules/
 packages/
 package-lock.json
+!monado/helios-control/security/m365agentstoolkit-cli-audit/package-lock.json
 yarn.lock
 poetry.lock
 pip-log.txt

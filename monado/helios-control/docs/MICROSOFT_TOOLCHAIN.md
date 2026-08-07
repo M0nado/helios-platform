@@ -12,7 +12,7 @@ through Entra and solution pipelines.
   identity. Direct `azd provision` and `azd deploy` are blocked by
   `azure.yaml`; GitHub Actions uses OIDC for application promotion.
 - Power Platform CLI moves versioned Copilot Studio solutions between environments.
-- Microsoft 365 Agents Toolkit (`atk`) packages published agents for Copilot and Teams; new work does not use deprecated TeamsFx.
+- Microsoft 365 Agents Toolkit (`atk`) packages published agents for Copilot and Teams; new work does not use deprecated TeamsFx. The CLI is version-pinned and fail-closed: `automaticInstall` is permitted only while the Node 24 lock-based audit gate remains clean.
 - GitHub CLI and Copilot work through branches and pull requests.
 - Azure DevOps remote MCP is configured read-only for supported local VS Code/Visual Studio clients. Broader Foundry or Copilot Studio support is not assumed while the remote server remains preview-limited.
 - The official Azure MCP server is pinned for local use, starts in namespace mode,
@@ -54,6 +54,13 @@ in parallel. The command reports versions only; optional authentication probes
 discard command output so tenant, subscription, and user details are not copied
 into evidence. Installation remains the responsibility of the devcontainer or
 approved enterprise software distribution.
+
+The CI gate `scripts/Invoke-M365AgentsToolkitAuditGate.ps1` installs from
+`security/m365agentstoolkit-cli-audit/package-lock.json`, runs
+`npm audit --audit-level=high`, and blocks any attempt to set
+`automaticInstall: true` while high/critical advisories are present. The audit
+fixture currently pins transitive remediations for `adm-zip` and `uuid` through
+the lockfile override policy.
 
 ## Provisioning order
 

@@ -13,7 +13,7 @@
     { "id": "jq", "command": "jq", "arguments": ["--version"], "required": true, "networkRequired": false },
     { "id": "functions", "command": "func", "arguments": ["--version"], "required": false, "networkRequired": false },
     { "id": "power-platform", "command": "pac", "arguments": ["--version"], "required": false, "networkRequired": false },
-    { "id": "m365-agents", "command": "atk", "arguments": ["--version"], "required": false, "networkRequired": false },
+    { "id": "m365-agents", "command": "atk", "arguments": ["--version"], "required": false, "networkRequired": false, "pinnedVersion": "1.1.14", "automaticInstall": true },
     { "id": "vscode-insiders", "command": "code-insiders", "arguments": ["--version"], "required": false, "networkRequired": false },
     { "id": "claude-code", "command": "claude", "arguments": ["--version"], "required": false, "networkRequired": false },
     { "id": "azure-mcp", "command": "npx", "arguments": ["-y", "@azure/mcp@3.0.0-beta.27", "--version"], "required": false, "networkRequired": true }
