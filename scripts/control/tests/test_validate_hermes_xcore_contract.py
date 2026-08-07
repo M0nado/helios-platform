@@ -181,6 +181,17 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             "idempotency.required must be true",
         )
 
+    def test_event_profile_rejects_unknown_idempotency_key_field(self) -> None:
+        candidate = copy.deepcopy(self.event)
+        candidate["delivery"]["idempotency"]["keyFields"].append("nonexistentField")
+        self.assert_has_error(
+            self.environment,
+            self.capability,
+            candidate,
+            self.approval,
+            "idempotency.keyFields contains unexpected nonexistentField",
+        )
+
     def test_event_profile_rejects_legacy_evidence_links_field(self) -> None:
         candidate = copy.deepcopy(self.event)
         required_fields = candidate["eventEnvelope"]["requiredFields"]

@@ -448,7 +448,8 @@ public sealed partial class ControlRunCoordinator(
         if (!IdempotencyPattern().IsMatch(idempotencyKey)) throw new ArgumentException("Idempotency-Key must be 8-128 safe characters.", nameof(idempotencyKey));
         var intent = Normalize(request.Intent, "intent", 64).ToLowerInvariant();
         if (!Intents.Contains(intent)) throw new ArgumentException("One-button runs support provision-resources or cleanup-owned-resources.", nameof(request.Intent));
-        var environment = Normalize(request.Environment, "environment", 16).ToLowerInvariant();
+        var requestedEnvironment = Normalize(request.Environment, "environment", 16).ToLowerInvariant();
+        var environment = NormalizePersistedEnvironmentName(requestedEnvironment);
         if (!Environments.Contains(environment)) throw new ArgumentException("Environment must be x-tier-dev, x-tier-xcore, or x-tier-prod.", nameof(request.Environment));
         var context = inventory.GetContext();
         var target = context.ResourceGroup;
@@ -468,14 +469,7 @@ public sealed partial class ControlRunCoordinator(
         if (normalizedConnectors.Any(value => !Connectors.Contains(value))) throw new ArgumentException("A connector is not in the governed allowlist.", nameof(request.Connectors));
         requestedBy = string.IsNullOrWhiteSpace(requestedBy) ? "authorized-user" : Normalize(requestedBy, "requestedBy", 128);
         var id = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{requestedBy}\n{idempotencyKey}"))).ToLowerInvariant()[..32];
-        var canonicalRequest = JsonSerializer.Serialize(new
-        {
-            intent,
-            environment,
-            target = target.ToLowerInvariant(),
-            connectors = normalizedConnectors
-        });
-        var requestSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest))).ToLowerInvariant();
+        var requestSha256 = ComputeRequestSha256(intent, environment, target, normalizedConnectors);
         var now = DateTimeOffset.UtcNow;
         var tenantId = NormalizeTenant(context.TenantId);
         var repository = ResolveRepository();
@@ -497,6 +491,8 @@ public sealed partial class ControlRunCoordinator(
             Repository: repository,
             ArtifactDigest: requestSha256);
         var (snapshot, created) = await store.CreateOrGetAsync(candidate, cancellationToken);
+        if (!created)
+            snapshot = await NormalizePersistedEnvironmentAsync(snapshot, cancellationToken);
         if (!created &&
             (!string.Equals(snapshot.RequestSha256, requestSha256, StringComparison.Ordinal) ||
              !string.Equals(snapshot.RequestedBy, requestedBy, StringComparison.Ordinal) ||
@@ -614,13 +610,12 @@ public sealed partial class ControlRunCoordinator(
                 LeaseExpiresAt = now.Add(_timing.LeaseDuration),
                 UpdatedAt = now
             }, cancellationToken);
+            run = await NormalizePersistedEnvironmentAsync(run, cancellationToken);
             if (nextAttempt > _policy.EventBus.Retry.MaxAttempts)
                 throw new InvalidOperationException("The run exceeded the configured maximum retry attempts.");
             run = await TransitionLifecycleAsync(run, "PRECHECK", cancellationToken);
         }
         catch (ControlRunConcurrencyException) { return; }
-
-        run = await NormalizePersistedEnvironmentAsync(run, cancellationToken);
 
         using var leaseLostCts = new CancellationTokenSource();
         using var heartbeatStopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -809,20 +804,29 @@ public sealed partial class ControlRunCoordinator(
     private async Task<ControlRunSnapshot> NormalizePersistedEnvironmentAsync(ControlRunSnapshot run, CancellationToken cancellationToken)
     {
         var canonicalEnvironment = NormalizePersistedEnvironmentName(run.Environment);
-        if (string.Equals(run.Environment, canonicalEnvironment, StringComparison.Ordinal))
-            return run;
         if (!Environments.Contains(canonicalEnvironment))
             throw new InvalidOperationException(
                 $"Persisted control run environment '{run.Environment}' is not supported.");
 
+        var canonicalRequestSha256 = ComputeRequestSha256(run.Intent, canonicalEnvironment, run.Target, run.Connectors);
+        var hasLegacyEnvironment = !string.Equals(run.Environment, canonicalEnvironment, StringComparison.Ordinal);
+        var hasLegacyRequestHash = !string.Equals(run.RequestSha256, canonicalRequestSha256, StringComparison.Ordinal);
+        if (!hasLegacyEnvironment && !hasLegacyRequestHash) return run;
+
+        var artifactDigest = string.Equals(run.ArtifactDigest, run.RequestSha256, StringComparison.Ordinal)
+            ? canonicalRequestSha256
+            : run.ArtifactDigest;
         logger.LogInformation(
-            "Normalizing persisted legacy environment '{LegacyEnvironment}' to '{CanonicalEnvironment}' for run {RunId}.",
+            "Normalizing persisted legacy environment/hash for run {RunId}: environment '{LegacyEnvironment}' -> '{CanonicalEnvironment}', request hash update required={RequestHashUpdated}.",
+            run.Id,
             run.Environment,
             canonicalEnvironment,
-            run.Id);
+            hasLegacyRequestHash);
         return await ReplaceAsync(run, run with
         {
             Environment = canonicalEnvironment,
+            RequestSha256 = canonicalRequestSha256,
+            ArtifactDigest = artifactDigest,
             UpdatedAt = DateTimeOffset.UtcNow
         }, cancellationToken);
     }
@@ -923,12 +927,30 @@ public sealed partial class ControlRunCoordinator(
     }
 
     private static string ClassifyIncidentSeverity(string environment) =>
-        environment.ToLowerInvariant() switch
+        NormalizePersistedEnvironmentName(environment) switch
         {
             "x-tier-prod" => "S0",
             "x-tier-xcore" => "S1",
             _ => "S2"
         };
+
+    private static string ComputeRequestSha256(string intent, string environment, string target, IReadOnlyList<string> connectors)
+    {
+        var normalizedConnectors = connectors
+            .Select(value => value.Trim().ToLowerInvariant())
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var canonicalRequest = JsonSerializer.Serialize(new
+        {
+            intent = intent.Trim().ToLowerInvariant(),
+            environment = NormalizePersistedEnvironmentName(environment),
+            target = target.Trim().ToLowerInvariant(),
+            connectors = normalizedConnectors
+        });
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest))).ToLowerInvariant();
+    }
 
     private static string BuildIncidentFingerprint(ControlRunSnapshot run, string severity, DateTimeOffset occurredAt)
     {

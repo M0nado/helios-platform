@@ -81,6 +81,12 @@ EXPECTED_EVENT_CLASSIFICATIONS = {
     "confidential",
     "restricted",
 }
+EXPECTED_EVENT_IDEMPOTENCY_KEY_FIELDS = {
+    "eventId",
+    "correlationId",
+    "source",
+    "eventType",
+}
 
 
 def _name_set(value: object) -> set[str]:
@@ -395,9 +401,17 @@ def validate_event_contract(contract: object) -> list[str]:
         if idempotency.get("required") is not True:
             errors.append("event profile contract: idempotency.required must be true")
         key_fields = _name_set(idempotency.get("keyFields"))
-        for required in {"eventId", "correlationId", "source", "eventType"}:
-            if required not in key_fields:
-                errors.append(f"event profile contract: idempotency.keyFields missing {required}")
+        missing_key_fields = sorted(EXPECTED_EVENT_IDEMPOTENCY_KEY_FIELDS - key_fields)
+        for required in missing_key_fields:
+            errors.append(f"event profile contract: idempotency.keyFields missing {required}")
+        unexpected_key_fields = sorted(
+            key_fields - EXPECTED_EVENT_IDEMPOTENCY_KEY_FIELDS
+        )
+        for unexpected in unexpected_key_fields:
+            errors.append(
+                "event profile contract: "
+                f"idempotency.keyFields contains unexpected {unexpected}"
+            )
 
     replay = _mapping(delivery.get("replayProtection"))
     if replay is None:

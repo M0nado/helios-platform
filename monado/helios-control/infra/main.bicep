@@ -10,6 +10,16 @@ param location string = resourceGroup().location
 ])
 param environmentName string = 'x-tier-dev'
 
+@description('Optional compatibility lane for resource names. Leave empty for canonical defaults; for x-tier-xcore use preview only when preserving preview-era resource names.')
+@allowed([
+  ''
+  'dev'
+  'test'
+  'preview'
+  'prod'
+])
+param resourceNameEnvironment string = ''
+
 param serviceName string = 'helios-connector'
 
 @description('Additional organization tags. HELIOS ownership and environment tags are always enforced by the connector module.')
@@ -54,6 +64,7 @@ module connector './connector.bicep' = {
   params: {
     location: location
     environmentName: environmentName
+    resourceNameEnvironment: resourceNameEnvironment
     serviceName: serviceName
     containerImage: containerImage
     containerRegistryName: containerRegistryName
