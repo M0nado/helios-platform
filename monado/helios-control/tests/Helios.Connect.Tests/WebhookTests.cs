@@ -554,9 +554,9 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         {
             Assert.Equal(HttpStatusCode.OK, discoveryResponse.StatusCode);
             using var discoveryDocument = JsonDocument.Parse(await discoveryResponse.Content.ReadAsStringAsync());
-            var statusTool = Assert.Single(
-                discoveryDocument.RootElement.GetProperty("result").GetProperty("tools").EnumerateArray(),
-                tool => tool.GetProperty("name").GetString() == "helios_get_control_plane_status");
+            var statusTool = Assert.Single(discoveryDocument.RootElement.GetProperty("result")
+                .GetProperty("tools").EnumerateArray(), tool =>
+                    tool.GetProperty("name").GetString() == "helios_get_control_plane_status");
             Assert.Equal("oauth2", Assert.Single(statusTool.GetProperty("securitySchemes")
                 .EnumerateArray()).GetProperty("type").GetString());
         }

@@ -116,6 +116,118 @@ namespace HELIOS.Platform.Phase10.Users
             });
         }
 
+        private async Task<bool> EnsureWritableDirectoryAsync(string path)
+        {
+            if (!await CreateDirectoryAsync(path))
+            {
+                return false;
+            }
+
+            return await Task.Run(() =>
+            {
+                string probeDirectoryName = $".helios-probe-{Guid.NewGuid():N}";
+                if (Path.IsPathRooted(probeDirectoryName))
+                {
+                    LogMessage($"Invalid probe directory name generated for {path}", LogLevel.Warning);
+                    return false;
+                }
+
+                if (probeDirectoryName.IndexOfAny(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }) >= 0)
+                {
+                    LogMessage($"Probe directory name contains path separators for {path}", LogLevel.Warning);
+                    return false;
+                }
+
+                string normalizedBasePath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                string probePath = Path.GetFullPath($"{normalizedBasePath}{Path.DirectorySeparatorChar}{probeDirectoryName}");
+                string expectedPrefix = normalizedBasePath + Path.DirectorySeparatorChar;
+                if (!probePath.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    LogMessage($"Computed probe path escaped base directory for {path}", LogLevel.Warning);
+                    return false;
+                }
+
+                try
+                {
+                    Directory.CreateDirectory(probePath);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    LogMessage($"Directory is not writable: {path}. {ex.Message}", LogLevel.Warning);
+                    return false;
+                }
+                catch (IOException ex)
+                {
+                    LogMessage($"Directory is not writable: {path}. {ex.Message}", LogLevel.Warning);
+                    return false;
+                }
+                catch (System.Security.SecurityException ex)
+                {
+                    LogMessage($"Directory is not writable: {path}. {ex.Message}", LogLevel.Warning);
+                    return false;
+                }
+
+                try
+                {
+                    Directory.Delete(probePath);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    LogMessage($"Directory is writable but probe cleanup failed for {path}. {ex.Message}", LogLevel.Warning);
+                }
+                catch (IOException ex)
+                {
+                    LogMessage($"Directory is writable but probe cleanup failed for {path}. {ex.Message}", LogLevel.Warning);
+                }
+                catch (System.Security.SecurityException ex)
+                {
+                    LogMessage($"Directory is writable but probe cleanup failed for {path}. {ex.Message}", LogLevel.Warning);
+                }
+
+                return true;
+            });
+        }
+
+        private async Task<string?> ResolveWritableUserFolderAsync(string username, string preferredFolderName, string fallbackFolderName)
+        {
+            if (Path.IsPathRooted(preferredFolderName) || Path.IsPathRooted(fallbackFolderName))
+            {
+                LogMessage($"Refusing rooted folder names for writable folder resolution: preferred='{preferredFolderName}', fallback='{fallbackFolderName}'", LogLevel.Error);
+                return null;
+            }
+
+            string safePreferredFolderName = Path.GetFileName(preferredFolderName);
+            string safeFallbackFolderName = Path.GetFileName(fallbackFolderName);
+            if (Path.IsPathRooted(safePreferredFolderName) || Path.IsPathRooted(safeFallbackFolderName))
+            {
+                LogMessage($"Sanitized folder names resolved to rooted paths: preferred='{safePreferredFolderName}', fallback='{safeFallbackFolderName}'", LogLevel.Error);
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(safePreferredFolderName) || string.IsNullOrWhiteSpace(safeFallbackFolderName))
+            {
+                LogMessage($"Invalid folder names for writable folder resolution: preferred='{preferredFolderName}', fallback='{fallbackFolderName}'", LogLevel.Error);
+                return null;
+            }
+
+            string userProfile = GetUserProfilePath(username);
+            string preferredPath = Path.Combine(userProfile, safePreferredFolderName);
+            if (await EnsureWritableDirectoryAsync(preferredPath))
+            {
+                return preferredPath;
+            }
+
+            string fallbackPath = Path.Combine(userProfile, ".helios", safeFallbackFolderName);
+            if (await EnsureWritableDirectoryAsync(fallbackPath))
+            {
+                LogMessage($"Using fallback writable directory for {safePreferredFolderName}: {fallbackPath}", LogLevel.Warning);
+                return fallbackPath;
+            }
+
+            LogMessage($"Unable to provision writable directory for {safePreferredFolderName}", LogLevel.Error);
+            return null;
+        }
+
         /// <summary>
         /// Sets up AppData directory structure with Local, Roaming, and LocalLow.
         /// </summary>
@@ -216,7 +328,11 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    string documentsPath = Path.Combine(GetUserProfilePath(username), "Documents");
+                    string? documentsPath = await ResolveWritableUserFolderAsync(username, "Documents", "Documents");
+                    if (documentsPath == null)
+                    {
+                        return false;
+                    }
 
                     var subfolders = new[]
                     {
@@ -255,13 +371,19 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    string userProfile = GetUserProfilePath(username);
+                    string? picturesPath = await ResolveWritableUserFolderAsync(username, "Pictures", "Pictures");
+                    string? videosPath = await ResolveWritableUserFolderAsync(username, "Videos", "Videos");
+                    string? musicPath = await ResolveWritableUserFolderAsync(username, "Music", "Music");
+                    if (picturesPath == null || videosPath == null || musicPath == null)
+                    {
+                        return false;
+                    }
 
                     var mediaFolders = new Dictionary<string, string[]>
                     {
-                        { Path.Combine(userProfile, "Pictures"), new[] { "Screenshots", "Wallpapers", "Screenshots", "Saved" } },
-                        { Path.Combine(userProfile, "Videos"), new[] { "Recordings", "Movies", "TV Shows", "Edited" } },
-                        { Path.Combine(userProfile, "Music"), new[] { "Artists", "Albums", "Playlists", "Downloaded" } }
+                        { picturesPath, new[] { "Screenshots", "Wallpapers", "Saved" } },
+                        { videosPath, new[] { "Recordings", "Movies", "TV Shows", "Edited" } },
+                        { musicPath, new[] { "Artists", "Albums", "Playlists", "Downloaded" } }
                     };
 
                     bool allSuccess = true;
