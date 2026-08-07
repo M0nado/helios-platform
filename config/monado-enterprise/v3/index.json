@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v3/index.schema.json",
+  "schemaVersion": "3.0.0",
+  "contractId": "monadoblade-six-profile-delivery-fabric-v3",
+  "status": "authoritative",
+  "historicalInputs": [
+    "config/profiles/monadoblade-profiles.v1.json",
+    "config/gui/monado-profile-shell.v1.json",
+    "config/storage/monadoblade-partitions.2x2tb.v1.json",
+    "config/storage/monadoblade-folder-hierarchy.v1.json",
+    "config/monado-enterprise/v2/index.json"
+  ],
+  "executionMode": "proposal-only",
+  "destructiveApplyDefault": false,
+  "requiresApprovalEvidence": true,
+  "contracts": {
+    "profiles": "config/monado-enterprise/v3/profiles.contract.v3.json",
+    "experience": "config/monado-enterprise/v3/experience.contract.v3.json",
+    "storage": "config/monado-enterprise/v3/storage.contract.v3.json",
+    "integrationProjection": "config/monado-enterprise/v3/integration-projection.contract.v3.json",
+    "repositoryMap": "config/monado-enterprise/v3/repository-map.contract.v3.json",
+    "libraries": "config/monado-enterprise/v3/libraries.contract.v3.json"
+  },
+  "migrationMap": "config/monado-enterprise/v3/migration-map.contract.v3.json",
+  "profileManifestDirectory": "config/monado-enterprise/v3/profile-manifests",
+  "profileManifestSchema": "schemas/monado-enterprise/v3/profile-manifest.v3.xsd",
+  "relatedIssues": [
+    149,
+    162,
+    171,
+    172,
+    194,
+    195,
+    196,
+    207
+  ],
+  "governanceGates": [
+    {
+      "area": "gui-and-usb-extraction",
+      "trackingIssue": 149,
+      "status": "gated"
+    },
+    {
+      "area": "runner-topology-evidence",
+      "trackingIssue": 194,
+      "trackingPullRequest": 196,
+      "status": "gated"
+    },
+    {
+      "area": "deployment-evidence",
+      "trackingIssue": 162,
+      "status": "gated"
+    }
+  ]
+}

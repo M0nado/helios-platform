@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monado-enterprise/v3/repository-map.contract.v3.schema.json",
+  "title": "Monadoblade repository map contract v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "canonicalRepository",
+    "crossRepositorySource",
+    "ownershipBoundaries",
+    "dedicatedTargets",
+    "governanceEvidenceGates",
+    "codeownersReadyPaths",
+    "projectStatusSources",
+    "nonAuthorities",
+    "constraints"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "3.0.0"
+    },
+    "contractId": {
+      "const": "monadoblade-repository-map-v3"
+    },
+    "canonicalRepository": {
+      "const": "M0nado/helios-platform"
+    },
+    "crossRepositorySource": {
+      "const": "config/integrations/repositories.json"
+    },
+    "ownershipBoundaries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repository",
+          "role",
+          "authority"
+        ],
+        "properties": {
+          "repository": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "authority": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "dedicatedTargets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gui",
+        "usbWizard"
+      ],
+      "properties": {
+        "gui": {
+          "$ref": "#/$defs/dedicatedTarget"
+        },
+        "usbWizard": {
+          "$ref": "#/$defs/dedicatedTarget"
+        }
+      }
+    },
+    "governanceEvidenceGates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runnerTopology",
+        "deployment"
+      ],
+      "properties": {
+        "runnerTopology": {
+          "$ref": "#/$defs/evidenceGate"
+        },
+        "deployment": {
+          "$ref": "#/$defs/evidenceGate"
+        }
+      }
+    },
+    "codeownersReadyPaths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "ownerRole",
+          "reason"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ownerRole": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "projectStatusSources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "githubIssue",
+        "linearIssue",
+        "sharepointRecord",
+        "slackRecord"
+      ],
+      "properties": {
+        "githubIssue": {
+          "type": "string",
+          "format": "uri"
+        },
+        "linearIssue": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sharepointRecord": {
+          "type": "string",
+          "format": "uri"
+        },
+        "slackRecord": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    },
+    "nonAuthorities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "noCompetingPlatformRoots",
+        "noDirectToMainWrites",
+        "noSecretMaterialInContracts",
+        "noExecutionTriggerFromProjectionSurfaces"
+      ],
+      "properties": {
+        "noCompetingPlatformRoots": {
+          "const": true
+        },
+        "noDirectToMainWrites": {
+          "const": true
+        },
+        "noSecretMaterialInContracts": {
+          "const": true
+        },
+        "noExecutionTriggerFromProjectionSurfaces": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "dedicatedTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workItems",
+        "ownership",
+        "integrationMode"
+      ],
+      "properties": {
+        "workItems": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "ownership": {
+          "type": "string",
+          "minLength": 1
+        },
+        "integrationMode": {
+          "const": "linked-not-duplicated"
+        }
+      }
+    },
+    "evidenceGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issues"
+      ],
+      "properties": {
+        "issues": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "pullRequests": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  }
+}

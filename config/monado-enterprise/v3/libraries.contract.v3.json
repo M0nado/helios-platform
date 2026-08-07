@@ -1,0 +1,76 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v3/libraries.contract.v3.schema.json",
+  "schemaVersion": "3.0.0",
+  "contractId": "monadoblade-delivery-fabric-libraries-v3",
+  "libraries": [
+    {
+      "id": "policy-library",
+      "surface": "policy",
+      "language": "csharp",
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "purpose": "Policy boundaries for six-profile routing, shell state gates, and local/offline SysAdmin controls.",
+      "stability": "versioned"
+    },
+    {
+      "id": "evidence-library",
+      "surface": "evidence",
+      "language": "csharp",
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "purpose": "Evidence-link constraints and correlation requirements for projection payloads.",
+      "stability": "versioned"
+    },
+    {
+      "id": "control-client-library",
+      "surface": "control-client",
+      "language": "csharp",
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "purpose": "Control-client request classes for plan/request boundaries.",
+      "stability": "versioned"
+    },
+    {
+      "id": "shellkit-library",
+      "surface": "shellkit",
+      "language": "csharp",
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "purpose": "Post-auth shell state machine contracts and fallback behavior.",
+      "stability": "versioned"
+    },
+    {
+      "id": "renderer-library",
+      "surface": "renderer",
+      "language": "csharp",
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "purpose": "Renderer profile contracts for profile-linked UX without privileged execution.",
+      "stability": "versioned"
+    },
+    {
+      "id": "chroma-library",
+      "surface": "chroma",
+      "language": "csharp",
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "purpose": "Chroma profile contracts for six-profile visual differentiation.",
+      "stability": "versioned"
+    },
+    {
+      "id": "wyvern-library",
+      "surface": "wyvern",
+      "language": "csharp",
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "purpose": "Wyvern audio profile contracts for shell presentation states.",
+      "stability": "versioned"
+    },
+    {
+      "id": "usb-device-broker-library",
+      "surface": "usb-device-broker-requests",
+      "language": "csharp",
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "purpose": "USB device-broker request boundaries for inventory/dry-run/storage-plan-only behavior.",
+      "stability": "versioned"
+    }
+  ],
+  "invariants": {
+    "allSurfacesVersioned": true,
+    "allSurfacesReusable": true,
+    "executorSurfaceExcluded": true
+  }
+}

@@ -1,0 +1,390 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monado-enterprise/v3/experience.contract.v3.schema.json",
+  "title": "Monadoblade experience contract v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "commonCoreInstall",
+    "postAuthShell",
+    "profileWheel",
+    "alvis",
+    "profiles",
+    "dedicatedTargets"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "3.0.0"
+    },
+    "contractId": {
+      "const": "monadoblade-experience-contract-v3"
+    },
+    "commonCoreInstall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "noApplicationDuplication",
+        "packages"
+      ],
+      "properties": {
+        "mode": {
+          "const": "single-shared-baseline"
+        },
+        "noApplicationDuplication": {
+          "const": true
+        },
+        "packages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "postAuthShell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runsAfterWindowsAuthentication",
+        "replacesWindowsCredentialProvider",
+        "safeFallbackShell",
+        "stateMachine"
+      ],
+      "properties": {
+        "runsAfterWindowsAuthentication": {
+          "const": true
+        },
+        "replacesWindowsCredentialProvider": {
+          "const": false
+        },
+        "safeFallbackShell": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stateMachine": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "states",
+            "transitions"
+          ],
+          "properties": {
+            "states": {
+              "type": "array",
+              "minItems": 5,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "const": "safe-boot"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "identity-verified"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "wheel-select"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "shell-active"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "safe-neutral-blocked"
+                  }
+                }
+              ]
+            },
+            "transitions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "from",
+                  "to",
+                  "condition"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "to": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "condition": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "profileWheel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selection",
+        "sectors"
+      ],
+      "properties": {
+        "selection": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sectors": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "profile",
+              "glyph",
+              "angle"
+            ],
+            "properties": {
+              "profile": {
+                "enum": [
+                  "core",
+                  "developer",
+                  "studio",
+                  "gamer",
+                  "ai-server",
+                  "sysadmin"
+                ]
+              },
+              "glyph": {
+                "type": "string",
+                "minLength": 1
+              },
+              "angle": {
+                "type": "number"
+              },
+              "hiddenUntilAuthorized": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "alvis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assistantId",
+        "mode",
+        "administrator",
+        "executorToolsAllowed",
+        "toolClasses"
+      ],
+      "properties": {
+        "assistantId": {
+          "const": "ALVIS"
+        },
+        "mode": {
+          "const": "reactive-assistant"
+        },
+        "administrator": {
+          "const": false
+        },
+        "executorToolsAllowed": {
+          "const": false
+        },
+        "toolClasses": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "readOnlyPrefixes",
+            "planOnlyPrefixes",
+            "approvalPendingPrefixes"
+          ],
+          "properties": {
+            "readOnlyPrefixes": {
+              "const": [
+                "search_",
+                "fetch_"
+              ]
+            },
+            "planOnlyPrefixes": {
+              "const": [
+                "plan_"
+              ]
+            },
+            "approvalPendingPrefixes": {
+              "const": [
+                "request_"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "core",
+        "developer",
+        "studio",
+        "gamer",
+        "ai-server",
+        "sysadmin"
+      ],
+      "patternProperties": {
+        "^(core|developer|studio|gamer|ai-server|sysadmin)$": {
+          "$ref": "#/$defs/profileExperience"
+        }
+      }
+    },
+    "dedicatedTargets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "guiGateIssue",
+        "usbWizardGateIssue",
+        "linkagePolicy",
+        "legacyTrackingIssues"
+      ],
+      "properties": {
+        "guiGateIssue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "usbWizardGateIssue": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "linkagePolicy": {
+          "const": "link-not-duplicate"
+        },
+        "legacyTrackingIssues": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "profileExperience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semanticUi",
+        "theme",
+        "shellKitLayout",
+        "rendererPreset",
+        "chromaProfile",
+        "wyvernAudioProfile",
+        "serviceBudget",
+        "processBudget",
+        "storageRoots",
+        "networkPolicy",
+        "telemetryPolicy"
+      ],
+      "properties": {
+        "semanticUi": {
+          "type": "string",
+          "minLength": 1
+        },
+        "theme": {
+          "type": "string",
+          "minLength": 1
+        },
+        "shellKitLayout": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rendererPreset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "chromaProfile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "wyvernAudioProfile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "serviceBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "alwaysOnMax",
+            "backgroundPriority"
+          ],
+          "properties": {
+            "alwaysOnMax": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "backgroundPriority": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "processBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxHighPriorityProcesses"
+          ],
+          "properties": {
+            "maxHighPriorityProcesses": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "storageRoots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "networkPolicy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "telemetryPolicy": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
