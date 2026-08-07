@@ -16,6 +16,7 @@ case "$cmd" in
   build) exec python3 scripts/build_graph/build_graph.py "$@" ;;
   codex) exec python3 scripts/codex/generate-codex-tasks.py "$@" ;;
   recommendations) exec python3 scripts/analysis/merge_prune_recommendations.py "$@" ;;
+  pr-trains|codex-pr-trains) exec python3 scripts/analysis/codex_pr_merge_trains.py "$@" ;;
   profiles) exec python3 scripts/integrations/cross_access_profiles.py "$@" ;;
   readiness) exec python3 scripts/integrations/readiness_score.py "$@" ;;
   apps) exec python3 scripts/integrations/app_automation.py "$@" ;;
@@ -52,9 +53,14 @@ case "$cmd" in
     test -f docs/security/CONTROL_PLANE_PERMISSIONS.md
     printf '6/15 Build graph\n'
     python3 scripts/build_graph/build_graph.py
-    printf '7/15 Branch merge/prune recommendations\n'
+    printf '7/15 Branch merge/prune recommendations and Codex PR trains\n'
     python3 scripts/analysis/branch_intelligence.py
     python3 scripts/analysis/merge_prune_recommendations.py
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+      python3 scripts/analysis/codex_pr_merge_trains.py
+    else
+      printf 'Skipping Codex PR trains (gh missing or not authenticated).\n'
+    fi
     printf '8/15 Dashboard actions page\n'
     python3 scripts/dashboard/generate-actions.py
     python3 scripts/control/doctor.py
@@ -96,6 +102,7 @@ Commands:
   build             Build graph report or runner
   codex             Generate Codex task packets
   recommendations   Branch merge/prune recommendations
+  pr-trains         Build Codex/Copilot PR overlap and merge-train plan
   profiles          Cross-access profile readiness
   readiness         Local/repo readiness score
   apps              App automation readiness for GitHub MCP, Slack, Linear, Copilot, ChatGPT, Claude, Azure

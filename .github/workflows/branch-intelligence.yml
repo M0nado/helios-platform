@@ -22,6 +22,7 @@ on:
       - 'docs/integration/remote-manifest.json'
       - 'docs/integration/BRANCH_INTELLIGENCE.md'
       - 'scripts/analysis/branch_intelligence.py'
+      - 'scripts/analysis/codex_pr_merge_trains.py'
       - '.github/workflows/branch-intelligence.yml'
       - 'src/native/HELIOS.Native.Performance/**'
 
@@ -29,6 +30,8 @@ permissions:
   contents: read
   actions: read
   checks: read
+  statuses: read
+  pull-requests: read
 
 jobs:
   branch-intelligence:
@@ -47,6 +50,7 @@ jobs:
 
       - name: Run branch intelligence
         env:
+          GH_TOKEN: ${{ github.token }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -63,6 +67,7 @@ jobs:
             ARGS+=(--enrich-ideas)
           fi
           python3 scripts/analysis/branch_intelligence.py "${ARGS[@]}"
+          python3 scripts/analysis/codex_pr_merge_trains.py
 
       - name: Publish dashboard summary
         run: |

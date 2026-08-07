@@ -1175,7 +1175,7 @@
     {
       "id": "python-static",
       "title": "Python static compile checks",
-      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py tests/scripts/test_build_graph.py scripts/apply/finish_readiness_apply.py scripts/apply/generate_finish_tasks.py scripts/azure/azure_connection_pipeline.py scripts/integrations/super_stack_readiness.py scripts/integrations/deep_agent_readiness.py scripts/integrations/full_integration_matrix.py scripts/analysis/super_branch_unification.py scripts/analysis/deep_branch_code_score.py scripts/agents/branch_fix_agents.py scripts/agents/agent_specialization_matrix.py scripts/analysis/commit_window_unification.py scripts/analysis/code_learning_atlas.py scripts/analysis/recover_missing_branch_work.py scripts/analysis/language_role_optimizer.py scripts/analysis/module_submodule_test_matrix.py scripts/analysis/knowledge_absorption_engine.py scripts/analysis/language_decision_matrix.py scripts/analysis/control_plane_knowledge_matrix.py scripts/analysis/document_code_absorption_ranker.py scripts/analysis/language_engine_catalog.py scripts/analysis/agent_language_framework.py scripts/agents/agent_fleet_control_catalog.py scripts/agents/agent_fleet_autopilot.py scripts/integrations/aihub_super_shell.py scripts/integrations/aihub_connectivity_guide.py scripts/integrations/aihub_full_framework.py scripts/analysis/legacy_algorithm_recovery.py scripts/integrations/aihub_learning_rules.py scripts/agents/branch_test_autofix_plan.py scripts/integrations/aihub_live_flags.py",
+      "command": "python3 -m py_compile scripts/control/helios-control.py scripts/web/helios-web.py scripts/ai/enrich-ideas.py scripts/integrations/check-connections.py scripts/analysis/branch_intelligence.py scripts/graphs/generate_graphs.py scripts/github/update-wiki-from-reports.py scripts/integrations/app_automation.py scripts/control/validate_workflows.py scripts/control/doctor.py scripts/integrations/readiness_score.py scripts/integrations/cross_access_profiles.py scripts/dashboard/generate-gui.py scripts/dashboard/generate-actions.py scripts/github/update-pr-from-reports.py scripts/analysis/repo_inventory.py scripts/analysis/hybrid_gap_analysis.py scripts/analysis/merge_prune_recommendations.py scripts/build_graph/build_graph.py scripts/codex/generate-codex-tasks.py scripts/azure/azure-inventory.py scripts/github/github-inventory.py scripts/security/secret_preflight.py scripts/security/apply_gate_preflight.py scripts/agents/hermes_fleet_readiness.py scripts/azure/azure_what_if.py tests/scripts/test_build_graph.py scripts/apply/finish_readiness_apply.py scripts/apply/generate_finish_tasks.py scripts/azure/azure_connection_pipeline.py scripts/integrations/super_stack_readiness.py scripts/integrations/deep_agent_readiness.py scripts/integrations/full_integration_matrix.py scripts/analysis/super_branch_unification.py scripts/analysis/deep_branch_code_score.py scripts/agents/branch_fix_agents.py scripts/agents/agent_specialization_matrix.py scripts/analysis/commit_window_unification.py scripts/analysis/code_learning_atlas.py scripts/analysis/recover_missing_branch_work.py scripts/analysis/codex_pr_merge_trains.py scripts/analysis/language_role_optimizer.py scripts/analysis/module_submodule_test_matrix.py scripts/analysis/knowledge_absorption_engine.py scripts/analysis/language_decision_matrix.py scripts/analysis/control_plane_knowledge_matrix.py scripts/analysis/document_code_absorption_ranker.py scripts/analysis/language_engine_catalog.py scripts/analysis/agent_language_framework.py scripts/agents/agent_fleet_control_catalog.py scripts/agents/agent_fleet_autopilot.py scripts/integrations/aihub_super_shell.py scripts/integrations/aihub_connectivity_guide.py scripts/integrations/aihub_full_framework.py scripts/analysis/legacy_algorithm_recovery.py scripts/integrations/aihub_learning_rules.py scripts/agents/branch_test_autofix_plan.py scripts/integrations/aihub_live_flags.py",
       "paths": [
         "scripts/**/*.py"
       ],
@@ -1246,6 +1246,22 @@
       "tags": [
         "analysis",
         "branch"
+      ]
+    },
+    {
+      "id": "codex-pr-merge-trains",
+      "title": "Codex/Copilot PR overlap and merge-train report",
+      "command": "python3 scripts/analysis/codex_pr_merge_trains.py",
+      "paths": [
+        "scripts/analysis/codex_pr_merge_trains.py",
+        ".github/workflows/**",
+        "config/integrations/**",
+        "docs/**"
+      ],
+      "tags": [
+        "analysis",
+        "branch",
+        "github"
       ]
     },
     {

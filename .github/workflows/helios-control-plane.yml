@@ -28,8 +28,11 @@ on:
 
 permissions:
   contents: read
+  checks: read
+  statuses: read
   pages: write
   id-token: write
+  pull-requests: read
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -68,10 +71,13 @@ jobs:
         run: test -f docs/security/CONTROL_PLANE_PERMISSIONS.md
       - name: 06 Build graph report
         run: python3 scripts/build_graph/build_graph.py
-      - name: 07 Branch merge prune recommendations
+      - name: 07 Branch merge prune recommendations and Codex PR trains
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/analysis/branch_intelligence.py
           python3 scripts/analysis/merge_prune_recommendations.py
+          python3 scripts/analysis/codex_pr_merge_trains.py
           python3 scripts/graphs/generate_graphs.py
       - name: 08 Dashboard actions page and GUI
         run: |

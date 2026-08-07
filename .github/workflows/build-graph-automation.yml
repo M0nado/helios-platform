@@ -23,6 +23,9 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+  checks: read
+  statuses: read
 
 jobs:
   build-graph-automation:
@@ -52,6 +55,8 @@ jobs:
       - name: Unit tests
         run: python3 -m unittest tests/scripts/test_build_graph.py
       - name: Generate safe reports
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/security/secret_preflight.py
           python3 scripts/security/apply_gate_preflight.py
