@@ -38,9 +38,19 @@ var suffix = uniqueString(resourceGroup().id, environmentName, serviceName)
 var validatedContainerAppsInfrastructureSubnetId = environmentName != 'prod' || !empty(containerAppsInfrastructureSubnetId)
   ? containerAppsInfrastructureSubnetId
   : fail('Production requires a delegated Container Apps infrastructure subnet.')
-var containerAppsVnetSubscriptionId = !empty(validatedContainerAppsInfrastructureSubnetId) ? split(validatedContainerAppsInfrastructureSubnetId, '/')[2] : ''
-var containerAppsVnetResourceGroupName = !empty(validatedContainerAppsInfrastructureSubnetId) ? split(validatedContainerAppsInfrastructureSubnetId, '/')[4] : ''
-var containerAppsVnetName = !empty(validatedContainerAppsInfrastructureSubnetId) ? split(validatedContainerAppsInfrastructureSubnetId, '/')[8] : ''
+var subnetResourceIdSegments = split(validatedContainerAppsInfrastructureSubnetId, '/')
+var subnetResourceIdIsCanonical = empty(validatedContainerAppsInfrastructureSubnetId)
+  ? true
+  : (length(subnetResourceIdSegments) == 11 && toLower(subnetResourceIdSegments[1]) == 'subscriptions' && toLower(subnetResourceIdSegments[3]) == 'resourcegroups' && toLower(subnetResourceIdSegments[5]) == 'providers' && toLower(subnetResourceIdSegments[6]) == 'microsoft.network' && toLower(subnetResourceIdSegments[7]) == 'virtualnetworks' && toLower(subnetResourceIdSegments[9]) == 'subnets')
+var subnetScopeMatchesDeployment = empty(validatedContainerAppsInfrastructureSubnetId)
+  ? true
+  : (subnetResourceIdIsCanonical && toLower(subnetResourceIdSegments[2]) == toLower(subscription().subscriptionId) && toLower(subnetResourceIdSegments[4]) == toLower(resourceGroup().name))
+var scopedContainerAppsInfrastructureSubnetId = subnetScopeMatchesDeployment
+  ? validatedContainerAppsInfrastructureSubnetId
+  : fail('containerAppsInfrastructureSubnetId must target a subnet in the deployment subscription and resource group. Cross-resource-group subnet bindings are not supported by the reviewed OIDC deployment scope.')
+var containerAppsVnetSubscriptionId = !empty(scopedContainerAppsInfrastructureSubnetId) ? split(scopedContainerAppsInfrastructureSubnetId, '/')[2] : ''
+var containerAppsVnetResourceGroupName = !empty(scopedContainerAppsInfrastructureSubnetId) ? split(scopedContainerAppsInfrastructureSubnetId, '/')[4] : ''
+var containerAppsVnetName = !empty(scopedContainerAppsInfrastructureSubnetId) ? split(scopedContainerAppsInfrastructureSubnetId, '/')[8] : ''
 var governedTags = union(commonTags, {
   'helios-managed': 'true'
   'helios-service': serviceName
@@ -172,9 +182,9 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   location: location
   tags: governedTags
   properties: {
-    vnetConfiguration: !empty(validatedContainerAppsInfrastructureSubnetId)
+    vnetConfiguration: !empty(scopedContainerAppsInfrastructureSubnetId)
       ? union({
-          infrastructureSubnetId: validatedContainerAppsInfrastructureSubnetId
+          infrastructureSubnetId: scopedContainerAppsInfrastructureSubnetId
           internal: true
         }, environmentName == 'prod'
           ? {
@@ -194,12 +204,12 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   }
 }
 
-resource containerAppsVirtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' existing = if (!empty(validatedContainerAppsInfrastructureSubnetId)) {
+resource containerAppsVirtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' existing = if (!empty(scopedContainerAppsInfrastructureSubnetId)) {
   name: containerAppsVnetName
   scope: resourceGroup(containerAppsVnetSubscriptionId, containerAppsVnetResourceGroupName)
 }
 
-module containerAppsInternalDns 'containerapp-internal-dns.bicep' = if (!empty(validatedContainerAppsInfrastructureSubnetId)) {
+module containerAppsInternalDns 'containerapp-internal-dns.bicep' = if (!empty(scopedContainerAppsInfrastructureSubnetId)) {
   name: '${serviceName}-${environmentName}-ca-dns'
   params: {
     zoneName: environment.properties.defaultDomain

@@ -5,6 +5,8 @@ param apimSubnetId string
 param publisherEmail string
 @description('Internal HTTPS origin for the HELIOS connector. Empty is supported only while non-production infrastructure is staged.')
 param connectorBackendUrl string = ''
+@description('Enable the Front Door public route after the connector has been rebound to the reviewed public origin.')
+param edgeRouteEnabled bool = true
 param publisherName string = 'HELIOS Platform'
 
 var suffix = uniqueString(resourceGroup().id, environmentName)
@@ -123,7 +125,7 @@ resource edgeRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = {
     forwardingProtocol: 'HttpsOnly'
     linkToDefaultDomain: 'Enabled'
     httpsRedirect: 'Enabled'
-    enabledState: 'Enabled'
+    enabledState: edgeRouteEnabled ? 'Enabled' : 'Disabled'
   }
 }
 

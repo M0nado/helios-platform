@@ -20,6 +20,8 @@ param platformAddressSpace string = ''
 param connectorBackendUrl string = ''
 @description('Provision network and private endpoints only. Use for reviewed production subnet bootstrap before connector cutover.')
 param networkOnly bool = false
+@description('Enable the Front Door public route after the connector has been redeployed with the reviewed public origin.')
+param edgeRouteCutoverApproved bool = false
 
 @description('Existing private-link capable resource IDs. Empty values skip that endpoint.')
 param cosmosAccountId string = ''
@@ -168,6 +170,7 @@ module privateEdge 'modules/private-edge.bicep' = if (!networkOnly) {
     apimSubnetId: network.outputs.apimSubnetId
     publisherEmail: publisherEmail
     connectorBackendUrl: validatedConnectorBackendUrl
+    edgeRouteEnabled: environmentName != 'prod' || edgeRouteCutoverApproved
   }
 }
 

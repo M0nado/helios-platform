@@ -165,6 +165,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
         run: |
           set -euo pipefail
           required=(
@@ -186,8 +187,25 @@ jobs:
             echo "Production requires protected environment variable HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID." >&2
             exit 1
           fi
+          if [[ -n "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:-}" ]]; then
+            if [[ "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" =~ ^/subscriptions/([^/]+)/resourceGroups/([^/]+)/providers/Microsoft\.Network/virtualNetworks/[^/]+/subnets/[^/]+$ ]]; then
+              subnet_subscription_id="${BASH_REMATCH[1]}"
+              subnet_resource_group="${BASH_REMATCH[2]}"
+            else
+              echo "HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must be a full subnet resource ID." >&2
+              exit 1
+            fi
+            if [[ "${subnet_subscription_id,,}" != "${AZURE_SUBSCRIPTION_ID,,}" || "${subnet_resource_group,,}" != "${AZURE_RESOURCE_GROUP,,}" ]]; then
+              echo "HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must target the protected deployment subscription/resource-group scope." >&2
+              exit 1
+            fi
+          fi
           if [[ ! "${HELIOS_CONTAINER_REGISTRY_NAME}" =~ ^[a-z0-9]{5,50}$ ]]; then
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
+            exit 1
+          fi
+          if [[ -n "${HELIOS_CONNECTOR_PUBLIC_BASE_URL:-}" && ! "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" =~ ^https://[^/?#]+$ ]]; then
+            echo "HELIOS_CONNECTOR_PUBLIC_BASE_URL must be one HTTPS origin without path, query, or fragment." >&2
             exit 1
           fi
 
@@ -414,6 +432,7 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
           COMMON_TAGS_SHA256: ${{ needs.validate.outputs.common_tags_sha256 }}
         run: |
@@ -438,6 +457,7 @@ jobs:
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               containerAppsInfrastructureSubnetId="${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" \
+              publicBaseUrl="${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \
             --output json > "${raw_what_if}"
@@ -482,11 +502,12 @@ jobs:
             --arg entraTenantId "${AZURE_TENANT_ID}" \
             --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg containerAppsInfrastructureSubnetId "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" \
+            --arg publicBaseUrl "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, containerAppsInfrastructureSubnetId: $containerAppsInfrastructureSubnetId, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, containerAppsInfrastructureSubnetId: $containerAppsInfrastructureSubnetId, publicBaseUrl: $publicBaseUrl, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -551,6 +572,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
         run: |
           set -euo pipefail
           required=(
@@ -572,8 +594,25 @@ jobs:
             echo "Production requires protected environment variable HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID." >&2
             exit 1
           fi
+          if [[ -n "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:-}" ]]; then
+            if [[ "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" =~ ^/subscriptions/([^/]+)/resourceGroups/([^/]+)/providers/Microsoft\.Network/virtualNetworks/[^/]+/subnets/[^/]+$ ]]; then
+              subnet_subscription_id="${BASH_REMATCH[1]}"
+              subnet_resource_group="${BASH_REMATCH[2]}"
+            else
+              echo "HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must be a full subnet resource ID." >&2
+              exit 1
+            fi
+            if [[ "${subnet_subscription_id,,}" != "${AZURE_SUBSCRIPTION_ID,,}" || "${subnet_resource_group,,}" != "${AZURE_RESOURCE_GROUP,,}" ]]; then
+              echo "HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must target the protected deployment subscription/resource-group scope." >&2
+              exit 1
+            fi
+          fi
           if [[ ! "${HELIOS_CONTAINER_REGISTRY_NAME}" =~ ^[a-z0-9]{5,50}$ ]]; then
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
+            exit 1
+          fi
+          if [[ -n "${HELIOS_CONNECTOR_PUBLIC_BASE_URL:-}" && ! "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" =~ ^https://[^/?#]+$ ]]; then
+            echo "HELIOS_CONNECTOR_PUBLIC_BASE_URL must be one HTTPS origin without path, query, or fragment." >&2
             exit 1
           fi
 
@@ -658,6 +697,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
           COMMON_TAGS_SHA256: ${{ needs.validate.outputs.common_tags_sha256 }}
         run: |
@@ -694,11 +734,12 @@ jobs:
             --arg entraTenantId "${AZURE_TENANT_ID}" \
             --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg containerAppsInfrastructureSubnetId "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" \
+            --arg publicBaseUrl "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, containerAppsInfrastructureSubnetId: $containerAppsInfrastructureSubnetId, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, containerAppsInfrastructureSubnetId: $containerAppsInfrastructureSubnetId, publicBaseUrl: $publicBaseUrl, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${evidence_dir}/request.json" > /dev/null
 
       - name: Re-verify configured registry and published digest
@@ -824,6 +865,7 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
         run: |
           set -euo pipefail
@@ -845,6 +887,7 @@ jobs:
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               containerAppsInfrastructureSubnetId="${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" \
+              publicBaseUrl="${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \
             --output json > "${raw_what_if}"
@@ -870,6 +913,7 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
         run: |
           set -euo pipefail
@@ -889,6 +933,7 @@ jobs:
               entraTenantId="${AZURE_TENANT_ID}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               containerAppsInfrastructureSubnetId="${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}" \
+              publicBaseUrl="${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \
             --output json)"

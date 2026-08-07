@@ -7,8 +7,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = PROJECT_ROOT.parents[1]
 WORKFLOW = REPOSITORY_ROOT / ".github/workflows/helios-cloud-deploy.yml"
 AZURE_INFRA_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/azure-infra.yml"
+AZURE_MAIN_BICEP = REPOSITORY_ROOT / "infra/azure/main.bicep"
 NETWORK_MODULE = REPOSITORY_ROOT / "infra/azure/modules/network.bicep"
 HUB_GOVERNANCE_MODULE = REPOSITORY_ROOT / "infra/azure/modules/hub-governance.bicep"
+PRIVATE_EDGE_MODULE = REPOSITORY_ROOT / "infra/azure/modules/private-edge.bicep"
 NETWORK_PATHS = PROJECT_ROOT / "config/network-paths.json"
 SUBNET_PARAMETER = "containerAppsInfrastructureSubnetId"
 
@@ -101,6 +103,11 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("module containerAppsInternalDns 'containerapp-internal-dns.bicep'", connector)
         self.assertIn("zoneName: environment.properties.defaultDomain", connector)
         self.assertIn("virtualNetworkId: containerAppsVirtualNetwork.id", connector)
+        self.assertIn("scopedContainerAppsInfrastructureSubnetId", connector)
+        self.assertIn(
+            "containerAppsInfrastructureSubnetId must target a subnet in the deployment subscription and resource group.",
+            connector,
+        )
         self.assertIn("resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01'", internal_dns_module)
         self.assertIn("resource privateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01'", internal_dns_module)
         self.assertIn("resource wildcardRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01'", internal_dns_module)
@@ -156,15 +163,23 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("platform_address_space:", workflow)
         self.assertIn("cosmos_account_id:", workflow)
         self.assertIn("container_registry_id:", workflow)
+        self.assertIn("edge_route_cutover_approved:", workflow)
         self.assertIn("key_vault_private_cutover_approved:", workflow)
         self.assertIn("enabled_egress_profiles:", workflow)
         self.assertIn("connector_relay_destinations:", workflow)
+        self.assertIn("resolved_location=", workflow)
+        self.assertIn("edgeRouteCutoverApproved=", workflow)
+        self.assertIn("Input location '", workflow)
         self.assertIn("platformAddressSpace=", workflow)
         self.assertIn("cosmosAccountId=", workflow)
         self.assertIn("containerRegistryId=", workflow)
         self.assertIn("keyVaultPrivateCutoverApproved=", workflow)
         self.assertIn("enabledEgressProfiles=", workflow)
         self.assertIn("connectorRelayDestinations=", workflow)
+        self.assertIn("Require reviewed connector public-origin rebinding before edge cutover", workflow)
+        self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL", workflow)
+        self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL must match the deployed Front Door endpoint origin", workflow)
+        self.assertIn("HELIOS_PUBLIC_BASE_URL", workflow)
         self.assertIn("microsoftIdentityAzure for Cosmos readiness egress", workflow)
         self.assertIn("containerAppsPlatform for Container Apps platform egress", workflow)
         self.assertIn("containerRegistryDataPlane for ACR image-pull egress", workflow)
@@ -191,7 +206,11 @@ class AzureDeploymentContractTests(unittest.TestCase):
         network_module = NETWORK_MODULE.read_text(encoding="utf-8")
         hub_governance_module = HUB_GOVERNANCE_MODULE.read_text(encoding="utf-8")
         self.assertIn("param platformAddressSpace string = ''", network_module)
-        self.assertIn("empty(platformAddressSpace) ? '10.42.0.0/16' : platformAddressSpace", network_module)
+        self.assertIn("environmentName == 'prod'", network_module)
+        self.assertIn("? '10.44.0.0/16'", network_module)
+        self.assertIn(": environmentName == 'test'", network_module)
+        self.assertIn("? '10.43.0.0/16'", network_module)
+        self.assertIn(": '10.42.0.0/16'", network_module)
         self.assertIn("'10.42.0.0/16'", network_module)
         self.assertIn("'10.43.0.0/16'", network_module)
         self.assertIn("'10.44.0.0/16'", network_module)
@@ -199,6 +218,30 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("output platformAddressSpace string = resolvedPlatformAddressSpace", network_module)
         self.assertIn("param platformAddressSpace string", hub_governance_module)
         self.assertIn("sourceAddresses: [platformAddressSpace]", hub_governance_module)
+
+    def test_reviewed_connector_workflow_propagates_public_base_url(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}", workflow)
+        self.assertIn("HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must be a full subnet resource ID.", workflow)
+        self.assertIn(
+            "HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must target the protected deployment subscription/resource-group scope.",
+            workflow,
+        )
+        self.assertIn(
+            "HELIOS_CONNECTOR_PUBLIC_BASE_URL must be one HTTPS origin without path, query, or fragment.",
+            workflow,
+        )
+        self.assertGreaterEqual(workflow.count('publicBaseUrl="${HELIOS_CONNECTOR_PUBLIC_BASE_URL}"'), 3)
+        self.assertIn('--arg publicBaseUrl "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}"', workflow)
+        self.assertIn("publicBaseUrl: $publicBaseUrl", workflow)
+
+    def test_production_edge_route_cutover_is_explicitly_gated(self) -> None:
+        azure_main = AZURE_MAIN_BICEP.read_text(encoding="utf-8")
+        private_edge = PRIVATE_EDGE_MODULE.read_text(encoding="utf-8")
+        self.assertIn("param edgeRouteCutoverApproved bool = false", azure_main)
+        self.assertIn("edgeRouteEnabled: environmentName != 'prod' || edgeRouteCutoverApproved", azure_main)
+        self.assertIn("param edgeRouteEnabled bool = true", private_edge)
+        self.assertIn("enabledState: edgeRouteEnabled ? 'Enabled' : 'Disabled'", private_edge)
 
     def test_network_path_catalog_includes_cosmos_firewall_destination(self) -> None:
         network_paths = NETWORK_PATHS.read_text(encoding="utf-8")

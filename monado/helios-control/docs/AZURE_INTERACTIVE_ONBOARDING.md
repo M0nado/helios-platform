@@ -40,7 +40,8 @@ The interactive administrator applies `helios-environment=<environment>` to
 the selected resource group without replacing other tags and refuses to
 reclassify a group already bound to another environment. It grants CI only
 Contributor at the selected resource-group scope. It separately grants the runtime identity Reader and
-registers only the seven resource providers listed by the wizard; provider
+requires any reviewed `ContainerAppsInfrastructureSubnetId` to point to that
+same subscription/resource-group scope, and registers only the seven resource providers listed by the wizard; provider
 registration has its own `REGISTER HELIOS PROVIDERS` confirmation. CI never
 receives Owner or role-assignment authority. Configuration requires the exact
 phrase `CONFIGURE HELIOS AZURE`; resource-group creation has a separate exact
@@ -122,6 +123,15 @@ named managed environment already exists without subnet integration (or with a
 different subnet), the run fails before deployment and requires a reviewed
 replacement-environment migration with rollback evidence rather than an
 in-place subnet retrofit.
+
+When `HELIOS_CONNECTOR_PUBLIC_BASE_URL` is set, the reviewed workflow carries it
+into what-if evidence and deployment as `publicBaseUrl`, which rebases
+`HELIOS_PUBLIC_BASE_URL` and the Entra Application ID URI to that reviewed
+origin. For production edge cutover, run `azure-infra` once with
+`edge_route_cutover_approved=false` to mint the Front Door hostname, then set
+`HELIOS_CONNECTOR_PUBLIC_BASE_URL=https://<front-door-hostname>`, redeploy the
+connector through `helios-cloud-deploy`, and only then rerun `azure-infra` with
+`edge_route_cutover_approved=true` to enable the public route.
 
 For private-network production verification, the workflow requires a
 self-hosted runner with VNet/private-DNS reachability before deploy mode can

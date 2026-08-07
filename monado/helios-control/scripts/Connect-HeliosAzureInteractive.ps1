@@ -1814,6 +1814,20 @@ try {
     $selectedGroup = Select-ResourceGroup -Context $azureContext
     $selectedResourceGroup = [string] $selectedGroup.name
     $selectedLocation = [string] $selectedGroup.location
+    if (-not [string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) {
+        if ($ContainerAppsInfrastructureSubnetId -notmatch '^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Network/virtualNetworks/[^/]+/subnets/[^/]+$') {
+            throw 'ContainerAppsInfrastructureSubnetId must be a full subnet resource ID.'
+        }
+        $subnetIdSegments = $ContainerAppsInfrastructureSubnetId -split '/'
+        $subnetSubscriptionId = [string] $subnetIdSegments[2]
+        $subnetResourceGroup = [string] $subnetIdSegments[4]
+        if (
+            -not [string]::Equals($subnetSubscriptionId, $azureContext.SubscriptionId, [StringComparison]::OrdinalIgnoreCase) -or
+            -not [string]::Equals($subnetResourceGroup, $selectedResourceGroup, [StringComparison]::OrdinalIgnoreCase)
+        ) {
+            throw 'ContainerAppsInfrastructureSubnetId must target a subnet in the selected subscription and resource group. Cross-resource-group subnet bindings are not supported by the reviewed OIDC deployment scope.'
+        }
+    }
 
     if ($Mode -eq 'Publish' -and -not [string]::IsNullOrWhiteSpace($ImageReference)) {
         throw 'Publish does not accept ImageReference. The protected GitHub workflow builds the exact checked-out GITHUB_SHA and resolves its digest.'

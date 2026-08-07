@@ -16,11 +16,16 @@ on:
           - test
           - prod
       location:
-        description: 'Azure location'
+        description: 'Azure location override. Leave empty to use the target resource-group location.'
         required: false
-        default: 'eastus'
+        default: ''
       network_only:
         description: 'Provision reviewed network/private-endpoint prerequisites only'
+        required: false
+        default: false
+        type: boolean
+      edge_route_cutover_approved:
+        description: 'Enable the production Front Door route only after reviewed connector public-origin rebinding.'
         required: false
         default: false
         type: boolean
@@ -97,6 +102,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     outputs:
+      resolved_location: ${{ steps.params.outputs.resolved_location }}
+      edge_route_cutover_approved: ${{ steps.params.outputs.edge_route_cutover_approved }}
       key_vault_private_cutover_approved: ${{ steps.params.outputs.key_vault_private_cutover_approved }}
       enabled_egress_profiles: ${{ steps.params.outputs.enabled_egress_profiles }}
       connector_relay_destinations: ${{ steps.params.outputs.connector_relay_destinations }}
@@ -141,6 +148,7 @@ jobs:
           INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name }}
           INPUT_LOCATION: ${{ github.event.inputs.location }}
           INPUT_NETWORK_ONLY: ${{ github.event.inputs.network_only }}
+          INPUT_EDGE_ROUTE_CUTOVER_APPROVED: ${{ github.event.inputs.edge_route_cutover_approved }}
           INPUT_CONNECTOR_BACKEND_URL: ${{ github.event.inputs.connector_backend_url }}
           INPUT_NAME_PREFIX: ${{ github.event.inputs.name_prefix }}
           INPUT_PUBLISHER_EMAIL: ${{ github.event.inputs.publisher_email }}
@@ -156,6 +164,30 @@ jobs:
           INPUT_CONNECTOR_RELAY_DESTINATIONS: ${{ github.event.inputs.connector_relay_destinations }}
         run: |
           set -euo pipefail
+
+          resource_group_location="$(az group show --name "${INPUT_RESOURCE_GROUP}" --query location --output tsv)"
+          if [[ -z "${resource_group_location}" || ! "${resource_group_location}" =~ ^[a-z0-9-]+$ ]]; then
+            echo "Could not resolve a valid location for resource group '${INPUT_RESOURCE_GROUP}'." >&2
+            exit 1
+          fi
+          if [[ -z "${INPUT_LOCATION}" ]]; then
+            resolved_location="${resource_group_location}"
+          elif [[ "${INPUT_LOCATION,,}" != "${resource_group_location,,}" ]]; then
+            echo "Input location '${INPUT_LOCATION}' does not match resource group '${INPUT_RESOURCE_GROUP}' location '${resource_group_location}'." >&2
+            exit 1
+          else
+            resolved_location="${resource_group_location}"
+          fi
+
+          case "${INPUT_EDGE_ROUTE_CUTOVER_APPROVED,,}" in
+            true|false)
+              edge_route_cutover_approved="${INPUT_EDGE_ROUTE_CUTOVER_APPROVED,,}"
+              ;;
+            *)
+              echo "edge_route_cutover_approved must be true or false." >&2
+              exit 1
+              ;;
+          esac
 
           enabled_egress_profiles_input="${INPUT_ENABLED_EGRESS_PROFILES}"
           connector_relay_destinations_input="${INPUT_CONNECTOR_RELAY_DESTINATIONS}"
@@ -220,11 +252,12 @@ jobs:
           params_file="${RUNNER_TEMP}/azure-infra.params"
           params=(
             "infra/azure/parameters/dev.json"
-            "location=${INPUT_LOCATION}"
+            "location=${resolved_location}"
             "environmentName=${INPUT_ENVIRONMENT_NAME}"
             "namePrefix=${INPUT_NAME_PREFIX}"
             "publisherEmail=${INPUT_PUBLISHER_EMAIL}"
             "networkOnly=${INPUT_NETWORK_ONLY}"
+            "edgeRouteCutoverApproved=${edge_route_cutover_approved}"
             "egressMode=${INPUT_EGRESS_MODE}"
             "enabledEgressProfiles=${enabled_egress_profiles_json}"
             "connectorRelayDestinations=${connector_relay_destinations_json}"
@@ -254,6 +287,8 @@ jobs:
 
           printf '%s\n' "${params[@]}" > "${params_file}"
           echo "file=${params_file}" >> "${GITHUB_OUTPUT}"
+          echo "resolved_location=${resolved_location}" >> "${GITHUB_OUTPUT}"
+          echo "edge_route_cutover_approved=${edge_route_cutover_approved}" >> "${GITHUB_OUTPUT}"
           echo "enabled_egress_profiles=${enabled_egress_profiles_json}" >> "${GITHUB_OUTPUT}"
           echo "connector_relay_destinations=${connector_relay_destinations_json}" >> "${GITHUB_OUTPUT}"
           echo "key_vault_private_cutover_approved=${key_vault_private_cutover_approved}" >> "${GITHUB_OUTPUT}"
@@ -352,13 +387,87 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Require reviewed connector public-origin rebinding before edge cutover
+        env:
+          INPUT_NETWORK_ONLY: ${{ github.event.inputs.network_only }}
+          EDGE_ROUTE_CUTOVER_APPROVED: ${{ needs.validate.outputs.edge_route_cutover_approved }}
+          INPUT_NAME_PREFIX: ${{ github.event.inputs.name_prefix }}
+          INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name }}
+          INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
+          HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
+        run: |
+          set -euo pipefail
+          if [[ "${INPUT_NETWORK_ONLY}" == "true" || "${EDGE_ROUTE_CUTOVER_APPROVED}" != "true" ]]; then
+            exit 0
+          fi
+
+          if [[ -z "${HELIOS_CONNECTOR_PUBLIC_BASE_URL:-}" ]]; then
+            echo "edge_route_cutover_approved=true requires protected environment variable HELIOS_CONNECTOR_PUBLIC_BASE_URL." >&2
+            exit 1
+          fi
+          if [[ ! "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" =~ ^https://[^/?#]+$ ]]; then
+            echo "HELIOS_CONNECTOR_PUBLIC_BASE_URL must be one HTTPS origin without path, query, or fragment." >&2
+            exit 1
+          fi
+
+          front_door_name="${INPUT_NAME_PREFIX}-${INPUT_ENVIRONMENT_NAME}-edge"
+          set +e
+          front_door_hostname="$(az resource show \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
+            --resource-type "Microsoft.Cdn/profiles/afdEndpoints" \
+            --name "${front_door_name}/${front_door_name}" \
+            --api-version 2024-02-01 \
+            --query properties.hostName \
+            --output tsv 2>&1)"
+          front_door_exit=$?
+          set -e
+          if [[ ${front_door_exit} -ne 0 ]]; then
+            if grep -qiE '(ResourceNotFound|could not be found|was not found)' <<<"${front_door_hostname}"; then
+              echo "Front Door endpoint '${front_door_name}' is not deployed yet. Run once with edge_route_cutover_approved=false to mint the hostname, redeploy connector with that HTTPS origin, then rerun with approval true." >&2
+            else
+              echo "${front_door_hostname}" >&2
+            fi
+            exit 1
+          fi
+          expected_public_base_url="https://${front_door_hostname}"
+          if [[ "${HELIOS_CONNECTOR_PUBLIC_BASE_URL,,}" != "${expected_public_base_url,,}" ]]; then
+            echo "HELIOS_CONNECTOR_PUBLIC_BASE_URL must match the deployed Front Door endpoint origin '${expected_public_base_url}' before edge cutover." >&2
+            exit 1
+          fi
+
+          container_app_name="helios-connector-${INPUT_ENVIRONMENT_NAME}-api"
+          set +e
+          connector_public_base_url="$(az resource show \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
+            --resource-type "Microsoft.App/containerApps" \
+            --name "${container_app_name}" \
+            --api-version 2024-03-01 \
+            --query "properties.template.containers[0].env[?name=='HELIOS_PUBLIC_BASE_URL'] | [0].value" \
+            --output tsv 2>&1)"
+          connector_exit=$?
+          set -e
+          if [[ ${connector_exit} -ne 0 ]]; then
+            echo "${connector_public_base_url}" >&2
+            echo "Connector '${container_app_name}' must be deployed and rebound to '${expected_public_base_url}' before edge cutover." >&2
+            exit 1
+          fi
+          if [[ -z "${connector_public_base_url}" ]]; then
+            echo "Connector '${container_app_name}' does not expose HELIOS_PUBLIC_BASE_URL. Redeploy connector with publicBaseUrl='${expected_public_base_url}' before edge cutover." >&2
+            exit 1
+          fi
+          if [[ "${connector_public_base_url,,}" != "${HELIOS_CONNECTOR_PUBLIC_BASE_URL,,}" ]]; then
+            echo "Connector '${container_app_name}' advertises HELIOS_PUBLIC_BASE_URL='${connector_public_base_url}', but protected binding is '${HELIOS_CONNECTOR_PUBLIC_BASE_URL}'. Redeploy connector before edge cutover." >&2
+            exit 1
+          fi
+
       - name: Build production deployment parameter set from reviewed values
         id: params
         env:
+          RESOLVED_LOCATION: ${{ needs.validate.outputs.resolved_location }}
+          EDGE_ROUTE_CUTOVER_APPROVED: ${{ needs.validate.outputs.edge_route_cutover_approved }}
           KEY_VAULT_PRIVATE_CUTOVER_APPROVED: ${{ needs.validate.outputs.key_vault_private_cutover_approved }}
           ENABLED_EGRESS_PROFILES: ${{ needs.validate.outputs.enabled_egress_profiles }}
           CONNECTOR_RELAY_DESTINATIONS: ${{ needs.validate.outputs.connector_relay_destinations }}
-          INPUT_LOCATION: ${{ github.event.inputs.location }}
           INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name }}
           INPUT_NAME_PREFIX: ${{ github.event.inputs.name_prefix }}
           INPUT_PUBLISHER_EMAIL: ${{ github.event.inputs.publisher_email }}
@@ -373,8 +482,16 @@ jobs:
           INPUT_CONTAINER_REGISTRY_ID: ${{ github.event.inputs.container_registry_id }}
         run: |
           set -euo pipefail
+          if [[ -z "${RESOLVED_LOCATION}" || ! "${RESOLVED_LOCATION}" =~ ^[a-z0-9-]+$ ]]; then
+            echo "Validated deployment location is missing or invalid." >&2
+            exit 1
+          fi
           if [[ -z "${KEY_VAULT_PRIVATE_CUTOVER_APPROVED}" ]]; then
             echo "Validated Key Vault cutover approval output is missing." >&2
+            exit 1
+          fi
+          if [[ "${EDGE_ROUTE_CUTOVER_APPROVED}" != "true" && "${EDGE_ROUTE_CUTOVER_APPROVED}" != "false" ]]; then
+            echo "Validated edge route cutover approval output is invalid." >&2
             exit 1
           fi
 
@@ -399,11 +516,12 @@ jobs:
           params_file="${RUNNER_TEMP}/azure-infra-prod.params"
           params=(
             "infra/azure/parameters/dev.json"
-            "location=${INPUT_LOCATION}"
+            "location=${RESOLVED_LOCATION}"
             "environmentName=${INPUT_ENVIRONMENT_NAME}"
             "namePrefix=${INPUT_NAME_PREFIX}"
             "publisherEmail=${INPUT_PUBLISHER_EMAIL}"
             "networkOnly=${INPUT_NETWORK_ONLY}"
+            "edgeRouteCutoverApproved=${EDGE_ROUTE_CUTOVER_APPROVED}"
             "egressMode=${INPUT_EGRESS_MODE}"
             "enabledEgressProfiles=${enabled_egress_profiles_json}"
             "connectorRelayDestinations=${connector_relay_destinations_json}"
