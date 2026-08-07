@@ -73,6 +73,12 @@ builds the exact checked-out GitHub commit in ACR, resolves its immutable digest
 captures ARM what-if evidence, and requires a second approval before deployment.
 The operator script has no local image-build or application-apply path.
 
+For guided operator automation around the remaining external blockers, use
+`scripts/Invoke-HeliosCloudApprovalFlow.ps1`. It wraps Configure/Publish,
+dispatches deploy mode intentionally, binds `HELIOS_AZURE_CONNECTOR_URL` from
+the live Container App after approval, and can run cloud verification without
+removing reviewer or protected-environment gates.
+
 The Bash compatibility script is preview-only. Its legacy mutation path is
 retired so it cannot bypass GitHub environment verification or newer immutable
 OIDC subject formats.

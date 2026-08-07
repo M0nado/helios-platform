@@ -144,12 +144,16 @@ namespace HELIOS.Platform.Phase10.Users.Tests
     {
         private readonly UserDataDirectorySetup _setup;
         private readonly string _testLogPath;
+        private readonly string _testUsersRootPath;
         private readonly string _testUsername = "TestUser_" + Guid.NewGuid().ToString().Substring(0, 8);
 
         public UserDataDirectorySetupTests()
         {
             _testLogPath = Path.Combine(Path.GetTempPath(), $"DirectorySetup_{Guid.NewGuid()}.log");
-            _setup = new UserDataDirectorySetup(_testLogPath);
+            _testUsersRootPath = Path.Combine(Path.GetTempPath(), $"HELIOS_Users_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(_testUsersRootPath);
+            Directory.CreateDirectory(Path.Combine(_testUsersRootPath, Environment.UserName));
+            _setup = new UserDataDirectorySetup(_testLogPath, _testUsersRootPath);
         }
 
         [Fact]
@@ -165,16 +169,15 @@ namespace HELIOS.Platform.Phase10.Users.Tests
             
             Assert.NotNull(path);
             Assert.Contains(_testUsername, path);
-            Assert.Contains("Users", path);
+            Assert.StartsWith(_testUsersRootPath, path, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
-        public void GetUserProfilePath_ContainsSystemDrive()
+        public void GetUserProfilePath_UsesConfiguredRootPath()
         {
             var path = _setup.GetUserProfilePath(_testUsername);
-            var systemDrive = Environment.ExpandEnvironmentVariables("%SystemDrive%");
             
-            Assert.StartsWith(systemDrive, path);
+            Assert.StartsWith(_testUsersRootPath, path, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
@@ -218,6 +221,8 @@ namespace HELIOS.Platform.Phase10.Users.Tests
             {
                 if (File.Exists(_testLogPath))
                     File.Delete(_testLogPath);
+                if (Directory.Exists(_testUsersRootPath))
+                    Directory.Delete(_testUsersRootPath, true);
             }
             catch { }
         }
@@ -521,7 +526,7 @@ namespace HELIOS.Platform.Phase10.Users.Tests
             var report = await _monitor.GenerateActivityReportAsync(_testUsername, DateTime.Now.AddHours(-1), DateTime.Now.AddHours(1));
             
             Assert.NotNull(report.RiskLevel);
-            Assert.True(new[] { "Minimal", "Low", "Medium", "High", "Critical" }.Contains(report.RiskLevel));
+            Assert.Contains(report.RiskLevel, new[] { "Minimal", "Low", "Medium", "High", "Critical" });
         }
 
         [Fact]

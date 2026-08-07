@@ -12,11 +12,13 @@ namespace HELIOS.Platform.Phase10.Users
     public class UserDataDirectorySetup
     {
         private readonly string _logPath;
+        private readonly string _userProfilesRootPath;
         private readonly object _lockObject = new();
 
-        public UserDataDirectorySetup(string logPath = null)
+        public UserDataDirectorySetup(string logPath = null, string userProfilesRootPath = null)
         {
             _logPath = logPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HELIOS", "Logs", "DirectorySetup.log");
+            _userProfilesRootPath = ResolveUserProfilesRootPath(userProfilesRootPath);
             EnsureLogDirectory();
         }
 
@@ -68,7 +70,33 @@ namespace HELIOS.Platform.Phase10.Users
         /// </summary>
         public string GetUserProfilePath(string username)
         {
-            return Path.Combine(Environment.ExpandEnvironmentVariables("%SystemDrive%"), "Users", username);
+            return Path.Combine(_userProfilesRootPath, username);
+        }
+
+        private static string ResolveUserProfilesRootPath(string configuredRootPath)
+        {
+            if (!string.IsNullOrWhiteSpace(configuredRootPath))
+            {
+                return configuredRootPath;
+            }
+
+            var systemDrive = Environment.ExpandEnvironmentVariables("%SystemDrive%");
+            if (!string.IsNullOrWhiteSpace(systemDrive) && !systemDrive.Contains('%'))
+            {
+                return Path.Combine(systemDrive, "Users");
+            }
+
+            var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrWhiteSpace(userProfile))
+            {
+                var parent = Directory.GetParent(userProfile);
+                if (parent != null)
+                {
+                    return parent.FullName;
+                }
+            }
+
+            return Path.Combine("C:\\", "Users");
         }
 
         /// <summary>

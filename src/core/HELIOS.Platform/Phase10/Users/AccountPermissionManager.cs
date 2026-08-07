@@ -4,6 +4,7 @@ using System.DirectoryServices;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Security.Principal;
 using System.Threading.Tasks;
 
 namespace HELIOS.Platform.Phase10.Users
@@ -403,6 +404,11 @@ namespace HELIOS.Platform.Phase10.Users
                         }
                         catch { }
                     }
+
+                    if (groups.Count == 0 && string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        groups = GetCurrentPrincipalGroups();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -411,6 +417,38 @@ namespace HELIOS.Platform.Phase10.Users
 
                 return groups;
             });
+        }
+
+        private List<string> GetCurrentPrincipalGroups()
+        {
+            try
+            {
+                var identity = WindowsIdentity.GetCurrent();
+                if (identity?.Groups == null)
+                {
+                    return new List<string>();
+                }
+
+                return identity.Groups
+                    .Select(groupSid =>
+                    {
+                        try
+                        {
+                            return groupSid.Translate(typeof(NTAccount)).Value;
+                        }
+                        catch
+                        {
+                            return groupSid.Value;
+                        }
+                    })
+                    .Where(groupName => !string.IsNullOrWhiteSpace(groupName))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch
+            {
+                return new List<string>();
+            }
         }
 
         private void EnsureLogDirectory()

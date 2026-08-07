@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 using Moq;
+using HELIOS.Platform.Phase10.Quarantine;
 
 namespace HELIOS.Platform.Tests.Phase10.Quarantine
 {

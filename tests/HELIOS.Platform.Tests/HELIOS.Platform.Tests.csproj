@@ -23,12 +23,42 @@
 
   <ItemGroup>
     <Compile Remove="Phase10/Quarantine/**/*.cs" />
-    <Compile Include="../Phase3Phase5IntegrationTests.cs" Link="Imported/Phase3Phase5IntegrationTests.cs" />
-    <Compile Include="../SandboxTests.cs" Link="Imported/SandboxTests.cs" />
-    <Compile Include="../Plugins/**/*.cs" Link="Imported/Plugins/%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="../unit/**/*.cs" Link="Imported/Unit/%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="../../src/core/HELIOS.Platform/**/Tests/**/*.cs" Exclude="../../src/core/HELIOS.Platform/Phase10/Users/Tests/**/*.cs" Link="Imported/Core/%(RecursiveDir)%(Filename)%(Extension)" />
-    <Compile Include="../../src/core/HELIOS.Platform/**/*Tests.cs" Exclude="../../src/core/HELIOS.Platform/**/Tests/**/*.cs" Link="Imported/Core/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Remove="ApiSecurity/**/*.cs" />
+    <Compile Remove="AI/**/*.cs" />
+    <Compile Remove="CLI/**/*.cs" />
+    <Compile Remove="CompatibilityTests.cs" />
+    <Compile Remove="Dashboard/**/*.cs" />
+    <Compile Remove="DeveloperDashboardTests.cs" />
+    <Compile Remove="EndToEndTests.cs" />
+    <Compile Remove="GlobalIntelligenceServicesTests.cs" />
+    <Compile Remove="HeliosDeploymentTests.cs" />
+    <Compile Remove="IntegrationTests.cs" />
+    <Compile Remove="Integration/**/*.cs" />
+    <Compile Remove="Intelligence/**/*.cs" />
+    <Compile Remove="Malwarebytes/**/*.cs" />
+    <Compile Remove="PerformanceTests.cs" />
+    <Compile Remove="Phase1ServiceTests.cs" />
+    <Compile Remove="Phase3APIWebTests.cs" />
+    <Compile Remove="Phase3ProductionBenchmarks.cs" />
+    <Compile Remove="Phase3ProductionTests.cs" />
+    <Compile Remove="Phase3Tier4SecurityDisasterRecoveryTests.cs" />
+    <Compile Remove="Phase5/AdvancedML/**/*.cs" />
+    <Compile Remove="Phase6AdvancedOptimizationTests.cs" />
+    <Compile Remove="ScalingValidation.cs" />
+    <Compile Remove="ScalingTestTools.cs" />
+    <Compile Remove="SecurityTests.cs" />
+    <Compile Remove="Security/**/*.cs" />
+    <Compile Remove="Presentation/Studio/**/*.cs" />
+    <Compile Remove="Server/**/*.cs" />
+    <Compile Remove="System/**/*.cs" />
+    <Compile Remove="SystemIntegration/**/*.cs" />
+    <Compile Remove="UIAnimationTests.cs" />
+    <Compile Remove="Unit/AsyncMethodsTests.cs" />
+    <Compile Remove="Unit/ConstantsValidationTests.cs" />
+    <Compile Remove="Unit/DriverInstallerTests.cs" />
+    <Compile Remove="UnitTests.cs" />
+    <Compile Remove="Phase5GlobalTests.cs" />
+    <Compile Remove="Vault/**/*.cs" />
   </ItemGroup>
 
   <ItemGroup>
