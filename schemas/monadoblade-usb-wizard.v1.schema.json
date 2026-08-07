@@ -57,7 +57,7 @@
       ],
       "properties": {
         "allowPhysicalDiskWriteWithoutApproval": {
-          "type": "boolean"
+          "const": false
         },
         "requireDeviceIdentityForStoragePlan": {
           "type": "boolean"

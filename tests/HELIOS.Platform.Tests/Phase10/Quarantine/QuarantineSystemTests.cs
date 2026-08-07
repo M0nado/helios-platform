@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using HELIOS.Platform.Phase10.Quarantine;
 using Xunit;
@@ -34,10 +35,13 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
         public async Task InitializeQuarantineSystemAsync_ShouldGenerateMasterKey()
         {
             // Act
-            var result = await _setup.InitializeQuarantineSystemAsync();
+            MethodInfo? method = typeof(QuarantineSystemSetup).GetMethod("GenerateMasterKeyAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(method);
+            var task = Assert.IsAssignableFrom<Task<bool>>(method.Invoke(_setup, null));
+            var result = await task;
 
             // Assert
-            Assert.IsType<bool>(result);
+            Assert.True(result);
         }
 
         [Fact]

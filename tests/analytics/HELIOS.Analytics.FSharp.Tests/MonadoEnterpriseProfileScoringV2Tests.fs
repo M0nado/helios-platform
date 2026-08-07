@@ -1,6 +1,7 @@
 namespace HELIOS.Analytics.FSharp.Tests
 
 open HELIOS.Analytics.FSharp.Optimization
+open System
 open Xunit
 
 module MonadoEnterpriseProfileScoringV2Tests =
@@ -60,3 +61,12 @@ module MonadoEnterpriseProfileScoringV2Tests =
 
         Assert.Contains("maintain-current-policy", recommendation.Actions)
         Assert.False(recommendation.RequiresApproval)
+
+    [<Fact>]
+    let ``Non-finite telemetry forces operator approval`` () =
+        let signal = telemetry 10.0 30.0 0.0 16.0 22.0 7.0
+        let unsafeSignal = { signal with SecurityRisk = Double.NaN }
+        let recommendation = MonadoEnterpriseProfileScoringV2.Recommend(MonadoEnterpriseProfileId.Core, unsafeSignal)
+
+        Assert.True(recommendation.RequiresApproval)
+        Assert.Contains("operator-review-non-finite-telemetry", recommendation.Actions)

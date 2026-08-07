@@ -39,7 +39,8 @@ type MonadoEnterpriseRecommendation =
 
 module private MonadoEnterpriseNumeric =
     let clamp01 (value: float) : float =
-        if value < 0.0 then 0.0
+        if not (Double.IsFinite(value)) then 1.0
+        elif value < 0.0 then 0.0
         elif value > 1.0 then 1.0
         else value
 
@@ -53,6 +54,22 @@ module private MonadoEnterpriseNumeric =
             1.0 - clamp01 (value / maximum)
 
 module MonadoEnterpriseProfilePolicy =
+    let private hasNonFiniteTelemetry (telemetry: MonadoEnterpriseTelemetry) : bool =
+        [|
+            telemetry.CpuUtilization
+            telemetry.GpuUtilization
+            telemetry.MemoryUtilization
+            telemetry.StorageLatencyMs
+            telemetry.NetworkLatencyMs
+            telemetry.ThermalPressure
+            telemetry.SecurityRisk
+            telemetry.VmMemoryPressure
+            telemetry.ModelLatencyMs
+            telemetry.AudioXruns
+            telemetry.FrameTimeMs
+        |]
+        |> Array.exists (fun value -> not (Double.IsFinite(value)))
+
     let private safetyFloor (telemetry: MonadoEnterpriseTelemetry) : float =
         let thermal = MonadoEnterpriseNumeric.normalizedPercent telemetry.ThermalPressure
         let risk = MonadoEnterpriseNumeric.normalizedPercent telemetry.SecurityRisk
@@ -90,7 +107,10 @@ module MonadoEnterpriseProfilePolicy =
         : MonadoEnterpriseRecommendation =
         let fitness = score profile telemetry
         let actions = ResizeArray<string>()
-        let mutable requiresApproval = false
+        let mutable requiresApproval = hasNonFiniteTelemetry telemetry
+
+        if requiresApproval then
+            actions.Add("operator-review-non-finite-telemetry")
 
         if telemetry.SecurityRisk >= 60.0 then
             actions.Add("isolate-risky-workload")

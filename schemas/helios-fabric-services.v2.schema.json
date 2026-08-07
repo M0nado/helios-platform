@@ -68,7 +68,7 @@
           "type": "boolean"
         },
         "approvalRequiredForPrivilegedApply": {
-          "type": "boolean"
+          "const": true
         },
         "noDirectExecutorSurfaceInPresentationLayers": {
           "type": "boolean"

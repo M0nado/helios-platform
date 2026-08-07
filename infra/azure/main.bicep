@@ -20,6 +20,9 @@ param vmAdminPublicKey string = ''
 @description('Azure VM size for the optional VM deployment.')
 param vmSize string = 'Standard_B2s'
 
+@description('CIDR or source prefix allowed to reach VM SSH (port 22).')
+param vmAllowedSshSourcePrefix string = '10.0.0.0/8'
+
 module storage 'modules/storage.bicep' = {
   name: 'storage-${environmentName}'
   params: {
@@ -68,6 +71,7 @@ module vm 'modules/vm.bicep' = if (deployVm && !empty(vmAdminPublicKey)) {
     adminUsername: vmAdminUsername
     adminPublicKey: vmAdminPublicKey
     vmSize: vmSize
+    allowedSshSourcePrefix: vmAllowedSshSourcePrefix
   }
 }
 

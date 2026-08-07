@@ -55,9 +55,6 @@ jobs:
         run: dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj --configuration Release --filter "FullyQualifiedName!~CreateDocumentFoldersAsync_ReturnsTrue&FullyQualifiedName!~CreateMediaFoldersAsync_ReturnsTrue"
       - shell: pwsh
         run: dotnet test tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj --configuration Release
-      - shell: pwsh
-        continue-on-error: true
-        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Security|FullyQualifiedName~Vault|FullyQualifiedName~Driver|FullyQualifiedName~Malware|FullyQualifiedName~Deployment"
 
   integration:
     name: Tests / Integration

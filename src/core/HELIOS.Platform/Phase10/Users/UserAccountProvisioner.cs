@@ -154,11 +154,15 @@ namespace HELIOS.Platform.Phase10.Users
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    lock (_lockObject)
+                    {
+                        LogMessage($"Unable to query account existence for {username}: {ex.Message}", LogLevel.Warning);
+                    }
                 }
 
-                return string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase);
+                return false;
             });
         }
 

@@ -503,7 +503,7 @@
     },
     {
       "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoEnterpriseExperienceV2ContractsTests.cs",
-      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "project": "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj",
       "layer": "windows"
     },
     {

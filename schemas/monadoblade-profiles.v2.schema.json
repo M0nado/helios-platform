@@ -184,6 +184,28 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "id": {
+                "enum": [
+                  "core",
+                  "developer",
+                  "studio",
+                  "gamer",
+                  "ai-server"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "admin": {
+                "const": false
+              }
+            }
+          }
         }
       ]
     }
