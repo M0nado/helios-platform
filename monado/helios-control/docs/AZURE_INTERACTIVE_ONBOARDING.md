@@ -52,6 +52,7 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -Mode Configure `
   -EnvironmentName dev `
   -ResourceGroup rg-helios-dev `
+  -ConnectorPublicBaseUrl 'https://<reviewed-public-origin>' `
   -ContainerRegistryName '<globally-unique-acr-name>' `
   -RequiredReviewerId '<github-user-id>' `
   -GitHubDeploymentBranch main
@@ -64,8 +65,10 @@ the Microsoft Azure CLI public client for that scope so the verifier can obtain
 a token without storing a secret. Before the first deployment its identifier is
 the provisional `api://<client-id>`. After deployment, re-run Configure once:
 the wizard discovers the Container App FQDN and adds the Teams-required
-`api://<public-hostname>/<client-id>` Application ID URI. Install the Teams
-package only after that origin-bound URI is verified.
+`api://<public-hostname>/<client-id>` Application ID URI. For reviewed Front
+Door cutover, pass `-ConnectorPublicBaseUrl https://<front-door-hostname>` so
+Configure registers and persists that exact public audience before Publish.
+Install the Teams package only after that origin-bound URI is verified.
 
 ## 3. Prepare and dispatch the protected cloud build
 
@@ -127,7 +130,9 @@ in-place subnet retrofit.
 When `HELIOS_CONNECTOR_PUBLIC_BASE_URL` is set, the reviewed workflow carries it
 into what-if evidence and deployment as `publicBaseUrl`, which rebases
 `HELIOS_PUBLIC_BASE_URL` and the Entra Application ID URI to that reviewed
-origin. For production edge cutover, run `azure-infra` once with
+origin. Configure persists `HELIOS_ENTRA_APPLICATION_ID_URI`, and deploy mode
+rejects public-origin runs until that variable matches
+`api://<public-hostname>/<HELIOS_ENTRA_CLIENT_ID>`. For production edge cutover, run `azure-infra` once with
 `edge_route_cutover_approved=false` to mint the Front Door hostname, then set
 `HELIOS_CONNECTOR_PUBLIC_BASE_URL=https://<front-door-hostname>`, redeploy the
 connector through `helios-cloud-deploy`, and only then rerun `azure-infra` with
@@ -140,9 +145,10 @@ principal rejection, OAuth metadata, and MCP challenge) instead of replacing
 them with control-plane-only assertions.
 
 After the deployment returns the connector hostname, re-run `-Mode Configure`
-with the same reviewed inputs and confirmation. This idempotent pass discovers
-the deployed FQDN and finalizes the domain-qualified Teams SSO Application ID
-URI; it does not deploy the application.
+with the same reviewed inputs and confirmation. For Front Door cutover, include
+`-ConnectorPublicBaseUrl https://<front-door-hostname>`. This idempotent pass
+finalizes the domain-qualified Teams SSO Application ID URI; it does not deploy
+the application.
 
 Use GitHub Actions → `helios-cloud-deploy` → **Run workflow**. Direct local
 `az deployment group create`, `azd provision`, and `azd deploy` are not Helios

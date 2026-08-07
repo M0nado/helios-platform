@@ -135,7 +135,7 @@ jobs:
     name: Reviewed Azure what-if (${{ inputs.targetEnvironment }})
     if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: validate
-    runs-on: ${{ inputs.targetEnvironment == 'azure-prod' && fromJSON('["self-hosted","linux","x64","helios-azure"]') || fromJSON('["ubuntu-24.04"]') }}
+    runs-on: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID != '' && fromJSON('["self-hosted","linux","x64","helios-azure"]') || fromJSON('["ubuntu-24.04"]') }}
     timeout-minutes: 30
     # The operator bootstrap verifies this environment's reviewer protection via
     # the GitHub API before creating OIDC federation; a variable is not evidence.
@@ -163,6 +163,7 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          HELIOS_ENTRA_APPLICATION_ID_URI: ${{ vars.HELIOS_ENTRA_APPLICATION_ID_URI }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
           HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
@@ -207,6 +208,13 @@ jobs:
           if [[ -n "${HELIOS_CONNECTOR_PUBLIC_BASE_URL:-}" && ! "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}" =~ ^https://[^/?#]+$ ]]; then
             echo "HELIOS_CONNECTOR_PUBLIC_BASE_URL must be one HTTPS origin without path, query, or fragment." >&2
             exit 1
+          fi
+          if [[ -n "${HELIOS_CONNECTOR_PUBLIC_BASE_URL:-}" ]]; then
+            expected_application_id_uri="api://${HELIOS_CONNECTOR_PUBLIC_BASE_URL#https://}/${HELIOS_ENTRA_CLIENT_ID}"
+            if [[ "${HELIOS_ENTRA_APPLICATION_ID_URI:-}" != "${expected_application_id_uri}" ]]; then
+              echo "HELIOS_ENTRA_APPLICATION_ID_URI must match '${expected_application_id_uri}' before deploying a public-origin binding." >&2
+              exit 1
+            fi
           fi
 
       - name: Azure login with GitHub OIDC
@@ -549,7 +557,7 @@ jobs:
     needs:
       - validate
       - preview
-    runs-on: ${{ inputs.targetEnvironment == 'azure-prod' && fromJSON('["self-hosted","linux","x64","helios-azure"]') || fromJSON('["ubuntu-24.04"]') }}
+    runs-on: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID != '' && fromJSON('["self-hosted","linux","x64","helios-azure"]') || fromJSON('["ubuntu-24.04"]') }}
     timeout-minutes: 30
     # A second environment deployment creates a distinct approval gate after
     # the immutable what-if artifact is available to reviewers.
@@ -570,6 +578,7 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          HELIOS_ENTRA_APPLICATION_ID_URI: ${{ vars.HELIOS_ENTRA_APPLICATION_ID_URI }}
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
           HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
@@ -615,9 +624,16 @@ jobs:
             echo "HELIOS_CONNECTOR_PUBLIC_BASE_URL must be one HTTPS origin without path, query, or fragment." >&2
             exit 1
           fi
+          if [[ -n "${HELIOS_CONNECTOR_PUBLIC_BASE_URL:-}" ]]; then
+            expected_application_id_uri="api://${HELIOS_CONNECTOR_PUBLIC_BASE_URL#https://}/${HELIOS_ENTRA_CLIENT_ID}"
+            if [[ "${HELIOS_ENTRA_APPLICATION_ID_URI:-}" != "${expected_application_id_uri}" ]]; then
+              echo "HELIOS_ENTRA_APPLICATION_ID_URI must match '${expected_application_id_uri}' before deploying a public-origin binding." >&2
+              exit 1
+            fi
+          fi
 
-      - name: Require self-hosted runner for private production boundary verification
-        if: ${{ inputs.mode == 'deploy' && inputs.targetEnvironment == 'azure-prod' }}
+      - name: Require self-hosted runner for private subnet boundary verification
+        if: ${{ inputs.mode == 'deploy' }}
         shell: bash
         env:
           HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
@@ -625,7 +641,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -n "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:-}" && "${RUNNER_ENVIRONMENT}" != "self-hosted" ]]; then
-            echo "Production private-network validation requires a self-hosted runner with VNet and private DNS reachability to the internal Container Apps ingress." >&2
+            echo "Private subnet deployments require a self-hosted runner with VNet and private DNS reachability to the internal Container Apps ingress." >&2
             exit 1
           fi
 

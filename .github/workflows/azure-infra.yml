@@ -104,6 +104,7 @@ jobs:
     outputs:
       resolved_location: ${{ steps.params.outputs.resolved_location }}
       edge_route_cutover_approved: ${{ steps.params.outputs.edge_route_cutover_approved }}
+      edge_route_was_already_enabled: ${{ steps.params.outputs.edge_route_was_already_enabled }}
       key_vault_private_cutover_approved: ${{ steps.params.outputs.key_vault_private_cutover_approved }}
       enabled_egress_profiles: ${{ steps.params.outputs.enabled_egress_profiles }}
       connector_relay_destinations: ${{ steps.params.outputs.connector_relay_destinations }}
@@ -208,6 +209,38 @@ jobs:
               exit 1
               ;;
           esac
+          edge_route_was_already_enabled='false'
+          if [[ "${INPUT_ENVIRONMENT_NAME}" == "prod" && "${INPUT_NETWORK_ONLY}" != "true" ]]; then
+            front_door_name="${INPUT_NAME_PREFIX}-${INPUT_ENVIRONMENT_NAME}-edge"
+            edge_route_name="${front_door_name}/${front_door_name}/all-approved-traffic"
+            set +e
+            edge_route_state="$(az resource show \
+              --resource-group "${INPUT_RESOURCE_GROUP}" \
+              --resource-type "Microsoft.Cdn/profiles/afdEndpoints/routes" \
+              --name "${edge_route_name}" \
+              --api-version 2024-02-01 \
+              --query properties.enabledState \
+              --output tsv 2>&1)"
+            edge_route_state_exit=$?
+            set -e
+            if [[ ${edge_route_state_exit} -eq 0 ]]; then
+              case "${edge_route_state,,}" in
+                enabled)
+                  edge_route_was_already_enabled='true'
+                  edge_route_cutover_approved='true'
+                  ;;
+                disabled)
+                  ;;
+                *)
+                  echo "Front Door route '${edge_route_name}' returned unexpected enabledState '${edge_route_state}'." >&2
+                  exit 1
+                  ;;
+              esac
+            elif ! grep -qiE '(ResourceNotFound|could not be found|was not found)' <<<"${edge_route_state}"; then
+              echo "${edge_route_state}" >&2
+              exit "${edge_route_state_exit}"
+            fi
+          fi
 
           enabled_egress_profiles_input="${INPUT_ENABLED_EGRESS_PROFILES}"
           connector_relay_destinations_input="${INPUT_CONNECTOR_RELAY_DESTINATIONS}"
@@ -309,6 +342,7 @@ jobs:
           echo "file=${params_file}" >> "${GITHUB_OUTPUT}"
           echo "resolved_location=${resolved_location}" >> "${GITHUB_OUTPUT}"
           echo "edge_route_cutover_approved=${edge_route_cutover_approved}" >> "${GITHUB_OUTPUT}"
+          echo "edge_route_was_already_enabled=${edge_route_was_already_enabled}" >> "${GITHUB_OUTPUT}"
           echo "enabled_egress_profiles=${enabled_egress_profiles_json}" >> "${GITHUB_OUTPUT}"
           echo "connector_relay_destinations=${connector_relay_destinations_json}" >> "${GITHUB_OUTPUT}"
           echo "key_vault_private_cutover_approved=${key_vault_private_cutover_approved}" >> "${GITHUB_OUTPUT}"
@@ -411,13 +445,18 @@ jobs:
         env:
           INPUT_NETWORK_ONLY: ${{ github.event.inputs.network_only }}
           EDGE_ROUTE_CUTOVER_APPROVED: ${{ needs.validate.outputs.edge_route_cutover_approved }}
+          EDGE_ROUTE_WAS_ALREADY_ENABLED: ${{ needs.validate.outputs.edge_route_was_already_enabled }}
           INPUT_NAME_PREFIX: ${{ github.event.inputs.name_prefix }}
           INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name }}
           INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
           HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
         run: |
           set -euo pipefail
-          if [[ "${INPUT_NETWORK_ONLY}" == "true" || "${EDGE_ROUTE_CUTOVER_APPROVED}" != "true" ]]; then
+          if [[ "${EDGE_ROUTE_WAS_ALREADY_ENABLED}" != "true" && "${EDGE_ROUTE_WAS_ALREADY_ENABLED}" != "false" ]]; then
+            echo "Validated edge route state output is invalid." >&2
+            exit 1
+          fi
+          if [[ "${INPUT_NETWORK_ONLY}" == "true" || "${EDGE_ROUTE_CUTOVER_APPROVED}" != "true" || "${EDGE_ROUTE_WAS_ALREADY_ENABLED}" == "true" ]]; then
             exit 0
           fi
 

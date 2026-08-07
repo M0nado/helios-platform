@@ -32,7 +32,7 @@ class AzureDeploymentContractTests(unittest.TestCase):
                 invocation.count(f'{SUBNET_PARAMETER}="${{HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}}"'),
             )
 
-        self.assertIn('"${{ inputs.targetEnvironment }}" == "azure-prod"', workflow)
+        self.assertIn("vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID != ''", workflow)
         self.assertGreaterEqual(workflow.count("Production requires protected environment variable"), 2)
 
     def test_review_evidence_binds_subnet_parameter(self) -> None:
@@ -64,14 +64,14 @@ class AzureDeploymentContractTests(unittest.TestCase):
 
     def test_private_production_requires_self_hosted_runner_for_boundary_checks(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn('Require self-hosted runner for private production boundary verification', workflow)
+        self.assertIn('Require self-hosted runner for private subnet boundary verification', workflow)
         self.assertIn('RUNNER_ENVIRONMENT: ${{ runner.environment }}', workflow)
         self.assertGreaterEqual(
             workflow.count('fromJSON(\'["self-hosted","linux","x64","helios-azure"]\')'),
             2,
         )
         self.assertIn(
-            "Production private-network validation requires a self-hosted runner with VNet and private DNS reachability to the internal Container Apps ingress.",
+            "Private subnet deployments require a self-hosted runner with VNet and private DNS reachability to the internal Container Apps ingress.",
             workflow,
         )
 
@@ -140,13 +140,21 @@ class AzureDeploymentContractTests(unittest.TestCase):
     def test_publish_requires_subnet_argument_to_match_protected_environment_binding(self) -> None:
         interactive = (PROJECT_ROOT / "scripts" / "Connect-HeliosAzureInteractive.ps1").read_text(encoding="utf-8")
         self.assertIn("Get-GitHubEnvironmentVariableValue", interactive)
+        self.assertIn("[string] $ConnectorPublicBaseUrl", interactive)
+        self.assertIn("Resolve-PublicApiHostname", interactive)
         self.assertIn("HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID", interactive)
+        self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL", interactive)
+        self.assertIn("HELIOS_ENTRA_APPLICATION_ID_URI", interactive)
         self.assertRegex(
             interactive,
             r"if \(\$EnvironmentName -eq 'prod'\) \{\s+\$protectedSubnetBinding = Get-GitHubEnvironmentVariableValue",
         )
         self.assertIn(
             "Publish requires -ContainerAppsInfrastructureSubnetId to match protected environment binding HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID.",
+            interactive,
+        )
+        self.assertIn(
+            "Connector Entra app '$ConnectorAppName' does not expose '$expectedPublicIdentifierUri'. Run -Mode Configure after setting HELIOS_CONNECTOR_PUBLIC_BASE_URL to register the reviewed public audience before Publish.",
             interactive,
         )
 
@@ -170,6 +178,10 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("connector_relay_destinations:", workflow)
         self.assertIn("resolved_location=", workflow)
         self.assertIn("edgeRouteCutoverApproved=", workflow)
+        self.assertIn("edge_route_was_already_enabled: ${{ steps.params.outputs.edge_route_was_already_enabled }}", workflow)
+        self.assertIn("echo \"edge_route_was_already_enabled=${edge_route_was_already_enabled}\" >> \"${GITHUB_OUTPUT}\"", workflow)
+        self.assertIn("EDGE_ROUTE_WAS_ALREADY_ENABLED: ${{ needs.validate.outputs.edge_route_was_already_enabled }}", workflow)
+        self.assertIn("--resource-type \"Microsoft.Cdn/profiles/afdEndpoints/routes\"", workflow)
         self.assertIn("Input location '", workflow)
         self.assertIn("platformAddressSpace=", workflow)
         self.assertIn("cosmosAccountId=", workflow)
@@ -226,6 +238,7 @@ class AzureDeploymentContractTests(unittest.TestCase):
     def test_reviewed_connector_workflow_propagates_public_base_url(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}", workflow)
+        self.assertIn("HELIOS_ENTRA_APPLICATION_ID_URI: ${{ vars.HELIOS_ENTRA_APPLICATION_ID_URI }}", workflow)
         self.assertIn("HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must be a full subnet resource ID.", workflow)
         self.assertIn(
             "HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID must target the protected deployment subscription/resource-group scope.",
@@ -238,6 +251,10 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn('metadata_resource_origin="${CONNECTOR_URL}"', workflow)
         self.assertIn(
             'expected_application_id_uri="api://${HELIOS_CONNECTOR_PUBLIC_BASE_URL#https://}/${HELIOS_ENTRA_CLIENT_ID}"',
+            workflow,
+        )
+        self.assertIn(
+            "HELIOS_ENTRA_APPLICATION_ID_URI must match '${expected_application_id_uri}' before deploying a public-origin binding.",
             workflow,
         )
         self.assertIn('--arg resource "${metadata_resource_origin}/mcp"', workflow)
