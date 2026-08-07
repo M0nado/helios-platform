@@ -121,6 +121,58 @@ public sealed class ControlRunTests
     }
 
     [Fact]
+    public async Task Recovered_run_reuses_persisted_knaa_assessment_for_dispatch_idempotency()
+    {
+        var store = new InMemoryControlRunStore();
+        var now = DateTimeOffset.UtcNow;
+        var persistedKnaa = BuildSampleKnaaAssessment(now.AddMinutes(-20));
+        var steps = new[]
+        {
+            new ControlRunStep("context", "completed", "completed"),
+            new ControlRunStep("inventory", "completed", "completed"),
+            new ControlRunStep("plan", "completed", "completed"),
+            new ControlRunStep("evidence", "completed", "completed"),
+            new ControlRunStep("evaluation", "completed", "completed"),
+            new ControlRunStep("connectors", "queued", "queued"),
+            new ControlRunStep("approval", "queued", "queued")
+        };
+        var persisted = new ControlRunSnapshot(
+            "bcdefabcdefabcdefabcdefabcdefabc", "control-runs", new string('a', 64), "correlation-recovery-knaa", "principal-1",
+            "provision-resources", "dev", "helios-dev-rg", ["github"], "queued", "diagnose-plan-sync", now, now, steps, [],
+            Plan: new EdgeAutomationPlanner().CreatePlan(new EdgeAutomationRequest("provision-resources", "dev", "helios-dev-rg", "all")),
+            EvidenceSha256: new string('b', 64),
+            ResourceCount: 2,
+            Knaa: persistedKnaa);
+        await store.CreateOrGetAsync(persisted, CancellationToken.None);
+
+        var overrideEvaluator = new KnaaEvaluator(new KnaaEvaluatorOptions(
+            "helios.knaa.v1",
+            "override-model-version",
+            new KnaaThresholds(0.20, 0.40, 0.60),
+            ConservativeAutoBlock: false));
+
+        using var coordinator = new ControlRunCoordinator(
+            store,
+            new FakeInventory(),
+            new EdgeAutomationPlanner(),
+            new FakeDispatcher(),
+            NullLogger<ControlRunCoordinator>.Instance,
+            knaaEvaluator: overrideEvaluator);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var completed = await WaitForTerminalAsync(coordinator, persisted.Id);
+            Assert.NotNull(completed.Knaa);
+            Assert.Equal(persistedKnaa.ModelVersion, completed.Knaa!.ModelVersion);
+            Assert.Equal(persistedKnaa.EvaluatedAt, completed.Knaa.EvaluatedAt);
+        }
+        finally
+        {
+            await coordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task Empty_connector_selection_is_respected_and_runs_are_owner_scoped()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);

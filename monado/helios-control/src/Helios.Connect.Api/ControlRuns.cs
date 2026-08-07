@@ -667,14 +667,29 @@ public sealed partial class ControlRunCoordinator(
             run = await SetStepAsync(run, "evidence", "completed", $"Evidence SHA-256 {digest}.", workToken);
 
             run = await SetStepAsync(run, "evaluation", "running", "Scoring KNAA vector and policy thresholds.", workToken);
-            var knaa = _knaaEvaluator.Evaluate(run);
-            run = await ReplaceAsync(run, run with { Knaa = knaa, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
-            var scoreText = knaa.Score.HasValue
-                ? knaa.Score.Value.ToString("0.000", CultureInfo.InvariantCulture)
-                : "unknown";
-            run = await SetStepAsync(run, "evaluation", "completed",
-                $"KNAA outcome {knaa.Policy.Outcome}; score {scoreText}; confidence {knaa.Confidence.ToString("0.000", CultureInfo.InvariantCulture)}.",
-                workToken);
+            KnaaAssessment knaa;
+            string evaluationDetail;
+            if (run.Knaa is not null)
+            {
+                knaa = run.Knaa;
+                var persistedScoreText = knaa.Score.HasValue
+                    ? knaa.Score.Value.ToString("0.000", CultureInfo.InvariantCulture)
+                    : "unknown";
+                evaluationDetail =
+                    $"Reused persisted KNAA outcome {knaa.Policy.Outcome}; score {persistedScoreText}; confidence {knaa.Confidence.ToString("0.000", CultureInfo.InvariantCulture)}.";
+            }
+            else
+            {
+                knaa = _knaaEvaluator.Evaluate(run);
+                run = await ReplaceAsync(run, run with { Knaa = knaa, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+                var scoreText = knaa.Score.HasValue
+                    ? knaa.Score.Value.ToString("0.000", CultureInfo.InvariantCulture)
+                    : "unknown";
+                evaluationDetail =
+                    $"KNAA outcome {knaa.Policy.Outcome}; score {scoreText}; confidence {knaa.Confidence.ToString("0.000", CultureInfo.InvariantCulture)}.";
+            }
+
+            run = await SetStepAsync(run, "evaluation", "completed", evaluationDetail, workToken);
 
             run = await SetStepAsync(run, "connectors", "running", "Reconciling external status receipts.", workToken);
             var awaitsApproval = plan.Steps.Any(step => step.Mutating);

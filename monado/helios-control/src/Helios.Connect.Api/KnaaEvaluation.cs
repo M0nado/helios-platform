@@ -326,12 +326,18 @@ public sealed class KnaaEvaluator(KnaaEvaluatorOptions options) : IKnaaEvaluator
     {
         var weightedTotal = 0d;
         var weightSum = 0d;
-        foreach (var component in vector)
+        var weightedComponents = vector
+            .Where(component => component.Value.HasValue)
+            .Select(component => (
+                Component: component,
+                HasWeight: weights.TryGetValue(component.Name, out var weight),
+                Weight: weight))
+            .Where(item => item.HasWeight);
+
+        foreach (var item in weightedComponents)
         {
-            if (!component.Value.HasValue) continue;
-            if (!weights.TryGetValue(component.Name, out var weight)) continue;
-            weightedTotal += component.Value.Value * weight;
-            weightSum += weight;
+            weightedTotal += item.Component.Value!.Value * item.Weight;
+            weightSum += item.Weight;
         }
         return weightSum <= 0d ? null : Round(weightedTotal / weightSum);
     }
