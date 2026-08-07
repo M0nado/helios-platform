@@ -71,6 +71,26 @@ namespace HELIOS.Platform.Phase10.Users
             return Path.Combine(Environment.ExpandEnvironmentVariables("%SystemDrive%"), "Users", username);
         }
 
+        private string ResolveKnownFolderPath(string username, Environment.SpecialFolder specialFolder, string fallbackFolderName)
+        {
+            if (string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+            {
+                var resolvedPath = Environment.GetFolderPath(specialFolder);
+                if (!string.IsNullOrWhiteSpace(resolvedPath))
+                {
+                    return resolvedPath;
+                }
+            }
+
+            return Path.Combine(GetUserProfilePath(username), fallbackFolderName);
+        }
+
+        private string GetWritableFallbackRoot(string username)
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return Path.Combine(localAppData, "HELIOS", "UserData", username);
+        }
+
         /// <summary>
         /// Gets list of standard directories to create.
         /// </summary>
@@ -216,7 +236,9 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    string documentsPath = Path.Combine(GetUserProfilePath(username), "Documents");
+                    string documentsPath = ResolveKnownFolderPath(username, Environment.SpecialFolder.MyDocuments, "Documents");
+                    string fallbackRoot = Path.Combine(GetWritableFallbackRoot(username), "Documents");
+                    bool allowFallback = string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase);
 
                     var subfolders = new[]
                     {
@@ -230,7 +252,21 @@ namespace HELIOS.Platform.Phase10.Users
                     bool allSuccess = true;
                     foreach (var folder in subfolders)
                     {
-                        if (!await CreateDirectoryAsync(Path.Combine(documentsPath, folder)))
+                        var primaryPath = Path.Combine(documentsPath, folder);
+                        if (await CreateDirectoryAsync(primaryPath))
+                        {
+                            continue;
+                        }
+
+                        if (!allowFallback)
+                        {
+                            allSuccess = false;
+                            continue;
+                        }
+
+                        var fallbackPath = Path.Combine(fallbackRoot, folder);
+                        LogMessage($"Primary document path unavailable, retrying with fallback: {fallbackPath}", LogLevel.Warning);
+                        if (!await CreateDirectoryAsync(fallbackPath))
                         {
                             allSuccess = false;
                         }
@@ -255,21 +291,39 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    string userProfile = GetUserProfilePath(username);
+                    string picturesPath = ResolveKnownFolderPath(username, Environment.SpecialFolder.MyPictures, "Pictures");
+                    string videosPath = ResolveKnownFolderPath(username, Environment.SpecialFolder.MyVideos, "Videos");
+                    string musicPath = ResolveKnownFolderPath(username, Environment.SpecialFolder.MyMusic, "Music");
+                    string fallbackRoot = GetWritableFallbackRoot(username);
+                    bool allowFallback = string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase);
 
-                    var mediaFolders = new Dictionary<string, string[]>
+                    var mediaFolders = new[]
                     {
-                        { Path.Combine(userProfile, "Pictures"), new[] { "Screenshots", "Wallpapers", "Screenshots", "Saved" } },
-                        { Path.Combine(userProfile, "Videos"), new[] { "Recordings", "Movies", "TV Shows", "Edited" } },
-                        { Path.Combine(userProfile, "Music"), new[] { "Artists", "Albums", "Playlists", "Downloaded" } }
+                        (Category: "Pictures", BasePath: picturesPath, Subfolders: new[] { "Screenshots", "Wallpapers", "Screenshots", "Saved" }),
+                        (Category: "Videos", BasePath: videosPath, Subfolders: new[] { "Recordings", "Movies", "TV Shows", "Edited" }),
+                        (Category: "Music", BasePath: musicPath, Subfolders: new[] { "Artists", "Albums", "Playlists", "Downloaded" })
                     };
 
                     bool allSuccess = true;
-                    foreach (var (mediaDir, subfolders) in mediaFolders)
+                    foreach (var mediaFolder in mediaFolders)
                     {
-                        foreach (var subfolder in subfolders)
+                        foreach (var subfolder in mediaFolder.Subfolders)
                         {
-                            if (!await CreateDirectoryAsync(Path.Combine(mediaDir, subfolder)))
+                            var primaryPath = Path.Combine(mediaFolder.BasePath, subfolder);
+                            if (await CreateDirectoryAsync(primaryPath))
+                            {
+                                continue;
+                            }
+
+                            if (!allowFallback)
+                            {
+                                allSuccess = false;
+                                continue;
+                            }
+
+                            var fallbackPath = Path.Combine(fallbackRoot, mediaFolder.Category, subfolder);
+                            LogMessage($"Primary media path unavailable, retrying with fallback: {fallbackPath}", LogLevel.Warning);
+                            if (!await CreateDirectoryAsync(fallbackPath))
                             {
                                 allSuccess = false;
                             }
