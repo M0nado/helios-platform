@@ -65,7 +65,7 @@ namespace HELIOS.Platform.Phase10.Users.Interfaces
     /// </summary>
     public class SecurityConfiguration
     {
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
         public bool PasswordRequired { get; set; }
         public int PasswordMinLength { get; set; }
         public int PasswordHistoryCount { get; set; }
@@ -81,14 +81,14 @@ namespace HELIOS.Platform.Phase10.Users.Interfaces
     /// </summary>
     public class UserActivityReport
     {
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
         public DateTime ReportDate { get; set; }
         public int TotalLoginAttempts { get; set; }
         public int SuccessfulLogins { get; set; }
         public int FailedLoginAttempts { get; set; }
         public List<ActivityEvent> Activities { get; set; } = new();
         public int PrivilegeEscalationCount { get; set; }
-        public string RiskLevel { get; set; }
+        public string RiskLevel { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -97,8 +97,8 @@ namespace HELIOS.Platform.Phase10.Users.Interfaces
     public class ActivityEvent
     {
         public DateTime Timestamp { get; set; }
-        public string EventType { get; set; }
-        public string Description { get; set; }
+        public string EventType { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
         public bool IsAnomalous { get; set; }
     }
 
@@ -107,11 +107,11 @@ namespace HELIOS.Platform.Phase10.Users.Interfaces
     /// </summary>
     public class AccountValidationResult
     {
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
         public bool IsValid { get; set; }
         public List<string> Errors { get; set; } = new();
         public List<string> Warnings { get; set; } = new();
-        public PermissionStatus PermissionStatus { get; set; }
+        public PermissionStatus PermissionStatus { get; set; } = new();
     }
 
     /// <summary>

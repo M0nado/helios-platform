@@ -14,7 +14,7 @@ namespace HELIOS.Platform.Phase10.Users
         private readonly string _logPath;
         private readonly object _lockObject = new();
 
-        public UserDataDirectorySetup(string logPath = null)
+        public UserDataDirectorySetup(string? logPath = null)
         {
             _logPath = logPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HELIOS", "Logs", "DirectorySetup.log");
             EnsureLogDirectory();
@@ -330,7 +330,7 @@ namespace HELIOS.Platform.Phase10.Users
         /// <summary>
         /// Sets up OneDrive sync folders if applicable.
         /// </summary>
-        public async Task<bool> SetupOneDriveFoldersAsync(string username, string oneDrivePath = null)
+        public async Task<bool> SetupOneDriveFoldersAsync(string username, string? oneDrivePath = null)
         {
             return await Task.Run(async () =>
             {
@@ -487,8 +487,8 @@ namespace HELIOS.Platform.Phase10.Users
         {
             try
             {
-                string logDir = Path.GetDirectoryName(_logPath);
-                if (!Directory.Exists(logDir))
+                string? logDir = Path.GetDirectoryName(_logPath);
+                if (!string.IsNullOrWhiteSpace(logDir) && !Directory.Exists(logDir))
                 {
                     Directory.CreateDirectory(logDir);
                 }

@@ -16,7 +16,7 @@ namespace HELIOS.Platform.Phase10.Users
         private readonly string _logPath;
         private readonly object _lockObject = new();
 
-        public UserAccountProvisioner(string logPath = null)
+        public UserAccountProvisioner(string? logPath = null)
         {
             _logPath = logPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HELIOS", "Logs", "UserProvisioning.log");
             EnsureLogDirectory();
@@ -295,10 +295,10 @@ namespace HELIOS.Platform.Phase10.Users
                         {
                             accounts.Add(new UserAccountInfo
                             {
-                                Username = mo["Name"]?.ToString(),
-                                FullName = mo["FullName"]?.ToString(),
+                                Username = mo["Name"]?.ToString() ?? string.Empty,
+                                FullName = mo["FullName"]?.ToString() ?? string.Empty,
                                 Disabled = Convert.ToBoolean(mo["Disabled"]),
-                                Sid = mo["SID"]?.ToString()
+                                Sid = mo["SID"]?.ToString() ?? string.Empty
                             });
                         }
                     }
@@ -351,8 +351,8 @@ namespace HELIOS.Platform.Phase10.Users
         {
             try
             {
-                string logDir = Path.GetDirectoryName(_logPath);
-                if (!Directory.Exists(logDir))
+                string? logDir = Path.GetDirectoryName(_logPath);
+                if (!string.IsNullOrWhiteSpace(logDir) && !Directory.Exists(logDir))
                 {
                     Directory.CreateDirectory(logDir);
                 }
@@ -384,10 +384,10 @@ namespace HELIOS.Platform.Phase10.Users
 
         public class UserAccountInfo
         {
-            public string Username { get; set; }
-            public string FullName { get; set; }
+            public string Username { get; set; } = string.Empty;
+            public string FullName { get; set; } = string.Empty;
             public bool Disabled { get; set; }
-            public string Sid { get; set; }
+            public string Sid { get; set; } = string.Empty;
         }
     }
 }

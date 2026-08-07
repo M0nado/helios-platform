@@ -24,7 +24,7 @@ namespace HELIOS.Platform.Phase10.Users
             Service
         }
 
-        public AccountPermissionManager(string logPath = null)
+        public AccountPermissionManager(string? logPath = null)
         {
             _logPath = logPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HELIOS", "Logs", "Permissions.log");
             EnsureLogDirectory();
@@ -90,7 +90,9 @@ namespace HELIOS.Platform.Phase10.Users
                         {
                             DirectoryEntry groupEntry = new DirectoryEntry($"WinNT://{Environment.MachineName}/{group},group");
                             
-                            if (groupEntry.Invoke("IsMember", new object[] { $"WinNT://{Environment.MachineName}/{username},user" }).Equals(false))
+                            var isMemberResult = groupEntry.Invoke("IsMember", new object[] { $"WinNT://{Environment.MachineName}/{username},user" });
+                            var isMember = isMemberResult is bool boolResult && boolResult;
+                            if (!isMember)
                             {
                                 groupEntry.Invoke("Add", new object[] { $"WinNT://{Environment.MachineName}/{username},user" });
                                 LogMessage($"Added {username} to group: {group}");
@@ -313,7 +315,9 @@ namespace HELIOS.Platform.Phase10.Users
                         {
                             DirectoryEntry groupEntry = new DirectoryEntry($"WinNT://{Environment.MachineName}/{group},group");
                             
-                            if (groupEntry.Invoke("IsMember", new object[] { $"WinNT://{Environment.MachineName}/{username},user" }).Equals(true))
+                            var isMemberResult = groupEntry.Invoke("IsMember", new object[] { $"WinNT://{Environment.MachineName}/{username},user" });
+                            var isMember = isMemberResult is bool boolResult && boolResult;
+                            if (isMember)
                             {
                                 groupEntry.Invoke("Remove", new object[] { $"WinNT://{Environment.MachineName}/{username},user" });
                             }
@@ -346,7 +350,7 @@ namespace HELIOS.Platform.Phase10.Users
                     DirectoryEntry groupEntry = new DirectoryEntry($"WinNT://{Environment.MachineName}/Administrators,group");
                     var isMember = groupEntry.Invoke("IsMember", new object[] { $"WinNT://{Environment.MachineName}/{username},user" });
                     groupEntry?.Dispose();
-                    return isMember.Equals(true);
+                    return isMember is bool boolResult && boolResult;
                 }
                 catch
                 {
@@ -395,7 +399,9 @@ namespace HELIOS.Platform.Phase10.Users
                         try
                         {
                             DirectoryEntry groupEntry = new DirectoryEntry($"WinNT://{Environment.MachineName}/{group},group");
-                            if (groupEntry.Invoke("IsMember", new object[] { $"WinNT://{Environment.MachineName}/{username},user" }).Equals(true))
+                            var isMemberResult = groupEntry.Invoke("IsMember", new object[] { $"WinNT://{Environment.MachineName}/{username},user" });
+                            var isMember = isMemberResult is bool boolResult && boolResult;
+                            if (isMember)
                             {
                                 groups.Add(group);
                             }
@@ -417,8 +423,8 @@ namespace HELIOS.Platform.Phase10.Users
         {
             try
             {
-                string logDir = Path.GetDirectoryName(_logPath);
-                if (!Directory.Exists(logDir))
+                string? logDir = Path.GetDirectoryName(_logPath);
+                if (!string.IsNullOrWhiteSpace(logDir) && !Directory.Exists(logDir))
                 {
                     Directory.CreateDirectory(logDir);
                 }
@@ -450,7 +456,7 @@ namespace HELIOS.Platform.Phase10.Users
 
         public class UserPermissions
         {
-            public string Username { get; set; }
+            public string Username { get; set; } = string.Empty;
             public bool IsAdministrator { get; set; }
             public List<string> Groups { get; set; } = new();
         }
