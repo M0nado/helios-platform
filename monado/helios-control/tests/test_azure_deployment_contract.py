@@ -42,24 +42,37 @@ class AzureDeploymentContractTests(unittest.TestCase):
     def test_workflow_blocks_in_place_subnet_migration(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
         self.assertGreaterEqual(
+            workflow.count('az resource show \\'),
+            2,
+        )
+        self.assertGreaterEqual(
             workflow.count(' --resource-type "Microsoft.App/managedEnvironments"'),
             2,
         )
+        self.assertNotIn('az resource list \\\n            --resource-group "${AZURE_RESOURCE_GROUP}" \\\n            --resource-type "Microsoft.App/managedEnvironments"', workflow)
         self.assertGreaterEqual(
             workflow.count('deploy a replacement environment and migrate with reviewed rollback evidence.'),
             4,
         )
 
-    def test_private_ingress_verification_is_control_plane_aware(self) -> None:
+    def test_private_production_requires_self_hosted_runner_for_boundary_checks(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn('if [[ "${ingress_external}" != "true" ]]; then', workflow)
-        self.assertIn(' --resource-type "Microsoft.App/containerApps/authConfigs"', workflow)
+        self.assertIn('Require self-hosted runner for private production boundary verification', workflow)
+        self.assertIn('RUNNER_ENVIRONMENT: ${{ runner.environment }}', workflow)
         self.assertIn(
-            "Private ingress prevents direct runner probes; validated readiness and fail-closed auth policy from ARM state.",
+            "Production private-network validation requires a self-hosted runner with VNet and private DNS reachability to the internal Container Apps ingress.",
             workflow,
         )
 
-    def test_connector_entry_point_cannot_be_external_in_production(self) -> None:
+    def test_verification_waits_for_ready_revision_and_immutable_image(self) -> None:
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn('latest_revision="$(jq -r \'.properties.latestRevisionName // empty\' <<<"${app_state}")"', workflow)
+        self.assertIn('latest_ready_revision="$(jq -r \'.properties.latestReadyRevisionName // empty\' <<<"${app_state}")"', workflow)
+        self.assertIn('active_image="$(jq -r \'.properties.template.containers[0].image // empty\' <<<"${app_state}")"', workflow)
+        self.assertIn('"${latest_revision}" == "${latest_ready_revision}"', workflow)
+        self.assertIn('"${active_image}" == "${IMAGE_REFERENCE}"', workflow)
+
+    def test_connector_entry_point_keeps_reachable_ingress(self) -> None:
         connector = (PROJECT_ROOT / "infra/connector.bicep").read_text(encoding="utf-8")
         self.assertIn(
             "environmentName != 'prod' || !empty(containerAppsInfrastructureSubnetId)",
@@ -69,8 +82,13 @@ class AzureDeploymentContractTests(unittest.TestCase):
             "fail('Production requires a delegated Container Apps infrastructure subnet.')",
             connector,
         )
-        self.assertIn("external: empty(validatedContainerAppsInfrastructureSubnetId)", connector)
-        self.assertNotIn("external: empty(containerAppsInfrastructureSubnetId)", connector)
+        self.assertIn("external: true", connector)
+        self.assertNotIn("external: empty(validatedContainerAppsInfrastructureSubnetId)", connector)
+
+    def test_connector_sets_user_defined_routing_for_production_subnet(self) -> None:
+        connector = (PROJECT_ROOT / "infra/connector.bicep").read_text(encoding="utf-8")
+        self.assertIn("outboundType: 'UserDefinedRouting'", connector)
+        self.assertIn("outboundType: 'LoadBalancer'", connector)
 
     def test_direct_callers_forward_subnet_and_reject_empty_production(self) -> None:
         callers = [

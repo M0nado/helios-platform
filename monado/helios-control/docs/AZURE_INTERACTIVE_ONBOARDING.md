@@ -123,10 +123,11 @@ different subnet), the run fails before deployment and requires a reviewed
 replacement-environment migration with rollback evidence rather than an
 in-place subnet retrofit.
 
-For private-ingress deployments, the GitHub-hosted runner cannot probe the
-internal FQDN directly. The workflow therefore validates readiness and
-fail-closed auth policy from ARM control-plane state instead of requiring
-public endpoint curls.
+For private-network production verification, the workflow requires a
+self-hosted runner with VNet/private-DNS reachability before deploy mode can
+proceed. This preserves full live boundary checks (anonymous 401, forged
+principal rejection, OAuth metadata, and MCP challenge) instead of replacing
+them with control-plane-only assertions.
 
 After the deployment returns the connector hostname, re-run `-Mode Configure`
 with the same reviewed inputs and confirmation. This idempotent pass discovers

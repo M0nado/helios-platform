@@ -169,10 +169,18 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   location: location
   tags: governedTags
   properties: {
-    vnetConfiguration: !empty(validatedContainerAppsInfrastructureSubnetId) ? {
-      infrastructureSubnetId: validatedContainerAppsInfrastructureSubnetId
-      internal: true
-    } : null
+    vnetConfiguration: !empty(validatedContainerAppsInfrastructureSubnetId)
+      ? union({
+          infrastructureSubnetId: validatedContainerAppsInfrastructureSubnetId
+          internal: true
+        }, environmentName == 'prod'
+          ? {
+              outboundType: 'UserDefinedRouting'
+            }
+          : {
+              outboundType: 'LoadBalancer'
+            })
+      : null
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -196,7 +204,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: empty(validatedContainerAppsInfrastructureSubnetId)
+        external: true
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false

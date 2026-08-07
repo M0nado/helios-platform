@@ -304,16 +304,23 @@ jobs:
           fi
           environment_name="${TARGET_ENVIRONMENT#azure-}"
           managed_environment_name="${SERVICE_NAME}-${environment_name}-cae"
-          existing_environment="$(az resource list \
+          set +e
+          existing_environment="$(az resource show \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
             --resource-type "Microsoft.App/managedEnvironments" \
             --name "${managed_environment_name}" \
             --api-version 2024-03-01 \
-            --output json)"
-          if [[ "$(jq 'length' <<<"${existing_environment}")" -eq 0 ]]; then
-            exit 0
+            --output json 2>&1)"
+          show_exit=$?
+          set -e
+          if [[ ${show_exit} -ne 0 ]]; then
+            if grep -qiE '(ResourceNotFound|could not be found|was not found)' <<<"${existing_environment}"; then
+              exit 0
+            fi
+            echo "${existing_environment}" >&2
+            exit "${show_exit}"
           fi
-          current_subnet="$(jq -r '.[0].properties.vnetConfiguration.infrastructureSubnetId // empty' <<<"${existing_environment}")"
+          current_subnet="$(jq -r '.properties.vnetConfiguration.infrastructureSubnetId // empty' <<<"${existing_environment}")"
           if [[ -z "${current_subnet}" ]]; then
             echo "Managed environment '${managed_environment_name}' already exists without delegated subnet integration. In-place subnet migration is unsupported; deploy a replacement environment and migrate with reviewed rollback evidence." >&2
             exit 1
@@ -570,6 +577,19 @@ jobs:
             exit 1
           fi
 
+      - name: Require self-hosted runner for private production boundary verification
+        if: ${{ inputs.mode == 'deploy' && inputs.targetEnvironment == 'azure-prod' }}
+        shell: bash
+        env:
+          HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID }}
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID:-}" && "${RUNNER_ENVIRONMENT}" != "self-hosted" ]]; then
+            echo "Production private-network validation requires a self-hosted runner with VNet and private DNS reachability to the internal Container Apps ingress." >&2
+            exit 1
+          fi
+
       - name: Azure login with GitHub OIDC after second approval
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
         with:
@@ -763,16 +783,23 @@ jobs:
           fi
           environment_name="${TARGET_ENVIRONMENT#azure-}"
           managed_environment_name="${SERVICE_NAME}-${environment_name}-cae"
-          existing_environment="$(az resource list \
+          set +e
+          existing_environment="$(az resource show \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
             --resource-type "Microsoft.App/managedEnvironments" \
             --name "${managed_environment_name}" \
             --api-version 2024-03-01 \
-            --output json)"
-          if [[ "$(jq 'length' <<<"${existing_environment}")" -eq 0 ]]; then
-            exit 0
+            --output json 2>&1)"
+          show_exit=$?
+          set -e
+          if [[ ${show_exit} -ne 0 ]]; then
+            if grep -qiE '(ResourceNotFound|could not be found|was not found)' <<<"${existing_environment}"; then
+              exit 0
+            fi
+            echo "${existing_environment}" >&2
+            exit "${show_exit}"
           fi
-          current_subnet="$(jq -r '.[0].properties.vnetConfiguration.infrastructureSubnetId // empty' <<<"${existing_environment}")"
+          current_subnet="$(jq -r '.properties.vnetConfiguration.infrastructureSubnetId // empty' <<<"${existing_environment}")"
           if [[ -z "${current_subnet}" ]]; then
             echo "Managed environment '${managed_environment_name}' already exists without delegated subnet integration. In-place subnet migration is unsupported; deploy a replacement environment and migrate with reviewed rollback evidence." >&2
             exit 1
@@ -892,10 +919,13 @@ jobs:
           CONTAINER_APP_NAME: ${{ steps.deploy.outputs.container_app_name }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
         run: |
           set -euo pipefail
           ready=false
           ingress_external=''
+          latest_revision=''
+          latest_ready_revision=''
           for attempt in {1..24}; do
             app_state="$(az resource show \
               --resource-group "${AZURE_RESOURCE_GROUP}" \
@@ -905,43 +935,28 @@ jobs:
               --output json)"
             provisioning_state="$(jq -r '.properties.provisioningState // empty' <<<"${app_state}")"
             ingress_external="$(jq -r '.properties.configuration.ingress.external // empty' <<<"${app_state}")"
+            latest_revision="$(jq -r '.properties.latestRevisionName // empty' <<<"${app_state}")"
             latest_ready_revision="$(jq -r '.properties.latestReadyRevisionName // empty' <<<"${app_state}")"
-            if [[ "${provisioning_state}" == "Succeeded" && -n "${latest_ready_revision}" ]]; then
-              if [[ "${ingress_external}" == "true" ]]; then
+            active_image="$(jq -r '.properties.template.containers[0].image // empty' <<<"${app_state}")"
+            if [[ "${provisioning_state}" == "Succeeded" &&
+                  -n "${latest_revision}" &&
+                  "${latest_revision}" == "${latest_ready_revision}" &&
+                  "${active_image}" == "${IMAGE_REFERENCE}" ]]; then
+              if [[ "${ingress_external}" == "true" || "${ingress_external}" == "false" ]]; then
                 if curl --fail --silent --show-error "${CONNECTOR_URL}/health/ready" > /dev/null; then
                   ready=true
                   break
                 fi
-              elif [[ "${ingress_external}" == "false" ]]; then
-                ready=true
-                break
+              else
+                echo "Container App ingress.external returned unsupported value: ${ingress_external}" >&2
+                exit 1
               fi
             fi
             sleep 5
           done
           if [[ "${ready}" != true ]]; then
-            if [[ "${ingress_external}" == "false" ]]; then
-              echo "The private-ingress connector did not reach a ready revision within two minutes." >&2
-            else
-              echo "The deployed connector did not become ready within two minutes." >&2
-            fi
+            echo "The deployed connector did not reach a ready immutable revision within two minutes." >&2
             exit 1
-          fi
-          if [[ "${ingress_external}" != "true" ]]; then
-            auth_config="$(az resource show \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --resource-type "Microsoft.App/containerApps/authConfigs" \
-              --name "${CONTAINER_APP_NAME}/current" \
-              --api-version 2024-03-01 \
-              --output json)"
-            jq --exit-status \
-              --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
-              '.properties.platform.enabled == true and
-               .properties.identityProviders.azureActiveDirectory.enabled == true and
-               ((.properties.identityProviders.azureActiveDirectory.validation.defaultAuthorizationPolicy.allowedPrincipals.identities // []) | map(ascii_downcase)) == [($allowedPrincipalObjectId | ascii_downcase)]' \
-              <<<"${auth_config}" > /dev/null
-            echo "Private ingress prevents direct runner probes; validated readiness and fail-closed auth policy from ARM state."
-            exit 0
           fi
           status="$(curl --silent --output /dev/null --write-out '%{http_code}' "${CONNECTOR_URL}/connector/context")"
           if [[ "${status}" != 401 ]]; then
