@@ -138,9 +138,9 @@ namespace HELIOS.Platform.Phase10.Users
                     return false;
                 }
 
-                string normalizedBasePath = Path.GetFullPath(path);
-                string probePath = Path.GetFullPath(Path.Combine(normalizedBasePath, probeDirectoryName));
-                string expectedPrefix = normalizedBasePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                string normalizedBasePath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                string probePath = Path.GetFullPath($"{normalizedBasePath}{Path.DirectorySeparatorChar}{probeDirectoryName}");
+                string expectedPrefix = normalizedBasePath + Path.DirectorySeparatorChar;
                 if (!probePath.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
                 {
                     LogMessage($"Computed probe path escaped base directory for {path}", LogLevel.Warning);
