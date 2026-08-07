@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "fromVersion": "config/profiles/monadoblade-profiles.v1.json",
   "toVersion": "config/profiles/monadoblade-profiles.v2.json",
   "preserveLegacyInput": true,
@@ -13,10 +13,52 @@
     "personal": "core",
     "server-background": "ai-server"
   },
+  "legacySurfaceContracts": {
+    "software": "config/software/monadoblade-profile-software.v1.json",
+    "aihubPolicy": "config/aihub/profile-optimization-policies.v1.json",
+    "storagePartitions": "config/storage/monadoblade-partitions.2x2tb.v1.json",
+    "storageHierarchy": "config/storage/monadoblade-folder-hierarchy.v1.json",
+    "shellV1": "config/gui/monado-profile-shell.v1.json"
+  },
+  "surfaceMappings": {
+    "softwareScopes": {
+      "core": ["personal"],
+      "developer": ["developer"],
+      "studio": ["studio"],
+      "gamer": ["gamer"],
+      "ai-server": ["sysops", "server-background"],
+      "sysadmin-offline": ["sysadmin"]
+    },
+    "aihubPolicies": {
+      "core": ["personal"],
+      "developer": ["developer"],
+      "studio": ["studio"],
+      "gamer": ["gamer"],
+      "ai-server": ["sysops", "server-background"],
+      "sysadmin-offline": ["sysadmin"]
+    },
+    "guiThemes": {
+      "core": ["personal"],
+      "developer": ["developer"],
+      "studio": ["studio"],
+      "gamer": ["gamer"],
+      "ai-server": ["sysops", "server-background"],
+      "sysadmin-offline": ["sysadmin"]
+    },
+    "storageWorkspaces": {
+      "core": ["Personal"],
+      "developer": ["Developer"],
+      "studio": ["Studio"],
+      "gamer": ["Gamer"],
+      "ai-server": ["SysOps", "ServerBackground"],
+      "sysadmin-offline": ["SysAdmin"]
+    }
+  },
   "notes": [
     "v1 remains the seven-profile legacy contract and is not rewritten.",
     "SysOps and ServerBackground responsibilities are folded into AI/Server in v2.",
     "Personal is consolidated into Core in v2.",
-    "Recovery and Quarantine remain Sysadmin workflows and are not independent profiles."
+    "Recovery and Quarantine remain Sysadmin workflows and are not independent profiles.",
+    "Legacy software, AIHub, shell-theme, and storage workspace scopes stay v1-labeled until their dedicated v2 manifests ship."
   ]
 }

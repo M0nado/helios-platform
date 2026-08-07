@@ -41,6 +41,8 @@ on:
       - 'config/usb/monadoblade-usb-wizard.v1.json'
       - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
       - 'docs/WIKI/README.md'
+      - 'docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md'
+      - '.github/workflows/validate-monadoblade-profile-contracts.yml'
   workflow_dispatch:
 
 permissions:
@@ -169,12 +171,60 @@ jobs:
           if map_v1_to_v2 != required_mappings:
               raise SystemExit(f'Unexpected v1->v2 mapping: {map_v1_to_v2}')
 
+          legacy_surfaces = migration.get('legacySurfaceContracts', {})
+          required_legacy_surfaces = {
+              'software': 'config/software/monadoblade-profile-software.v1.json',
+              'aihubPolicy': 'config/aihub/profile-optimization-policies.v1.json',
+              'storagePartitions': 'config/storage/monadoblade-partitions.2x2tb.v1.json',
+              'storageHierarchy': 'config/storage/monadoblade-folder-hierarchy.v1.json',
+              'shellV1': 'config/gui/monado-profile-shell.v1.json',
+          }
+          if legacy_surfaces != required_legacy_surfaces:
+              raise SystemExit(f'Unexpected legacy surface contract map: {legacy_surfaces}')
+          for path in legacy_surfaces.values():
+              if not Path(path).exists():
+                  raise SystemExit(f'Missing legacy surface contract: {path}')
+
+          surface_mappings = migration.get('surfaceMappings', {})
+          required_surface_keys = {'softwareScopes', 'aihubPolicies', 'guiThemes', 'storageWorkspaces'}
+          if set(surface_mappings.keys()) != required_surface_keys:
+              raise SystemExit(f'Unexpected migration surface keys: {set(surface_mappings.keys())}')
+          expected_set = set(expected)
+          for key in required_surface_keys:
+              profile_map = surface_mappings.get(key)
+              if not isinstance(profile_map, dict):
+                  raise SystemExit(f'{key} must be a profile-to-legacy mapping object')
+              if set(profile_map.keys()) != expected_set:
+                  raise SystemExit(f'{key} must map every v2 profile: {set(profile_map.keys())}')
+          if surface_mappings['softwareScopes']['core'] != ['personal']:
+              raise SystemExit('core software scope migration must map from personal')
+          if surface_mappings['softwareScopes']['ai-server'] != ['sysops', 'server-background']:
+              raise SystemExit('ai-server software scope migration must include sysops and server-background')
+          if surface_mappings['softwareScopes']['sysadmin-offline'] != ['sysadmin']:
+              raise SystemExit('sysadmin-offline software scope migration must map from sysadmin')
+
           shell = json.loads(Path('config/gui/monado-profile-shell.v2.json').read_text(encoding='utf-8'))
           chain = shell.get('postAuthStateMachine', [])
           if chain != ['safe-boot', 'identity-verified', 'wheel-ready', 'profile-selected', 'shell-ready']:
               raise SystemExit(f'Unexpected shell post-auth chain: {chain}')
           if shell['securityBoundary'].get('runsAfterWindowsAuthentication') is not True:
               raise SystemExit('Shell v2 must be post-auth only')
+
+          runtime = json.loads(Path('config/runtime/helios-fabric-services.v2.json').read_text(encoding='utf-8'))
+          expected_profile_contracts = {
+              'active': 'config/profiles/monadoblade-profiles.v2.json',
+              'legacyInput': 'config/profiles/monadoblade-profiles.v1.json',
+              'migration': 'config/profiles/monadoblade-profiles.migration.v1-to-v2.json',
+          }
+          if runtime.get('profileContracts') != expected_profile_contracts:
+              raise SystemExit(f'Unexpected runtime profile contract links: {runtime.get("profileContracts")}')
+          surface_contracts = runtime.get('surfaceContracts', {})
+          for key in ('shell', 'usbWizard', 'alvisCapabilities', 'integrationProjection'):
+              path = surface_contracts.get(key)
+              if not path:
+                  raise SystemExit(f'Runtime surface contract missing key: {key}')
+              if not Path(path).exists():
+                  raise SystemExit(f'Runtime surface contract path missing: {path}')
 
           usb = json.loads(Path('config/usb/monadoblade-usb-wizard.v1.json').read_text(encoding='utf-8'))
           if usb.get('defaultMode') != 'dry-run':

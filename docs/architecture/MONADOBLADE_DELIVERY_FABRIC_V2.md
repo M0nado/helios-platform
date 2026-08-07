@@ -7,6 +7,7 @@ This document defines the governed six-profile Monadoblade delivery fabric contr
 - Active contract: `/config/profiles/monadoblade-profiles.v2.json`
 - Legacy input retained: `/config/profiles/monadoblade-profiles.v1.json`
 - Migration map: `/config/profiles/monadoblade-profiles.migration.v1-to-v2.json`
+- Runtime linkage contract: `/config/runtime/helios-fabric-services.v2.json`
 - Shell state machine: `/config/gui/monado-profile-shell.v2.json`
 - USB wizard boundary: `/config/usb/monadoblade-usb-wizard.v1.json`
 - ALVIS capability boundary: `/config/aihub/alvis-capabilities.v1.json`
@@ -20,6 +21,14 @@ This document defines the governed six-profile Monadoblade delivery fabric contr
 4. Gamer `迅`
 5. AI/Server `智`
 6. local/offline Sysadmin `統`
+
+## Compatibility and migration coverage
+
+- Legacy v1 profile IDs remain read-only compatibility inputs.
+- The migration contract carries explicit software-scope, AIHub-policy,
+  shell-theme, and storage-workspace mappings for every v2 profile.
+- Runtime `surfaceContracts` pin the active shell, USB wizard, ALVIS capability,
+  and integration projection manifests to prevent ambiguous profile wiring.
 
 ## Safety boundaries
 

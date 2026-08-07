@@ -13,6 +13,17 @@
     { "id": "wyvern", "package": "HELIOS.Wyvern", "version": "2.0.0" },
     { "id": "usb-device-broker-requests", "package": "HELIOS.USB.DeviceBroker.Contracts", "version": "2.0.0" }
   ],
+  "profileContracts": {
+    "active": "config/profiles/monadoblade-profiles.v2.json",
+    "legacyInput": "config/profiles/monadoblade-profiles.v1.json",
+    "migration": "config/profiles/monadoblade-profiles.migration.v1-to-v2.json"
+  },
+  "surfaceContracts": {
+    "shell": "config/gui/monado-profile-shell.v2.json",
+    "usbWizard": "config/usb/monadoblade-usb-wizard.v1.json",
+    "alvisCapabilities": "config/aihub/alvis-capabilities.v1.json",
+    "integrationProjection": "config/integrations/monadoblade-collaboration-projection.v1.json"
+  },
   "governance": {
     "failClosed": true,
     "idempotentWritesOnly": true,
