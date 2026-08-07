@@ -121,7 +121,12 @@ $result = Invoke-AICoordination `
 ```
 
 The merged output is returned in `$result.MergedRecommendations`, so overlapping
-guidance from ChatGPT and Codex can be reviewed as one recommendation set.
+guidance from ChatGPT and Codex can be reviewed as one recommendation set. Only
+cross-agent overlaps are reported as merged recommendations.
+
+When Codex returns generated source code, provide a separate prose or JSON
+recommendation payload for `-CodexResponse`; code-only responses are
+intentionally ignored by merge-similar extraction.
 
 ## Integration Points
 

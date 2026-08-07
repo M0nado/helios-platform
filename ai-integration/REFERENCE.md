@@ -67,6 +67,9 @@ $result = Invoke-AICoordination `
 # Review merged recommendation set
 $result.MergedRecommendations
 
+# Merges include only overlapping guidance from both sources.
+# Pass prose/JSON recommendations for Codex when code generation output is used.
+
 # Get statistics
 Get-AICoordinationStats -Days 30
 ```
