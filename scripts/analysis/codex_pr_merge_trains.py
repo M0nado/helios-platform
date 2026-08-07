@@ -475,7 +475,8 @@ def load_required_checks(repo: str, number: int) -> list[dict[str, str]] | None:
             if parsed is not None:
                 return parsed
         except json.JSONDecodeError:
-            pass
+            # Keep existing fallback semantics: non-JSON output is handled by return-code/marker logic below.
+            ...
 
     if proc.returncode != 0:
         detail = f"{proc.stderr}\n{proc.stdout}".lower()
