@@ -115,6 +115,17 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             "rogue-surface deployment authority is not declared",
         )
 
+    def test_duplicate_surface_name_fails_closed(self) -> None:
+        candidate = copy.deepcopy(self.capability)
+        candidate["surfaces"].append(copy.deepcopy(candidate["surfaces"][0]))
+        self.assert_has_error(
+            self.environment,
+            candidate,
+            self.event,
+            self.approval,
+            "duplicates existing surface",
+        )
+
     def test_hotfix_auto_deploy_fails_closed(self) -> None:
         candidate = copy.deepcopy(self.approval)
         candidate["hotfix"]["autoDeploy"] = True
@@ -159,6 +170,17 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             candidate,
             self.approval,
             "use links instead of evidenceLinks",
+        )
+
+    def test_event_profile_requires_payload_field(self) -> None:
+        candidate = copy.deepcopy(self.event)
+        candidate["eventEnvelope"]["requiredFields"].remove("payload")
+        self.assert_has_error(
+            self.environment,
+            self.capability,
+            candidate,
+            self.approval,
+            "requiredFields missing payload",
         )
 
 

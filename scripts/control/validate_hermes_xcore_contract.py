@@ -58,13 +58,18 @@ NON_AUTHORITATIVE_SURFACES = {
 }
 ADVISORY_ONLY_SURFACES = {"hermes-router", "xcore-evaluator"}
 EXPECTED_EVENT_REQUIRED_FIELDS = {
+    "schemaVersion",
     "eventId",
     "correlationId",
     "source",
     "eventType",
+    "repository",
     "environment",
+    "dataClassification",
+    "occurredAt",
     "actor",
     "links",
+    "payload",
 }
 
 
@@ -220,6 +225,11 @@ def validate_capability_contract(contract: object) -> list[str]:
         name = surface.get("name")
         if not isinstance(name, str):
             errors.append(f"capability contract: surfaces[{index}].name must be a string")
+            continue
+        if name in surfaces:
+            errors.append(
+                f"capability contract: surfaces[{index}].name duplicates existing surface {name}"
+            )
             continue
         surfaces[name] = surface
 

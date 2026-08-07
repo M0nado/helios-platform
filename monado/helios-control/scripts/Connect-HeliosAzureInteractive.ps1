@@ -69,6 +69,7 @@ $script:RequiredProviders = @(
     'Microsoft.ManagedIdentity',
     'Microsoft.OperationalInsights'
 )
+$script:LegacyGitHubEnvironmentNames = @('azure-dev', 'azure-test', 'azure-prod', 'dev', 'test', 'preview', 'prod')
 
 function Protect-DiagnosticText {
     param([AllowEmptyString()] [string] $Text)
@@ -748,6 +749,50 @@ function Get-FederatedCredentialClaimsExpression {
     return if ($valueProperty) { [string] $valueProperty.Value } else { '' }
 }
 
+function Test-IsLegacyGitHubEnvironmentSubject {
+    param([AllowEmptyString()] [string] $Subject)
+
+    if ([string]::IsNullOrWhiteSpace($Subject)) {
+        return $false
+    }
+
+    foreach ($legacyEnvironment in $script:LegacyGitHubEnvironmentNames) {
+        if ($Subject.EndsWith(":environment:$legacyEnvironment", [StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Assert-NoLegacyGitHubFederationCredentials {
+    param([Parameter(Mandatory)] [pscustomobject[]] $Credentials)
+
+    $legacyCredentials = @($Credentials | Where-Object {
+        $_.issuer -eq 'https://token.actions.githubusercontent.com' -and (
+            [string]::Equals([string] $_.name, 'github-azure-dev', [StringComparison]::OrdinalIgnoreCase) -or
+            [string]::Equals([string] $_.name, 'github-azure-test', [StringComparison]::OrdinalIgnoreCase) -or
+            [string]::Equals([string] $_.name, 'github-azure-prod', [StringComparison]::OrdinalIgnoreCase) -or
+            (Test-IsLegacyGitHubEnvironmentSubject -Subject (Get-FederatedCredentialSubject -Credential $_))
+        )
+    })
+
+    if ($legacyCredentials.Count -eq 0) {
+        return
+    }
+
+    $descriptors = $legacyCredentials | ForEach-Object {
+        $name = [string] $_.name
+        $subject = Get-FederatedCredentialSubject -Credential $_
+        if ([string]::IsNullOrWhiteSpace($name)) {
+            return "<unnamed>:$subject"
+        }
+        return "${name}:$subject"
+    } | Sort-Object -Unique
+    $descriptorText = $descriptors -join ', '
+    throw "Retired GitHub OIDC federations were detected ($descriptorText). Remove legacy azure-* and dev/test/preview/prod environment credentials before continuing."
+}
+
 function Ensure-GitHubFederation {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Application,
@@ -757,6 +802,7 @@ function Ensure-GitHubFederation {
 
     $credentialName = "github-$Environment"
     $credentials = @(Get-GitHubFederatedCredentials -ApplicationObjectId ([string] $Application.id))
+    Assert-NoLegacyGitHubFederationCredentials -Credentials $credentials
     $named = @($credentials | Where-Object name -eq $credentialName)
     if ($named.Count -gt 1) {
         throw "More than one federated credential is named '$credentialName'. Refusing to guess which trust is authoritative."
@@ -822,6 +868,7 @@ function Assert-GitHubFederationPresent {
 
     $credentialName = "github-$Environment"
     $credentials = @(Get-GitHubFederatedCredentials -ApplicationObjectId ([string] $Application.id))
+    Assert-NoLegacyGitHubFederationCredentials -Credentials $credentials
     $matching = @($credentials | Where-Object {
         $_.name -eq $credentialName -and
         $_.issuer -eq 'https://token.actions.githubusercontent.com' -and
@@ -1012,6 +1059,17 @@ function Resolve-LegacyEnvironmentAlias {
     }
 }
 
+function Resolve-ResourceNameEnvironment {
+    param([Parameter(Mandatory)] [string] $CanonicalEnvironmentName)
+
+    switch ($CanonicalEnvironmentName) {
+        'x-tier-dev' { return 'dev' }
+        'x-tier-xcore' { return 'test' }
+        'x-tier-prod' { return 'prod' }
+        default { throw "Unsupported canonical environment '$CanonicalEnvironmentName'." }
+    }
+}
+
 function Get-ResourceGroupEnvironmentTag {
     param(
         [Parameter(Mandatory)] [pscustomobject] $Context,
@@ -1075,7 +1133,8 @@ function Ensure-RuntimeManagedIdentity {
         [Parameter(Mandatory)] [string] $LocationName
     )
 
-    $identityName = "helios-connector-$EnvironmentName-id"
+    $resourceEnvironment = Resolve-ResourceNameEnvironment -CanonicalEnvironmentName $EnvironmentName
+    $identityName = "helios-connector-$resourceEnvironment-id"
     $identities = @(Invoke-AzJson `
         -Arguments @('identity', 'list', '--subscription', $Context.SubscriptionId, '--resource-group', $ResourceGroupName) `
         -Operation "Looking up managed identity '$identityName'")
@@ -1111,7 +1170,8 @@ function Get-RuntimeManagedIdentity {
         [Parameter(Mandatory)] [string] $ResourceGroupName
     )
 
-    $identityName = "helios-connector-$EnvironmentName-id"
+    $resourceEnvironment = Resolve-ResourceNameEnvironment -CanonicalEnvironmentName $EnvironmentName
+    $identityName = "helios-connector-$resourceEnvironment-id"
     $identities = @(Invoke-AzJson `
         -Arguments @('identity', 'list', '--subscription', $Context.SubscriptionId, '--resource-group', $ResourceGroupName) `
         -Operation "Looking up managed identity '$identityName'")
@@ -1649,7 +1709,8 @@ function Resolve-DeployedApiHostname {
         [Parameter(Mandatory)] [string] $ResourceGroupName
     )
 
-    $expectedName = "helios-connector-$EnvironmentName-api"
+    $resourceEnvironment = Resolve-ResourceNameEnvironment -CanonicalEnvironmentName $EnvironmentName
+    $expectedName = "helios-connector-$resourceEnvironment-api"
     $apps = @(Invoke-AzJson `
         -Arguments @(
             'containerapp', 'list',

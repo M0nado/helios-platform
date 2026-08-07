@@ -4,14 +4,17 @@
   "contractId": "helios-hermes-xcore-event-profile-v1",
   "eventEnvelope": {
     "requiredFields": [
+      "schemaVersion",
       "eventId",
       "correlationId",
       "source",
       "eventType",
+      "repository",
       "environment",
       "dataClassification",
       "actor",
       "links",
+      "payload",
       "occurredAt"
     ],
     "classifications": [
