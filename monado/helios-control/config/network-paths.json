@@ -10,7 +10,7 @@
     "natGatewayAllowedProfiles": ["dev-isolated"],
     "approvedDestinations": {
       "github": ["github.com", "api.github.com", "*.githubusercontent.com", "*.actions.githubusercontent.com"],
-      "microsoftIdentityAzure": ["login.microsoftonline.com", "management.azure.com", "management.core.windows.net"],
+      "microsoftIdentityAzure": ["login.microsoftonline.com", "management.azure.com", "management.core.windows.net", "documents.azure.com", "*.documents.azure.com"],
       "slack": ["slack.com", "api.slack.com"],
       "linear": ["api.linear.app"],
       "sharePointGraph": ["graph.microsoft.com", "*.sharepoint.com"],

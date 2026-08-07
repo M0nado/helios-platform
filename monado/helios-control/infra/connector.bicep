@@ -38,6 +38,9 @@ var suffix = uniqueString(resourceGroup().id, environmentName, serviceName)
 var validatedContainerAppsInfrastructureSubnetId = environmentName != 'prod' || !empty(containerAppsInfrastructureSubnetId)
   ? containerAppsInfrastructureSubnetId
   : fail('Production requires a delegated Container Apps infrastructure subnet.')
+var containerAppsVnetSubscriptionId = !empty(validatedContainerAppsInfrastructureSubnetId) ? split(validatedContainerAppsInfrastructureSubnetId, '/')[2] : ''
+var containerAppsVnetResourceGroupName = !empty(validatedContainerAppsInfrastructureSubnetId) ? split(validatedContainerAppsInfrastructureSubnetId, '/')[4] : ''
+var containerAppsVnetName = !empty(validatedContainerAppsInfrastructureSubnetId) ? split(validatedContainerAppsInfrastructureSubnetId, '/')[8] : ''
 var governedTags = union(commonTags, {
   'helios-managed': 'true'
   'helios-service': serviceName
@@ -188,6 +191,21 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
         sharedKey: logs.listKeys().primarySharedKey
       }
     }
+  }
+}
+
+resource containerAppsVirtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' existing = if (!empty(validatedContainerAppsInfrastructureSubnetId)) {
+  name: containerAppsVnetName
+  scope: resourceGroup(containerAppsVnetSubscriptionId, containerAppsVnetResourceGroupName)
+}
+
+module containerAppsInternalDns 'containerapp-internal-dns.bicep' = if (!empty(validatedContainerAppsInfrastructureSubnetId)) {
+  name: '${serviceName}-${environmentName}-ca-dns'
+  params: {
+    zoneName: environment.properties.defaultDomain
+    virtualNetworkId: containerAppsVirtualNetwork.id
+    staticIp: environment.properties.staticIp
+    tags: governedTags
   }
 }
 

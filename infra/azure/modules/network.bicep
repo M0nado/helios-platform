@@ -1,6 +1,8 @@
 param location string
 param namePrefix string
 param environmentName string
+@description('Optional reviewed platform VNet address space (/16). Leave empty to use environment defaults that avoid overlap across dev/test/prod.')
+param platformAddressSpace string = ''
 
 @allowed([
   'natGateway'
@@ -20,14 +22,52 @@ var tags = {
   managedBy: 'Bicep'
   'helios-managed': 'true'
 }
+var defaultPlatformAddressSpace = environmentName == 'dev'
+  ? '10.42.0.0/16'
+  : environmentName == 'test'
+    ? '10.43.0.0/16'
+    : '10.44.0.0/16'
+var resolvedPlatformAddressSpace = empty(platformAddressSpace) ? defaultPlatformAddressSpace : platformAddressSpace
+var addressPlans = {
+  '10.42.0.0/16': {
+    ingress: '10.42.0.0/24'
+    apim: '10.42.1.0/24'
+    containerApps: '10.42.2.0/23'
+    functions: '10.42.4.0/24'
+    runners: '10.42.5.0/24'
+    privateEndpoints: '10.42.6.0/24'
+    management: '10.42.7.0/24'
+  }
+  '10.43.0.0/16': {
+    ingress: '10.43.0.0/24'
+    apim: '10.43.1.0/24'
+    containerApps: '10.43.2.0/23'
+    functions: '10.43.4.0/24'
+    runners: '10.43.5.0/24'
+    privateEndpoints: '10.43.6.0/24'
+    management: '10.43.7.0/24'
+  }
+  '10.44.0.0/16': {
+    ingress: '10.44.0.0/24'
+    apim: '10.44.1.0/24'
+    containerApps: '10.44.2.0/23'
+    functions: '10.44.4.0/24'
+    runners: '10.44.5.0/24'
+    privateEndpoints: '10.44.6.0/24'
+    management: '10.44.7.0/24'
+  }
+}
+var selectedAddressPlan = contains(addressPlans, resolvedPlatformAddressSpace)
+  ? addressPlans[resolvedPlatformAddressSpace]
+  : fail('platformAddressSpace must be one of 10.42.0.0/16, 10.43.0.0/16, or 10.44.0.0/16.')
 var subnetDefinitions = [
-  { name: 'ingress', prefix: '10.42.0.0/24', delegation: '' }
-  { name: 'apim', prefix: '10.42.1.0/24', delegation: '' }
-  { name: 'container-apps', prefix: '10.42.2.0/23', delegation: 'Microsoft.App/environments' }
-  { name: 'functions', prefix: '10.42.4.0/24', delegation: 'Microsoft.Web/serverFarms' }
-  { name: 'vm-runners', prefix: '10.42.5.0/24', delegation: '' }
-  { name: 'private-endpoints', prefix: '10.42.6.0/24', delegation: '' }
-  { name: 'management', prefix: '10.42.7.0/24', delegation: '' }
+  { name: 'ingress', prefix: selectedAddressPlan.ingress, delegation: '' }
+  { name: 'apim', prefix: selectedAddressPlan.apim, delegation: '' }
+  { name: 'container-apps', prefix: selectedAddressPlan.containerApps, delegation: 'Microsoft.App/environments' }
+  { name: 'functions', prefix: selectedAddressPlan.functions, delegation: 'Microsoft.Web/serverFarms' }
+  { name: 'vm-runners', prefix: selectedAddressPlan.runners, delegation: '' }
+  { name: 'private-endpoints', prefix: selectedAddressPlan.privateEndpoints, delegation: '' }
+  { name: 'management', prefix: selectedAddressPlan.management, delegation: '' }
 ]
 
 resource natPublicIp 'Microsoft.Network/publicIPAddresses@2023-11-01' = if (egressMode == 'natGateway') {
@@ -137,7 +177,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   location: location
   tags: tags
   properties: {
-    addressSpace: { addressPrefixes: ['10.42.0.0/16'] }
+    addressSpace: { addressPrefixes: [resolvedPlatformAddressSpace] }
     subnets: [for (subnet, i) in subnetDefinitions: {
       name: subnet.name
       properties: union({
@@ -181,4 +221,5 @@ output functionsSubnetId string = virtualNetwork.properties.subnets[3].id
 output runnerSubnetId string = virtualNetwork.properties.subnets[4].id
 output privateEndpointSubnetId string = virtualNetwork.properties.subnets[5].id
 output managementSubnetId string = virtualNetwork.properties.subnets[6].id
+output platformAddressSpace string = resolvedPlatformAddressSpace
 output egressDecision string = egressMode

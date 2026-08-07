@@ -2,6 +2,7 @@ param namePrefix string
 param environmentName string
 param hubVirtualNetworkName string
 param platformVirtualNetworkId string
+param platformAddressSpace string
 param azureFirewallPolicyName string
 param enabledEgressProfiles array
 param connectorRelayDestinations array
@@ -12,7 +13,7 @@ var selectedProfileRules = [for profile in enabledEgressProfiles: {
   name: 'Allow-${profile}'
   ruleType: 'ApplicationRule'
   protocols: [{ protocolType: 'Https', port: 443 }]
-  sourceAddresses: ['10.42.0.0/16']
+  sourceAddresses: [platformAddressSpace]
   targetFqdns: approvedDestinations[profile]
 }]
 var invalidRelayDestinations = filter(connectorRelayDestinations, destination => !contains(destination, 'profile') || !contains(destination, 'fqdn') || !contains(enabledEgressProfiles, destination.?profile ?? '') || empty(destination.?fqdn ?? '') || contains(destination.?fqdn ?? '', '://') || contains(destination.?fqdn ?? '', '/') || contains(destination.?fqdn ?? '', ':') || startsWith(destination.?fqdn ?? '', '.') || endsWith(destination.?fqdn ?? '', '.') || contains(destination.?fqdn ?? '', '*'))
@@ -21,7 +22,7 @@ var relayRules = [for (destination, index) in validatedRelayDestinations: {
   name: 'Allow-${destination.profile}-relay-${index}'
   ruleType: 'ApplicationRule'
   protocols: [{ protocolType: 'Https', port: 443 }]
-  sourceAddresses: ['10.42.0.0/16']
+  sourceAddresses: [platformAddressSpace]
   targetFqdns: [destination.fqdn]
 }]
 

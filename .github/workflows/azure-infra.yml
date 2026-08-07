@@ -36,6 +36,10 @@ on:
         description: 'APIM publisher contact email'
         required: false
         default: 'helios-platform@example.invalid'
+      platform_address_space:
+        description: 'Optional platform VNet address space (/16). Leave empty for environment defaults.'
+        required: false
+        default: ''
       egress_mode:
         description: 'Outbound egress design'
         required: false
@@ -54,6 +58,10 @@ on:
         default: ''
       azure_firewall_policy_id:
         description: 'Firewall Policy resource ID (required for azureFirewall)'
+        required: false
+        default: ''
+      cosmos_account_id:
+        description: 'Optional existing Cosmos DB account resource ID for private endpoint staging.'
         required: false
         default: ''
       key_vault_private_cutover_approved:
@@ -104,10 +112,10 @@ jobs:
       - name: Require reviewed rollback plan for production deploy
         if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' }}
         env:
-          ROLLBACK_PLAN: ${{ github.event.inputs.rollback_plan }}
+          INPUT_ROLLBACK_PLAN: ${{ github.event.inputs.rollback_plan }}
         run: |
           set -euo pipefail
-          if [[ -z "${ROLLBACK_PLAN}" ]]; then
+          if [[ -z "${INPUT_ROLLBACK_PLAN}" ]]; then
             echo "Production deploy requests require rollback_plan evidence before approval." >&2
             exit 1
           fi
@@ -123,20 +131,38 @@ jobs:
 
       - name: Build reviewed deployment parameter set
         id: params
+        env:
+          INPUT_DEPLOY: ${{ github.event.inputs.deploy }}
+          INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
+          INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name }}
+          INPUT_LOCATION: ${{ github.event.inputs.location }}
+          INPUT_NETWORK_ONLY: ${{ github.event.inputs.network_only }}
+          INPUT_CONNECTOR_BACKEND_URL: ${{ github.event.inputs.connector_backend_url }}
+          INPUT_NAME_PREFIX: ${{ github.event.inputs.name_prefix }}
+          INPUT_PUBLISHER_EMAIL: ${{ github.event.inputs.publisher_email }}
+          INPUT_PLATFORM_ADDRESS_SPACE: ${{ github.event.inputs.platform_address_space }}
+          INPUT_EGRESS_MODE: ${{ github.event.inputs.egress_mode }}
+          INPUT_AZURE_FIREWALL_PRIVATE_IP: ${{ github.event.inputs.azure_firewall_private_ip }}
+          INPUT_HUB_VIRTUAL_NETWORK_ID: ${{ github.event.inputs.hub_virtual_network_id }}
+          INPUT_AZURE_FIREWALL_POLICY_ID: ${{ github.event.inputs.azure_firewall_policy_id }}
+          INPUT_COSMOS_ACCOUNT_ID: ${{ github.event.inputs.cosmos_account_id }}
+          INPUT_KEY_VAULT_PRIVATE_CUTOVER_APPROVED: ${{ github.event.inputs.key_vault_private_cutover_approved }}
+          INPUT_ENABLED_EGRESS_PROFILES: ${{ github.event.inputs.enabled_egress_profiles }}
+          INPUT_CONNECTOR_RELAY_DESTINATIONS: ${{ github.event.inputs.connector_relay_destinations }}
         run: |
           set -euo pipefail
 
-          enabled_egress_profiles_input='${{ github.event.inputs.enabled_egress_profiles }}'
-          connector_relay_destinations_input='${{ github.event.inputs.connector_relay_destinations }}'
+          enabled_egress_profiles_input="${INPUT_ENABLED_EGRESS_PROFILES}"
+          connector_relay_destinations_input="${INPUT_CONNECTOR_RELAY_DESTINATIONS}"
           if [[ -z "${enabled_egress_profiles_input}" ]]; then
-            if [[ "${{ github.event.inputs.deploy }}" == "true" && "${{ github.event.inputs.environment_name }}" == "prod" && "${{ github.event.inputs.egress_mode }}" == "azureFirewall" ]]; then
+            if [[ "${INPUT_DEPLOY}" == "true" && "${INPUT_ENVIRONMENT_NAME}" == "prod" && "${INPUT_EGRESS_MODE}" == "azureFirewall" ]]; then
               echo "Production azureFirewall deploy requests require enabled_egress_profiles as a JSON array." >&2
               exit 1
             fi
             enabled_egress_profiles_input='[]'
           fi
           if [[ -z "${connector_relay_destinations_input}" ]]; then
-            if [[ "${{ github.event.inputs.deploy }}" == "true" && "${{ github.event.inputs.environment_name }}" == "prod" && "${{ github.event.inputs.egress_mode }}" == "azureFirewall" ]]; then
+            if [[ "${INPUT_DEPLOY}" == "true" && "${INPUT_ENVIRONMENT_NAME}" == "prod" && "${INPUT_EGRESS_MODE}" == "azureFirewall" ]]; then
               echo "Production azureFirewall deploy requests require connector_relay_destinations as a JSON array." >&2
               exit 1
             fi
@@ -146,16 +172,23 @@ jobs:
           enabled_egress_profiles_json="$(jq -c -e 'if type=="array" then . else error("enabled_egress_profiles must be a JSON array.") end' <<<"${enabled_egress_profiles_input}")"
           connector_relay_destinations_json="$(jq -c -e 'if type=="array" then . else error("connector_relay_destinations must be a JSON array.") end' <<<"${connector_relay_destinations_input}")"
 
-          key_vault_private_cutover_input='${{ github.event.inputs.key_vault_private_cutover_approved }}'
+          if [[ "${INPUT_ENVIRONMENT_NAME}" == "prod" && "${INPUT_EGRESS_MODE}" == "azureFirewall" && "${INPUT_NETWORK_ONLY}" != "true" ]]; then
+            if ! jq -e 'index("microsoftIdentityAzure") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Production connector cutover with azureFirewall requires enabled_egress_profiles to include microsoftIdentityAzure for Cosmos readiness egress." >&2
+              exit 1
+            fi
+          fi
+
+          key_vault_private_cutover_input="${INPUT_KEY_VAULT_PRIVATE_CUTOVER_APPROVED}"
           if [[ -z "${key_vault_private_cutover_input}" ]]; then
-            raw_key_vault_name='${{ github.event.inputs.name_prefix }}-${{ github.event.inputs.environment_name }}-kv'
+            raw_key_vault_name="${INPUT_NAME_PREFIX}-${INPUT_ENVIRONMENT_NAME}-kv"
             key_vault_name="$(printf '%s' "${raw_key_vault_name}" | tr '[:upper:]' '[:lower:]' | tr -d '-' | cut -c1-24)"
-            existing_public_network_access="$(az keyvault list \
-              --resource-group "${{ github.event.inputs.resource_group }}" \
-              --query "[?name=='${key_vault_name}'].properties.publicNetworkAccess | [0]" \
-              --output tsv)"
-            if [[ "${existing_public_network_access}" == "Disabled" || "${existing_public_network_access}" == "disabled" ]]; then
-              key_vault_private_cutover_approved='true'
+            if existing_public_network_access="$(az keyvault show --name "${key_vault_name}" --resource-group "${INPUT_RESOURCE_GROUP}" --query properties.publicNetworkAccess --output tsv 2>/dev/null)"; then
+              if [[ "${existing_public_network_access}" == "Disabled" || "${existing_public_network_access}" == "disabled" ]]; then
+                key_vault_private_cutover_approved='true'
+              else
+                key_vault_private_cutover_approved='false'
+              fi
             else
               key_vault_private_cutover_approved='false'
             fi
@@ -174,27 +207,33 @@ jobs:
           params_file="${RUNNER_TEMP}/azure-infra.params"
           params=(
             "infra/azure/parameters/dev.json"
-            "location=${{ github.event.inputs.location }}"
-            "environmentName=${{ github.event.inputs.environment_name }}"
-            "namePrefix=${{ github.event.inputs.name_prefix }}"
-            "publisherEmail=${{ github.event.inputs.publisher_email }}"
-            "networkOnly=${{ github.event.inputs.network_only }}"
-            "egressMode=${{ github.event.inputs.egress_mode }}"
+            "location=${INPUT_LOCATION}"
+            "environmentName=${INPUT_ENVIRONMENT_NAME}"
+            "namePrefix=${INPUT_NAME_PREFIX}"
+            "publisherEmail=${INPUT_PUBLISHER_EMAIL}"
+            "networkOnly=${INPUT_NETWORK_ONLY}"
+            "egressMode=${INPUT_EGRESS_MODE}"
             "enabledEgressProfiles=${enabled_egress_profiles_json}"
             "connectorRelayDestinations=${connector_relay_destinations_json}"
             "keyVaultPrivateCutoverApproved=${key_vault_private_cutover_approved}"
           )
-          if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
-            params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
+          if [[ -n "${INPUT_CONNECTOR_BACKEND_URL}" ]]; then
+            params+=("connectorBackendUrl=${INPUT_CONNECTOR_BACKEND_URL}")
           fi
-          if [[ -n "${{ github.event.inputs.azure_firewall_private_ip }}" ]]; then
-            params+=("azureFirewallPrivateIp=${{ github.event.inputs.azure_firewall_private_ip }}")
+          if [[ -n "${INPUT_AZURE_FIREWALL_PRIVATE_IP}" ]]; then
+            params+=("azureFirewallPrivateIp=${INPUT_AZURE_FIREWALL_PRIVATE_IP}")
           fi
-          if [[ -n "${{ github.event.inputs.hub_virtual_network_id }}" ]]; then
-            params+=("hubVirtualNetworkId=${{ github.event.inputs.hub_virtual_network_id }}")
+          if [[ -n "${INPUT_HUB_VIRTUAL_NETWORK_ID}" ]]; then
+            params+=("hubVirtualNetworkId=${INPUT_HUB_VIRTUAL_NETWORK_ID}")
           fi
-          if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
-            params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
+          if [[ -n "${INPUT_AZURE_FIREWALL_POLICY_ID}" ]]; then
+            params+=("azureFirewallPolicyId=${INPUT_AZURE_FIREWALL_POLICY_ID}")
+          fi
+          if [[ -n "${INPUT_PLATFORM_ADDRESS_SPACE}" ]]; then
+            params+=("platformAddressSpace=${INPUT_PLATFORM_ADDRESS_SPACE}")
+          fi
+          if [[ -n "${INPUT_COSMOS_ACCOUNT_ID}" ]]; then
+            params+=("cosmosAccountId=${INPUT_COSMOS_ACCOUNT_ID}")
           fi
 
           printf '%s\n' "${params[@]}" > "${params_file}"
@@ -204,33 +243,39 @@ jobs:
           echo "key_vault_private_cutover_approved=${key_vault_private_cutover_approved}" >> "${GITHUB_OUTPUT}"
 
       - name: Validate deployment
+        env:
+          INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
         run: |
           set -euo pipefail
           mapfile -t params < "${{ steps.params.outputs.file }}"
           az deployment group validate \
-            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
             --template-file infra/azure/main.bicep \
             --parameters "${params[@]}"
 
       - name: What-if
+        env:
+          INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
         run: |
           set -euo pipefail
           mapfile -t params < "${{ steps.params.outputs.file }}"
           az deployment group what-if \
-            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
             --template-file infra/azure/main.bicep \
             --parameters "${params[@]}"
 
       - name: Capture reviewed production what-if
         if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' }}
         id: prod_whatif
+        env:
+          INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
         run: |
           set -euo pipefail
           mapfile -t params < "${{ steps.params.outputs.file }}"
           raw_whatif="${RUNNER_TEMP}/azure-infra-prod-whatif.raw.json"
           canonical_whatif="${RUNNER_TEMP}/azure-infra-prod-whatif.canonical.json"
           az deployment group what-if \
-            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
             --template-file infra/azure/main.bicep \
             --result-format FullResourcePayloads \
             --output json \
@@ -253,11 +298,13 @@ jobs:
 
       - name: Deploy non-production
         if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name != 'prod' }}
+        env:
+          INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
         run: |
           set -euo pipefail
           mapfile -t params < "${{ steps.params.outputs.file }}"
           az deployment group create \
-            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
             --template-file infra/azure/main.bicep \
             --parameters "${params[@]}"
 
@@ -274,14 +321,14 @@ jobs:
 
       - name: Require reviewed rollback plan before production apply
         env:
-          ROLLBACK_PLAN: ${{ github.event.inputs.rollback_plan }}
+          INPUT_ROLLBACK_PLAN: ${{ github.event.inputs.rollback_plan }}
         run: |
           set -euo pipefail
-          if [[ -z "${ROLLBACK_PLAN}" ]]; then
+          if [[ -z "${INPUT_ROLLBACK_PLAN}" ]]; then
             echo "Production deployment requires rollback_plan evidence before apply." >&2
             exit 1
           fi
-          echo "Reviewed rollback plan: ${ROLLBACK_PLAN}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Reviewed rollback plan: ${INPUT_ROLLBACK_PLAN}" >> "${GITHUB_STEP_SUMMARY}"
 
       - uses: azure/login@v2
         with:
@@ -295,15 +342,31 @@ jobs:
           KEY_VAULT_PRIVATE_CUTOVER_APPROVED: ${{ needs.validate.outputs.key_vault_private_cutover_approved }}
           ENABLED_EGRESS_PROFILES: ${{ needs.validate.outputs.enabled_egress_profiles }}
           CONNECTOR_RELAY_DESTINATIONS: ${{ needs.validate.outputs.connector_relay_destinations }}
+          INPUT_LOCATION: ${{ github.event.inputs.location }}
+          INPUT_ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name }}
+          INPUT_NAME_PREFIX: ${{ github.event.inputs.name_prefix }}
+          INPUT_PUBLISHER_EMAIL: ${{ github.event.inputs.publisher_email }}
+          INPUT_NETWORK_ONLY: ${{ github.event.inputs.network_only }}
+          INPUT_EGRESS_MODE: ${{ github.event.inputs.egress_mode }}
+          INPUT_CONNECTOR_BACKEND_URL: ${{ github.event.inputs.connector_backend_url }}
+          INPUT_AZURE_FIREWALL_PRIVATE_IP: ${{ github.event.inputs.azure_firewall_private_ip }}
+          INPUT_HUB_VIRTUAL_NETWORK_ID: ${{ github.event.inputs.hub_virtual_network_id }}
+          INPUT_AZURE_FIREWALL_POLICY_ID: ${{ github.event.inputs.azure_firewall_policy_id }}
+          INPUT_PLATFORM_ADDRESS_SPACE: ${{ github.event.inputs.platform_address_space }}
+          INPUT_COSMOS_ACCOUNT_ID: ${{ github.event.inputs.cosmos_account_id }}
         run: |
           set -euo pipefail
           if [[ -z "${KEY_VAULT_PRIVATE_CUTOVER_APPROVED}" ]]; then
             echo "Validated Key Vault cutover approval output is missing." >&2
             exit 1
           fi
-          if [[ "${{ github.event.inputs.egress_mode }}" == "azureFirewall" ]]; then
-            if [[ -z "${ENABLED_EGRESS_PROFILES}" || -z "${CONNECTOR_RELAY_DESTINATIONS}" ]]; then
-              echo "Validated firewall egress profile outputs are missing for production deployment." >&2
+
+          enabled_egress_profiles_json="$(jq -c -e 'if type=="array" then . else error("validated enabled egress profiles must be a JSON array.") end' <<<"${ENABLED_EGRESS_PROFILES}")"
+          connector_relay_destinations_json="$(jq -c -e 'if type=="array" then . else error("validated connector relay destinations must be a JSON array.") end' <<<"${CONNECTOR_RELAY_DESTINATIONS}")"
+
+          if [[ "${INPUT_EGRESS_MODE}" == "azureFirewall" && "${INPUT_NETWORK_ONLY}" != "true" ]]; then
+            if ! jq -e 'index("microsoftIdentityAzure") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Validated production profiles must include microsoftIdentityAzure for connector Cosmos readiness egress." >&2
               exit 1
             fi
           fi
@@ -311,27 +374,33 @@ jobs:
           params_file="${RUNNER_TEMP}/azure-infra-prod.params"
           params=(
             "infra/azure/parameters/dev.json"
-            "location=${{ github.event.inputs.location }}"
-            "environmentName=${{ github.event.inputs.environment_name }}"
-            "namePrefix=${{ github.event.inputs.name_prefix }}"
-            "publisherEmail=${{ github.event.inputs.publisher_email }}"
-            "networkOnly=${{ github.event.inputs.network_only }}"
-            "egressMode=${{ github.event.inputs.egress_mode }}"
-            "enabledEgressProfiles=${ENABLED_EGRESS_PROFILES}"
-            "connectorRelayDestinations=${CONNECTOR_RELAY_DESTINATIONS}"
+            "location=${INPUT_LOCATION}"
+            "environmentName=${INPUT_ENVIRONMENT_NAME}"
+            "namePrefix=${INPUT_NAME_PREFIX}"
+            "publisherEmail=${INPUT_PUBLISHER_EMAIL}"
+            "networkOnly=${INPUT_NETWORK_ONLY}"
+            "egressMode=${INPUT_EGRESS_MODE}"
+            "enabledEgressProfiles=${enabled_egress_profiles_json}"
+            "connectorRelayDestinations=${connector_relay_destinations_json}"
             "keyVaultPrivateCutoverApproved=${KEY_VAULT_PRIVATE_CUTOVER_APPROVED}"
           )
-          if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
-            params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
+          if [[ -n "${INPUT_CONNECTOR_BACKEND_URL}" ]]; then
+            params+=("connectorBackendUrl=${INPUT_CONNECTOR_BACKEND_URL}")
           fi
-          if [[ -n "${{ github.event.inputs.azure_firewall_private_ip }}" ]]; then
-            params+=("azureFirewallPrivateIp=${{ github.event.inputs.azure_firewall_private_ip }}")
+          if [[ -n "${INPUT_AZURE_FIREWALL_PRIVATE_IP}" ]]; then
+            params+=("azureFirewallPrivateIp=${INPUT_AZURE_FIREWALL_PRIVATE_IP}")
           fi
-          if [[ -n "${{ github.event.inputs.hub_virtual_network_id }}" ]]; then
-            params+=("hubVirtualNetworkId=${{ github.event.inputs.hub_virtual_network_id }}")
+          if [[ -n "${INPUT_HUB_VIRTUAL_NETWORK_ID}" ]]; then
+            params+=("hubVirtualNetworkId=${INPUT_HUB_VIRTUAL_NETWORK_ID}")
           fi
-          if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
-            params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
+          if [[ -n "${INPUT_AZURE_FIREWALL_POLICY_ID}" ]]; then
+            params+=("azureFirewallPolicyId=${INPUT_AZURE_FIREWALL_POLICY_ID}")
+          fi
+          if [[ -n "${INPUT_PLATFORM_ADDRESS_SPACE}" ]]; then
+            params+=("platformAddressSpace=${INPUT_PLATFORM_ADDRESS_SPACE}")
+          fi
+          if [[ -n "${INPUT_COSMOS_ACCOUNT_ID}" ]]; then
+            params+=("cosmosAccountId=${INPUT_COSMOS_ACCOUNT_ID}")
           fi
 
           printf '%s\n' "${params[@]}" > "${params_file}"
@@ -345,13 +414,15 @@ jobs:
 
       - name: Re-run production what-if after approval
         id: post_approval_whatif
+        env:
+          INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
         run: |
           set -euo pipefail
           mapfile -t params < "${{ steps.params.outputs.file }}"
           raw_whatif="${RUNNER_TEMP}/azure-infra-prod-whatif.post-approval.raw.json"
           canonical_whatif="${RUNNER_TEMP}/azure-infra-prod-whatif.post-approval.canonical.json"
           az deployment group what-if \
-            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
             --template-file infra/azure/main.bicep \
             --result-format FullResourcePayloads \
             --output json \
@@ -390,10 +461,12 @@ jobs:
           fi
 
       - name: Deploy production after protected approval
+        env:
+          INPUT_RESOURCE_GROUP: ${{ github.event.inputs.resource_group }}
         run: |
           set -euo pipefail
           mapfile -t params < "${{ steps.params.outputs.file }}"
           az deployment group create \
-            --resource-group "${{ github.event.inputs.resource_group }}" \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
             --template-file infra/azure/main.bicep \
             --parameters "${params[@]}"

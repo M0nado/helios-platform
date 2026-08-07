@@ -14,6 +14,8 @@ param namePrefix string = 'helios'
 
 @description('APIM publisher contact. Supply through protected deployment parameters.')
 param publisherEmail string
+@description('Optional platform VNet address space for non-overlapping environment peering. Leave empty for canonical environment defaults.')
+param platformAddressSpace string = ''
 @description('Internal Container Apps connector origin, for example https://app.internal.region.azurecontainerapps.io.')
 param connectorBackendUrl string = ''
 @description('Provision network and private endpoints only. Use for reviewed production subnet bootstrap before connector cutover.')
@@ -81,6 +83,7 @@ module network 'modules/network.bicep' = {
     location: location
     namePrefix: namePrefix
     environmentName: environmentName
+    platformAddressSpace: platformAddressSpace
     egressMode: validatedEgressMode
     azureFirewallPrivateIp: azureFirewallPrivateIp
     hubVirtualNetworkId: hubVirtualNetworkId
@@ -95,6 +98,7 @@ module hubGovernance 'modules/hub-governance.bicep' = if (validatedEgressMode ==
     environmentName: environmentName
     hubVirtualNetworkName: last(split(hubVirtualNetworkId, '/'))
     platformVirtualNetworkId: network.outputs.virtualNetworkId
+    platformAddressSpace: network.outputs.platformAddressSpace
     azureFirewallPolicyName: last(split(azureFirewallPolicyId, '/'))
     enabledEgressProfiles: enabledEgressProfiles
     connectorRelayDestinations: connectorRelayDestinations

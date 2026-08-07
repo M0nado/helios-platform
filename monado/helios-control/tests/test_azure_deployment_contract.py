@@ -7,6 +7,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = PROJECT_ROOT.parents[1]
 WORKFLOW = REPOSITORY_ROOT / ".github/workflows/helios-cloud-deploy.yml"
 AZURE_INFRA_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/azure-infra.yml"
+NETWORK_MODULE = REPOSITORY_ROOT / "infra/azure/modules/network.bicep"
+HUB_GOVERNANCE_MODULE = REPOSITORY_ROOT / "infra/azure/modules/hub-governance.bicep"
+NETWORK_PATHS = PROJECT_ROOT / "config/network-paths.json"
 SUBNET_PARAMETER = "containerAppsInfrastructureSubnetId"
 
 
@@ -92,8 +95,15 @@ class AzureDeploymentContractTests(unittest.TestCase):
 
     def test_connector_sets_user_defined_routing_for_production_subnet(self) -> None:
         connector = (PROJECT_ROOT / "infra/connector.bicep").read_text(encoding="utf-8")
+        internal_dns_module = (PROJECT_ROOT / "infra/containerapp-internal-dns.bicep").read_text(encoding="utf-8")
         self.assertIn("outboundType: 'UserDefinedRouting'", connector)
         self.assertIn("outboundType: 'LoadBalancer'", connector)
+        self.assertIn("module containerAppsInternalDns 'containerapp-internal-dns.bicep'", connector)
+        self.assertIn("zoneName: environment.properties.defaultDomain", connector)
+        self.assertIn("virtualNetworkId: containerAppsVirtualNetwork.id", connector)
+        self.assertIn("resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01'", internal_dns_module)
+        self.assertIn("resource privateDnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01'", internal_dns_module)
+        self.assertIn("resource wildcardRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01'", internal_dns_module)
 
     def test_direct_callers_forward_subnet_and_reject_empty_production(self) -> None:
         callers = [
@@ -143,12 +153,17 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("Re-run production what-if after approval", workflow)
         self.assertIn("Fail on production what-if drift", workflow)
         self.assertIn("environment: azure-prod", workflow)
+        self.assertIn("platform_address_space:", workflow)
+        self.assertIn("cosmos_account_id:", workflow)
         self.assertIn("key_vault_private_cutover_approved:", workflow)
         self.assertIn("enabled_egress_profiles:", workflow)
         self.assertIn("connector_relay_destinations:", workflow)
+        self.assertIn("platformAddressSpace=", workflow)
+        self.assertIn("cosmosAccountId=", workflow)
         self.assertIn("keyVaultPrivateCutoverApproved=", workflow)
         self.assertIn("enabledEgressProfiles=", workflow)
         self.assertIn("connectorRelayDestinations=", workflow)
+        self.assertIn("microsoftIdentityAzure for Cosmos readiness egress", workflow)
         self.assertIn(
             "if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' && github.ref == 'refs/heads/main' }}",
             workflow,
@@ -157,6 +172,32 @@ class AzureDeploymentContractTests(unittest.TestCase):
             "if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name != 'prod' }}",
             workflow,
         )
+
+    def test_azure_infra_reads_free_form_inputs_from_environment_variables(self) -> None:
+        workflow = AZURE_INFRA_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("INPUT_ENABLED_EGRESS_PROFILES: ${{ github.event.inputs.enabled_egress_profiles }}", workflow)
+        self.assertIn("INPUT_CONNECTOR_RELAY_DESTINATIONS: ${{ github.event.inputs.connector_relay_destinations }}", workflow)
+        self.assertIn('enabled_egress_profiles_input="${INPUT_ENABLED_EGRESS_PROFILES}"', workflow)
+        self.assertIn('connector_relay_destinations_input="${INPUT_CONNECTOR_RELAY_DESTINATIONS}"', workflow)
+        self.assertNotIn("enabled_egress_profiles_input='${{ github.event.inputs.enabled_egress_profiles }}'", workflow)
+        self.assertNotIn("connector_relay_destinations_input='${{ github.event.inputs.connector_relay_destinations }}'", workflow)
+
+    def test_network_modules_support_non_overlapping_environment_address_plans(self) -> None:
+        network_module = NETWORK_MODULE.read_text(encoding="utf-8")
+        hub_governance_module = HUB_GOVERNANCE_MODULE.read_text(encoding="utf-8")
+        self.assertIn("param platformAddressSpace string = ''", network_module)
+        self.assertIn("'10.42.0.0/16'", network_module)
+        self.assertIn("'10.43.0.0/16'", network_module)
+        self.assertIn("'10.44.0.0/16'", network_module)
+        self.assertIn("platformAddressSpace must be one of 10.42.0.0/16, 10.43.0.0/16, or 10.44.0.0/16.", network_module)
+        self.assertIn("output platformAddressSpace string = resolvedPlatformAddressSpace", network_module)
+        self.assertIn("param platformAddressSpace string", hub_governance_module)
+        self.assertIn("sourceAddresses: [platformAddressSpace]", hub_governance_module)
+
+    def test_network_path_catalog_includes_cosmos_firewall_destination(self) -> None:
+        network_paths = NETWORK_PATHS.read_text(encoding="utf-8")
+        self.assertIn("documents.azure.com", network_paths)
+        self.assertIn("*.documents.azure.com", network_paths)
 
 
 if __name__ == "__main__":
