@@ -75,11 +75,32 @@ public sealed class LauncherTests
         {
             var options = new LauncherOptions(LauncherCommand.Start, root, "quick", 3, false);
 
-            var invocation = CommandBuilder.Build(root, options);
+            var invocation = CommandBuilder.Build(root, options, isWindows: false);
 
             Assert.Equal("bash", invocation.FileName);
             Assert.Equal(Path.Combine(root, "helios.sh"), invocation.Arguments[0]);
             Assert.Equal(["setup", "--profile", "quick", "--changed-only", "--max-workers", "3"], invocation.Arguments.Skip(1));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CommandBuilder_uses_native_powershell_on_windows()
+    {
+        var root = CreateRepository();
+        try
+        {
+            var options = new LauncherOptions(LauncherCommand.Dashboard, root, "full", 6, false);
+
+            var invocation = CommandBuilder.Build(root, options, isWindows: true);
+
+            Assert.Equal("powershell.exe", invocation.FileName);
+            Assert.Contains(Path.Combine(root, "scripts", "setup", "helios-dev.ps1"), invocation.Arguments);
+            Assert.Contains("-Serve", invocation.Arguments);
+            Assert.Contains("6", invocation.Arguments);
         }
         finally
         {

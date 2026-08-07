@@ -227,8 +227,11 @@ public sealed record CommandInvocation(string FileName, IReadOnlyList<string> Ar
 
 public static class CommandBuilder
 {
-    public static CommandInvocation Build(string repository, LauncherOptions options)
+    public static CommandInvocation Build(string repository, LauncherOptions options, bool? isWindows = null)
     {
+        if (isWindows ?? OperatingSystem.IsWindows())
+            return BuildWindows(repository, options);
+
         var arguments = new List<string> { Path.Combine(repository, "helios.sh") };
         switch (options.Command)
         {
@@ -256,6 +259,41 @@ public static class CommandBuilder
 
         return new("bash", arguments, repository);
     }
+
+    private static CommandInvocation BuildWindows(string repository, LauncherOptions options)
+    {
+        var script = Path.Combine(repository, "scripts", "setup", "helios-dev.ps1");
+        var arguments = new List<string>
+        {
+            "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script
+        };
+
+        switch (options.Command)
+        {
+            case LauncherCommand.Start:
+                arguments.AddRange(["-Profile", options.Profile, "-ChangedOnly", "-MaxWorkers", options.MaxWorkers.ToString()]);
+                break;
+            case LauncherCommand.Dashboard:
+                arguments.AddRange(["-Profile", options.Profile, "-ChangedOnly", "-MaxWorkers", options.MaxWorkers.ToString(), "-Serve"]);
+                break;
+            case LauncherCommand.Doctor:
+                arguments.Add("-Doctor");
+                break;
+            case LauncherCommand.Status:
+                arguments.Add("-Status");
+                break;
+            case LauncherCommand.Validate:
+                arguments.Add("-Validate");
+                break;
+            case LauncherCommand.All:
+                arguments.Add("-AllReports");
+                break;
+            default:
+                throw new LauncherException("No executable command was selected.");
+        }
+
+        return new("powershell.exe", arguments, repository);
+    }
 }
 
 public static class ProcessRunner
@@ -279,9 +317,7 @@ public static class ProcessRunner
         }
         catch (System.ComponentModel.Win32Exception exception)
         {
-            throw new LauncherException(
-                $"Could not start '{invocation.FileName}'. Install Bash (Git for Windows, WSL, or Bash) and retry.",
-                exception);
+            throw new LauncherException($"Could not start '{invocation.FileName}'. Verify the required shell is installed and retry.", exception);
         }
 
         try

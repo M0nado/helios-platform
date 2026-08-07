@@ -41,7 +41,7 @@ Run from anywhere inside the HELIOS checkout:
 .run/<package>/run-helios.sh start
 ```
 
-On Windows with Git for Windows, WSL, or another Bash installation:
+On Windows, the executable uses native Windows PowerShell:
 
 ```cmd
 .run\<package>\run-helios.cmd start
@@ -117,11 +117,13 @@ what-if, rollback, and Guardian gates.
 Run inside the checkout or pass `--repo PATH`. A valid checkout must contain
 `helios.sh` and `config/integrations/event-contract.schema.json`.
 
-### Bash not found on Windows
+### PowerShell or Bash is not found
 
-Install or select Git for Windows, WSL, or another supported Bash environment.
-The launcher reports this as a setup error rather than falling back to an
-unreviewed shell implementation.
+Windows packages use Windows PowerShell and Linux packages use Bash. The
+launcher reports a missing shell as a setup error rather than falling back to
+an unreviewed implementation. Git for Windows or WSL is still useful for
+repository administration but is not required merely to launch the Windows
+readiness and build orchestration path.
 
 ### A tool or authentication check fails
 
