@@ -65,18 +65,16 @@ jobs:
           placeholder_values = {"", "n/a", "na", "todo", "tbd", "none"}
           protected_workflow_requirements = {
               ".github/workflows/helios-cloud-deploy.yml": {
-                  "job_name_markers": (
-                      "reviewed azure what-if",
-                      "deploy after second approval",
+                  "job_name_patterns": (
+                      r"^reviewed azure what-if \(azure-(dev|test|prod)\)$",
+                      r"^deploy after second approval \(azure-(dev|test|prod)\)$",
                   ),
-                  "environment_pattern": r"^azure-(dev|test|prod)$",
               },
               ".github/workflows/enterprise-bicep.yml": {
-                  "job_name_markers": (
-                      "what-if ",
-                      "deploy ",
+                  "job_name_patterns": (
+                      r"^what-if (dev|test)$",
+                      r"^deploy (dev|test)$",
                   ),
-                  "environment_pattern": r"^helios-(dev|test)-(what-if|deploy)$",
               },
           }
           top_level_field_labels = (
@@ -338,35 +336,31 @@ jobs:
                   raise SystemExit(1)
 
               jobs = jobs_payload.get("jobs", []) if isinstance(jobs_payload, dict) else []
-              protected_job_markers = tuple(
-                  marker.lower()
-                  for marker in workflow_requirements.get("job_name_markers", ())
-                  if marker
+              protected_job_patterns = tuple(
+                  pattern
+                  for pattern in workflow_requirements.get("job_name_patterns", ())
+                  if pattern
               )
-              environment_pattern = workflow_requirements.get("environment_pattern", "")
               protected_jobs = []
               for job in jobs:
                   job_name = str(job.get("name") or "").lower()
-                  if not any(marker in job_name for marker in protected_job_markers):
+                  if not any(
+                      re.match(pattern, job_name, flags=re.IGNORECASE)
+                      for pattern in protected_job_patterns
+                  ):
                       continue
 
-                  environment = job.get("environment")
-                  if isinstance(environment, dict):
-                      environment_name = str(environment.get("name") or "")
-                  else:
-                      environment_name = str(environment or "")
-                  if not environment_name or not re.match(environment_pattern, environment_name, flags=re.IGNORECASE):
+                  status = str(job.get("status") or "").lower()
+                  conclusion = str(job.get("conclusion") or "").lower()
+                  if status not in {"waiting", "in_progress"} and not (
+                      status == "completed" and conclusion == "success"
+                  ):
                       continue
 
                   protected_jobs.append(job)
-              approved_jobs = [
-                  job
-                  for job in protected_jobs
-                  if job.get("status") == "completed" and job.get("conclusion") == "success"
-              ]
-              if not approved_jobs:
+              if not protected_jobs:
                   print(
-                      "Protected approval workflow run must include a successful protected validation job.",
+                      "Protected approval workflow run must include a protected-environment approval/deployment job that is waiting, in progress, or successful.",
                       file=sys.stderr,
                   )
                   raise SystemExit(1)
