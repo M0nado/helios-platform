@@ -45,18 +45,19 @@ Use lane-targeted commands from active workflows.
 ### Core .NET lanes (platform and contracts)
 
 ```powershell
-dotnet restore HELIOS.Platform.slnx
-dotnet build HELIOS.Platform.slnx --configuration Release
+dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj
+dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj --configuration Release
+dotnet build src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj --configuration Release
 
 dotnet test tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release
 dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --configuration Release
-dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName!~Integration&FullyQualifiedName!~Performance&FullyQualifiedName!~EndToEnd&FullyQualifiedName!~Security"
+dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName!~Integration&FullyQualifiedName!~Performance&FullyQualifiedName!~EndToEnd&FullyQualifiedName!~E2E&FullyQualifiedName!~Security&FullyQualifiedName!~Vault&FullyQualifiedName!~Driver&FullyQualifiedName!~Malware&FullyQualifiedName!~Deployment"
 ```
 
 Single-test/class example:
 
 ```powershell
-dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Phase10.Quarantine.QuarantineSystemTests"
+dotnet test tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj --configuration Release --filter "FullyQualifiedName~QuarantineSystemSetupTests"
 ```
 
 ### Helios control-plane lane (`monado/helios-control`)
@@ -71,6 +72,8 @@ dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Test
 
 ```powershell
 python -m unittest discover -s plugins/helios-control-fabric/scripts -p "test_*.py" -v
+gh auth status
+$env:GH_TOKEN = (gh auth token)
 python plugins/helios-control-fabric/scripts/helios.py doctor --json
 python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev --json
 python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev --json
@@ -90,8 +93,8 @@ ctest --test-dir build/native --build-config Release --output-on-failure
 ```powershell
 python -m pip install --disable-pip-version-check uv==0.9.25
 uv sync --frozen --no-dev --project services/helios-deployment-agent
-python -m unittest discover -s services/helios-deployment-agent/tests -v
-python services/helios-deployment-agent/evals/run_local.py
+uv run --project services/helios-deployment-agent python -m unittest discover -s services/helios-deployment-agent/tests -v
+uv run --project services/helios-deployment-agent python services/helios-deployment-agent/evals/run_local.py
 ```
 
 ### Node MCP lane (`plugins/openai/helios-mcp`)
@@ -110,6 +113,9 @@ pwsh -Command "Invoke-ScriptAnalyzer -Path './src','./scripts' -Recurse -Severit
 
 python -m json.tool config/integrations/event-contract.schema.json > $null
 python -m json.tool config/integrations/repositories.json > $null
+python -m pip install --disable-pip-version-check jsonschema
+python -c "import json; from pathlib import Path; from jsonschema import Draft202012Validator; schema=json.loads(Path('config/integrations/event-contract.schema.json').read_text(encoding='utf-8')); Draft202012Validator.check_schema(schema); print('event-contract schema draft validation ok')"
+python scripts/integrations/validate_repository_integrity.py
 ```
 
 ## Benchmark, code-scoring, and XCore/Hermes evaluation loop
@@ -210,7 +216,7 @@ Useful GitHub commands:
 
 ```powershell
 gh pr status
-gh pr view <number> --json number,title,state,isDraft,headRefName,baseRefName,mergeStateStatus,url
+gh pr view <number> --json number,title,state,isDraft,headRefName,baseRefName,mergeStateStatus,autoMergeRequest,url
 gh issue view <number> --json number,title,state,assignees,labels,url
 ```
 
