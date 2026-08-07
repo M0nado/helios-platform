@@ -58,11 +58,17 @@ jobs:
         run: |
           set -euo pipefail
 
-          DOTNET_TARGETS=$(find . -maxdepth 4 \( -name "*.sln" -o -name "*.slnx" \) \
-            -not -path "./.git/*" \
-            -not -path "./modules/*" \
-            -not -path "./submodules/*" \
-            | sed 's#^./##' | sort -u | jq -R 'select(length > 0)' | jq -cs .)
+          DOTNET_TARGETS=$(
+            {
+              find . -maxdepth 4 -name "*.sln" \
+                -not -path "./.git/*" \
+                -not -path "./modules/*" \
+                -not -path "./submodules/*"
+              if [ -f "src/core/HELIOS.Platform/HELIOS.Platform.csproj" ]; then
+                echo "./src/core/HELIOS.Platform/HELIOS.Platform.csproj"
+              fi
+            } | sed 's#^./##' | sort -u | jq -R 'select(length > 0)' | jq -cs .
+          )
           DOTNET_COUNT=$(jq 'length' <<< "$DOTNET_TARGETS")
           if [ "$DOTNET_COUNT" -gt 0 ]; then
             HAS_DOTNET_TARGETS=true
@@ -138,6 +144,10 @@ jobs:
         run: |
           TARGET_NAME=$(echo "${{ matrix.target }}" | tr '/.' '__')
           mkdir -p artifacts/test-results
+          if [[ "${{ matrix.target }}" == *.csproj ]] && [[ "$(basename "${{ matrix.target }}")" != *Test* ]]; then
+            echo "Skipping dotnet test for non-test project target: ${{ matrix.target }}"
+            exit 0
+          fi
           dotnet test "${{ matrix.target }}" \
             --configuration Release \
             --no-build \

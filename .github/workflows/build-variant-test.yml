@@ -154,12 +154,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore and build core target
-        shell: pwsh
-        run: |
-          dotnet restore src/core/HELIOS.Platform/HELIOS.Platform.csproj
-          dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj --configuration ${{ matrix.variant.configuration }} --no-restore -p:ContinuousIntegrationBuild=${{ matrix.variant.ci_build }}
-
       - name: Run variant tests
         shell: pwsh
         run: |
