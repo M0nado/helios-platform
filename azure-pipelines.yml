@@ -6,13 +6,12 @@
 trigger:
   branches:
     include:
-    - main
-    - copilot/*
+    - "*"
 
 pr:
   branches:
     include:
-    - main
+    - "*"
 
 pool:
   vmImage: ubuntu-latest
