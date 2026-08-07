@@ -31,10 +31,11 @@ For control-plane changes, read first:
 ### Recency triage commands
 
 ```powershell
-gh issue list --repo M0nado/helios-platform --state open --limit 30 --json number,title,updatedAt,url
-gh pr list --repo M0nado/helios-platform --state all --limit 40 --json number,title,state,isDraft,headRefName,baseRefName,updatedAt,url
+gh issue list --repo M0nado/helios-platform --state all --limit 80 --search "sort:updated-desc"
+gh pr list --repo M0nado/helios-platform --state all --limit 80 --search "sort:updated-desc"
 git --no-pager branch --all --sort=-committerdate
-git --no-pager log --date=iso --decorate --pretty=format:"%h|%ad|%d|%s" -n 50
+git --no-pager log main --date=iso --pretty=format:"%h|%ad|%s" -n 80
+python scripts/analysis/commit_window_unification.py --since "7 days ago"
 ```
 
 ## Build, test, and lint command matrix
@@ -165,13 +166,17 @@ This cleanup removes generated report artifacts only; it does not merge or delet
 Run this sweep before integrating to `main`:
 
 ```powershell
-gh issue list --repo M0nado/helios-platform --state all --limit 200 --json number,title,state,updatedAt,url
-gh pr list --repo M0nado/helios-platform --state all --limit 200 --json number,title,state,isDraft,headRefName,baseRefName,updatedAt,url
+gh issue list --repo M0nado/helios-platform --state all --limit 80 --search "sort:updated-desc"
+gh pr list --repo M0nado/helios-platform --state all --limit 80 --search "sort:updated-desc"
 git --no-pager log main --date=iso --pretty=format:"%h|%ad|%s" -n 80
 python scripts/analysis/commit_window_unification.py --since "7 days ago"
 ```
 
 Prioritize the newest active consolidation and XCore/Hermes streams first, then follow dependency order.
+
+Current recency anchors (refresh each session):
+- Issues: `#232`, `#242`, `#238`, `#241`, `#240`, `#231`
+- PRs: `#247`, `#246`, `#244`, `#243`, `#227`, `#212`
 
 ## Repository-specific conventions (required)
 
