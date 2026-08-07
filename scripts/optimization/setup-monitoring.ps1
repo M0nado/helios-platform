@@ -11,7 +11,9 @@
     Repository name
 .PARAMETER RepositoryOwner
     Repository owner
-.PARAMETER Verbose
+.PARAMETER GitHubToken
+    Optional GitHub token accepted for orchestrator compatibility
+.PARAMETER DetailedOutput
     Detailed output
 #>
 
@@ -27,12 +29,14 @@ param(
     
     [Parameter(Mandatory=$true)]
     [string]$RepositoryOwner,
-    
-    [switch]$Verbose
+
+    [string]$GitHubToken,
+
+    [switch]$DetailedOutput
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$VerbosePreference = if ($DetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/monitoring-setup_$timestamp.log"
@@ -45,7 +49,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($DetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # Monitoring configuration
@@ -377,7 +381,7 @@ The monitoring dashboard is available at:
 
 "@
     
-    $doc | Set-Content -Path 'logs/monitoring-setup-guide_$timestamp.md'
+    $doc | Set-Content -Path "logs/monitoring-setup-guide_$timestamp.md"
     Write-Log "Monitoring guide generated" 'SUCCESS'
 }
 
@@ -412,6 +416,10 @@ try {
     
     Write-Log '=== Monitoring Setup Complete ===' 'SUCCESS'
     Write-Log "Configured: $($report.summary.configured), Failed: $($report.summary.failed)" 'INFO'
+
+    if ($report.summary.failed -gt 0) {
+        throw "Monitoring setup incomplete: $($report.summary.failed) components failed."
+    }
     
     $report | ConvertTo-Json -Depth 10
 }

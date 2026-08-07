@@ -1,0 +1,25 @@
+{
+    "successMetrics":  [
+                           "Staging stability score \u003e 98%",
+                           "UAT readiness 100%",
+                           "Performance parity with prod spec",
+                           "Security validation complete"
+                       ],
+    "name":  "Pre-Production Staging",
+    "description":  "Staging environment deployment and validation",
+    "duration":  "3-5 days",
+    "acceptanceCriteria":  [
+                               "Deployed to staging successfully",
+                               "Data migration validated",
+                               "User acceptance testing scheduled",
+                               "Rollback plan documented"
+                           ],
+    "phase":  "Phase 6",
+    "fields":  {
+                   "DeploymentEnvironment":  "Staging",
+                   "DeploymentStatus":  "Deployed to Staging",
+                   "Documentation":  "Complete",
+                   "DataMigration":  "In Progress"
+               },
+    "createdAt":  "2026-08-06T18:06:09.5443849-05:00"
+}

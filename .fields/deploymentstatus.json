@@ -1,0 +1,17 @@
+{
+    "options":  [
+                    "Not Deployed",
+                    "Deployed to Dev",
+                    "Deployed to Staging",
+                    "Deployed to Prod",
+                    "Rolled Back"
+                ],
+    "description":  "Deployment status across environments",
+    "type":  "SingleSelect",
+    "default":  "Not Deployed",
+    "createdAt":  "2026-08-06T18:06:07.2401274-05:00",
+    "fieldId":  "PVTSSF_lADOEFilTs4BfnykzhZ5ZXY",
+    "name":  "DeploymentStatus",
+    "tier":  4,
+    "status":  "created"
+}

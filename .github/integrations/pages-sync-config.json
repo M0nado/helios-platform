@@ -1,0 +1,7 @@
+{
+    "buildCommand":  "pwsh -NoProfile -File scripts/utilities/wiki/generate-wiki.ps1 -ProjectRoot .",
+    "target":  "gh-pages",
+    "autoUpdate":  true,
+    "source":  "docs/",
+    "createdAt":  "2026-08-06T18:06:09.7838436-05:00"
+}

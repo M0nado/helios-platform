@@ -1,0 +1,23 @@
+{
+    "successMetrics":  [
+                           "Requirements completeness score \u003e 90%",
+                           "Stakeholder satisfaction \u003e 85%",
+                           "Risk identification rate \u003e 95%"
+                       ],
+    "name":  "Requirements \u0026 Planning",
+    "description":  "Initial requirements gathering and planning",
+    "duration":  "5-10 days",
+    "acceptanceCriteria":  [
+                               "Requirements document completed",
+                               "Stakeholder sign-off obtained",
+                               "Technical feasibility assessed",
+                               "Resource allocation confirmed"
+                           ],
+    "phase":  "Phase 1",
+    "fields":  {
+                   "Priority":  "Medium",
+                   "Effort":  "M",
+                   "Sprint":  "Backlog"
+               },
+    "createdAt":  "2026-08-06T18:06:09.5288109-05:00"
+}

@@ -1,0 +1,37 @@
+{
+    "id":  "view-critical",
+    "filters":  [
+                    {
+                        "field":  "Priority",
+                        "operator":  "in",
+                        "value":  [
+                                      "Critical",
+                                      "High"
+                                  ]
+                    },
+                    {
+                        "field":  "Status",
+                        "operator":  "notEquals",
+                        "value":  "Done"
+                    }
+                ],
+    "purpose":  "Management view of high-impact work",
+    "description":  "Filter for critical and high priority items only",
+    "fieldVisibility":  [
+                            "Status",
+                            "Priority",
+                            "RiskLevel",
+                            "AssignedTo",
+                            "DueDate",
+                            "BlockedBy"
+                        ],
+    "layout":  "table",
+    "name":  "Critical \u0026 High Priority",
+    "groupBy":  "Status",
+    "sortBy":  {
+                   "field":  "Priority",
+                   "order":  "descending"
+               },
+    "createdAt":  "2026-08-06T18:06:09.6646508-05:00",
+    "isActive":  true
+}

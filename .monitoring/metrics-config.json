@@ -1,0 +1,38 @@
+{
+    "aggregation":  "hourly",
+    "retention":  30,
+    "collectionInterval":  60,
+    "metrics":  [
+                    {
+                        "name":  "Workflow Duration",
+                        "unit":  "seconds",
+                        "threshold":  300
+                    },
+                    {
+                        "name":  "Deployment Success Rate",
+                        "unit":  "percent",
+                        "threshold":  95
+                    },
+                    {
+                        "name":  "Build Cache Hit Rate",
+                        "unit":  "percent",
+                        "threshold":  70
+                    },
+                    {
+                        "name":  "Average Response Time",
+                        "unit":  "ms",
+                        "threshold":  200
+                    },
+                    {
+                        "name":  "Error Rate",
+                        "unit":  "percent",
+                        "threshold":  1
+                    },
+                    {
+                        "name":  "Resource Utilization",
+                        "unit":  "percent",
+                        "threshold":  80
+                    }
+                ],
+    "createdAt":  "2026-08-06T18:06:09.8218035-05:00"
+}

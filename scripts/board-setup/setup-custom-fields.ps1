@@ -12,8 +12,8 @@
     GitHub organization containing the project
 .PARAMETER DryRun
     Preview changes without applying them
-.PARAMETER Verbose
-    Enable verbose logging output
+.PARAMETER DetailedOutput
+    Enable detailed logging output
 .EXAMPLE
     .\setup-custom-fields.ps1 -GitHubToken $token -ProjectNumber 1 -OrganizationName "helios-org"
 #>
@@ -29,11 +29,11 @@ param(
     [string]$OrganizationName,
     
     [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DetailedOutput
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$VerbosePreference = if ($DetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
 
 # Configuration
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
@@ -51,7 +51,7 @@ function Write-Log {
     $timestamp = Get-Date -Format 'HH:mm:ss'
     $logMessage = "[$timestamp] [$Level] $Message"
     Add-Content -Path $logFile -Value $logMessage
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') {
+    if ($DetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') {
         Write-Host $logMessage
     }
 }
@@ -87,6 +87,35 @@ function Invoke-GitHubGraphQL {
         Write-Log "GraphQL Request Failed: $_" 'ERROR'
         throw
     }
+}
+
+function Convert-ToGitHubFieldType {
+    param([string]$FieldType)
+
+    switch ($FieldType) {
+        'SingleSelect' { return 'SINGLE_SELECT' }
+        'Date' { return 'DATE' }
+        'Text' { return 'TEXT' }
+        default { throw "Unsupported field type mapping: $FieldType" }
+    }
+}
+
+function Convert-FromGitHubFieldType {
+    param([string]$DataType)
+
+    switch ($DataType) {
+        'SINGLE_SELECT' { return 'SingleSelect' }
+        'DATE' { return 'Date' }
+        'TEXT' { return 'Text' }
+        default { return $DataType }
+    }
+}
+
+function Get-LocalFieldPath {
+    param([string]$FieldName)
+
+    $safeName = ($FieldName -replace '[^a-zA-Z0-9_-]', '_').ToLowerInvariant()
+    return ".fields/$safeName.json"
 }
 
 # Field definitions for all 5 tiers
@@ -332,14 +361,189 @@ query ($org: String!, $projectNum: Int!) {
     }
 }
 
+function Get-ExistingProjectFields {
+    Write-Log 'Loading existing project fields...'
+
+    $fieldsQuery = @'
+query ($org: String!, $projectNum: Int!) {
+  organization(login: $org) {
+    projectV2(number: $projectNum) {
+      fields(first: 100) {
+        nodes {
+          __typename
+          ... on ProjectV2Field {
+            id
+            name
+            dataType
+          }
+          ... on ProjectV2SingleSelectField {
+            id
+            name
+            dataType
+            options {
+              name
+            }
+          }
+          ... on ProjectV2IterationField {
+            id
+            name
+            dataType
+          }
+        }
+      }
+    }
+  }
+}
+'@
+
+    $result = Invoke-GitHubGraphQL -Query $fieldsQuery -Variables @{
+        org = $OrganizationName
+        projectNum = $ProjectNumber
+    }
+
+    $existing = @{}
+    $nodes = $result.organization.projectV2.fields.nodes
+    foreach ($node in $nodes) {
+        if (-not [string]::IsNullOrWhiteSpace($node.name)) {
+            $fieldOptions = @()
+            if ($node.__typename -eq 'ProjectV2SingleSelectField' -and $null -ne $node.options) {
+                $fieldOptions = @(
+                    $node.options |
+                        ForEach-Object { $_.name } |
+                        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                )
+            }
+
+            $existing[$node.name] = @{
+                id = $node.id
+                name = $node.name
+                dataType = $node.dataType
+                options = $fieldOptions
+            }
+        }
+    }
+
+    Write-Log "Existing project fields loaded: $($existing.Count)" 'SUCCESS'
+    return $existing
+}
+
 function Create-CustomField {
     param(
         [string]$ProjectId,
         [hashtable]$FieldDef,
-        [ref]$CreatedFields
+        [ref]$CreatedFields,
+        [hashtable]$ExistingFields
     )
     
     Write-Log "Creating field: $($FieldDef.name) (Tier $($FieldDef.tier))"
+
+    if ($ExistingFields.ContainsKey($FieldDef.name)) {
+        $existingField = $ExistingFields[$FieldDef.name]
+        Write-Log "  Field already exists (ID: $($existingField.id))" 'INFO'
+
+        $expectedDataType = Convert-ToGitHubFieldType -FieldType $FieldDef.type
+        $compatibilityIssues = @()
+
+        if ($existingField.dataType -ne $expectedDataType) {
+            $compatibilityIssues += "type mismatch (expected '$expectedDataType', found '$($existingField.dataType)')"
+        }
+
+        if ($FieldDef.type -eq 'SingleSelect') {
+            $expectedOptions = @()
+            if ($FieldDef.options) {
+                $expectedOptions = @(
+                    $FieldDef.options |
+                        ForEach-Object { $_.Trim() } |
+                        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                        Sort-Object -Unique
+                )
+            }
+
+            $actualOptions = @()
+            if ($existingField.options) {
+                $actualOptions = @(
+                    $existingField.options |
+                        ForEach-Object { $_.Trim() } |
+                        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                        Sort-Object -Unique
+                )
+            }
+
+            $missingOptions = @($expectedOptions | Where-Object { $_ -notin $actualOptions })
+            if ($missingOptions.Count -gt 0) {
+                $compatibilityIssues += "missing options: $($missingOptions -join ', ')"
+            }
+        }
+
+        if ($compatibilityIssues.Count -gt 0) {
+            $issueText = $compatibilityIssues -join '; '
+            Write-Log "  Existing field schema is incompatible: $issueText" 'ERROR'
+            $CreatedFields.Value += @{
+                name = $FieldDef.name
+                fieldId = $existingField.id
+                type = $FieldDef.type
+                tier = $FieldDef.tier
+                status = 'failed'
+                error = "Existing field '$($FieldDef.name)' is incompatible ($issueText)."
+            }
+            return
+        }
+
+        if ($DryRun) {
+            Write-Log "  [DRY RUN] Existing field is compatible: $($FieldDef.name)" 'INFO'
+            $CreatedFields.Value += @{
+                name = $FieldDef.name
+                fieldId = $existingField.id
+                type = $FieldDef.type
+                status = 'dry-run'
+                tier = $FieldDef.tier
+            }
+            return
+        }
+
+        if (-not (Test-Path '.fields')) {
+            New-Item -ItemType Directory -Path '.fields' -Force | Out-Null
+        }
+
+        $resolvedType = Convert-FromGitHubFieldType -DataType $existingField.dataType
+        if ([string]::IsNullOrWhiteSpace($resolvedType)) {
+            $resolvedType = $FieldDef.type
+        }
+        $resolvedOptions = if ($resolvedType -eq 'SingleSelect') { @($existingField.options) } else { $null }
+        $resolvedDefault = if (
+            $resolvedType -eq 'SingleSelect' -and
+            $FieldDef.default -and
+            $resolvedOptions -and
+            $resolvedOptions -contains $FieldDef.default
+        ) {
+            $FieldDef.default
+        }
+        else {
+            $null
+        }
+
+        $localField = @{
+            name = $FieldDef.name
+            fieldId = $existingField.id
+            type = $resolvedType
+            tier = $FieldDef.tier
+            description = $FieldDef.description
+            options = $resolvedOptions
+            default = $resolvedDefault
+            status = 'existing'
+            createdAt = Get-Date -Format 'o'
+        }
+        $localField | ConvertTo-Json -Depth 10 | Set-Content -Path (Get-LocalFieldPath -FieldName $FieldDef.name)
+
+        $CreatedFields.Value += @{
+            name = $FieldDef.name
+            fieldId = $existingField.id
+            type = $resolvedType
+            tier = $FieldDef.tier
+            status = 'existing'
+        }
+        return
+    }
     
     if ($DryRun) {
         Write-Log "  [DRY RUN] Would create field: $($FieldDef.name)" 'INFO'
@@ -357,35 +561,73 @@ function Create-CustomField {
 mutation CreateProjectField($input: CreateProjectV2FieldInput!) {
   createProjectV2Field(input: $input) {
     projectV2Field {
-      id
-      name
-      dataType
+      __typename
+      ... on ProjectV2Field {
+        id
+        name
+        dataType
+      }
+      ... on ProjectV2SingleSelectField {
+        id
+        name
+        dataType
+      }
+      ... on ProjectV2IterationField {
+        id
+        name
+        dataType
+      }
     }
   }
 }
 '@
         
         # Build field configuration
-        $fieldConfig = @{
+        $mutationInput = @{
+            projectId = $ProjectId
             name = $FieldDef.name
-            dataType = $FieldDef.type
+            dataType = (Convert-ToGitHubFieldType -FieldType $FieldDef.type)
         }
         
         if ($FieldDef.type -eq 'SingleSelect' -and $FieldDef.options) {
-            $fieldConfig['singleSelectOptions'] = $FieldDef.options | ForEach-Object { @{ name = $_ } }
-        }
-        
-        $result = Invoke-GitHubGraphQL -Query $createFieldQuery -Variables @{
-            input = @{
-                projectId = $ProjectId
-                name = $FieldDef.name
-                dataType = $FieldDef.type
+            $mutationInput['singleSelectOptions'] = @()
+            $colorPalette = @('GRAY', 'BLUE', 'GREEN', 'YELLOW', 'ORANGE', 'RED', 'PINK', 'PURPLE')
+            for ($i = 0; $i -lt $FieldDef.options.Count; $i++) {
+                $option = $FieldDef.options[$i]
+                $color = $colorPalette[$i % $colorPalette.Count]
+                $mutationInput['singleSelectOptions'] += @{
+                    name = $option
+                    color = $color
+                    description = $option
+                }
             }
         }
         
+        $result = Invoke-GitHubGraphQL -Query $createFieldQuery -Variables @{
+            input = $mutationInput
+        }
+        
         if ($result.createProjectV2Field.projectV2Field) {
-            $fieldId = $result.createProjectV2Field.projectV2Field.id
+            $createdField = $result.createProjectV2Field.projectV2Field
+            $fieldId = $createdField.id
             Write-Log "  Field created successfully (ID: $fieldId)" 'SUCCESS'
+
+            if (-not (Test-Path '.fields')) {
+                New-Item -ItemType Directory -Path '.fields' -Force | Out-Null
+            }
+
+            $localField = @{
+                name = $FieldDef.name
+                fieldId = $fieldId
+                type = $FieldDef.type
+                tier = $FieldDef.tier
+                description = $FieldDef.description
+                options = $FieldDef.options
+                default = $FieldDef.default
+                status = 'created'
+                createdAt = Get-Date -Format 'o'
+            }
+            $localField | ConvertTo-Json -Depth 10 | Set-Content -Path (Get-LocalFieldPath -FieldName $FieldDef.name)
             
             $CreatedFields.Value += @{
                 name = $FieldDef.name
@@ -394,6 +636,15 @@ mutation CreateProjectField($input: CreateProjectV2FieldInput!) {
                 tier = $FieldDef.tier
                 status = 'created'
             }
+            $ExistingFields[$FieldDef.name] = @{
+                id = $fieldId
+                name = $FieldDef.name
+                dataType = $mutationInput.dataType
+                options = if ($FieldDef.type -eq 'SingleSelect') { @($FieldDef.options) } else { @() }
+            }
+        }
+        else {
+            throw "Field creation returned no payload for field '$($FieldDef.name)'."
         }
     }
     catch {
@@ -403,7 +654,7 @@ mutation CreateProjectField($input: CreateProjectV2FieldInput!) {
             type = $FieldDef.type
             status = 'failed'
             tier = $FieldDef.tier
-            error = $_
+            error = $_.ToString()
         }
     }
 }
@@ -417,6 +668,7 @@ function Generate-Report {
         organization = $OrganizationName
         totalFieldsRequested = $fieldDefinitions.Count
         fieldsCreated = ($CreatedFields | Where-Object { $_.status -eq 'created' }).Count
+        fieldsExisting = ($CreatedFields | Where-Object { $_.status -eq 'existing' }).Count
         fieldsFailed = ($CreatedFields | Where-Object { $_.status -eq 'failed' }).Count
         fieldsDryRun = ($CreatedFields | Where-Object { $_.status -eq 'dry-run' }).Count
         fields = $CreatedFields
@@ -445,6 +697,7 @@ try {
     }
     
     $projectId = Test-Prerequisites
+    $existingFields = Get-ExistingProjectFields
     
     $createdFields = @()
     $fieldsRef = [ref]$createdFields
@@ -452,14 +705,18 @@ try {
     Write-Log "Creating $($fieldDefinitions.Count) custom fields..." 'INFO'
     
     $fieldDefinitions | ForEach-Object {
-        Create-CustomField -ProjectId $projectId -FieldDef $_ -CreatedFields $fieldsRef
+        Create-CustomField -ProjectId $projectId -FieldDef $_ -CreatedFields $fieldsRef -ExistingFields $existingFields
     }
     
     $report = Generate-Report -CreatedFields $createdFields
     
     Write-Log '=== Custom Fields Setup Complete ===' 'SUCCESS'
-    Write-Log "Created: $($report.fieldsCreated), Failed: $($report.fieldsFailed)" 'INFO'
+    Write-Log "Created: $($report.fieldsCreated), Existing: $($report.fieldsExisting), Failed: $($report.fieldsFailed)" 'INFO'
     Write-Log "By Tier - 1: $($report.byTier.tier1), 2: $($report.byTier.tier2), 3: $($report.byTier.tier3), 4: $($report.byTier.tier4), 5: $($report.byTier.tier5)" 'INFO'
+
+    if ($report.fieldsFailed -gt 0) {
+        throw "Custom field setup incomplete: $($report.fieldsFailed) fields failed."
+    }
     
     # Output report
     $report | ConvertTo-Json -Depth 10

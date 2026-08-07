@@ -1,0 +1,11 @@
+{
+    "options":  null,
+    "description":  "Tasks or features this depends on",
+    "type":  "Text",
+    "default":  null,
+    "createdAt":  "2026-08-06T18:06:07.8474511-05:00",
+    "fieldId":  "PVTF_lADOEFilTs4BfnykzhZ5ZXg",
+    "name":  "DependsOn",
+    "tier":  4,
+    "status":  "created"
+}

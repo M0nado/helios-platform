@@ -1,0 +1,11 @@
+{
+    "options":  null,
+    "description":  "ADR reference or architecture decision document",
+    "type":  "Text",
+    "default":  null,
+    "createdAt":  "2026-08-06T18:06:09.4792023-05:00",
+    "fieldId":  "PVTF_lADOEFilTs4BfnykzhZ5ZYs",
+    "name":  "ArchitectureDecision",
+    "tier":  5,
+    "status":  "created"
+}

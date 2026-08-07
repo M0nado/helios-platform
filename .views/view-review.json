@@ -1,0 +1,38 @@
+{
+    "id":  "view-review",
+    "filters":  [
+                    {
+                        "field":  "ReviewStatus",
+                        "operator":  "in",
+                        "value":  [
+                                      "Not Reviewed",
+                                      "In Review",
+                                      "Changes Requested"
+                                  ]
+                    },
+                    {
+                        "field":  "ApprovalRequired",
+                        "operator":  "equals",
+                        "value":  "Yes"
+                    }
+                ],
+    "purpose":  "Review queue management",
+    "description":  "Items awaiting code or design review",
+    "fieldVisibility":  [
+                            "ReviewStatus",
+                            "Priority",
+                            "ReviewedBy",
+                            "Component",
+                            "Effort",
+                            "RiskLevel"
+                        ],
+    "layout":  "table",
+    "name":  "Review Required",
+    "groupBy":  "ReviewStatus",
+    "sortBy":  {
+                   "field":  "Priority",
+                   "order":  "descending"
+               },
+    "createdAt":  "2026-08-06T18:06:09.6706497-05:00",
+    "isActive":  true
+}

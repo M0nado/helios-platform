@@ -11,7 +11,7 @@
     Organization name
 .PARAMETER DryRun
     Preview mode
-.PARAMETER Verbose
+.PARAMETER DetailedOutput
     Detailed output
 #>
 
@@ -26,11 +26,11 @@ param(
     [string]$OrganizationName,
     
     [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DetailedOutput
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$VerbosePreference = if ($DetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/views-setup_$timestamp.log"
@@ -43,7 +43,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($DetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # 6 Board Views Definition
@@ -235,7 +235,7 @@ function Create-View {
             name = $View.name
             id = $View.id
             status = 'failed'
-            error = $_
+            error = $_.ToString()
         }
     }
 }
@@ -352,6 +352,10 @@ try {
     
     Write-Log '=== Board Views Setup Complete ===' 'SUCCESS'
     Write-Log "Created: $($report.created), Failed: $($report.failed)" 'INFO'
+
+    if ($report.failed -gt 0) {
+        throw "Board views setup incomplete: $($report.failed) views failed."
+    }
     
     $report | ConvertTo-Json -Depth 10
 }

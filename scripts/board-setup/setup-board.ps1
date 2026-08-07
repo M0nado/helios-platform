@@ -15,7 +15,7 @@
     Preview mode
 .PARAMETER SkipSteps
     Comma-separated list of steps to skip (fields,templates,automation,views)
-.PARAMETER Verbose
+.PARAMETER DetailedOutput
     Detailed output
 .EXAMPLE
     .\setup-board.ps1 -GitHubToken $token -ProjectNumber 1 -OrganizationName "helios" -BoardName "HELIOS Platform"
@@ -36,11 +36,11 @@ param(
     
     [switch]$DryRun,
     [string[]]$SkipSteps = @(),
-    [switch]$Verbose
+    [switch]$DetailedOutput
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$VerbosePreference = if ($DetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/board-setup_$timestamp.log"
@@ -54,7 +54,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($DetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 function Invoke-SetupStep {
@@ -89,10 +89,17 @@ function Invoke-SetupStep {
         }
         
         if ($DryRun) { $params['DryRun'] = $true }
-        if ($Verbose) { $params['Verbose'] = $true }
+        if ($DetailedOutput) { $params['DetailedOutput'] = $true }
         
         # Execute script
+        $global:LASTEXITCODE = 0
         $result = & $ScriptPath @params
+        $stepSucceeded = $?
+        $stepExitCode = $LASTEXITCODE
+
+        if (-not $stepSucceeded -or $stepExitCode -ne 0) {
+            throw "Step script exited with code $stepExitCode"
+        }
         
         Write-Log "  Completed: $StepName" 'SUCCESS'
         
@@ -190,9 +197,9 @@ function Display-Summary {
     param([hashtable]$Report)
     
     Write-Host "`n" -ForegroundColor Cyan
-    Write-Host "╔════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║         HELIOS PLATFORM - BOARD SETUP SUMMARY          ║" -ForegroundColor Cyan
-    Write-Host "╚════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "========================================================" -ForegroundColor Cyan
+    Write-Host " HELIOS PLATFORM - BOARD SETUP SUMMARY " -ForegroundColor Cyan
+    Write-Host "========================================================" -ForegroundColor Cyan
     
     Write-Host "`nProject Configuration:" -ForegroundColor Green
     Write-Host "  Organization: $($Report.organization)"
@@ -209,9 +216,9 @@ function Display-Summary {
     Write-Host "`nStep Details:" -ForegroundColor Green
     foreach ($step in $Report.steps) {
         $status = switch ($step.status) {
-            'completed' { '✓ COMPLETED' }
-            'failed' { '✗ FAILED' }
-            'skipped' { '⊘ SKIPPED' }
+            'completed' { '[OK] COMPLETED' }
+            'failed' { '[FAIL] FAILED' }
+            'skipped' { '[SKIP] SKIPPED' }
             default { $step.status }
         }
         Write-Host "  $($step.name): $status"
@@ -224,7 +231,7 @@ function Display-Summary {
     Write-Host "  4. Review report: logs/board-setup-report_$timestamp.json"
     
     if ($DryRun) {
-        Write-Host "`n⚠️  DRY RUN MODE - No changes were actually applied" -ForegroundColor Yellow
+        Write-Host "`nWARNING: DRY RUN MODE - No changes were actually applied" -ForegroundColor Yellow
     }
     
     Write-Host "`n"
@@ -232,9 +239,9 @@ function Display-Summary {
 
 # Main execution
 try {
-    Write-Log '╔═══════════════════════════════════════════════════════╗'
-    Write-Log '║    HELIOS PLATFORM - MASTER BOARD SETUP SCRIPT       ║'
-    Write-Log '╚═══════════════════════════════════════════════════════╝'
+    Write-Log '======================================================='
+    Write-Log 'HELIOS PLATFORM - MASTER BOARD SETUP SCRIPT'
+    Write-Log '======================================================='
     Write-Log "Started: $timestamp"
     Write-Log "Organization: $OrganizationName, Project: $ProjectNumber"
     Write-Log "DryRun: $DryRun"
@@ -266,8 +273,12 @@ try {
     
     $report = Generate-Report -StepResults $steps
     Display-Summary -Report $report
+
+    if ($report.summary.failed -gt 0) {
+        throw "Board setup incomplete: $($report.summary.failed) step(s) failed."
+    }
     
-    Write-Log '═══════════════════════════════════════════════════════'
+    Write-Log '======================================================='
     Write-Log "Completed: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 'SUCCESS'
     
     # Return report for integration

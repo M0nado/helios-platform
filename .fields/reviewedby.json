@@ -1,0 +1,11 @@
+{
+    "options":  null,
+    "description":  "Team member who reviewed this",
+    "type":  "Text",
+    "default":  null,
+    "createdAt":  "2026-08-06T18:06:05.6686989-05:00",
+    "fieldId":  "PVTF_lADOEFilTs4BfnykzhZ5ZXE",
+    "name":  "ReviewedBy",
+    "tier":  3,
+    "status":  "created"
+}

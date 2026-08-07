@@ -1,0 +1,16 @@
+{
+    "options":  [
+                    "Critical",
+                    "High",
+                    "Medium",
+                    "Low"
+                ],
+    "description":  "Task priority level",
+    "type":  "SingleSelect",
+    "default":  "Medium",
+    "createdAt":  "2026-08-06T18:06:02.4681178-05:00",
+    "fieldId":  "PVTSSF_lADOEFilTs4BfnykzhZ5ZWM",
+    "name":  "Priority",
+    "tier":  1,
+    "status":  "created"
+}
