@@ -43,14 +43,22 @@ type XCoreAnalytics() =
             if finiteData.Length < 2 then
                 nonFinite |> Array.distinct |> Array.sort :> IReadOnlyList<int>
             else
-                let mean = finiteData |> Array.averageBy snd
-                let deviation = finiteData |> Array.averageBy (fun (_, value) -> pown (value - mean) 2) |> sqrt
-                let statistical =
-                    if deviation = 0.0 then Array.empty<int>
-                    else
-                        finiteData
-                        |> Array.choose (fun (index, value) -> if abs(value - mean) / deviation >= threshold then Some index else None)
-                Array.append nonFinite statistical |> Array.distinct |> Array.sort :> IReadOnlyList<int>
+                let maxAbs = finiteData |> Array.maxBy (fun (_, value) -> abs value) |> snd |> abs
+                if maxAbs = 0.0 then
+                    nonFinite |> Array.distinct |> Array.sort :> IReadOnlyList<int>
+                else
+                    let normalized = finiteData |> Array.map (fun (index, value) -> index, value / maxAbs)
+                    let meanNormalized = normalized |> Array.averageBy snd
+                    let centered =
+                        normalized
+                        |> Array.map (fun (index, value) -> index, value - meanNormalized)
+                    let deviation = centered |> Array.averageBy (fun (_, value) -> value * value) |> sqrt
+                    let statistical =
+                        if deviation = 0.0 then Array.empty<int>
+                        else
+                            centered
+                            |> Array.choose (fun (index, value) -> if abs value / deviation >= threshold then Some index else None)
+                    Array.append nonFinite statistical |> Array.distinct |> Array.sort :> IReadOnlyList<int>
         member _.EvaluatePredictions(predicted, actual, confidence) =
             if predicted.Count = 0 || predicted.Count <> actual.Count || predicted.Count <> confidence.Count then invalidArg "predicted" "Prediction, actual, and confidence arrays must have equal non-zero lengths."
             if Seq.exists (fun value -> not (Double.IsFinite value)) predicted ||

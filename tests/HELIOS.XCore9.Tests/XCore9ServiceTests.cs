@@ -225,7 +225,7 @@ public sealed class XCore9ServiceTests
     [Fact]
     public void Feature_extraction_deduplicates_allowed_features_before_bounding()
     {
-        var (service, _) = Create(options: new XCore9Options(MaxFeaturesPerRun: 2));
+        var (service, _) = Create(options: new XCore9Options(MaxFeaturesPerRun: 3));
         var entry = new RunHistoryEntry(
             Guid.NewGuid(),
             "corr-features",
@@ -244,6 +244,28 @@ public sealed class XCore9ServiceTests
         Assert.Equal(2, features.Count);
         Assert.Equal("success_rate", features[0].Name);
         Assert.Equal("route_accuracy", features[1].Name);
+    }
+
+    [Fact]
+    public async Task Run_history_rejects_feature_lists_above_configured_bound()
+    {
+        var (service, _) = Create(options: new XCore9Options(MaxFeaturesPerRun: 2));
+        var entry = new RunHistoryEntry(
+            Guid.NewGuid(),
+            "corr-features-oversized",
+            "reviewer",
+            true,
+            TimeSpan.FromMilliseconds(20),
+            0,
+            [
+                new SanitizedRunFeature("success_rate", 0.9),
+                new SanitizedRunFeature("route_accuracy", 0.8),
+                new SanitizedRunFeature("dependency_health", 0.7)
+            ],
+            [new Uri("https://evidence.test/1")]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.IngestRunHistoryAsync(entry, "operator", default).AsTask());
     }
 
     [Fact]
@@ -336,6 +358,36 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public async Task Negotiation_records_roll_back_when_audit_fails()
+    {
+        var audit = new RecordingAuditSink(failEventType: "xcore9.negotiation.recorded", failOnOccurrence: 1);
+        var (service, _) = Create(options: new XCore9Options(MaxNegotiationEntries: 1), audit: audit);
+        var failedRecord = new NegotiationRecord(
+            Guid.NewGuid(),
+            "corr-neg-1",
+            "builder",
+            "reviewer",
+            "sha256:proposal-a",
+            "counter-offer",
+            DateTimeOffset.UtcNow);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.RecordNegotiationAsync(failedRecord, "operator", default).AsTask());
+        Assert.Empty(NegotiationSnapshot(service));
+
+        var succeededRecord = failedRecord with
+        {
+            NegotiationId = Guid.NewGuid(),
+            CorrelationId = "corr-neg-2"
+        };
+        await service.RecordNegotiationAsync(succeededRecord, "operator", default);
+
+        var negotiations = NegotiationSnapshot(service);
+        Assert.Single(negotiations);
+        Assert.Equal(succeededRecord.NegotiationId, negotiations[0].NegotiationId);
+    }
+
+    [Fact]
     public async Task Promotion_requires_external_authority_and_preserves_rollback()
     {
         var (service, _) = Create();
@@ -394,6 +446,33 @@ public sealed class XCore9ServiceTests
         Assert.False(decision.Approved);
         Assert.Equal("holdout-values-not-finite", decision.ReasonCode);
         Assert.Equal("initial", decision.ActivePolicy.PolicyId);
+    }
+
+    [Fact]
+    public async Task Promotion_uses_evidence_snapshot_after_validation()
+    {
+        var authorization = new GatedExternalAuthorityAuthorization();
+        var (service, audit) = Create(authorization: authorization);
+        var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
+        var mutableLinks = new List<Uri> { new("https://evidence.test/original") };
+        var request = new PromotionRequest(
+            "corr-p3c",
+            new RoutingPolicy("candidate", 2, new Dictionary<string, string>(), null),
+            holdout,
+            "guardian",
+            mutableLinks);
+
+        var decisionTask = service.EvaluatePromotionAsync(request, "guardian", default).AsTask();
+        await authorization.ExternalAuthorityStarted;
+
+        mutableLinks.Add(new Uri("https://evidence.test/mutated"));
+        authorization.Release();
+
+        var decision = await decisionTask;
+        Assert.True(decision.Approved);
+        var promotedEvent = Assert.Single(audit.Events, evt => evt.EventType == "xcore9.policy.promoted");
+        var link = Assert.Single(promotedEvent.Links);
+        Assert.Equal("https://evidence.test/original", link.Href.ToString());
     }
 
     [Fact]
@@ -512,6 +591,9 @@ public sealed class XCore9ServiceTests
             [double.MaxValue],
             [-double.MaxValue],
             [.9]));
+
+        var extreme = analytics.DetectAnomalies([0.0, double.MaxValue], 1.0);
+        Assert.Equal(new[] { 0, 1 }, extreme);
     }
 
     [Fact]
@@ -552,6 +634,9 @@ public sealed class XCore9ServiceTests
     {
         Assert.Throws<ArgumentException>(() =>
             Create(options: new XCore9Options(LeaseDuration: TimeSpan.Zero)));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(LeaseDuration: TimeSpan.MaxValue)));
 
         Assert.Throws<ArgumentException>(() =>
             Create(options: new XCore9Options(AuditEnvironment: "qa")));
@@ -612,6 +697,14 @@ public sealed class XCore9ServiceTests
         return history.ToArray();
     }
 
+    private static IReadOnlyList<NegotiationRecord> NegotiationSnapshot(XCore9Service service)
+    {
+        var negotiationsField = typeof(XCore9Service).GetField("_negotiations", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(negotiationsField);
+        var negotiations = Assert.IsType<List<NegotiationRecord>>(negotiationsField!.GetValue(service));
+        return negotiations.ToArray();
+    }
+
     private sealed class CapabilityAuthorization : IXCoreAuthorization
     {
         public ValueTask<bool> AuthorizeAsync(string actor, string capability, CancellationToken cancellationToken)
@@ -623,6 +716,27 @@ public sealed class XCore9ServiceTests
             }
 
             return ValueTask.FromResult(true);
+        }
+    }
+
+    private sealed class GatedExternalAuthorityAuthorization : IXCoreAuthorization
+    {
+        private readonly TaskCompletionSource<bool> _externalAuthorityStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<bool> _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task ExternalAuthorityStarted => _externalAuthorityStarted.Task;
+
+        public void Release() => _release.TrySetResult(true);
+
+        public async ValueTask<bool> AuthorizeAsync(string actor, string capability, CancellationToken cancellationToken)
+        {
+            if (string.Equals(capability, "policy.promote.external-authority", StringComparison.Ordinal))
+            {
+                _externalAuthorityStarted.TrySetResult(true);
+                await _release.Task.WaitAsync(cancellationToken);
+            }
+
+            return true;
         }
     }
 

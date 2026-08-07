@@ -18,6 +18,10 @@ DOMAINS={
  'knowledge-center':['docs','.md','jstor','knowledge','absorb','prune','merge']
 }
 TOOLS=['git','gh','az','dotnet','cmake','python3','docker','wsl','ollama','codex','claude']
+FALLBACK_IGNORED_PARTS={
+ '.git','.build','bin','obj','reports','node_modules',
+ '.venv','venv','__pycache__','.mypy_cache','.pytest_cache'
+}
 
 IDE_MESH=[
  {'id':'aihub-command-ide','role':'single command IDE: Codex + GitHub Copilot + Azure + APIs','bestFor':'one report/GUI command center for repo edits, Copilot suggestions, Azure what-if, and API bridges','safeCommand':'python3 scripts/integrations/aihub_command_ide.py && python3 scripts/dashboard/generate-gui.py'},
@@ -92,7 +96,14 @@ def rg_files():
  if p.returncode==0:
   files=[x for x in p.stdout.splitlines() if x]
   if files: return files
- return [str(path.relative_to(ROOT)).replace('\\','/') for path in ROOT.rglob('*') if path.is_file()]
+ files=[]
+ for path in ROOT.rglob('*'):
+  if not path.is_file(): continue
+  rel=path.relative_to(ROOT)
+  parts={part.lower() for part in rel.parts}
+  if parts & FALLBACK_IGNORED_PARTS: continue
+  files.append(str(rel).replace('\\','/'))
+ return files
 
 def score_domains(files):
  text=' '.join(files).lower(); scores={}

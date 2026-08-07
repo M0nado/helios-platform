@@ -45,6 +45,7 @@ public sealed class XCore9Service : IXCore9Service
     private readonly List<NegotiationRecord> _negotiations = [];
     private readonly object _gate = new();
     private readonly SemaphoreSlim _historyGate = new(1, 1);
+    private readonly SemaphoreSlim _negotiationGate = new(1, 1);
     private readonly SemaphoreSlim _promotionGate = new(1, 1);
     private readonly SemaphoreSlim _leaseGate = new(1, 1);
 
@@ -101,7 +102,8 @@ public sealed class XCore9Service : IXCore9Service
     {
         cancellationToken.ThrowIfCancellationRequested();
         await DemandAsync(actor, "run-history.ingest", cancellationToken);
-        ValidateEnvelope(entry.CorrelationId, entry.EvidenceLinks);
+        var evidenceLinks = entry.EvidenceLinks.ToArray();
+        ValidateEnvelope(entry.CorrelationId, evidenceLinks);
 
         if (!_templates.ContainsKey(entry.TemplateId))
         {
@@ -111,7 +113,7 @@ public sealed class XCore9Service : IXCore9Service
         var sanitized = entry with
         {
             Features = ExtractFeatures(entry),
-            EvidenceLinks = entry.EvidenceLinks.ToArray()
+            EvidenceLinks = evidenceLinks
         };
 
         await _historyGate.WaitAsync(cancellationToken);
@@ -174,6 +176,11 @@ public sealed class XCore9Service : IXCore9Service
     public IReadOnlyList<SanitizedRunFeature> ExtractFeatures(RunHistoryEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
+        if (entry.Features.Count > _options.MaxFeaturesPerRun)
+        {
+            throw new InvalidOperationException("Run history feature list exceeds the configured bound.");
+        }
+
         var seen = new HashSet<string>(IdentifierComparer);
         return entry.Features
             .Where(feature => AllowedFeatures.Contains(feature.Name) &&
@@ -280,11 +287,17 @@ public sealed class XCore9Service : IXCore9Service
                     throw new InvalidOperationException("Worker instance or resource limit reached.");
                 }
 
+                var now = DateTimeOffset.UtcNow;
+                if (_options.EffectiveLeaseDuration > DateTimeOffset.MaxValue - now)
+                {
+                    throw new InvalidOperationException("Lease duration exceeds representable expiration range.");
+                }
+
                 lease = new WorkerLease(
                     LeaseId: Guid.NewGuid(),
                     TemplateId: templateId,
                     CorrelationId: correlationId,
-                    ExpiresAt: DateTimeOffset.UtcNow + _options.EffectiveLeaseDuration);
+                    ExpiresAt: now + _options.EffectiveLeaseDuration);
 
                 _leases[lease.LeaseId] = lease;
             }
@@ -388,38 +401,76 @@ public sealed class XCore9Service : IXCore9Service
             throw new ArgumentException("Only a sanitized proposal digest may be recorded.", nameof(record));
         }
 
-        lock (_gate)
+        await _negotiationGate.WaitAsync(cancellationToken);
+        try
         {
-            AppendBounded(_negotiations, record, _options.MaxNegotiationEntries);
-        }
-
-        await WriteAuditAsync(
-            eventType: "xcore9.negotiation.recorded",
-            actor: actor,
-            correlationId: record.CorrelationId,
-            evidenceLinks: Array.Empty<Uri>(),
-            payload: new Dictionary<string, object?>(IdentifierComparer)
+            NegotiationRecord? evicted = null;
+            int insertedIndex;
+            lock (_gate)
             {
-                ["negotiationId"] = record.NegotiationId.ToString("N"),
-                ["proposer"] = record.Proposer,
-                ["counterparty"] = record.Counterparty,
-                ["outcome"] = record.Outcome
-            },
-            cancellationToken);
+                if (_negotiations.Count >= _options.MaxNegotiationEntries)
+                {
+                    evicted = _negotiations[0];
+                    _negotiations.RemoveAt(0);
+                }
+
+                _negotiations.Add(record);
+                insertedIndex = _negotiations.Count - 1;
+            }
+
+            try
+            {
+                await WriteAuditAsync(
+                    eventType: "xcore9.negotiation.recorded",
+                    actor: actor,
+                    correlationId: record.CorrelationId,
+                    evidenceLinks: Array.Empty<Uri>(),
+                    payload: new Dictionary<string, object?>(IdentifierComparer)
+                    {
+                        ["negotiationId"] = record.NegotiationId.ToString("N"),
+                        ["proposer"] = record.Proposer,
+                        ["counterparty"] = record.Counterparty,
+                        ["outcome"] = record.Outcome
+                    },
+                    cancellationToken);
+            }
+            catch
+            {
+                lock (_gate)
+                {
+                    if (_negotiations.Count > insertedIndex)
+                    {
+                        _negotiations.RemoveAt(insertedIndex);
+                    }
+
+                    if (evicted is not null)
+                    {
+                        _negotiations.Insert(0, evicted);
+                    }
+                }
+
+                throw;
+            }
+        }
+        finally
+        {
+            _negotiationGate.Release();
+        }
     }
 
     public async ValueTask<PolicyDecision> EvaluatePromotionAsync(PromotionRequest request, string actor, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         await DemandAsync(actor, "policy.promote", cancellationToken);
-        ValidateEnvelope(request.CorrelationId, request.EvidenceLinks);
+        var evidenceLinks = request.EvidenceLinks.ToArray();
+        ValidateEnvelope(request.CorrelationId, evidenceLinks);
 
         if (string.IsNullOrWhiteSpace(request.RequestedBy))
         {
             return CurrentDecision(false, "requested-by-required");
         }
 
-        if (request.EvidenceLinks.Count == 0)
+        if (evidenceLinks.Length == 0)
         {
             return CurrentDecision(false, "promotion-evidence-required");
         }
@@ -468,7 +519,7 @@ public sealed class XCore9Service : IXCore9Service
                 eventType: "xcore9.policy.promoted",
                 actor: actor,
                 correlationId: request.CorrelationId,
-                evidenceLinks: request.EvidenceLinks,
+                evidenceLinks: evidenceLinks,
                 payload: new Dictionary<string, object?>(IdentifierComparer)
                 {
                     ["candidatePolicyId"] = promotedPolicy.PolicyId,
@@ -578,6 +629,12 @@ public sealed class XCore9Service : IXCore9Service
         if (options.LeaseDuration is { } leaseDuration && leaseDuration <= TimeSpan.Zero)
         {
             throw new ArgumentException("Lease duration must be positive when configured.");
+        }
+
+        if (options.LeaseDuration is { } boundedLeaseDuration &&
+            boundedLeaseDuration > DateTimeOffset.MaxValue - DateTimeOffset.UtcNow)
+        {
+            throw new ArgumentException("Lease duration must fit within representable DateTimeOffset expirations.");
         }
 
         if (string.IsNullOrWhiteSpace(options.AuditEnvironment))
