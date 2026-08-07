@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v3/index.schema.json",
   "schemaVersion": "3.0.0",
   "contractId": "monadoblade-six-profile-delivery-fabric-v3",
   "status": "authoritative",

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Xml;
 using System.Xml.Schema;
 using HELIOS.Platform.Contracts.MonadoBlade.DeliveryFabric.V3;
+using Xunit;
 
 namespace HELIOS.Platform.Contracts.Tests;
 

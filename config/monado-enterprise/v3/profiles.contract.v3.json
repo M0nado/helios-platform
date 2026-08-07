@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v3/profiles.contract.v3.schema.json",
   "schemaVersion": "3.0.0",
   "contractId": "monadoblade-six-profile-contract-v3",
   "defaultProfile": "core",

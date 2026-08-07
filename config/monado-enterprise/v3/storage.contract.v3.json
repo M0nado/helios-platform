@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v3/storage.contract.v3.schema.json",
   "schemaVersion": "3.0.0",
   "contractId": "monadoblade-storage-contract-v3",
   "executionPolicy": {
