@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -52,6 +53,7 @@ public sealed record ControlRunSnapshot(
     EdgeAutomationPlan? Plan = null,
     string? EvidenceSha256 = null,
     int ResourceCount = 0,
+    KnaaAssessment? Knaa = null,
     string? Error = null,
     [property: System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonProperty(PropertyName = "_etag")] string? ETag = null,
     [property: System.Text.Json.Serialization.JsonIgnore] string? LeaseOwner = null,
@@ -283,7 +285,12 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
                     ["target"] = run.Target,
                     ["evidenceSha256"] = run.EvidenceSha256,
                     ["resourceCount"] = run.ResourceCount,
-                    ["planId"] = run.Plan?.PlanId
+                    ["planId"] = run.Plan?.PlanId,
+                    ["knaaModelVersion"] = run.Knaa?.ModelVersion,
+                    ["knaaThresholds"] = run.Knaa?.Policy.Thresholds,
+                    ["knaaEvidenceLinks"] = run.Knaa?.EvidenceLinks,
+                    ["knaaOutcome"] = run.Knaa?.Policy.Outcome,
+                    ["knaa"] = run.Knaa
                 });
             var payload = JsonSerializer.Serialize(envelope, new JsonSerializerOptions(JsonSerializerDefaults.Web));
             var idempotencyKey = $"{run.Id}:{connector}";
@@ -392,12 +399,14 @@ public sealed partial class ControlRunCoordinator(
     IEdgeAutomationPlanner planner,
     IConnectorDispatcher dispatcher,
     ILogger<ControlRunCoordinator> logger,
-    ControlRunCoordinatorTiming? timing = null) : BackgroundService
+    ControlRunCoordinatorTiming? timing = null,
+    IKnaaEvaluator? knaaEvaluator = null) : BackgroundService
 {
     private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "dev", "test", "preview", "prod" };
     private static readonly HashSet<string> Intents = new(StringComparer.OrdinalIgnoreCase) { "provision-resources", "cleanup-owned-resources" };
     private static readonly HashSet<string> Connectors = new(StringComparer.OrdinalIgnoreCase) { "github", "linear", "slack", "sharepoint", "teams", "copilot" };
     private readonly ControlRunCoordinatorTiming _timing = ControlRunCoordinatorTiming.Validate(timing);
+    private readonly IKnaaEvaluator _knaaEvaluator = knaaEvaluator ?? new KnaaEvaluator(KnaaEvaluatorOptions.Default);
     private readonly Channel<string> _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(256)
     {
         FullMode = BoundedChannelFullMode.Wait,
@@ -448,6 +457,7 @@ public sealed partial class ControlRunCoordinator(
             Step("inventory", "queued", "Read non-secret resource metadata."),
             Step("plan", "queued", "Create a deterministic governed plan."),
             Step("evidence", "queued", "Hash the normalized plan and inventory summary."),
+            Step("evaluation", "queued", "Compute KNAA value vector and policy recommendation."),
             Step("connectors", "queued", "Deliver idempotent status receipts through configured relays."),
             Step("approval", "queued", "Stop at the protected approval boundary.")
         };
@@ -605,6 +615,16 @@ public sealed partial class ControlRunCoordinator(
             run = await ReplaceAsync(run, run with { EvidenceSha256 = digest, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
             run = await SetStepAsync(run, "evidence", "completed", $"Evidence SHA-256 {digest}.", workToken);
 
+            run = await SetStepAsync(run, "evaluation", "running", "Scoring KNAA vector and policy thresholds.", workToken);
+            var knaa = _knaaEvaluator.Evaluate(run);
+            run = await ReplaceAsync(run, run with { Knaa = knaa, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
+            var scoreText = knaa.Score.HasValue
+                ? knaa.Score.Value.ToString("0.000", CultureInfo.InvariantCulture)
+                : "unknown";
+            run = await SetStepAsync(run, "evaluation", "completed",
+                $"KNAA outcome {knaa.Policy.Outcome}; score {scoreText}; confidence {knaa.Confidence.ToString("0.000", CultureInfo.InvariantCulture)}.",
+                workToken);
+
             run = await SetStepAsync(run, "connectors", "running", "Reconciling external status receipts.", workToken);
             var awaitsApproval = plan.Steps.Any(step => step.Mutating);
             var receipts = await dispatcher.DispatchAsync(run with { Status = awaitsApproval ? "awaiting-approval" : "completed" }, workToken);
@@ -612,9 +632,7 @@ public sealed partial class ControlRunCoordinator(
             run = await SetStepAsync(run, "connectors", "completed", $"Recorded {receipts.Count} connector receipts.", workToken);
 
             run = await SetStepAsync(run, "approval", "running", "Evaluating protected mutation gates.", workToken);
-            run = await SetStepAsync(run, "approval", "completed", awaitsApproval
-                ? "Stopped before mutation. Review what-if evidence and approve through the protected workflow."
-                : "No mutating step is present.", workToken);
+            run = await SetStepAsync(run, "approval", "completed", BuildApprovalDetail(awaitsApproval, run.Knaa), workToken);
             await ReplaceAsync(run, run with
             {
                 Status = awaitsApproval ? "awaiting-approval" : "completed",
@@ -724,15 +742,28 @@ public sealed partial class ControlRunCoordinator(
     private async Task<ControlRunSnapshot> SetStepAsync(ControlRunSnapshot run, string name, string status, string detail, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
-        var steps = run.Steps.Select(step => step.Name == name
-            ? step with
+        var matched = false;
+        var steps = run.Steps.Select(step =>
+        {
+            if (!string.Equals(step.Name, name, StringComparison.Ordinal)) return step;
+            matched = true;
+            return step with
             {
                 Status = status,
                 Detail = detail,
                 StartedAt = step.StartedAt ?? (status == "running" ? now : null),
                 CompletedAt = status == "completed" ? now : step.CompletedAt
-            }
-            : step).ToArray();
+            };
+        }).ToList();
+        if (!matched)
+        {
+            steps.Add(new ControlRunStep(
+                name,
+                status,
+                detail,
+                StartedAt: status == "running" ? now : null,
+                CompletedAt: status == "completed" ? now : null));
+        }
         return await ReplaceAsync(run, run with { Steps = steps, UpdatedAt = now }, cancellationToken);
     }
 
@@ -772,6 +803,21 @@ public sealed partial class ControlRunCoordinator(
     }
 
     private static ControlRunStep Step(string name, string status, string detail) => new(name, status, detail);
+
+    private static string BuildApprovalDetail(bool awaitsApproval, KnaaAssessment? knaa)
+    {
+        if (!awaitsApproval) return "No mutating step is present.";
+        if (knaa is null) return "Stopped before mutation. Review what-if evidence and approve through the protected workflow.";
+        if (knaa.Policy.AutoBlockTriggered)
+            return "Stopped before mutation. Conservative KNAA auto-block policy triggered and requires explicit operator review.";
+        return knaa.Policy.Outcome switch
+        {
+            "block" => "Stopped before mutation. KNAA advisory outcome is block; complete evidence and manual review are required.",
+            "warn" => "Stopped before mutation. KNAA outcome is warn; proceed only with explicit reviewer justification.",
+            "review-required" => "Stopped before mutation. KNAA outcome requires manual review through the protected workflow.",
+            _ => "Stopped before mutation. Review what-if evidence and approve through the protected workflow."
+        };
+    }
 
     private static string Normalize(string? value, string name, int maxLength)
     {

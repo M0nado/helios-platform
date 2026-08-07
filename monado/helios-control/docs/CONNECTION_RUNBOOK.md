@@ -37,6 +37,18 @@ its own provider receipt is durable. Promote one
 destination at a time. The Edge connector-status endpoint reports binding and
 mode without disclosing endpoints or secrets.
 
+Every `helios.control-run.status` relay payload now carries KNAA evaluator
+telemetry:
+
+- `knaaModelVersion`
+- `knaaThresholds`
+- `knaaEvidenceLinks`
+- `knaaOutcome`
+- full `knaa` assessment object (source signals, vector, confidence, policy)
+
+See `docs/XCORE9_KNAA_VALUE_MODEL.md` and
+`config/knaa-value-model.v1.schema.json` for the authoritative contract.
+
 ## Webhook endpoints
 
 `POST /webhooks/github`, `/linear`, `/slack`, `/teams`, `/sharepoint`, `/foundry`,

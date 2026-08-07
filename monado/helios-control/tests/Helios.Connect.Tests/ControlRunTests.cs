@@ -32,6 +32,11 @@ public sealed class ControlRunTests
             Assert.Matches("^[0-9a-f]{64}$", completed.EvidenceSha256);
             Assert.Equal(2, completed.ResourceCount);
             Assert.Equal(4, completed.Receipts.Count);
+            Assert.NotNull(completed.Knaa);
+            Assert.Equal("helios.knaa.v1", completed.Knaa!.SchemaVersion);
+            Assert.Equal("xcore9-knaa-1.0.0", completed.Knaa.ModelVersion);
+            Assert.NotEmpty(completed.Knaa.EvidenceLinks);
+            Assert.Equal("awaiting-approval", completed.Status);
             Assert.All(completed.Steps, step => Assert.Equal("completed", step.Status));
         }
         finally
@@ -86,6 +91,7 @@ public sealed class ControlRunTests
             new ControlRunStep("inventory", "queued", "queued"),
             new ControlRunStep("plan", "queued", "queued"),
             new ControlRunStep("evidence", "queued", "queued"),
+            new ControlRunStep("evaluation", "queued", "queued"),
             new ControlRunStep("connectors", "queued", "queued"),
             new ControlRunStep("approval", "queued", "queued")
         };
@@ -265,7 +271,7 @@ public sealed class ControlRunTests
         var now = DateTimeOffset.UtcNow;
         var run = new ControlRunSnapshot("0123456789abcdef0123456789abcdef", "control-runs", "edge-relay-0001", "correlation-1", "principal-1",
             "provision-resources", "dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
-            EvidenceSha256: new string('a', 64), ResourceCount: 2);
+            EvidenceSha256: new string('a', 64), ResourceCount: 2, Knaa: BuildSampleKnaaAssessment(now));
 
         var receipts = await dispatcher.DispatchAsync(run, CancellationToken.None);
         var firstBody = handler.Body;
@@ -298,7 +304,53 @@ public sealed class ControlRunTests
         Assert.Equal("internal", envelope.DataClassification);
         Assert.Equal("github", ((JsonElement)envelope.Payload["connector"]!).GetString());
         Assert.Equal("0123456789abcdef0123456789abcdef", ((JsonElement)envelope.Payload["runId"]!).GetString());
+        Assert.Equal("xcore9-knaa-1.0.0", ((JsonElement)envelope.Payload["knaaModelVersion"]!).GetString());
+        var thresholds = (JsonElement)envelope.Payload["knaaThresholds"]!;
+        Assert.Equal(0.35, thresholds.GetProperty("block").GetDouble());
+        Assert.Equal(0.55, thresholds.GetProperty("warn").GetDouble());
+        Assert.Equal(0.75, thresholds.GetProperty("reviewRequired").GetDouble());
+        var evidenceLinks = ((JsonElement)envelope.Payload["knaaEvidenceLinks"]!).EnumerateArray().Select(value => value.GetString()).ToArray();
+        Assert.Contains("run://control-runs/0123456789abcdef0123456789abcdef", evidenceLinks);
     }
+
+    private static KnaaAssessment BuildSampleKnaaAssessment(DateTimeOffset now) => new(
+        SchemaVersion: "helios.knaa.v1",
+        ModelVersion: "xcore9-knaa-1.0.0",
+        EvaluatedAt: now,
+        EvidenceState: "sufficient",
+        Score: 0.91,
+        Confidence: 0.93,
+        Uncertainty: "none",
+        SourceSignals:
+        [
+            new KnaaSourceSignal("context-verified", "control-run-step.context", 1, 1, "known", "context complete"),
+            new KnaaSourceSignal("evidence-digest", "control-run.evidenceSha256", 1, 1, "known", "digest present"),
+            new KnaaSourceSignal("plan-present", "edge.plan", 1, 1, "known", "plan available")
+        ],
+        Vector:
+        [
+            new KnaaVectorComponent("knowledge", 0.92, "known", ["context-verified", "evidence-digest"]),
+            new KnaaVectorComponent("normalization", 0.89, "known", ["plan-present", "context-verified"]),
+            new KnaaVectorComponent("actionability", 0.91, "known", ["plan-present"]),
+            new KnaaVectorComponent("assurance", 0.92, "known", ["evidence-digest", "context-verified"])
+        ],
+        Policy: new KnaaPolicyDecision(
+            Outcome: "pass",
+            AdvisoryOnly: true,
+            AutoBlockTriggered: false,
+            Thresholds: new KnaaThresholds(0.35, 0.55, 0.75),
+            Reason: "KNAA score is above all review thresholds."),
+        Recommendation: new KnaaRecommendation(
+            Outcome: "pass",
+            Detail: "Eligible for promotion review only.",
+            PromotionRecommended: true,
+            DeploymentAuthorized: false,
+            BasedOnComponents: ["knowledge", "normalization", "actionability", "assurance"]),
+        EvidenceLinks:
+        [
+            "run://control-runs/0123456789abcdef0123456789abcdef",
+            "evidence://sha256/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ]);
 
     private static async Task<ControlRunSnapshot> WaitForTerminalAsync(ControlRunCoordinator coordinator, string id)
     {

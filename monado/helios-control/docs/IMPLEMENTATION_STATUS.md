@@ -41,6 +41,10 @@
   leases and recovery scans, deterministic Azure orchestration-plan digests,
   managed-identity persistence, resumable failed-run status, and an explicit
   `awaiting-approval` terminal gate.
+- KNAA v1 evaluator integration for control runs, including versioned model
+  metadata, normalized source-signal vectors, confidence/uncertainty semantics,
+  threshold-scored policy outcomes (`block`/`warn`/`review-required`/`pass`),
+  and audit payload traceability links.
 - Signed HTTPS connector relays for GitHub, Linear, Slack, SharePoint, Teams,
   and Copilot. The runtime stores per-destination receipts, uses stable
   idempotency keys, retries three times, and never returns relay URLs or HMAC

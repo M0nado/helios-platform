@@ -6,7 +6,7 @@ Local processes are development and administration clients only; the governed
 runtime is hosted in Azure.
 
 The implemented slice validates signed webhooks, exposes read-only MCP
-inventory, runs the Edge one-button Diagnose → Plan → Save → Sync flow, stores
+inventory, runs the Edge one-button Diagnose → Plan → Save → Evaluate → Sync flow, stores
 run/idempotency state in Cosmos DB through managed identity, and emits signed
 connector-relay receipts. Service Bus scale-out, provider-native workers, and
 dead-letter replay remain target architecture.
@@ -32,7 +32,8 @@ Key Vault references, signing secrets, outbound workers, and destination
 allowlists are implemented and reviewed. Providers without an implemented
 verifier remain fail-closed.
 
-See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`, and
+See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`,
+`docs/XCORE9_KNAA_VALUE_MODEL.md`, and
 `config/integrations.json`.
 
 ## Edge and Copilot setup wizard

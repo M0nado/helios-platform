@@ -12,6 +12,9 @@ builder.Services.AddHttpClient("helios-connectors", client => client.Timeout = T
 builder.Services.AddSingleton<IEdgeAutomationPlanner, EdgeAutomationPlanner>();
 builder.Services.AddSingleton<ISetupWizardService, SetupWizardService>();
 builder.Services.AddSingleton<IConnectorDispatcher, ConnectorDispatcher>();
+builder.Services.AddSingleton(services =>
+    KnaaEvaluatorOptions.FromConfiguration(services.GetRequiredService<IConfiguration>()));
+builder.Services.AddSingleton<IKnaaEvaluator, KnaaEvaluator>();
 builder.Services.AddSingleton<IControlRunStore>(services =>
 {
     var configuration = services.GetRequiredService<IConfiguration>();
@@ -74,7 +77,7 @@ app.MapGet("/openapi/v1.json", (HttpRequest request) =>
         ["/control/connectors"] = new { get = new { operationId = "ListConnectorBindings", summary = "List safe connector binding state without endpoints or secrets.", responses = new Dictionary<string, object> { ["200"] = new { description = "Connector states" }, ["401"] = new { description = "Entra authentication required" } } } },
         ["/control/runs"] = new { post = new {
             operationId = "StartControlRun",
-            summary = "Start an idempotent Diagnose, Plan, Save, and Sync run that cannot apply.",
+            summary = "Start an idempotent Diagnose, Plan, Save, Evaluate, and Sync run that cannot apply.",
             parameters = new[] { new { name = "Idempotency-Key", @in = "header", required = true, schema = new { type = "string", pattern = "^[A-Za-z0-9._:-]{8,128}$" } } },
             requestBody = new {
                 required = true,
@@ -961,7 +964,7 @@ static object[] BuildAzureToolList(IConfiguration configuration)
         BuildMcpToolDescriptor(
             "helios_get_run",
             "Get HELIOS control run",
-            "Read the saved progress, evidence digest, approval boundary, and connector receipts for one Edge control run.",
+            "Read the saved progress, KNAA evaluation telemetry, evidence digest, approval boundary, and connector receipts for one Edge control run.",
             new { type = "object", required = new[] { "runId" }, properties = new { runId = new { type = "string", pattern = "^[0-9a-f]{32}$" } }, additionalProperties = false },
             configuration),
         BuildMcpToolDescriptor(
