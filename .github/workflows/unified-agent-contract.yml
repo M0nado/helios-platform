@@ -6,13 +6,16 @@ on:
       - "AGENTS.md"
       - ".codex/**"
       - ".github/copilot-instructions.md"
+      - ".github/pull_request_template.md"
       - "config/integrations/**"
       - ".gitmodules"
-      - "modules/**"Because the new validator accepts any .gitmodules path whose URL is approved, an approved submodule can be moved to vendor/... and still pass; after that, gitlink-only PRs under that declared path do not match this modules/** filter (nor the matching push filter), so the repository-integrity gate will not run for the pin changes it is supposed to validate. Either reject declared paths outside modules/<repo> or watch all accepted gitlink paths.
-
-Useful? React with 👍 / 👎.
+      - "modules/**"
       - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
+      - "docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md"
+      - "scripts/control/validate_ai_collaboration_pr.py"
+      - "tests/scripts/test_validate_ai_collaboration_pr.py"
+      - ".github/workflows/ai-collaboration-governance.yml"
       - ".github/workflows/unified-agent-contract.yml"
   push:
     branches: [main]
@@ -22,6 +25,11 @@ Useful? React with 👍 / 👎.
       - "modules/**"
       - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
+      - "docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md"
+      - ".github/pull_request_template.md"
+      - "scripts/control/validate_ai_collaboration_pr.py"
+      - "tests/scripts/test_validate_ai_collaboration_pr.py"
+      - ".github/workflows/ai-collaboration-governance.yml"
   workflow_dispatch:
 
 permissions:
@@ -72,18 +80,35 @@ jobs:
         run: |
           test -s AGENTS.md
           test -s .github/copilot-instructions.md
+          test -s .github/pull_request_template.md
           test -s .codex/config.toml
           test -s docs/architecture/UNIFIED_AGENT_COMMUNICATION.md
+          test -s docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md
+          test -s scripts/integrations/validate_repository_integrity.py
+          test -s scripts/control/validate_ai_collaboration_pr.py
+          test -s tests/scripts/test_validate_ai_collaboration_pr.py
+          test -s .github/workflows/ai-collaboration-governance.yml
       - name: Validate repository integrity
         run: python scripts/integrations/validate_repository_integrity.py
+      - name: Validate governed PR checker
+        shell: bash
+        run: |
+          python -m py_compile scripts/control/validate_ai_collaboration_pr.py
+          python -m unittest tests/scripts/test_validate_ai_collaboration_pr.py -v
       - uses: actions/upload-artifact@v4
         with:
           name: helios-unified-agent-contract
           path: |
             AGENTS.md
             .github/copilot-instructions.md
+            .github/pull_request_template.md
             .codex/config.toml
             config/integrations/repositories.json
             config/integrations/event-contract.schema.json
             docs/architecture/UNIFIED_AGENT_COMMUNICATION.md
+            docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md
+            scripts/integrations/validate_repository_integrity.py
+            scripts/control/validate_ai_collaboration_pr.py
+            tests/scripts/test_validate_ai_collaboration_pr.py
+            .github/workflows/ai-collaboration-governance.yml
           retention-days: 14

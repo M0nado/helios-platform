@@ -43,6 +43,16 @@ jobs:
           fetch-depth: 0
           submodules: false
 
+      - name: Initialize accessible submodules (best effort)
+        run: |
+          set -euo pipefail
+          if [ -f .gitmodules ]; then
+            git submodule sync --recursive
+            if ! git -c protocol.version=2 submodule update --init --recursive; then
+              echo "::warning::One or more submodules could not be fetched; continuing with accessible modules only."
+            fi
+          fi
+
       - name: Setup Build Configuration
         id: setup
         run: |
@@ -80,6 +90,16 @@ jobs:
           fetch-depth: 0
           submodules: false
 
+      - name: Initialize accessible submodules (best effort)
+        run: |
+          set -euo pipefail
+          if [ -f .gitmodules ]; then
+            git submodule sync --recursive
+            if ! git -c protocol.version=2 submodule update --init --recursive; then
+              echo "::warning::One or more submodules could not be fetched; continuing with accessible modules only."
+            fi
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -105,6 +125,14 @@ jobs:
           echo "NPM version: $(npm --version)"
           echo "Module: ${{ matrix.module }}"
           echo "Clean build: ${{ github.event.inputs.clean_build }}"
+
+      - name: Compute artifact slug
+        id: artifact-slug
+        run: |
+          module='${{ matrix.module }}'
+          slug="${module//\//-}"
+          slug="${slug//[^A-Za-z0-9._-]/-}"
+          echo "value=$slug" >> "$GITHUB_OUTPUT"
 
       - name: Install Dependencies
         run: |
@@ -156,7 +184,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-${{ matrix.module }}
+          name: build-artifacts-${{ steps.artifact-slug.outputs.value }}
           path: |
             ${{ matrix.module }}/dist/
             ${{ matrix.module }}/build/
@@ -167,7 +195,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.module }}
+          name: coverage-${{ steps.artifact-slug.outputs.value }}
           path: ${{ matrix.module }}/coverage/
           if-no-files-found: warn
           retention-days: 7
