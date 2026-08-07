@@ -70,6 +70,8 @@ export AZURE_OPENAI_API_KEY="..."
 Generated reports are written to `reports/branch-intelligence/`:
 
 - `branch-ranking.json` / `.md`
+- `branch-source-manifest.md` (commits, authorship, files, conflicts, and disposition)
+- `umbrella-issues.json` / `.md` (primary assignment and integration-train gates)
 - `idea-impact.json` / `.md`
 - `idea-impact-summary.json` / `.md`
 - `agent-work-queue.json` / `.md`
@@ -77,3 +79,10 @@ Generated reports are written to `reports/branch-intelligence/`:
 - `connectivity.json` / `.md`
 - `remote-actions.json`
 - `dashboard.md`
+
+Each branch record includes its unique and patch-equivalent commits relative to
+`origin/main`, the complete changed-file list, primary umbrella assignment,
+module owner, merge-tree conflict result, security impact, temporary integration
+branch, and disposition. The analyzer never creates, merges, pushes, or deletes
+branches; issue creation and every integration train remain explicit reviewed
+GitHub operations.

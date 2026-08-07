@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "targetBranch": "work",
+  "targetBranch": "origin/main",
   "remotes": [
     {
       "name": "origin",
