@@ -365,14 +365,14 @@ public sealed class XCore9GovernanceTests
             throw new ArgumentException("Base path is required.", nameof(basePath));
         }
 
-        if (segments.Any(segment => string.IsNullOrWhiteSpace(segment) || Path.IsPathRooted(segment)))
-        {
-            throw new ArgumentException("All path segments must be non-empty relative paths.", nameof(segments));
-        }
-
         var combined = basePath;
         foreach (var segment in segments)
         {
+            if (string.IsNullOrWhiteSpace(segment) || Path.IsPathRooted(segment))
+            {
+                throw new ArgumentException("All path segments must be non-empty relative paths.", nameof(segments));
+            }
+
             combined = Path.Combine(combined, segment);
         }
 
