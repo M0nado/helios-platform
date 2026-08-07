@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using HELIOS.Platform.Contracts.Monadoblade;
 using Xunit;
 
@@ -78,6 +79,32 @@ public class MonadoEnterpriseExperienceFabricV2ContractsTests
             expiresAtUtc: now.AddMinutes(45));
 
         proposal.Validate(now);
+    }
+
+    [Fact]
+    public void MonadoEnterpriseProfileId_UsesSchemaCompatibleSerialization()
+    {
+        Assert.Equal("\"ai-server\"", JsonSerializer.Serialize(MonadoEnterpriseProfileId.AiServer));
+        Assert.Equal(
+            MonadoEnterpriseProfileId.AiServer,
+            JsonSerializer.Deserialize<MonadoEnterpriseProfileId>("\"ai-server\""));
+    }
+
+    [Fact]
+    public void MonadoOpenAiProposal_SerializesProfileIdAsSchemaString()
+    {
+        var now = new DateTimeOffset(2026, 8, 7, 1, 0, 0, TimeSpan.Zero);
+        var proposal = BuildProposal(
+            actionType: "proposal",
+            approvalRequired: false,
+            expiresAtUtc: now.AddMinutes(45));
+
+        var json = JsonSerializer.Serialize(proposal, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        using var document = JsonDocument.Parse(json);
+        var profileId = document.RootElement.GetProperty("profileId");
+
+        Assert.Equal(JsonValueKind.String, profileId.ValueKind);
+        Assert.Equal("developer", profileId.GetString());
     }
 
     private static MonadoOpenAiProposal BuildProposal(

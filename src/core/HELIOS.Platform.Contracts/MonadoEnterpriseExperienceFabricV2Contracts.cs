@@ -1,12 +1,15 @@
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace HELIOS.Platform.Contracts.Monadoblade;
 
 /// <summary>
 /// Permanent profile catalog for Monado enterprise experience fabric v2.
 /// </summary>
+[JsonConverter(typeof(MonadoEnterpriseProfileIdJsonConverter))]
 public enum MonadoEnterpriseProfileId
 {
     Core,
@@ -17,6 +20,49 @@ public enum MonadoEnterpriseProfileId
     SysOps,
     AiServer,
     SysAdmin,
+}
+
+/// <summary>
+/// JSON converter that preserves schema-compatible kebab-case profile IDs.
+/// </summary>
+public sealed class MonadoEnterpriseProfileIdJsonConverter : JsonConverter<MonadoEnterpriseProfileId>
+{
+    public override MonadoEnterpriseProfileId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.String)
+        {
+            throw new JsonException("ProfileId must be serialized as a string.");
+        }
+
+        return reader.GetString() switch
+        {
+            "core" => MonadoEnterpriseProfileId.Core,
+            "developer" => MonadoEnterpriseProfileId.Developer,
+            "gamer" => MonadoEnterpriseProfileId.Gamer,
+            "studio" => MonadoEnterpriseProfileId.Studio,
+            "personal" => MonadoEnterpriseProfileId.Personal,
+            "sysops" => MonadoEnterpriseProfileId.SysOps,
+            "ai-server" => MonadoEnterpriseProfileId.AiServer,
+            "sysadmin" => MonadoEnterpriseProfileId.SysAdmin,
+            var unknown => throw new JsonException($"Unsupported profileId '{unknown}'."),
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, MonadoEnterpriseProfileId value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value switch
+        {
+            MonadoEnterpriseProfileId.Core => "core",
+            MonadoEnterpriseProfileId.Developer => "developer",
+            MonadoEnterpriseProfileId.Gamer => "gamer",
+            MonadoEnterpriseProfileId.Studio => "studio",
+            MonadoEnterpriseProfileId.Personal => "personal",
+            MonadoEnterpriseProfileId.SysOps => "sysops",
+            MonadoEnterpriseProfileId.AiServer => "ai-server",
+            MonadoEnterpriseProfileId.SysAdmin => "sysadmin",
+            _ => throw new JsonException($"Unsupported profileId '{value}'."),
+        });
+    }
 }
 
 /// <summary>

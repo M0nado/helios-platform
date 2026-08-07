@@ -241,11 +241,12 @@ jobs:
   report-results:
     name: Report Test Results
     runs-on: ubuntu-latest
-    needs: [test-variants, compare-variants]
+    needs: [setup-variants, test-variants, compare-variants]
     if: always()
     steps:
       - name: Generate Summary
         run: |
+          echo "Node project exists: ${{ needs.setup-variants.outputs.node_project_exists }}"
           echo "Test Status: ${{ needs.test-variants.result }}"
           echo "Comparison Status: ${{ needs.compare-variants.result }}"
 
@@ -254,10 +255,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const status = '${{ needs.test-variants.result }}' === 'success' ? '✓' : '✗';
+            const nodeProjectExists = '${{ needs.setup-variants.outputs.node_project_exists }}' === 'true';
+            const result = '${{ needs.test-variants.result }}';
+            const status = result === 'success' ? '✓' : '✗';
+            const body = nodeProjectExists
+              ? `## ${status} Build Variant Tests\n\n**Status**: ${result}\n\n**Variants Tested**:\n- Development\n- Staging\n- Production\n- Test\n\n**Platforms**:\n- Ubuntu (Node 18, 20)\n- Windows (Node 18)\n\n[View detailed results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+              : `## ~ Build Variant Tests\n\n**Status**: skipped\n\nNo root package.json was detected, so the Node.js variant matrix was intentionally skipped.\n\n[View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ${status} Build Variant Tests\n\n**Status**: ${{ needs.test-variants.result }}\n\n**Variants Tested**:\n- Development\n- Staging\n- Production\n- Test\n\n**Platforms**:\n- Ubuntu (Node 18, 20)\n- Windows (Node 18)\n\n[View detailed results](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+              body
             })

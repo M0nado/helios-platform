@@ -87,6 +87,14 @@ EXPECTED_OVERLAY_CONTRACT_ID = "monadoblade-experience-fabric-v2-overlay"
 EXPECTED_CANONICAL_CONTRACT_ID = "monado-enterprise-experience-fabric-v2"
 EXPECTED_OPENAI_SCHEMA_ID = "https://helios-platform.dev/schemas/monado-openai-proposal-v2.json"
 EXPECTED_PRIVILEGED_ACTION_TYPES = {"privileged-proposal", "deployment-proposal", "rollback-proposal"}
+EXPECTED_SYNC_PROHIBITIONS = {
+    "direct-to-main-write",
+    "implicit-external-message-side-effect",
+    "azure-apply-from-runtime",
+    "tenant-consent-from-runtime",
+    "direct-production-deployment",
+    "external-write-without-approval",
+}
 EXPECTED_DENIED_OPERATIONS = {
     "direct-disk-mutation",
     "direct-tenant-consent",
@@ -228,6 +236,14 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     disk0_letters = {item.get("targetLetter") for item in disk0.get("partitions", []) if isinstance(item, Mapping)}
     _require({"C", "R", "X"}.issubset(disk0_letters), "disk0 must define C/R/X partitions", errors)
     vhdx_items = [item for item in disk1.get("vhdx", []) if isinstance(item, Mapping)]
+    vhdx_ids = [item.get("id") for item in vhdx_items if isinstance(item.get("id"), str)]
+    _require(len(vhdx_ids) == len(set(vhdx_ids)), "storage vhdx entries must use unique id values", errors)
+    vhdx_letters = [item.get("targetLetter") for item in vhdx_items if isinstance(item.get("targetLetter"), str)]
+    _require(
+        len(vhdx_letters) == len(set(vhdx_letters)),
+        "storage vhdx entries must use unique target letters",
+        errors,
+    )
     devdrive = next((item for item in vhdx_items if item.get("id") == "devdrive"), None)
     vault = next((item for item in vhdx_items if item.get("id") == "vault"), None)
     _require(devdrive is not None and devdrive.get("targetLetter") == "D", "devdrive vhdx must target D", errors)
@@ -374,6 +390,15 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     )
     envelope_fields = set(sync.get("envelope", {}).get("requiredFields", []))
     _require(EXPECTED_ENVELOPE_FIELDS.issubset(envelope_fields), "synchronization envelope is missing required normalized fields", errors)
+    sync_prohibitions = sync.get("prohibitions", [])
+    _require(isinstance(sync_prohibitions, list), "synchronization prohibitions must be a list", errors)
+    if isinstance(sync_prohibitions, list):
+        sync_prohibition_set = {item for item in sync_prohibitions if isinstance(item, str)}
+        _require(
+            EXPECTED_SYNC_PROHIBITIONS.issubset(sync_prohibition_set),
+            "synchronization prohibitions must include the full protected operation set",
+            errors,
+        )
 
     ownership = _load_json(base / "repository-ownership.contract.v2.json")
     _require(ownership.get("canonicalPlatform") == "M0nado/helios-platform", "repository ownership canonicalPlatform mismatch", errors)
@@ -424,6 +449,9 @@ def validate_profile_xml(base: Path = BASE) -> list[str]:
     alvis = _load_json(base / "alvis-tool-budgets.v2.json")
     alvis_profiles = alvis.get("profiles", {})
     _require(isinstance(alvis_profiles, Mapping), "ALVIS profiles must be an object for XML budget cross-checks", errors)
+    experience = _load_json(base / "profile-experience.contract.v2.json")
+    experience_profiles = experience.get("profiles", {})
+    _require(isinstance(experience_profiles, Mapping), "profile-experience profiles must be an object for XML cross-checks", errors)
     xml_root = base / "xml"
     xsd_path = xml_root / "profile-manifest.v2.xsd"
     if not xsd_path.exists():
@@ -463,11 +491,41 @@ def validate_profile_xml(base: Path = BASE) -> list[str]:
             errors,
         )
 
+        xml_values: dict[str, str] = {}
         for element in ("SemanticUi", "ServiceMode", "NetworkMode", "TelemetryClass", "AlvisMaxToolCallsPerPlan"):
             node = root.find(f"m:{element}", XML_NS)
-            _require(node is not None and (node.text or "").strip() != "", f"{path}: missing {element}", errors)
-        max_calls_node = root.find("m:AlvisMaxToolCallsPerPlan", XML_NS)
-        max_calls_text = (max_calls_node.text or "").strip() if max_calls_node is not None else ""
+            value = (node.text or "").strip() if node is not None else ""
+            xml_values[element] = value
+            _require(value != "", f"{path}: missing {element}", errors)
+
+        if profile_id in EXPECTED_PROFILES and isinstance(experience_profiles, Mapping):
+            expected_profile = experience_profiles.get(profile_id)
+            _require(
+                isinstance(expected_profile, Mapping),
+                f"{path}: profile-experience must define profile {profile_id}",
+                errors,
+            )
+            if isinstance(expected_profile, Mapping):
+                for xml_field, json_field in (
+                    ("SemanticUi", "uiSemantic"),
+                    ("ServiceMode", "serviceMode"),
+                    ("NetworkMode", "networkMode"),
+                    ("TelemetryClass", "telemetryClass"),
+                ):
+                    expected_value = expected_profile.get(json_field)
+                    _require(
+                        isinstance(expected_value, str) and expected_value.strip() != "",
+                        f"{path}: profile-experience {profile_id}.{json_field} must be a non-empty string",
+                        errors,
+                    )
+                    if isinstance(expected_value, str) and expected_value.strip() != "":
+                        _require(
+                            xml_values[xml_field] == expected_value,
+                            f"{path}: {xml_field} must match profile-experience value '{expected_value}' for {profile_id}",
+                            errors,
+                        )
+
+        max_calls_text = xml_values["AlvisMaxToolCallsPerPlan"]
         _require(
             max_calls_text.isdigit() and int(max_calls_text) > 0,
             f"{path}: AlvisMaxToolCallsPerPlan must be a positive integer",

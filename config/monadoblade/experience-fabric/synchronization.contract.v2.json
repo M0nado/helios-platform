@@ -35,6 +35,8 @@
     "direct-to-main-write",
     "implicit-external-message-side-effect",
     "azure-apply-from-runtime",
-    "tenant-consent-from-runtime"
+    "tenant-consent-from-runtime",
+    "direct-production-deployment",
+    "external-write-without-approval"
   ]
 }

@@ -113,6 +113,14 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         errors = self._validate_with_override("synchronization.contract.v2.json", candidate)
         self.assertTrue(any("idempotency algorithm must be sha256" in error for error in errors))
 
+    def test_sync_requires_complete_prohibition_set(self) -> None:
+        candidate = copy.deepcopy(self.sync_contract)
+        candidate["prohibitions"] = [
+            prohibition for prohibition in candidate["prohibitions"] if prohibition != "direct-production-deployment"
+        ]
+        errors = self._validate_with_override("synchronization.contract.v2.json", candidate)
+        self.assertTrue(any("full protected operation set" in error for error in errors))
+
     def test_storage_guardrails_must_reject_runtime_disk_mutation(self) -> None:
         candidate = copy.deepcopy(self.storage_contract)
         candidate["guardrails"]["denyDirectDiskMutationFromRuntime"] = False
@@ -125,6 +133,15 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         vault["kind"] = "dynamic-plaintext"
         errors = self._validate_with_override("storage.contract.v2.json", candidate)
         self.assertTrue(any("dynamic-bitlocker-encrypted" in error for error in errors))
+
+    def test_storage_vhdx_ids_and_target_letters_must_be_unique(self) -> None:
+        candidate = copy.deepcopy(self.storage_contract)
+        duplicate = copy.deepcopy(next(item for item in candidate["topology"]["disk1"]["vhdx"] if item["id"] == "vault"))
+        duplicate["kind"] = "dynamic-plaintext"
+        candidate["topology"]["disk1"]["vhdx"].append(duplicate)
+        errors = self._validate_with_override("storage.contract.v2.json", candidate)
+        self.assertTrue(any("unique id values" in error for error in errors))
+        self.assertTrue(any("unique target letters" in error for error in errors))
 
     def test_alvis_tool_budget_must_be_positive(self) -> None:
         candidate = copy.deepcopy(self.alvis_budget)
@@ -187,6 +204,21 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
             tree.write(xml_path, encoding="utf-8", xml_declaration=True)
             errors = validate_profile_xml(target)
         self.assertTrue(any("must match ALVIS profile budget" in error for error in errors))
+
+    def test_profile_xml_semantics_must_match_profile_experience_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "experience-fabric"
+            shutil.copytree(BASE, target)
+            xml_path = target / "xml" / "sysadmin.profile.v2.xml"
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+            namespace = "{https://helios-platform.dev/schemas/monado-profile-v2}"
+            node = root.find(f"{namespace}NetworkMode")
+            self.assertIsNotNone(node)
+            node.text = "unrestricted-public"
+            tree.write(xml_path, encoding="utf-8", xml_declaration=True)
+            errors = validate_profile_xml(target)
+        self.assertTrue(any("NetworkMode must match profile-experience value" in error for error in errors))
 
 
 if __name__ == "__main__":
