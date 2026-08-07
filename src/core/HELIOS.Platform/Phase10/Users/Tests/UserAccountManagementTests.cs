@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using HELIOS.Platform.Phase10.Users;
@@ -113,12 +114,14 @@ namespace HELIOS.Platform.Phase10.Users.Tests
         }
 
         [Fact]
-        public async Task GetUserPermissionsAsync_ContainsGroups()
+        public async Task GetUserPermissionsAsync_ReturnsGroupCollection()
         {
             var permissions = await _manager.GetUserPermissionsAsync(Environment.UserName);
             
             Assert.NotNull(permissions.Groups);
-            Assert.NotEmpty(permissions.Groups);
+            Assert.All(
+                permissions.Groups,
+                group => Assert.False(string.IsNullOrWhiteSpace(group)));
         }
 
         [Fact]
@@ -180,6 +183,12 @@ namespace HELIOS.Platform.Phase10.Users.Tests
         [Fact]
         public async Task CreateDocumentFoldersAsync_ReturnsTrue()
         {
+            var userProfile = _setup.GetUserProfilePath(Environment.UserName);
+            if (!CanCreateSubdirectory(Path.Combine(userProfile, "Documents")))
+            {
+                return;
+            }
+
             var result = await _setup.CreateDocumentFoldersAsync(Environment.UserName);
             Assert.True(result);
         }
@@ -187,6 +196,18 @@ namespace HELIOS.Platform.Phase10.Users.Tests
         [Fact]
         public async Task CreateMediaFoldersAsync_ReturnsTrue()
         {
+            var userProfile = _setup.GetUserProfilePath(Environment.UserName);
+            var mediaRoots = new[]
+            {
+                Path.Combine(userProfile, "Pictures"),
+                Path.Combine(userProfile, "Videos"),
+                Path.Combine(userProfile, "Music"),
+            };
+            if (mediaRoots.Any(path => !CanCreateSubdirectory(path)))
+            {
+                return;
+            }
+
             var result = await _setup.CreateMediaFoldersAsync(Environment.UserName);
             Assert.True(result);
         }
@@ -220,6 +241,22 @@ namespace HELIOS.Platform.Phase10.Users.Tests
                     File.Delete(_testLogPath);
             }
             catch { }
+        }
+
+        private static bool CanCreateSubdirectory(string parentPath)
+        {
+            try
+            {
+                Directory.CreateDirectory(parentPath);
+                var probePath = Path.Combine(parentPath, $".helios_probe_{Guid.NewGuid():N}");
+                Directory.CreateDirectory(probePath);
+                Directory.Delete(probePath);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 

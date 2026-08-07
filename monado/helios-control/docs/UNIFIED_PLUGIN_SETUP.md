@@ -31,6 +31,8 @@ install 'helios-control-fabric'.
 
 Run:
 
+    python plugins/helios-control-fabric/scripts/helios.py setup
+    python plugins/helios-control-fabric/scripts/helios.py setup --write
     python plugins/helios-control-fabric/scripts/helios.py doctor
     python plugins/helios-control-fabric/scripts/helios.py targets
     python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
@@ -39,7 +41,11 @@ Run:
     python plugins/helios-control-fabric/scripts/helios.py devops-sync
     python plugins/helios-control-fabric/scripts/helios.py runners
 
-These commands inspect files and local prerequisites only.
+Commands are plan-first by default. `setup --write` only writes a local
+non-secret `.env.local` scaffold at
+`plugins/helios-control-fabric/.env.local`.
+`helios.py` reads that file for its own command execution only; MCP hosts still
+require these variables in the host environment before loading `.mcp.json`.
 
 ## Shared MCP app
 

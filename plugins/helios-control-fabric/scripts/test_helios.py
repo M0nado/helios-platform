@@ -2,6 +2,7 @@ import importlib.util
 import io
 import json
 import os
+import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
@@ -44,6 +45,110 @@ def github_reader(*, immutable: bool = True, use_default: bool = True) -> Mock:
 
 
 class HeliosCliTests(unittest.TestCase):
+    def test_setup_plan_reports_missing_required_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            env_file = Path(temp_directory) / ".env.local"
+            with patch.dict(os.environ, {}, clear=True):
+                payload = HELIOS.setup_environment(write=False, env_file=env_file)
+        self.assertEqual(payload["payloadType"], "setup")
+        self.assertEqual(payload["executionMode"], "plan-only")
+        self.assertFalse(payload["writePerformed"])
+        self.assertFalse(payload["requiredConfigured"])
+        self.assertIn(
+            "HELIOS_AZURE_CONNECTOR_URL",
+            payload["missingRequiredVariables"],
+        )
+        self.assertEqual(payload["environmentFile"], str(env_file))
+
+    def test_setup_write_creates_environment_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            env_file = Path(temp_directory) / ".env.local"
+            env_file.write_text("AZURE_TENANT_ID=tenant-1\n", encoding="utf-8")
+            with patch.dict(
+                os.environ,
+                {
+                    "HELIOS_AZURE_CONNECTOR_URL": "https://helios.example",
+                    "AZURE_DEVOPS_ORGANIZATION": "contoso",
+                },
+                clear=True,
+            ):
+                payload = HELIOS.setup_environment(write=True, env_file=env_file)
+            parsed = HELIOS.parse_environment_file(env_file)
+        self.assertTrue(payload["writePerformed"])
+        self.assertEqual(payload["executionMode"], "local-write")
+        self.assertTrue(parsed["HELIOS_AZURE_CONNECTOR_URL"])
+        self.assertEqual(parsed["AZURE_TENANT_ID"], "tenant-1")
+        self.assertEqual(
+            parsed["HELIOS_LOCAL_MCP_URL"],
+            "http://127.0.0.1:5080/runtime/webhooks/mcp",
+        )
+        self.assertTrue(payload["environmentFileExisted"])
+
+    def test_setup_write_preserves_unknown_entries_and_comments(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            env_file = Path(temp_directory) / ".env.local"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "# Keep custom operator notes.",
+                        "CUSTOM_LOCAL_FLAG=enabled",
+                        "AZURE_TENANT_ID=tenant-1",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {"HELIOS_AZURE_CONNECTOR_URL": "https://helios.example"},
+                clear=True,
+            ):
+                HELIOS.setup_environment(write=True, env_file=env_file)
+            updated_content = env_file.read_text(encoding="utf-8")
+            parsed = HELIOS.parse_environment_file(env_file)
+        self.assertIn("# Keep custom operator notes.", updated_content)
+        self.assertIn("CUSTOM_LOCAL_FLAG=enabled", updated_content)
+        self.assertEqual(parsed["CUSTOM_LOCAL_FLAG"], "enabled")
+        self.assertEqual(parsed["HELIOS_AZURE_CONNECTOR_URL"], "https://helios.example")
+
+    def test_setup_write_marks_missing_environment_file_as_new(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            env_file = Path(temp_directory) / ".env.local"
+            self.assertFalse(env_file.exists())
+            with patch.dict(os.environ, {}, clear=True):
+                payload = HELIOS.setup_environment(write=True, env_file=env_file)
+        self.assertFalse(payload["environmentFileExisted"])
+        self.assertTrue(payload["writePerformed"])
+
+    def test_load_local_environment_sets_only_unset_variables(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            env_file = Path(temp_directory) / ".env.local"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "AZURE_RESOURCE_GROUP=helios-rg",
+                        "AZURE_CLIENT_ID=from-file",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {"AZURE_CLIENT_ID": "override"}, clear=True):
+                status = HELIOS.load_local_environment(env_file=env_file)
+                loaded_resource_group = os.environ.get("AZURE_RESOURCE_GROUP")
+                loaded_client_id = os.environ.get("AZURE_CLIENT_ID")
+        self.assertTrue(status["loaded"])
+        self.assertEqual(status["appliedVariables"], 1)
+        self.assertEqual(loaded_resource_group, "helios-rg")
+        self.assertEqual(loaded_client_id, "override")
+
+    def test_load_local_environment_rejects_invalid_file_line(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            env_file = Path(temp_directory) / ".env.local"
+            env_file.write_text("NOT_A_VALID_LINE\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "Invalid .env.local line"):
+                HELIOS.load_local_environment(env_file=env_file)
+
     def test_targets_are_canonical(self) -> None:
         targets = HELIOS.read_targets()
         self.assertEqual(
