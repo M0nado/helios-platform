@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v2/index.schema.json",
   "schemaVersion": "2.0.0",
   "contractId": "monado-enterprise-experience-fabric-v2",
   "status": "authoritative",

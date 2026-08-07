@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../schemas/monado-enterprise/v2/synchronization.contract.v2.schema.json",
   "schemaVersion": "2.0.0",
   "contractId": "monado-enterprise-synchronization-v2",
   "executionMode": "proposal-only",
