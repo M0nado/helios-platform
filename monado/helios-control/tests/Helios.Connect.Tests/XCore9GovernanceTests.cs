@@ -373,7 +373,7 @@ public sealed class XCore9GovernanceTests
                 throw new ArgumentException("All path segments must be non-empty relative paths.", nameof(segments));
             }
 
-            combined = Path.Combine(combined, segment);
+            combined = Path.Join(combined, segment);
         }
 
         return combined;
