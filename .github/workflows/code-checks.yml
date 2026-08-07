@@ -118,7 +118,7 @@ jobs:
             '(?i)secret\s*=\s*[''"][^''"]+[''"]' = 'Hardcoded secret'
             '(?i)token\s*=\s*[''"][^''"]+[''"]' = 'Hardcoded token'
             'github_pat_[A-Za-z0-9_]{20,}' = 'GitHub personal access token'
-            'sk-[A-Za-z0-9_-]{20,}' = 'Provider API key'
+            'sk-(?:proj-)?[A-Za-z0-9]{24,}' = 'Provider API key'
           }
           $issues = @()
 
