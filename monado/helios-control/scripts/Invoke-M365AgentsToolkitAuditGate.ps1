@@ -146,6 +146,7 @@ function Invoke-PinnedPackageAudit {
 
 $controlRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $toolchainPath = Join-Path (Join-Path $controlRoot 'config') 'microsoft-toolchain.json'
+$cliMatrixPath = Join-Path (Join-Path $controlRoot 'config') 'cli-matrix.json'
 $auditFixturePath = Join-Path $controlRoot $auditFixtureRelativePath
 $fixtureManifestPath = Join-Path $auditFixturePath 'package.json'
 $fixtureLockPath = Join-Path $auditFixturePath 'package-lock.json'
@@ -174,6 +175,39 @@ if (-not $version.Trim()) {
 $automaticInstall = Get-RequiredObjectProperty -Object $tool -Name 'automaticInstall'
 if (-not ($automaticInstall -is [bool])) {
     throw "$toolId automaticInstall must be true or false."
+}
+
+$cliMatrix = Get-Content -LiteralPath $cliMatrixPath -Raw | ConvertFrom-Json
+$cliTools = Get-RequiredObjectProperty -Object $cliMatrix -Name 'tools'
+if (-not ($cliTools -is [System.Collections.IEnumerable])) {
+    throw "config/cli-matrix.json tools must be an array."
+}
+
+$cliToolId = 'm365-agents'
+$cliTool = $cliTools | Where-Object { $_.id -eq $cliToolId } | Select-Object -First 1
+if ($null -eq $cliTool) {
+    throw "config/cli-matrix.json is missing '$cliToolId'."
+}
+
+$cliCommand = [string](Get-RequiredObjectProperty -Object $cliTool -Name 'command')
+if ($cliCommand -ne 'atk') {
+    throw "$cliToolId command must be 'atk', found '$cliCommand'."
+}
+
+$cliPinnedVersion = [string](Get-RequiredObjectProperty -Object $cliTool -Name 'pinnedVersion')
+if (-not $cliPinnedVersion.Trim()) {
+    throw "$cliToolId pinnedVersion must be set."
+}
+if ($cliPinnedVersion -ne $version) {
+    throw "$cliToolId pinnedVersion '$cliPinnedVersion' must match microsoft-toolchain version '$version'."
+}
+
+$cliAutomaticInstall = Get-RequiredObjectProperty -Object $cliTool -Name 'automaticInstall'
+if (-not ($cliAutomaticInstall -is [bool])) {
+    throw "$cliToolId automaticInstall must be true or false."
+}
+if ($cliAutomaticInstall -ne $automaticInstall) {
+    throw "$cliToolId automaticInstall '$cliAutomaticInstall' must match microsoft-toolchain automaticInstall '$automaticInstall'."
 }
 
 $auditFixture = [string](Get-RequiredObjectProperty -Object $tool -Name 'auditFixture')

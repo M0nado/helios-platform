@@ -58,8 +58,11 @@ approved enterprise software distribution.
 The CI gate `scripts/Invoke-M365AgentsToolkitAuditGate.ps1` now validates both
 the lockfile-backed fixture graph (`npm ci` + `npm audit --audit-level=high`)
 and a direct install graph (`npm install @microsoft/m365agentstoolkit-cli@<pin>`
-+ `npm audit --audit-level=high`). It blocks any attempt to set
-`automaticInstall: true` while either graph reports high/critical advisories.
++ `npm audit --audit-level=high`). It also enforces that
+`config/cli-matrix.json` keeps the `m365-agents` pin and `automaticInstall`
+policy aligned with `config/microsoft-toolchain.json`. The gate blocks any
+attempt to set `automaticInstall: true` while either audit graph reports
+high/critical advisories.
 
 ## Provisioning order
 
