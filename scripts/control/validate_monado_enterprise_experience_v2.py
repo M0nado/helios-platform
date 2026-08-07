@@ -62,6 +62,9 @@ EXPECTED_ENVELOPE_FIELDS = {
     "links",
     "payload",
 }
+EXPECTED_IDEMPOTENCY_COMPONENTS = {"routeId", "sourceDeliveryId", "targetLogicalId", "operation"}
+EXPECTED_OVERLAY_CONTRACT_ID = "monadoblade-experience-fabric-v2-overlay"
+EXPECTED_CANONICAL_CONTRACT_ID = "monado-enterprise-experience-fabric-v2"
 
 
 def _load_json(path: Path) -> dict:
@@ -95,6 +98,12 @@ def validate_contracts(base: Path = BASE) -> list[str]:
         return errors
 
     root = _load_json(base / "monado-enterprise-experience-fabric.v2.json")
+    _require(root.get("contractId") == EXPECTED_OVERLAY_CONTRACT_ID, "root contractId must be monadoblade-experience-fabric-v2-overlay", errors)
+    _require(
+        root.get("extendsCanonicalContractId") == EXPECTED_CANONICAL_CONTRACT_ID,
+        "root must explicitly reference the canonical monado-enterprise v2 contract ID",
+        errors,
+    )
     _require(root.get("status") == "authoritative-proposal-only", "root status must remain authoritative-proposal-only", errors)
     execution = root.get("execution", {})
     _require(isinstance(execution, Mapping), "root execution must be an object", errors)
@@ -153,10 +162,21 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require(devdrive is not None and devdrive.get("targetLetter") == "D", "devdrive vhdx must target D", errors)
     _require(vault is not None and vault.get("targetLetter") == "V", "vault vhdx must target V", errors)
     _require(vault is not None and vault.get("autoMount") is False, "vault vhdx must never auto-mount", errors)
+    _require(
+        vault is not None and vault.get("kind") == "dynamic-bitlocker-encrypted",
+        "vault vhdx must remain dynamic-bitlocker-encrypted",
+        errors,
+    )
 
     catalog = _load_json(base / "profile-catalog.v2.json")
     profiles = catalog.get("profiles", [])
+    _require(len(profiles) == len(EXPECTED_PROFILES), "profile catalog must contain exactly eight entries", errors)
     ids = {entry.get("id") for entry in profiles if isinstance(entry, Mapping)}
+    _require(
+        len(ids) == len([entry for entry in profiles if isinstance(entry, Mapping)]),
+        "profile catalog entries must not duplicate profile IDs",
+        errors,
+    )
     _require(ids == EXPECTED_PROFILES, f"profile set mismatch: {sorted(ids)}", errors)
     administrators = [entry for entry in profiles if isinstance(entry, Mapping) and entry.get("administrator") is True]
     _require(
@@ -237,6 +257,21 @@ def validate_contracts(base: Path = BASE) -> list[str]:
 
     sync = _load_json(base / "synchronization.contract.v2.json")
     _require(sync.get("defaultMode") == "propose-and-validate-only", "synchronization defaultMode must remain propose-and-validate-only", errors)
+    idempotency = sync.get("idempotency", {})
+    _require(isinstance(idempotency, Mapping), "synchronization idempotency must be an object", errors)
+    if isinstance(idempotency, Mapping):
+        _require(idempotency.get("algorithm") == "sha256", "synchronization idempotency algorithm must be sha256", errors)
+        components = set(idempotency.get("components", []))
+        _require(
+            components == EXPECTED_IDEMPOTENCY_COMPONENTS,
+            "synchronization idempotency components must match the approved component set",
+            errors,
+        )
+        _require(
+            idempotency.get("normalization") == "nfc-trim-casefold-registered-identifiers",
+            "synchronization idempotency normalization must remain nfc-trim-casefold-registered-identifiers",
+            errors,
+        )
     systems = sync.get("systems", {})
     _require(isinstance(systems, Mapping), "synchronization systems must be an object", errors)
     devops = systems.get("azure-devops", {})
@@ -298,6 +333,12 @@ def validate_profile_xml(base: Path = BASE) -> list[str]:
         seen_ids.add(profile_id or "")
         _require(schema_version == "2.0.0", f"{path}: schemaVersion must be 2.0.0", errors)
         _require(profile_id in EXPECTED_PROFILES, f"{path}: profileId must be one of expected profiles", errors)
+        expected_id = path.name.removesuffix(".profile.v2.xml")
+        _require(
+            profile_id == expected_id,
+            f"{path}: profileId must match filename-derived id '{expected_id}'",
+            errors,
+        )
 
         for element in ("SemanticUi", "ServiceMode", "NetworkMode", "TelemetryClass", "AlvisMaxToolCallsPerPlan"):
             node = root.find(f"m:{element}", XML_NS)

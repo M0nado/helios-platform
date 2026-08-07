@@ -78,6 +78,13 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         errors = self._validate_with_override("profile-catalog.v2.json", candidate)
         self.assertTrue(any("sole administrator profile" in error for error in errors))
 
+    def test_profile_catalog_rejects_duplicate_profile_entries(self) -> None:
+        candidate = copy.deepcopy(self.profile_catalog)
+        duplicate = copy.deepcopy(next(profile for profile in candidate["profiles"] if profile["id"] == "developer"))
+        candidate["profiles"].append(duplicate)
+        errors = self._validate_with_override("profile-catalog.v2.json", candidate)
+        self.assertTrue(any("must not duplicate profile IDs" in error for error in errors))
+
     def test_sync_envelope_requires_links_and_classification_fields(self) -> None:
         candidate = copy.deepcopy(self.sync_contract)
         required_fields = candidate["envelope"]["requiredFields"]
@@ -85,11 +92,24 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         errors = self._validate_with_override("synchronization.contract.v2.json", candidate)
         self.assertTrue(any("missing required normalized fields" in error for error in errors))
 
+    def test_sync_requires_strict_idempotency_definition(self) -> None:
+        candidate = copy.deepcopy(self.sync_contract)
+        candidate["idempotency"]["algorithm"] = "sha1"
+        errors = self._validate_with_override("synchronization.contract.v2.json", candidate)
+        self.assertTrue(any("idempotency algorithm must be sha256" in error for error in errors))
+
     def test_storage_guardrails_must_reject_runtime_disk_mutation(self) -> None:
         candidate = copy.deepcopy(self.storage_contract)
         candidate["guardrails"]["denyDirectDiskMutationFromRuntime"] = False
         errors = self._validate_with_override("storage.contract.v2.json", candidate)
         self.assertTrue(any("denyDirectDiskMutationFromRuntime" in error for error in errors))
+
+    def test_storage_vault_kind_must_remain_bitlocker_encrypted(self) -> None:
+        candidate = copy.deepcopy(self.storage_contract)
+        vault = next(item for item in candidate["topology"]["disk1"]["vhdx"] if item["id"] == "vault")
+        vault["kind"] = "dynamic-plaintext"
+        errors = self._validate_with_override("storage.contract.v2.json", candidate)
+        self.assertTrue(any("dynamic-bitlocker-encrypted" in error for error in errors))
 
     def test_alvis_tool_budget_must_be_positive(self) -> None:
         candidate = copy.deepcopy(self.alvis_budget)
@@ -111,6 +131,18 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
             tree.write(xml_path, encoding="utf-8", xml_declaration=True)
             errors = validate_profile_xml(target)
         self.assertTrue(any("AlvisMaxToolCallsPerPlan must be a positive integer" in error for error in errors))
+
+    def test_profile_xml_filename_and_profile_id_must_match(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "experience-fabric"
+            shutil.copytree(BASE, target)
+            xml_path = target / "xml" / "developer.profile.v2.xml"
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+            root.set("profileId", "sysadmin")
+            tree.write(xml_path, encoding="utf-8", xml_declaration=True)
+            errors = validate_profile_xml(target)
+        self.assertTrue(any("must match filename-derived id 'developer'" in error for error in errors))
 
 
 if __name__ == "__main__":

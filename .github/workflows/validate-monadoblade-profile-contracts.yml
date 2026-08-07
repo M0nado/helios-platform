@@ -17,10 +17,13 @@ on:
       - 'config/runtime/helios-fabric-services.v2.json'
       - 'config/integrations/monadoblade-collaboration-projection.v1.json'
       - 'config/usb/monadoblade-usb-wizard.v1.json'
+      - 'config/monadoblade/experience-fabric/**'
       - 'config/monado-enterprise/v2/**'
       - 'config/monado-enterprise/v3/**'
       - 'schemas/monado-enterprise/v2/**'
       - 'schemas/monado-enterprise/v3/**'
+      - 'scripts/control/validate_monado_enterprise_experience_v2.py'
+      - 'scripts/control/tests/test_validate_monado_enterprise_experience_v2.py'
       - 'scripts/contracts/validate_monado_enterprise_v2.py'
       - 'scripts/contracts/validate_monadoblade_delivery_fabric_v3.py'
       - 'scripts/contracts/tests/test_validate_monado_enterprise_v2.py'
@@ -29,10 +32,13 @@ on:
       - 'tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs'
       - 'src/analytics/HELIOS.Analytics.FSharp/Optimization/MonadoEnterpriseProfileScoringV2.fs'
       - 'src/core/HELIOS.Platform.Contracts/MonadoEnterpriseExperienceV2Contracts.cs'
+      - 'src/core/HELIOS.Platform.Contracts/MonadoEnterpriseExperienceFabricV2Contracts.cs'
       - 'src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs'
       - 'src/native/HELIOS.Native.Performance/include/helios/monado_enterprise_feature_extractor.hpp'
+      - 'src/native/HELIOS.Native.Performance/include/helios/monadoblade_profile_optimizer.hpp'
       - 'src/native/HELIOS.Native.Performance/CMakeLists.txt'
       - 'tests/native/monado_enterprise_feature_extractor_smoke.cpp'
+      - 'tests/native/monadoblade_profile_optimizer_smoke.cpp'
       - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
       - 'docs/WIKI/README.md'
       - 'docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md'
@@ -57,10 +63,13 @@ on:
       - 'config/runtime/helios-fabric-services.v2.json'
       - 'config/integrations/monadoblade-collaboration-projection.v1.json'
       - 'config/usb/monadoblade-usb-wizard.v1.json'
+      - 'config/monadoblade/experience-fabric/**'
       - 'config/monado-enterprise/v2/**'
       - 'config/monado-enterprise/v3/**'
       - 'schemas/monado-enterprise/v2/**'
       - 'schemas/monado-enterprise/v3/**'
+      - 'scripts/control/validate_monado_enterprise_experience_v2.py'
+      - 'scripts/control/tests/test_validate_monado_enterprise_experience_v2.py'
       - 'scripts/contracts/validate_monado_enterprise_v2.py'
       - 'scripts/contracts/validate_monadoblade_delivery_fabric_v3.py'
       - 'scripts/contracts/tests/test_validate_monado_enterprise_v2.py'
@@ -69,10 +78,13 @@ on:
       - 'tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs'
       - 'src/analytics/HELIOS.Analytics.FSharp/Optimization/MonadoEnterpriseProfileScoringV2.fs'
       - 'src/core/HELIOS.Platform.Contracts/MonadoEnterpriseExperienceV2Contracts.cs'
+      - 'src/core/HELIOS.Platform.Contracts/MonadoEnterpriseExperienceFabricV2Contracts.cs'
       - 'src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs'
       - 'src/native/HELIOS.Native.Performance/include/helios/monado_enterprise_feature_extractor.hpp'
+      - 'src/native/HELIOS.Native.Performance/include/helios/monadoblade_profile_optimizer.hpp'
       - 'src/native/HELIOS.Native.Performance/CMakeLists.txt'
       - 'tests/native/monado_enterprise_feature_extractor_smoke.cpp'
+      - 'tests/native/monadoblade_profile_optimizer_smoke.cpp'
       - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
       - 'docs/WIKI/README.md'
       - 'docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md'
@@ -356,11 +368,15 @@ jobs:
               schema = json.loads(Path(schema_path).read_text(encoding='utf-8'))
               document = json.loads(Path(document_path).read_text(encoding='utf-8'))
               Draft202012Validator.check_schema(schema)
-              document_payload = document.copy()
-              document_payload.pop('$schema', None)
-              Draft202012Validator(schema).validate(document_payload)
+              Draft202012Validator(schema).validate(document)
               print(f'schema ok: {document_path}')
           PY
+
+      - name: Validate monadoblade v2 dependency-free invariants
+        shell: bash
+        run: |
+          python scripts/control/validate_monado_enterprise_experience_v2.py
+          python -m unittest discover -s scripts/control/tests -p "test_validate_monado_enterprise_experience_v2.py" -v
 
       - name: Validate v2 dependency-free invariants
         shell: bash

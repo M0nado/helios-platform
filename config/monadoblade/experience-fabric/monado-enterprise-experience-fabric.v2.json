@@ -1,7 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "schemaVersion": "2.0.0",
-  "contractId": "monado-enterprise-experience-fabric-v2",
+  "contractId": "monadoblade-experience-fabric-v2-overlay",
+  "extendsCanonicalContractId": "monado-enterprise-experience-fabric-v2",
+  "relationshipToCanonical": "overlay-experience-fabric-constraints",
   "status": "authoritative-proposal-only",
   "canonicalRepository": "M0nado/helios-platform",
   "issue": "https://github.com/M0nado/helios-platform/issues/206",
