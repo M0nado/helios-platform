@@ -27,6 +27,8 @@ EXPECTED_PROFILES = {
 }
 EXPECTED_STATE_IDS = {"recovery", "quarantine"}
 EXPECTED_OVERLAY_IDS = {"airgap"}
+XML_SCHEMA_NAMESPACE = {"xs": "http://www.w3.org/2001/XMLSchema"}
+XML_BOOLEAN_LITERALS = {"true", "false", "1", "0"}
 
 
 def _read_json(path: Path) -> dict:
@@ -40,6 +42,93 @@ def _resolve_contract_path(root: Path, relative_path: str) -> Path:
 def _append(errors: list[str], condition: bool, message: str) -> None:
     if not condition:
         errors.append(message)
+
+
+def _is_non_negative_integer(value: str) -> bool:
+    return value.isdigit()
+
+
+def _is_xsd_boolean(value: str) -> bool:
+    return value in XML_BOOLEAN_LITERALS
+
+
+def _load_manifest_schema_constraints(xsd_path: Path) -> dict[str, object]:
+    try:
+        schema_root = ET.parse(xsd_path).getroot()
+    except ET.ParseError as exc:  # pragma: no cover - defensive parse failure
+        raise ValueError(f"profile manifest XSD parse error: {exc}") from exc
+
+    profile_enum_nodes = schema_root.findall(
+        "./xs:simpleType[@name='ProfileIdType']/xs:restriction/xs:enumeration",
+        XML_SCHEMA_NAMESPACE,
+    )
+    profile_ids = {
+        node.attrib.get("value", "")
+        for node in profile_enum_nodes
+        if node.attrib.get("value")
+    }
+    if not profile_ids:
+        raise ValueError("profile manifest XSD does not define ProfileIdType enumerations")
+
+    root_element = schema_root.find(
+        "./xs:element[@name='MonadoProfileManifest']",
+        XML_SCHEMA_NAMESPACE,
+    )
+    if root_element is None:
+        raise ValueError("profile manifest XSD is missing MonadoProfileManifest root element")
+
+    sequence_elements = root_element.findall(
+        "./xs:complexType/xs:sequence/xs:element",
+        XML_SCHEMA_NAMESPACE,
+    )
+    ordered_children = [element.attrib.get("name", "") for element in sequence_elements]
+    if not ordered_children or any(not name for name in ordered_children):
+        raise ValueError("profile manifest XSD has an invalid root element sequence")
+
+    required_root_attributes: dict[str, str] = {}
+    for attribute_node in root_element.findall(
+        "./xs:complexType/xs:attribute[@use='required']",
+        XML_SCHEMA_NAMESPACE,
+    ):
+        attribute_name = attribute_node.attrib.get("name")
+        if not attribute_name:
+            raise ValueError("profile manifest XSD contains a required root attribute without a name")
+        required_root_attributes[attribute_name] = attribute_node.attrib.get("type", "xs:string")
+
+    required_child_attributes: dict[str, dict[str, str]] = {}
+    for element in sequence_elements:
+        element_name = element.attrib.get("name")
+        if not element_name:
+            continue
+        attributes: dict[str, str] = {}
+        for attribute_node in element.findall(
+            "./xs:complexType/xs:attribute[@use='required']",
+            XML_SCHEMA_NAMESPACE,
+        ):
+            attribute_name = attribute_node.attrib.get("name")
+            if not attribute_name:
+                raise ValueError(f"profile manifest XSD contains unnamed required attribute on {element_name}")
+            attributes[attribute_name] = attribute_node.attrib.get("type", "xs:string")
+        if attributes:
+            required_child_attributes[element_name] = attributes
+
+    return {
+        "root_name": "MonadoProfileManifest",
+        "profile_ids": profile_ids,
+        "ordered_children": ordered_children,
+        "required_root_attributes": required_root_attributes,
+        "required_child_attributes": required_child_attributes,
+    }
+
+
+def _xsd_value_is_valid(value: str, value_type: str, profile_ids: set[str]) -> bool:
+    if value_type == "xs:nonNegativeInteger":
+        return _is_non_negative_integer(value)
+    if value_type == "xs:boolean":
+        return _is_xsd_boolean(value)
+    if value_type == "ProfileIdType":
+        return value in profile_ids
+    return len(value) > 0
 
 
 def validate_index(index: dict, root: Path) -> list[str]:
@@ -297,6 +386,28 @@ def validate_profile_manifests(manifest_directory: Path, expected_profiles: set[
     if errors:
         return errors
 
+    try:
+        constraints = _load_manifest_schema_constraints(XSD_PATH)
+    except ValueError as exc:
+        errors.append(str(exc))
+        return errors
+
+    schema_profile_ids = constraints["profile_ids"]
+    if not isinstance(schema_profile_ids, set):
+        errors.append("profile manifest schema profileId constraints are invalid")
+        return errors
+
+    _append(
+        errors,
+        schema_profile_ids == expected_profiles,
+        "profile manifest XSD profileId enumeration must match expected profile set",
+    )
+
+    ordered_children = constraints["ordered_children"]
+    required_root_attributes = constraints["required_root_attributes"]
+    required_child_attributes = constraints["required_child_attributes"]
+    root_name = constraints["root_name"]
+
     manifest_files = sorted(manifest_directory.glob("*.xml"))
     _append(errors, len(manifest_files) == len(expected_profiles), "profile manifest count must match expected profile count")
 
@@ -307,31 +418,45 @@ def validate_profile_manifests(manifest_directory: Path, expected_profiles: set[
         except ET.ParseError as exc:
             errors.append(f"{manifest.name}: XML parse error: {exc}")
             continue
-        if root.tag != "MonadoProfileManifest":
-            errors.append(f"{manifest.name}: root element must be MonadoProfileManifest")
+        if root.tag != root_name:
+            errors.append(f"{manifest.name}: root element must be {root_name}")
             continue
+
+        for attribute_name, attribute_type in required_root_attributes.items():
+            value = root.attrib.get(attribute_name)
+            if value is None:
+                errors.append(f"{manifest.name}: missing required root attribute '{attribute_name}'")
+                continue
+            if not _xsd_value_is_valid(value, attribute_type, schema_profile_ids):
+                errors.append(
+                    f"{manifest.name}: root attribute '{attribute_name}' violates XSD type {attribute_type}"
+                )
+
         profile_id = root.attrib.get("profileId")
-        version = root.attrib.get("version")
         if profile_id:
             discovered_profiles.add(profile_id)
-        _append(errors, version == "2.0.0", f"{manifest.name}: version must be 2.0.0")
-        required_children = {
-            "DisplayName",
-            "SemanticUi",
-            "Theme",
-            "ChromaProfile",
-            "WyvernAudioProfile",
-            "ServiceBudget",
-            "ProcessBudget",
-            "NetworkPolicy",
-            "TelemetryPolicy",
-            "AlvisToolBudget",
-            "StateModel",
-        }
-        children = {child.tag for child in root}
-        missing_children = sorted(required_children - children)
-        if missing_children:
-            errors.append(f"{manifest.name}: missing required elements: {', '.join(missing_children)}")
+
+        children = [child.tag for child in root]
+        _append(
+            errors,
+            children == ordered_children,
+            f"{manifest.name}: manifest elements must follow XSD sequence {ordered_children}",
+        )
+
+        for child in root:
+            attributes = required_child_attributes.get(child.tag, {})
+            for attribute_name, attribute_type in attributes.items():
+                value = child.attrib.get(attribute_name)
+                if value is None:
+                    errors.append(
+                        f"{manifest.name}: missing required attribute '{attribute_name}' on element '{child.tag}'"
+                    )
+                    continue
+                if not _xsd_value_is_valid(value, attribute_type, schema_profile_ids):
+                    errors.append(
+                        f"{manifest.name}: element '{child.tag}' attribute '{attribute_name}' violates XSD type {attribute_type}"
+                    )
+
     _append(errors, discovered_profiles == expected_profiles, "profile manifest IDs must match expected profile set")
     return errors
 

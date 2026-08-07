@@ -52,11 +52,21 @@ jobs:
       AIHUB_MODE: ${{ inputs.mode || 'github-runner' }}
       AIHUB_AGENT_COUNT: ${{ inputs.agents || '128' }}
       LEARNING_REFERENCE_REPOSITORY: ${{ vars.LEARNING_REFERENCE_REPOSITORY || github.repository }}
-      LEARNING_REFERENCE_REF: ${{ vars.LEARNING_REFERENCE_REF || github.ref_name }}
+      LEARNING_REFERENCE_REF: ${{ vars.LEARNING_REFERENCE_REF || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Resolve learning reference ref
+        shell: bash
+        run: |
+          if [ -n "${LEARNING_REFERENCE_REF}" ]; then
+            echo "LEARNING_REFERENCE_REF=${LEARNING_REFERENCE_REF}" >> "$GITHUB_ENV"
+          elif [ "${LEARNING_REFERENCE_REPOSITORY}" != "${GITHUB_REPOSITORY}" ]; then
+            echo "LEARNING_REFERENCE_REF=main" >> "$GITHUB_ENV"
+          else
+            echo "LEARNING_REFERENCE_REF=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          fi
       - name: Checkout learning reference repository
         continue-on-error: true
         uses: actions/checkout@v4

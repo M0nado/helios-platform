@@ -24,6 +24,12 @@ def github_name(url: str) -> str:
     return path.casefold()
 
 
+def expected_submodule_path(repository_name: str) -> str:
+    owner, repo = repository_name.split("/", 1)
+    _ = owner  # retain explicit split to validate owner/repo shape
+    return f"modules/{repo.casefold()}"
+
+
 def gitlinks(root: Path) -> dict[str, str]:
     result = subprocess.run(
         ["git", "ls-files", "--stage"],
@@ -87,9 +93,15 @@ def validate(root: Path = ROOT) -> list[str]:
         except ValueError as exc:
             errors.append(str(exc))
             continue
-        if path in declared:
-            errors.append(f"duplicate submodule path: {path}")
-        declared[path] = name
+        normalized_path = path.replace("\\", "/").strip("/")
+        expected_path = expected_submodule_path(name)
+        if normalized_path.casefold() != expected_path:
+            errors.append(
+                f"submodule path mismatch for {name}: expected '{expected_path}', found '{normalized_path}'"
+            )
+        if normalized_path in declared:
+            errors.append(f"duplicate submodule path: {normalized_path}")
+        declared[normalized_path] = name
 
     declared_names_list = list(declared.values())
     duplicate_declared_names = sorted(

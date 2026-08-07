@@ -8,9 +8,7 @@ on:
       - ".github/copilot-instructions.md"
       - "config/integrations/**"
       - ".gitmodules"
-      - "modules/**"Because the new validator accepts any .gitmodules path whose URL is approved, an approved submodule can be moved to vendor/... and still pass; after that, gitlink-only PRs under that declared path do not match this modules/** filter (nor the matching push filter), so the repository-integrity gate will not run for the pin changes it is supposed to validate. Either reject declared paths outside modules/<repo> or watch all accepted gitlink paths.
-
-Useful? React with 👍 / 👎.
+      - "modules/**"
       - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
       - ".github/workflows/unified-agent-contract.yml"

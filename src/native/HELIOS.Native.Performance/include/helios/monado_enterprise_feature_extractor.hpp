@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <string_view>
 
 namespace helios::monado_enterprise {
@@ -18,7 +19,16 @@ struct RuntimeSignals {
   double modelLatencyMs{};
 };
 
+[[nodiscard]] constexpr bool is_finite(const double value) noexcept {
+  return value == value &&
+         value != std::numeric_limits<double>::infinity() &&
+         value != -std::numeric_limits<double>::infinity();
+}
+
 [[nodiscard]] constexpr double clamp01(const double value) noexcept {
+  if (!is_finite(value)) {
+    return 1.0;
+  }
   return std::clamp(value, 0.0, 1.0);
 }
 
@@ -59,6 +69,9 @@ struct RuntimeSignals {
 }
 
 [[nodiscard]] constexpr bool requires_operator_review(const RuntimeSignals& signals) noexcept {
+  if (!is_finite(signals.securityRisk) || !is_finite(signals.thermalPressure)) {
+    return true;
+  }
   return signals.securityRisk >= 60.0 || signals.thermalPressure >= 85.0 || profile_activation_pressure(signals) >= 0.70;
 }
 
