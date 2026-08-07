@@ -87,7 +87,7 @@ class HeliosCliTests(unittest.TestCase):
                 "helios-platform@1207349837:environment:azure-dev"
             ),
         )
-        self.assertEqual(setup["administratorGateCount"], 7)
+        self.assertEqual(setup["releasePlanAdministratorGateCount"], 7)
         self.assertIn("doctor", setup["steps"])
         self.assertIn("targets", setup["steps"])
         self.assertIn("plan", setup["steps"])
@@ -95,6 +95,10 @@ class HeliosCliTests(unittest.TestCase):
         self.assertIn("edge", setup["steps"])
         self.assertIn("devopsSync", setup["steps"])
         self.assertIn("runners", setup["steps"])
+        self.assertEqual(
+            setup["steps"]["runners"]["release"]["environment"],
+            "azure-dev",
+        )
 
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
@@ -198,6 +202,10 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(topology["validation"]["provider"], "github-hosted")
         self.assertFalse(topology["selfHosted"]["enabled"])
         self.assertTrue(topology["release"]["immutableImageRequired"])
+
+    def test_runner_topology_can_target_requested_environment(self) -> None:
+        topology = HELIOS.runner_plan("azure-test")
+        self.assertEqual(topology["release"]["environment"], "azure-test")
 
     def test_edge_plan_requires_private_link_and_separate_approval(self) -> None:
         plan = HELIOS.edge_plan("azure-dev")

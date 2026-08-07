@@ -311,9 +311,15 @@ def devops_sync_plan() -> dict[str, Any]:
     }
 
 
-def runner_plan() -> dict[str, Any]:
+def runner_plan(environment: str | None = None) -> dict[str, Any]:
+    plan = read_asset("runner-topology.json")
+    if environment is not None:
+        validate_environment(environment)
+        release = plan.get("release")
+        if isinstance(release, dict):
+            release["environment"] = environment
     return {
-        **read_asset("runner-topology.json"),
+        **plan,
         "executionMode": "plan-only",
     }
 
@@ -338,13 +344,13 @@ def setup_all(
     oidc = oidc_contract(environment, api_reader=api_reader)
     edge = edge_plan(environment)
     devops = devops_sync_plan()
-    runners = runner_plan()
+    runners = runner_plan(environment)
     return {
         "command": "setup-all",
         "environment": environment,
         "executionMode": "plan-only",
         "requiredToolsReady": doctor_result["requiredToolsReady"],
-        "administratorGateCount": len(plan["administratorGates"]),
+        "releasePlanAdministratorGateCount": len(plan["administratorGates"]),
         "oidcSubject": oidc["selectedSubject"],
         "steps": {
             "doctor": doctor_result,
@@ -366,7 +372,10 @@ def print_human(payload: dict[str, Any]) -> None:
             f"{str(payload['requiredToolsReady']).lower()}"
         )
         print(f"  oidc subject: {payload['oidcSubject']}")
-        print(f"  administrator gates: {payload['administratorGateCount']}")
+        print(
+            "  release-plan administrator gates: "
+            f"{payload['releasePlanAdministratorGateCount']}"
+        )
         print("  steps: doctor, targets, plan, oidc, edge, devops-sync, runners")
         print("  No cloud mutation was performed.")
     elif "tools" in payload:
