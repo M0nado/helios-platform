@@ -100,6 +100,17 @@ function Convert-ToGitHubFieldType {
     }
 }
 
+function Convert-FromGitHubFieldType {
+    param([string]$DataType)
+
+    switch ($DataType) {
+        'SINGLE_SELECT' { return 'SingleSelect' }
+        'DATE' { return 'Date' }
+        'TEXT' { return 'Text' }
+        default { return $DataType }
+    }
+}
+
 function Get-LocalFieldPath {
     param([string]$FieldName)
 
@@ -369,6 +380,9 @@ query ($org: String!, $projectNum: Int!) {
             id
             name
             dataType
+            options {
+              name
+            }
           }
           ... on ProjectV2IterationField {
             id
@@ -391,10 +405,20 @@ query ($org: String!, $projectNum: Int!) {
     $nodes = $result.organization.projectV2.fields.nodes
     foreach ($node in $nodes) {
         if (-not [string]::IsNullOrWhiteSpace($node.name)) {
+            $fieldOptions = @()
+            if ($node.__typename -eq 'ProjectV2SingleSelectField' -and $null -ne $node.options) {
+                $fieldOptions = @(
+                    $node.options |
+                        ForEach-Object { $_.name } |
+                        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                )
+            }
+
             $existing[$node.name] = @{
                 id = $node.id
                 name = $node.name
                 dataType = $node.dataType
+                options = $fieldOptions
             }
         }
     }
@@ -417,18 +441,95 @@ function Create-CustomField {
         $existingField = $ExistingFields[$FieldDef.name]
         Write-Log "  Field already exists (ID: $($existingField.id))" 'INFO'
 
+        $expectedDataType = Convert-ToGitHubFieldType -FieldType $FieldDef.type
+        $compatibilityIssues = @()
+
+        if ($existingField.dataType -ne $expectedDataType) {
+            $compatibilityIssues += "type mismatch (expected '$expectedDataType', found '$($existingField.dataType)')"
+        }
+
+        if ($FieldDef.type -eq 'SingleSelect') {
+            $expectedOptions = @()
+            if ($FieldDef.options) {
+                $expectedOptions = @(
+                    $FieldDef.options |
+                        ForEach-Object { $_.Trim() } |
+                        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                        Sort-Object -Unique
+                )
+            }
+
+            $actualOptions = @()
+            if ($existingField.options) {
+                $actualOptions = @(
+                    $existingField.options |
+                        ForEach-Object { $_.Trim() } |
+                        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                        Sort-Object -Unique
+                )
+            }
+
+            $missingOptions = @($expectedOptions | Where-Object { $_ -notin $actualOptions })
+            if ($missingOptions.Count -gt 0) {
+                $compatibilityIssues += "missing options: $($missingOptions -join ', ')"
+            }
+        }
+
+        if ($compatibilityIssues.Count -gt 0) {
+            $issueText = $compatibilityIssues -join '; '
+            Write-Log "  Existing field schema is incompatible: $issueText" 'ERROR'
+            $CreatedFields.Value += @{
+                name = $FieldDef.name
+                fieldId = $existingField.id
+                type = $FieldDef.type
+                tier = $FieldDef.tier
+                status = 'failed'
+                error = "Existing field '$($FieldDef.name)' is incompatible ($issueText)."
+            }
+            return
+        }
+
+        if ($DryRun) {
+            Write-Log "  [DRY RUN] Existing field is compatible: $($FieldDef.name)" 'INFO'
+            $CreatedFields.Value += @{
+                name = $FieldDef.name
+                fieldId = $existingField.id
+                type = $FieldDef.type
+                status = 'dry-run'
+                tier = $FieldDef.tier
+            }
+            return
+        }
+
         if (-not (Test-Path '.fields')) {
             New-Item -ItemType Directory -Path '.fields' -Force | Out-Null
+        }
+
+        $resolvedType = Convert-FromGitHubFieldType -DataType $existingField.dataType
+        if ([string]::IsNullOrWhiteSpace($resolvedType)) {
+            $resolvedType = $FieldDef.type
+        }
+        $resolvedOptions = if ($resolvedType -eq 'SingleSelect') { @($existingField.options) } else { $null }
+        $resolvedDefault = if (
+            $resolvedType -eq 'SingleSelect' -and
+            $FieldDef.default -and
+            $resolvedOptions -and
+            $resolvedOptions -contains $FieldDef.default
+        ) {
+            $FieldDef.default
+        }
+        else {
+            $null
         }
 
         $localField = @{
             name = $FieldDef.name
             fieldId = $existingField.id
-            type = $FieldDef.type
+            type = $resolvedType
             tier = $FieldDef.tier
             description = $FieldDef.description
-            options = $FieldDef.options
-            default = $FieldDef.default
+            options = $resolvedOptions
+            default = $resolvedDefault
             status = 'existing'
             createdAt = Get-Date -Format 'o'
         }
@@ -437,7 +538,7 @@ function Create-CustomField {
         $CreatedFields.Value += @{
             name = $FieldDef.name
             fieldId = $existingField.id
-            type = $FieldDef.type
+            type = $resolvedType
             tier = $FieldDef.tier
             status = 'existing'
         }
@@ -539,6 +640,7 @@ mutation CreateProjectField($input: CreateProjectV2FieldInput!) {
                 id = $fieldId
                 name = $FieldDef.name
                 dataType = $mutationInput.dataType
+                options = if ($FieldDef.type -eq 'SingleSelect') { @($FieldDef.options) } else { @() }
             }
         }
         else {

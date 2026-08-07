@@ -75,7 +75,7 @@ $integrations = @(
         type = 'WorkflowTrigger'
         description = 'Trigger CI/CD workflows when PRs are created'
         config = @{
-            workflows = @('build.yml', 'test.yml', 'lint.yml')
+            workflows = @('dotnet-build.yml', 'test-lanes.yml', 'code-checks.yml')
             triggerOn = 'opened'
         }
     },
@@ -86,7 +86,7 @@ $integrations = @(
         description = 'Update board status based on workflow results'
         config = @{
             mapping = @{
-                'workflow_run.concluded' = @{ field = 'ProgressStatus'; value = '100% Complete' }
+                'workflow_run.concluded' = @{ field = 'ProgressStatus'; value = 'Complete' }
                 'workflow_run.failed' = @{ field = 'QAStatus'; value = 'QA Failed' }
                 'workflow_run.success' = @{ field = 'QAStatus'; value = 'QA Approved' }
             }
@@ -115,7 +115,7 @@ $integrations = @(
             source = 'docs/'
             target = 'gh-pages'
             autoUpdate = $true
-            buildCommand = 'npm run docs:build'
+            buildCommand = 'pwsh -NoProfile -File scripts/utilities/wiki/generate-wiki.ps1 -ProjectRoot .'
         }
     }
 )

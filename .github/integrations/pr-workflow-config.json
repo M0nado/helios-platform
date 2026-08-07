@@ -5,9 +5,9 @@
                        "author: !=bot"
                    ],
     "workflows":  [
-                      "build.yml",
-                      "test.yml",
-                      "lint.yml"
+                      "dotnet-build.yml",
+                      "test-lanes.yml",
+                      "code-checks.yml"
                   ],
     "createdAt":  "2026-08-06T18:06:09.7587831-05:00"
 }

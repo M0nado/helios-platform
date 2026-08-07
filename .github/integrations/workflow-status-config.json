@@ -8,7 +8,7 @@
                                                  "field":  "QAStatus"
                                              },
                      "workflow_run.concluded":  {
-                                                    "value":  "100% Complete",
+                                                    "value":  "Complete",
                                                     "field":  "ProgressStatus"
                                                 },
                      "workflow_run.success":  {

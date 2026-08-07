@@ -23,6 +23,7 @@
     .\complete-system-setup.ps1 -GitHubToken $token -ProjectNumber 1 -OrganizationName "helios" -RepositoryName "platform" -RepositoryOwner "helios-org"
 #>
 
+[CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)]
     [string]$GitHubToken,
@@ -45,7 +46,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($DetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
+$enableDetailedOutput = $DetailedOutput -or ($PSBoundParameters.ContainsKey('Verbose') -and [bool]$PSBoundParameters['Verbose'])
+$VerbosePreference = if ($enableDetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/complete-setup_$timestamp.log"
@@ -58,7 +60,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($DetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($enableDetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 function Show-Progress {
@@ -96,7 +98,7 @@ function Invoke-OrchestratedStep {
         }
         
         if ($DryRun) { $params['DryRun'] = $true }
-        if ($DetailedOutput) { $params['DetailedOutput'] = $true }
+        if ($enableDetailedOutput) { $params['DetailedOutput'] = $true }
         
         $global:LASTEXITCODE = 0
         $result = & $ScriptPath @params
