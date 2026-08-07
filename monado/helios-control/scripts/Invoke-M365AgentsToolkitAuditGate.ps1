@@ -167,6 +167,38 @@ try {
         throw "npm ci failed for audit fixture: $detail"
     }
 
+    $atkExecutable = if ($IsWindows) {
+        Join-Path $auditFixturePath 'node_modules\.bin\atk.cmd'
+    }
+    else {
+        Join-Path $auditFixturePath 'node_modules/.bin/atk'
+    }
+    if (-not (Test-Path -LiteralPath $atkExecutable)) {
+        throw "Toolkit binary was not installed at expected path: $atkExecutable"
+    }
+
+    if ($IsWindows -and -not $env:windir -and $env:SystemRoot) {
+        $env:windir = $env:SystemRoot
+    }
+
+    $smokeOutput = & $atkExecutable '--version' 2>&1
+    $smokeExitCode = $LASTEXITCODE
+    if ($smokeExitCode -ne 0) {
+        $detail = Get-FirstNonEmptyLine -Text ($smokeOutput | Out-String)
+        if (-not $detail) { $detail = 'atk --version failed without output.' }
+        throw "atk smoke test failed: $detail"
+    }
+
+    $smokeFirstLine = Get-FirstNonEmptyLine -Text ($smokeOutput | Out-String)
+    $smokeVersionMatch = [regex]::Match($smokeFirstLine, '\d+\.\d+\.\d+(?:[-+][0-9A-Za-z\.-]+)?')
+    if (-not $smokeVersionMatch.Success) {
+        throw "atk smoke test did not report a semantic version. First line: $smokeFirstLine"
+    }
+    if ($smokeVersionMatch.Value -ne $version) {
+        throw "atk smoke test resolved version '$($smokeVersionMatch.Value)' but microsoft-toolchain pin is '$version'."
+    }
+    Write-Host "Toolkit smoke test: atk version $($smokeVersionMatch.Value)"
+
     $auditResult = Invoke-NpmCommand -Arguments @('audit', '--audit-level=high', '--json')
     $auditText = $auditResult.Output | Out-String
     $auditReport = ConvertFrom-NpmJsonOutput -Text $auditText
