@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "tests": [
     {
+      "path": "monado/helios-control/tests/Helios.Connect.Tests/AgentCorePolicyTests.cs",
+      "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
+      "layer": "integration"
+    },
+    {
       "path": "monado/helios-control/tests/Helios.Connect.Tests/AzureInventoryServiceTests.cs",
       "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
       "layer": "integration"
@@ -467,6 +472,11 @@
       "layer": "privileged"
     },
     {
+      "path": "tests/HELIOS.XCore9.Tests/XCore9ServiceTests.cs",
+      "project": "tests/HELIOS.XCore9.Tests/HELIOS.XCore9.Tests.csproj",
+      "layer": "portable"
+    },
+    {
       "path": "tests/Phase3Phase5IntegrationTests.cs",
       "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "integration"
@@ -494,6 +504,16 @@
     {
       "path": "tests/analytics/HELIOS.Analytics.FSharp.Tests/AnalyticsEngineTests.fs",
       "project": "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+      "layer": "portable"
+    },
+    {
+      "path": "tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs",
+      "project": "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+      "layer": "portable"
+    },
+    {
+      "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoEnterpriseExperienceV2ContractsTests.cs",
+      "project": "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj",
       "layer": "portable"
     },
     {
