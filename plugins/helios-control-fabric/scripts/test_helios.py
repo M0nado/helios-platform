@@ -206,6 +206,17 @@ class HeliosCliTests(unittest.TestCase):
             ):
                 HELIOS.enterprise_fleet_plan()
 
+    def test_mcp_manifest_applies_read_only_toolset_headers(self) -> None:
+        manifest_path = SCRIPT.parents[1] / ".mcp.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        servers = manifest["mcpServers"]
+
+        for server_id in ("github", "linear", "slack", "foundry"):
+            with self.subTest(server=server_id):
+                headers = servers[server_id].get("headers", {})
+                self.assertEqual(headers.get("X-MCP-Toolsets"), "search,fetch")
+                self.assertEqual(headers.get("X-MCP-Readonly"), "true")
+
     def test_all_assets_are_json(self) -> None:
         for name in (
             "connections.json",

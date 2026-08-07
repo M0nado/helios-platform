@@ -69,10 +69,15 @@ public sealed class EnterpriseSubAgentFleetRegistryTests
     public void Enterprise_registry_has_bounded_agent_contracts_and_event_requirements()
     {
         var registry = LoadEnterpriseRegistry();
-        Assert.Equal("config/integrations/event-contract.schema.json", registry.EventContract.SchemaPath);
+        Assert.Equal("../../config/integrations/event-contract.schema.json", registry.EventContract.SchemaPath);
         Assert.True(registry.EventContract.CorrelationIdRequired);
         Assert.True(registry.EventContract.EvidenceLinksRequired);
         Assert.False(registry.EventContract.SecretsInPayloadAllowed);
+
+        var eventSchemaPath = ResolveControlRootPath(registry.EventContract.SchemaPath);
+        Assert.True(File.Exists(eventSchemaPath), $"Missing event schema file: {eventSchemaPath}");
+        using var eventSchema = JsonDocument.Parse(File.ReadAllText(eventSchemaPath));
+        Assert.Equal(JsonValueKind.Object, eventSchema.RootElement.ValueKind);
 
         foreach (var agent in registry.Agents)
         {

@@ -27,7 +27,7 @@
     "blockingReason": "External binding integrity coverage and Bicep-output alignment must pass before production provisioning."
   },
   "eventContract": {
-    "schemaPath": "config/integrations/event-contract.schema.json",
+    "schemaPath": "../../config/integrations/event-contract.schema.json",
     "correlationIdRequired": true,
     "evidenceLinksRequired": true,
     "secretsInPayloadAllowed": false

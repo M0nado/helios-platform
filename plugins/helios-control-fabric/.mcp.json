@@ -42,19 +42,35 @@
     },
     "github": {
       "type": "http",
-      "url": "https://api.githubcopilot.com/mcp"
+      "url": "https://api.githubcopilot.com/mcp",
+      "headers": {
+        "X-MCP-Toolsets": "search,fetch",
+        "X-MCP-Readonly": "true"
+      }
     },
     "linear": {
       "type": "http",
-      "url": "https://mcp.linear.app/mcp"
+      "url": "https://mcp.linear.app/mcp",
+      "headers": {
+        "X-MCP-Toolsets": "search,fetch",
+        "X-MCP-Readonly": "true"
+      }
     },
     "slack": {
       "type": "http",
-      "url": "https://mcp.slack.com/mcp"
+      "url": "https://mcp.slack.com/mcp",
+      "headers": {
+        "X-MCP-Toolsets": "search,fetch",
+        "X-MCP-Readonly": "true"
+      }
     },
     "foundry": {
       "type": "http",
-      "url": "https://mcp.ai.azure.com"
+      "url": "https://mcp.ai.azure.com",
+      "headers": {
+        "X-MCP-Toolsets": "search,fetch",
+        "X-MCP-Readonly": "true"
+      }
     }
   }
 }
