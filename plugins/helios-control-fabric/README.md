@@ -23,6 +23,8 @@ DevOps mirror, or activate external connector delivery.
 
 ## Start
 
+    python plugins/helios-control-fabric/scripts/helios.py setup
+    python plugins/helios-control-fabric/scripts/helios.py setup --write
     python plugins/helios-control-fabric/scripts/helios.py doctor
     python plugins/helios-control-fabric/scripts/helios.py targets
     python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
@@ -36,7 +38,9 @@ PowerShell:
     ./plugins/helios-control-fabric/scripts/helios.ps1 doctor
     ./plugins/helios-control-fabric/scripts/helios.ps1 oidc --environment azure-dev
 
-Every command above is read-only. Add '--json' for machine-readable output.
+Commands are plan-first by default. `setup --write` only writes a local
+non-secret `.env.local` scaffold in this plugin directory. Add '--json' for
+machine-readable output.
 The `oidc` command requires an authenticated GitHub CLI session because it
 reads the repository metadata and effective OIDC subject policy. It mirrors the
 Azure onboarding wizard: immutable owner/repository IDs are used when GitHub
@@ -47,6 +51,12 @@ fail closed rather than falling back to a guessed subject.
 
 Set these non-secret values after an administrator selects the tenant and
 runtime:
+
+- Copy `plugins/helios-control-fabric/.env.example` to
+  `plugins/helios-control-fabric/.env.local`, or run
+  `python plugins/helios-control-fabric/scripts/helios.py setup --write`.
+- `helios.py` automatically loads `.env.local` and never overrides explicitly
+  set process environment variables.
 
 - 'HELIOS_AZURE_CONNECTOR_URL' — approved HTTPS origin of the deployed HELIOS
   connector, without the '/mcp' suffix.

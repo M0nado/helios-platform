@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Plan-first HELIOS setup helper.
 
-Every command is read-only and deterministic. Cloud, repository, and
-collaboration writes remain in reviewed protected-environment workflows.
+Commands are deterministic and plan-first. The optional `setup --write`
+operation writes only a local non-secret `.env.local` scaffold. Cloud,
+repository, and collaboration writes remain in reviewed protected-environment
+workflows.
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -43,6 +46,12 @@ ENVIRONMENT_KEYS = (
     "AZURE_RESOURCE_GROUP",
     "AZURE_CLIENT_ID",
 )
+OPTIONAL_ENVIRONMENT_KEYS = ("HELIOS_LOCAL_MCP_URL",)
+DEFAULT_ENVIRONMENT_VALUES = {
+    "HELIOS_LOCAL_MCP_URL": "http://127.0.0.1:5080/runtime/webhooks/mcp",
+}
+LOCAL_ENV_FILE = ROOT / ".env.local"
+ENVIRONMENT_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 SUPPORTED_ENVIRONMENTS = ("azure-dev", "azure-test", "azure-prod")
 GITHUB_API_VERSION = "2026-03-10"
@@ -59,6 +68,116 @@ def read_targets() -> dict[str, Any]:
 
 def first_line(value: str) -> str:
     return value.strip().splitlines()[0] if value.strip() else "available"
+
+
+def parse_environment_file(path: Path) -> dict[str, str]:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        raise RuntimeError(f"Failed to read local environment file '{path}'.") from error
+    result: dict[str, str] = {}
+    for line_number, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if "=" not in line:
+            raise RuntimeError(
+                f"Invalid .env.local line {line_number}: expected KEY=VALUE."
+            )
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not ENVIRONMENT_KEY_PATTERN.match(key):
+            raise RuntimeError(
+                f"Invalid .env.local line {line_number}: invalid environment key '{key}'."
+            )
+        if key in result:
+            raise RuntimeError(
+                f"Invalid .env.local line {line_number}: duplicate key '{key}'."
+            )
+        result[key] = value.strip()
+    return result
+
+
+def load_local_environment(env_file: Path = LOCAL_ENV_FILE) -> dict[str, Any]:
+    if not env_file.exists():
+        return {
+            "loaded": False,
+            "path": str(env_file),
+            "appliedVariables": 0,
+        }
+    entries = parse_environment_file(env_file)
+    applied_variables = 0
+    for key, value in entries.items():
+        if key not in os.environ:
+            os.environ[key] = value
+            applied_variables += 1
+    return {
+        "loaded": True,
+        "path": str(env_file),
+        "appliedVariables": applied_variables,
+    }
+
+
+def render_environment_file(values: dict[str, str]) -> str:
+    lines = [
+        "# HELIOS Control Fabric local non-secret environment scaffold.",
+        "# Fill required values selected by an approved administrator.",
+        "# Do not place access tokens, secrets, or Key Vault values in this file.",
+        "",
+        "# Required for remote HELIOS MCP, OIDC, and Azure scope context.",
+    ]
+    for key in ENVIRONMENT_KEYS:
+        lines.append(f"{key}={values.get(key, '')}")
+    lines.extend(
+        [
+            "",
+            "# Optional local compatibility endpoint.",
+            f"HELIOS_LOCAL_MCP_URL={values.get('HELIOS_LOCAL_MCP_URL', DEFAULT_ENVIRONMENT_VALUES['HELIOS_LOCAL_MCP_URL'])}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def setup_environment(write: bool = False, env_file: Path = LOCAL_ENV_FILE) -> dict[str, Any]:
+    existing_values: dict[str, str] = {}
+    environment_file_existed = env_file.exists()
+    if environment_file_existed:
+        existing_values = parse_environment_file(env_file)
+
+    all_keys = (*ENVIRONMENT_KEYS, *OPTIONAL_ENVIRONMENT_KEYS)
+    values: dict[str, str] = {}
+    for key in all_keys:
+        values[key] = os.environ.get(
+            key,
+            existing_values.get(key, DEFAULT_ENVIRONMENT_VALUES.get(key, "")),
+        )
+
+    if write:
+        try:
+            env_file.write_text(render_environment_file(values), encoding="utf-8")
+        except OSError as error:
+            raise RuntimeError(
+                f"Failed to write local environment scaffold '{env_file}'."
+            ) from error
+
+    missing_required_variables = [
+        key for key in ENVIRONMENT_KEYS if not values.get(key, "").strip()
+    ]
+    configured_variables = {key: bool(values.get(key, "").strip()) for key in all_keys}
+
+    return {
+        "payloadType": "setup",
+        "executionMode": "local-write" if write else "plan-only",
+        "environmentFile": str(env_file),
+        "environmentFileExisted": environment_file_existed,
+        "writePerformed": write,
+        "requiredVariables": list(ENVIRONMENT_KEYS),
+        "optionalVariables": list(OPTIONAL_ENVIRONMENT_KEYS),
+        "configuredVariables": configured_variables,
+        "missingRequiredVariables": missing_required_variables,
+        "requiredConfigured": len(missing_required_variables) == 0,
+    }
 
 
 def check_tool(command: str, arguments: tuple[str, ...], required: bool) -> dict[str, Any]:
@@ -86,7 +205,7 @@ def check_tool(command: str, arguments: tuple[str, ...], required: bool) -> dict
     return result
 
 
-def doctor() -> dict[str, Any]:
+def doctor(environment_file_status: dict[str, Any] | None = None) -> dict[str, Any]:
     tools = [check_tool(*entry) for entry in TOOLS]
     environment = {
         key: {
@@ -104,6 +223,11 @@ def doctor() -> dict[str, Any]:
             for tool in tools
             if tool["required"]
         ),
+        "environmentFile": environment_file_status or {
+            "loaded": False,
+            "path": str(LOCAL_ENV_FILE),
+            "appliedVariables": 0,
+        },
         "cloudAuthenticated": "not-checked",
         "azureDeployed": False,
     }
@@ -335,8 +459,30 @@ def print_human(payload: dict[str, Any]) -> None:
                 "OPTIONAL" if not tool["required"] else "MISSING"
             )
             print(f"  [{mark:8}] {tool['command']}")
+        environment_file = payload.get("environmentFile", {})
+        if environment_file.get("loaded"):
+            print(
+                "  Local environment file: "
+                + f"{environment_file.get('path')} "
+                + f"(applied {environment_file.get('appliedVariables', 0)} unset variables)"
+            )
+        else:
+            print("  Local environment file: not found")
         print("  Cloud authentication: not checked")
         print("  Azure runtime: not live")
+    elif payload.get("payloadType") == "setup":
+        print("HELIOS local setup")
+        print(f"  environment file: {payload['environmentFile']}")
+        if payload.get("writePerformed"):
+            print("  scaffold written: true")
+        else:
+            print("  scaffold written: false (run with --write to materialize)")
+        if payload["missingRequiredVariables"]:
+            print("  missing required values:")
+            for key in payload["missingRequiredVariables"]:
+                print(f"    - {key}")
+        else:
+            print("  required values: complete")
     elif "authorities" in payload:
         print("HELIOS authorities")
         for name, value in payload["authorities"].items():
@@ -382,6 +528,12 @@ def add_environment_argument(parser: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="HELIOS plan-first setup helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help="Plan or write local non-secret HELIOS environment scaffold",
+    )
+    setup_parser.add_argument("--write", action="store_true")
+    setup_parser.add_argument("--json", action="store_true")
     doctor_parser = subparsers.add_parser("doctor", help="Check local prerequisites")
     doctor_parser.add_argument("--json", action="store_true")
     targets_parser = subparsers.add_parser("targets", help="Show canonical authorities")
@@ -402,8 +554,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        if args.command == "doctor":
-            payload = doctor()
+        environment_file_status = load_local_environment()
+        if args.command == "setup":
+            payload = setup_environment(write=args.write)
+        elif args.command == "doctor":
+            payload = doctor(environment_file_status)
         elif args.command == "targets":
             payload = read_targets()
         elif args.command == "plan":

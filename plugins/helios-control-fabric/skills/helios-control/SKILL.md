@@ -57,6 +57,8 @@ evidence.
 Run the plugin doctor, then generate a plan:
 
 ```bash
+python plugins/helios-control-fabric/scripts/helios.py setup
+python plugins/helios-control-fabric/scripts/helios.py setup --write
 python plugins/helios-control-fabric/scripts/helios.py doctor
 python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
@@ -64,6 +66,9 @@ python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-
 python plugins/helios-control-fabric/scripts/helios.py devops-sync
 python plugins/helios-control-fabric/scripts/helios.py runners
 ```
+
+`setup --write` only writes a local non-secret
+`plugins/helios-control-fabric/.env.local` scaffold.
 
 The `oidc` command is a read-only live resolution and therefore requires an
 authenticated GitHub CLI. It must use GitHub's effective default/immutable
