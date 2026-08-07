@@ -964,6 +964,8 @@ jobs:
           CONTAINER_APP_NAME: ${{ steps.deploy.outputs.container_app_name }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_CONNECTOR_PUBLIC_BASE_URL: ${{ vars.HELIOS_CONNECTOR_PUBLIC_BASE_URL }}
           IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
         run: |
           set -euo pipefail
@@ -1009,6 +1011,15 @@ jobs:
             exit 1
           fi
           application_id_uri="${CONNECTOR_SCOPE%/access_as_user}"
+          metadata_resource_origin="${CONNECTOR_URL}"
+          if [[ -n "${HELIOS_CONNECTOR_PUBLIC_BASE_URL:-}" ]]; then
+            metadata_resource_origin="${HELIOS_CONNECTOR_PUBLIC_BASE_URL}"
+            expected_application_id_uri="api://${HELIOS_CONNECTOR_PUBLIC_BASE_URL#https://}/${HELIOS_ENTRA_CLIENT_ID}"
+            if [[ "${application_id_uri}" != "${expected_application_id_uri}" ]]; then
+              echo "The connector Application ID URI '${application_id_uri}' does not match the reviewed public origin binding '${expected_application_id_uri}'." >&2
+              exit 1
+            fi
+          fi
           forged_principal="$(jq -cn \
             --arg audience "${application_id_uri}" \
             '{claims: [{typ: "aud", val: $audience}, {typ: "scp", val: "access_as_user"}]}' |
@@ -1023,7 +1034,7 @@ jobs:
           fi
           metadata="$(curl --fail --silent --show-error "${CONNECTOR_URL}/.well-known/oauth-protected-resource/mcp")"
           jq --exit-status \
-            --arg resource "${CONNECTOR_URL}/mcp" \
+            --arg resource "${metadata_resource_origin}/mcp" \
             --arg scope "${CONNECTOR_SCOPE}" \
             '.resource == $resource and (.authorization_servers | length) >= 1 and .scopes_supported == [$scope]' \
             <<<"${metadata}" > /dev/null

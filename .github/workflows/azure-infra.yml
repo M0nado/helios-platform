@@ -165,6 +165,26 @@ jobs:
         run: |
           set -euo pipefail
 
+          reject_newlines() {
+            local input_name="$1"
+            local input_value="$2"
+            if [[ "${input_value}" == *$'\n'* || "${input_value}" == *$'\r'* ]]; then
+              echo "${input_name} must not contain carriage returns or newlines." >&2
+              exit 1
+            fi
+          }
+
+          reject_newlines "location" "${INPUT_LOCATION}"
+          reject_newlines "connector_backend_url" "${INPUT_CONNECTOR_BACKEND_URL}"
+          reject_newlines "name_prefix" "${INPUT_NAME_PREFIX}"
+          reject_newlines "publisher_email" "${INPUT_PUBLISHER_EMAIL}"
+          reject_newlines "platform_address_space" "${INPUT_PLATFORM_ADDRESS_SPACE}"
+          reject_newlines "azure_firewall_private_ip" "${INPUT_AZURE_FIREWALL_PRIVATE_IP}"
+          reject_newlines "hub_virtual_network_id" "${INPUT_HUB_VIRTUAL_NETWORK_ID}"
+          reject_newlines "azure_firewall_policy_id" "${INPUT_AZURE_FIREWALL_POLICY_ID}"
+          reject_newlines "cosmos_account_id" "${INPUT_COSMOS_ACCOUNT_ID}"
+          reject_newlines "container_registry_id" "${INPUT_CONTAINER_REGISTRY_ID}"
+
           resource_group_location="$(az group show --name "${INPUT_RESOURCE_GROUP}" --query location --output tsv)"
           if [[ -z "${resource_group_location}" || ! "${resource_group_location}" =~ ^[a-z0-9-]+$ ]]; then
             echo "Could not resolve a valid location for resource group '${INPUT_RESOURCE_GROUP}'." >&2
@@ -434,6 +454,17 @@ jobs:
             echo "HELIOS_CONNECTOR_PUBLIC_BASE_URL must match the deployed Front Door endpoint origin '${expected_public_base_url}' before edge cutover." >&2
             exit 1
           fi
+          shared_private_link_status="$(az resource show \
+            --resource-group "${INPUT_RESOURCE_GROUP}" \
+            --resource-type "Microsoft.Cdn/profiles/originGroups/origins" \
+            --name "${front_door_name}/apim-private-origin/apim" \
+            --api-version 2024-02-01 \
+            --query properties.sharedPrivateLinkResource.status \
+            --output tsv)"
+          if [[ "${shared_private_link_status,,}" != "approved" ]]; then
+            echo "Front Door private-link connection status is '${shared_private_link_status}'. Approve the APIM private-link request before edge_route_cutover_approved=true." >&2
+            exit 1
+          fi
 
           container_app_name="helios-connector-${INPUT_ENVIRONMENT_NAME}-api"
           set +e
@@ -482,6 +513,25 @@ jobs:
           INPUT_CONTAINER_REGISTRY_ID: ${{ github.event.inputs.container_registry_id }}
         run: |
           set -euo pipefail
+          reject_newlines() {
+            local input_name="$1"
+            local input_value="$2"
+            if [[ "${input_value}" == *$'\n'* || "${input_value}" == *$'\r'* ]]; then
+              echo "${input_name} must not contain carriage returns or newlines." >&2
+              exit 1
+            fi
+          }
+
+          reject_newlines "connector_backend_url" "${INPUT_CONNECTOR_BACKEND_URL}"
+          reject_newlines "name_prefix" "${INPUT_NAME_PREFIX}"
+          reject_newlines "publisher_email" "${INPUT_PUBLISHER_EMAIL}"
+          reject_newlines "platform_address_space" "${INPUT_PLATFORM_ADDRESS_SPACE}"
+          reject_newlines "azure_firewall_private_ip" "${INPUT_AZURE_FIREWALL_PRIVATE_IP}"
+          reject_newlines "hub_virtual_network_id" "${INPUT_HUB_VIRTUAL_NETWORK_ID}"
+          reject_newlines "azure_firewall_policy_id" "${INPUT_AZURE_FIREWALL_POLICY_ID}"
+          reject_newlines "cosmos_account_id" "${INPUT_COSMOS_ACCOUNT_ID}"
+          reject_newlines "container_registry_id" "${INPUT_CONTAINER_REGISTRY_ID}"
+
           if [[ -z "${RESOLVED_LOCATION}" || ! "${RESOLVED_LOCATION}" =~ ^[a-z0-9-]+$ ]]; then
             echo "Validated deployment location is missing or invalid." >&2
             exit 1

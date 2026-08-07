@@ -12,6 +12,7 @@ NETWORK_MODULE = REPOSITORY_ROOT / "infra/azure/modules/network.bicep"
 HUB_GOVERNANCE_MODULE = REPOSITORY_ROOT / "infra/azure/modules/hub-governance.bicep"
 PRIVATE_EDGE_MODULE = REPOSITORY_ROOT / "infra/azure/modules/private-edge.bicep"
 NETWORK_PATHS = PROJECT_ROOT / "config/network-paths.json"
+CONTROL_RUNS_SOURCE = PROJECT_ROOT / "src/Helios.Connect.Api/ControlRuns.cs"
 SUBNET_PARAMETER = "containerAppsInfrastructureSubnetId"
 
 
@@ -177,6 +178,9 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("enabledEgressProfiles=", workflow)
         self.assertIn("connectorRelayDestinations=", workflow)
         self.assertIn("Require reviewed connector public-origin rebinding before edge cutover", workflow)
+        self.assertIn("must not contain carriage returns or newlines", workflow)
+        self.assertIn("sharedPrivateLinkResource.status", workflow)
+        self.assertIn("Approve the APIM private-link request before edge_route_cutover_approved=true.", workflow)
         self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL", workflow)
         self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL must match the deployed Front Door endpoint origin", workflow)
         self.assertIn("HELIOS_PUBLIC_BASE_URL", workflow)
@@ -231,6 +235,12 @@ class AzureDeploymentContractTests(unittest.TestCase):
             "HELIOS_CONNECTOR_PUBLIC_BASE_URL must be one HTTPS origin without path, query, or fragment.",
             workflow,
         )
+        self.assertIn('metadata_resource_origin="${CONNECTOR_URL}"', workflow)
+        self.assertIn(
+            'expected_application_id_uri="api://${HELIOS_CONNECTOR_PUBLIC_BASE_URL#https://}/${HELIOS_ENTRA_CLIENT_ID}"',
+            workflow,
+        )
+        self.assertIn('--arg resource "${metadata_resource_origin}/mcp"', workflow)
         self.assertGreaterEqual(workflow.count('publicBaseUrl="${HELIOS_CONNECTOR_PUBLIC_BASE_URL}"'), 3)
         self.assertIn('--arg publicBaseUrl "${HELIOS_CONNECTOR_PUBLIC_BASE_URL}"', workflow)
         self.assertIn("publicBaseUrl: $publicBaseUrl", workflow)
@@ -250,6 +260,10 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("containerAppsPlatform", network_paths)
         self.assertIn("containerRegistryDataPlane", network_paths)
         self.assertIn("*.azurecr.io", network_paths)
+
+    def test_control_run_store_uses_gateway_mode_for_cosmos(self) -> None:
+        control_runs = CONTROL_RUNS_SOURCE.read_text(encoding="utf-8")
+        self.assertIn("ConnectionMode = ConnectionMode.Gateway", control_runs)
 
 
 if __name__ == "__main__":
