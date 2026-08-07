@@ -179,6 +179,8 @@
     <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
     <Compile Remove="**/Tests/**/*.cs" />
     <Compile Remove="**/*Tests.cs" />
+    <Compile Remove="**/obj/**/*.cs" />
+    <Compile Remove="**/bin/**/*.cs" />
   </ItemGroup>
 
 </Project>
