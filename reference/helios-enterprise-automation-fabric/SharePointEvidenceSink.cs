@@ -43,7 +43,8 @@ public sealed class SharePointEvidenceSink(
             authoritativeApproval = "github-protected-environments"
         }, FabricJson.Options);
         var endpoint = $"sites/{Uri.EscapeDataString(siteId)}/drives/{Uri.EscapeDataString(driveId)}/root:/{path}:/content?@microsoft.graph.conflictBehavior=fail";
-        using var response = await client.PutAsync(endpoint, new StringContent(content, Encoding.UTF8, "application/json"), cancellationToken);
+        using var payload = new StringContent(content, Encoding.UTF8, "application/json");
+        using var response = await client.PutAsync(endpoint, payload, cancellationToken);
         if (response.StatusCode == HttpStatusCode.Conflict) return; // Deterministic event path already exists.
         response.EnsureSuccessStatusCode();
     }

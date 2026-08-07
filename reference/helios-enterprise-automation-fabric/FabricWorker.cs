@@ -75,7 +75,7 @@ public sealed class FabricWorker(
                 await WriteReceiptAsync(evidenceContainer, envelope, route, args.CancellationToken);
                 delivered.Add(route.ConnectorId);
             }
-            catch (Exception exception)
+            catch (Exception exception) when (IsRecoverableDeliveryException(exception))
             {
                 logger.LogError(exception, "Delivery failed for {ConnectorId} and event {EventId}", route.ConnectorId, envelope.EventId);
                 failures.Add($"{route.ConnectorId}: {exception.GetType().Name}");
@@ -217,4 +217,11 @@ public sealed class FabricWorker(
 
     private static string Truncate(string value, int maximum) =>
         value.Length <= maximum ? value : value[..maximum];
+
+    private static bool IsRecoverableDeliveryException(Exception exception) =>
+        exception is not (OperationCanceledException
+            or OutOfMemoryException
+            or StackOverflowException
+            or AccessViolationException
+            or AppDomainUnloadedException);
 }

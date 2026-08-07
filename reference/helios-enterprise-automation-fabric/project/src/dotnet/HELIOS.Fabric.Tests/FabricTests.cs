@@ -32,8 +32,8 @@ public sealed class FabricTests
         var directory = Directory.CreateTempSubdirectory("helios-fabric-tests");
         try
         {
-            var registry = Path.Combine(directory.FullName, "registry.json");
-            var routes = Path.Combine(directory.FullName, "routes.json");
+            var registry = Path.Join(directory.FullName, "registry.json");
+            var routes = Path.Join(directory.FullName, "routes.json");
             File.WriteAllText(registry, """
             {"defaultMode":"deny","connectors":[{"id":"slack-ops","enabled":false}]}
             """);
