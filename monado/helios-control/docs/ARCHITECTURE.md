@@ -69,6 +69,18 @@ Every event has `id`, `type`, `source`, `subject`, `occurredAt`, `correlationId`
 idempotent on `id + target`, and outbound operations carry a Helios correlation
 marker. The current inline dispatcher is not the future Service Bus worker fleet.
 
+### Hermes/XCore9 specialization packs
+
+`config/hermes-xcore9-specialization-packs.json` is the versioned policy registry
+for bounded Hermes/XCore9 execution. It declares specialization roles, skill/tool
+capability contracts, fan-out/fan-in and timeout bounds, idempotency/correlation
+requirements, partial-failure behavior, and multimodal routing lanes.
+
+The runtime evaluates `helios_plan_specialization_run` requests against that
+registry in fail-closed mode. Undeclared skill bindings or tool usage are
+rejected, and accepted multimodal plans emit normalized provenance metadata that
+preserves correlation and evidence links.
+
 ## Security boundaries
 
 1. Verify provider signatures before parsing payloads.

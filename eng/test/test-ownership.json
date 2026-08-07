@@ -22,6 +22,11 @@
       "layer": "integration"
     },
     {
+      "path": "monado/helios-control/tests/Helios.Connect.Tests/SpecializationPolicyTests.cs",
+      "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
+      "layer": "integration"
+    },
+    {
       "path": "monado/helios-control/tests/Helios.Connect.Tests/WebhookTests.cs",
       "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
       "layer": "integration"

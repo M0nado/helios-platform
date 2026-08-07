@@ -11,6 +11,18 @@
     <ProjectReference Include="../Helios.Connect.Contracts/Helios.Connect.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\..\config\hermes-xcore9-specialization-packs.json">
+      <Link>config\hermes-xcore9-specialization-packs.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\config\hermes-xcore9-specialization.schema.json">
+      <Link>config\hermes-xcore9-specialization.schema.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\config\hermes-xcore9-specialization-packs.example.json">
+      <Link>config\hermes-xcore9-specialization-packs.example.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\config\agent-core-policy.json">
       <Link>config\agent-core-policy.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

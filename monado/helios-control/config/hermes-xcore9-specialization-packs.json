@@ -1,0 +1,183 @@
+{
+  "$schema": "./hermes-xcore9-specialization.schema.json",
+  "schemaVersion": "1.0",
+  "registryVersion": "1.0.0",
+  "parallelPolicy": {
+    "maxGlobalParallelism": 9,
+    "maxFanOut": 8,
+    "maxFanIn": 8,
+    "defaultTimeoutSeconds": 180,
+    "maxTimeoutSeconds": 600,
+    "requireIdempotencyKey": true,
+    "requireCorrelationId": true,
+    "cancelRunningChildrenOnTimeout": true
+  },
+  "skills": [
+    {
+      "id": "helios-control-skill",
+      "contractVersion": "1.0.0",
+      "allowedTools": [
+        "search",
+        "fetch",
+        "helios_get_control_plane_status",
+        "helios_plan_automation",
+        "helios_get_run",
+        "helios_list_connectors",
+        "helios_plan_specialization_run"
+      ],
+      "deniedTools": [
+        "direct_main_write",
+        "deployment_apply",
+        "role_assignment"
+      ],
+      "requiresCorrelationId": true,
+      "requiresEvidenceLinks": true
+    },
+    {
+      "id": "plugin-skill-bridge",
+      "contractVersion": "1.0.0",
+      "allowedTools": [
+        "search",
+        "fetch",
+        "helios_plan_specialization_run"
+      ],
+      "deniedTools": [
+        "direct_main_write",
+        "deployment_apply",
+        "secret_write"
+      ],
+      "requiresCorrelationId": true,
+      "requiresEvidenceLinks": true
+    }
+  ],
+  "packs": [
+    {
+      "id": "hermes-xcore9-orchestrator",
+      "role": "Hermes coordinator for bounded parallel sub-agent orchestration and fan-in synthesis.",
+      "inputs": [
+        "issue-context",
+        "repository-evidence",
+        "policy-contracts"
+      ],
+      "outputs": [
+        "bounded-execution-plan",
+        "specialization-receipts",
+        "compliance-summary"
+      ],
+      "allowedTools": [
+        "search",
+        "fetch",
+        "helios_get_control_plane_status",
+        "helios_plan_automation",
+        "helios_get_run",
+        "helios_list_connectors",
+        "helios_plan_specialization_run"
+      ],
+      "deniedTools": [
+        "direct_main_write",
+        "deployment_apply",
+        "role_assignment",
+        "secret_write"
+      ],
+      "maxParallelism": 4,
+      "maxFanOut": 4,
+      "maxFanIn": 4,
+      "timeoutSeconds": 240,
+      "timeoutBehavior": "cancel-running-children",
+      "partialFailurePolicy": "continue-and-report",
+      "boundSkills": [
+        "helios-control-skill"
+      ],
+      "modalities": [
+        "text",
+        "code",
+        "docs",
+        "telemetry"
+      ]
+    },
+    {
+      "id": "xcore9-multimodal-review",
+      "role": "XCore evaluator lane for multimodal evidence review and policy conformance scoring.",
+      "inputs": [
+        "text-summaries",
+        "code-snippets",
+        "docs-deltas",
+        "telemetry-signals"
+      ],
+      "outputs": [
+        "route-scorecard",
+        "policy-findings",
+        "promotion-recommendation"
+      ],
+      "allowedTools": [
+        "search",
+        "fetch",
+        "helios_get_control_plane_status",
+        "helios_get_run",
+        "helios_plan_specialization_run"
+      ],
+      "deniedTools": [
+        "direct_main_write",
+        "deployment_apply",
+        "role_assignment",
+        "secret_write"
+      ],
+      "maxParallelism": 3,
+      "maxFanOut": 3,
+      "maxFanIn": 3,
+      "timeoutSeconds": 180,
+      "timeoutBehavior": "complete-active-children",
+      "partialFailurePolicy": "fail-fast",
+      "boundSkills": [
+        "helios-control-skill",
+        "plugin-skill-bridge"
+      ],
+      "modalities": [
+        "text",
+        "code",
+        "docs",
+        "telemetry",
+        "media"
+      ]
+    }
+  ],
+  "multimodalRouting": {
+    "requiredProvenanceFields": [
+      "correlationId",
+      "idempotencyKey",
+      "specializationId",
+      "skillIds",
+      "modality",
+      "evidenceLinks",
+      "emittedAt",
+      "schemaVersion"
+    ],
+    "lanes": [
+      {
+        "id": "text",
+        "allowedContentTypes": ["text/plain", "application/json"],
+        "requiresEvidenceMetadata": true
+      },
+      {
+        "id": "code",
+        "allowedContentTypes": ["text/plain", "application/json"],
+        "requiresEvidenceMetadata": true
+      },
+      {
+        "id": "docs",
+        "allowedContentTypes": ["text/markdown", "application/json"],
+        "requiresEvidenceMetadata": true
+      },
+      {
+        "id": "telemetry",
+        "allowedContentTypes": ["application/json"],
+        "requiresEvidenceMetadata": true
+      },
+      {
+        "id": "media",
+        "allowedContentTypes": ["image/png", "image/jpeg", "audio/mpeg", "video/mp4"],
+        "requiresEvidenceMetadata": true
+      }
+    ]
+  }
+}

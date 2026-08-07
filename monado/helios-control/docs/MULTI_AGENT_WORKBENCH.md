@@ -14,6 +14,9 @@ They exchange only reviewed files, MCP results, and evidence artifacts.
 - `config/agent-fleet.json` defines provider preference, concurrency, workflow,
   and forbidden actions.
 - `config/cli-matrix.json` is the source of truth for concurrent CLI checks.
+- `config/hermes-xcore9-specialization-packs.json` defines specialization-pack
+  contracts for bounded parallelism, skill/tool capability enforcement, and
+  multimodal provenance requirements.
 
 ## Start safely
 

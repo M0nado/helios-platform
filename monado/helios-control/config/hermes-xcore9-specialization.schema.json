@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/hermes-xcore9-specialization-v1.json",
+  "title": "HELIOS Hermes/XCore9 specialization registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "registryVersion",
+    "parallelPolicy",
+    "skills",
+    "packs",
+    "multimodalRouting"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "type": "string", "const": "1.0" },
+    "registryVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "parallelPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxGlobalParallelism",
+        "maxFanOut",
+        "maxFanIn",
+        "defaultTimeoutSeconds",
+        "maxTimeoutSeconds",
+        "requireIdempotencyKey",
+        "requireCorrelationId",
+        "cancelRunningChildrenOnTimeout"
+      ],
+      "properties": {
+        "maxGlobalParallelism": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "maxFanOut": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "maxFanIn": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "defaultTimeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+        "maxTimeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+        "requireIdempotencyKey": { "type": "boolean" },
+        "requireCorrelationId": { "type": "boolean" },
+        "cancelRunningChildrenOnTimeout": { "type": "boolean" }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/skillContract" }
+    },
+    "packs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/specializationPack" }
+    },
+    "multimodalRouting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredProvenanceFields", "lanes"],
+      "properties": {
+        "requiredProvenanceFields": {
+          "type": "array",
+          "minItems": 5,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "lanes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/multimodalLane" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "skillContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "contractVersion",
+        "allowedTools",
+        "deniedTools",
+        "requiresCorrelationId",
+        "requiresEvidenceLinks"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "contractVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "allowedTools": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "deniedTools": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "requiresCorrelationId": { "type": "boolean" },
+        "requiresEvidenceLinks": { "type": "boolean" }
+      }
+    },
+    "specializationPack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "role",
+        "inputs",
+        "outputs",
+        "allowedTools",
+        "deniedTools",
+        "maxParallelism",
+        "maxFanOut",
+        "maxFanIn",
+        "timeoutSeconds",
+        "timeoutBehavior",
+        "partialFailurePolicy",
+        "boundSkills",
+        "modalities"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "allowedTools": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "deniedTools": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "maxParallelism": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "maxFanOut": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "maxFanIn": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+        "timeoutBehavior": {
+          "type": "string",
+          "enum": ["cancel-running-children", "complete-active-children"]
+        },
+        "partialFailurePolicy": {
+          "type": "string",
+          "enum": ["fail-fast", "continue-and-report", "continue-and-compensate"]
+        },
+        "boundSkills": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "modalities": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "enum": ["text", "code", "docs", "telemetry", "media"] }
+        }
+      }
+    },
+    "multimodalLane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "allowedContentTypes", "requiresEvidenceMetadata"],
+      "properties": {
+        "id": { "type": "string", "enum": ["text", "code", "docs", "telemetry", "media"] },
+        "allowedContentTypes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$" }
+        },
+        "requiresEvidenceMetadata": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -454,12 +454,13 @@ try {
                         'azure_list_foundry_resources',
                         'helios_plan_automation',
                         'helios_propose_upgrade',
+                        'helios_plan_specialization_run',
                         'helios_get_run',
                         'helios_list_connectors'
                     )
                     $toolDifference = @(Compare-Object -ReferenceObject $expectedToolNames -DifferenceObject $toolNames)
                     $passed = $response.StatusCode -eq 200 -and $null -ne $message -and $message.jsonrpc -eq '2.0' -and -not $message.ContainsKey('error') -and $toolDifference.Count -eq 0
-                    Add-TestResult -Name 'authenticated.mcp-tools-list' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP exposes exactly the seven approved read-only and plan-only tools.' } else { 'MCP tool inventory differs from the approved read-only and plan-only set.' })
+                    Add-TestResult -Name 'authenticated.mcp-tools-list' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP exposes exactly the eight approved read-only and plan-only tools.' } else { 'MCP tool inventory differs from the approved read-only and plan-only set.' })
                 }
                 catch {
                     Add-TestResult -Name 'authenticated.mcp-tools-list' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)

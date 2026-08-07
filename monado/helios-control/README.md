@@ -49,6 +49,10 @@ tenant bootstrap. Neither path applies from the browser. The **Upgrade agent** p
 `helios_propose_upgrade` MCP tool create deterministic proposals for a task
 branch, tests, and draft PR; they cannot silently change active policy or merge.
 
+`helios_plan_specialization_run` adds a governed Hermes/XCore9 specialization
+planning surface. It enforces declared skill/tool capability contracts, bounded
+parallelism, and multimodal provenance metadata requirements before any execution.
+
 See `docs/AZURE_SETUP_WIZARD.md`.
 
 ## Edge automation branch

@@ -50,7 +50,7 @@ After deployment, '<approved-origin>/mcp' provides:
 - 'helios_render_control_center';
 - the 'ui://helios/control-center-v2.html' MCP Apps resource;
 - Azure and Foundry inventory reads;
-- deterministic plan and upgrade proposals;
+- deterministic plan, specialization, and upgrade proposals;
 - owner-scoped control-run reads;
 - connector binding status.
 

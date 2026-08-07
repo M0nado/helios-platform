@@ -30,7 +30,7 @@ Local `Apply` and `VaultSet` modes are retired. Vault mutation remains unavailab
 
 ## Edge and OpenAI app surface
 
-The Edge page starts the job through authenticated same-origin REST. The MCP endpoint exposes `azure_get_context`, `azure_list_resources`, `azure_list_foundry_resources`, `helios_plan_automation`, `helios_propose_upgrade`, `helios_get_run`, and `helios_list_connectors` as read-only tools for ChatGPT, Codex, and Copilot. They follow the OpenAI Apps tool model and explicitly declare non-destructive behavior. There is deliberately no MCP apply or run-start tool.
+The Edge page starts the job through authenticated same-origin REST. The MCP endpoint exposes `azure_get_context`, `azure_list_resources`, `azure_list_foundry_resources`, `helios_plan_automation`, `helios_propose_upgrade`, `helios_plan_specialization_run`, `helios_get_run`, and `helios_list_connectors` as read-only tools for ChatGPT, Codex, and Copilot. They follow the OpenAI Apps tool model and explicitly declare non-destructive behavior. There is deliberately no MCP apply or run-start tool.
 
 Reference documentation:
 
