@@ -107,7 +107,9 @@ class HeliosCliTests(unittest.TestCase):
             bundle = HELIOS.full_setup_bundle("azure-dev")
         self.assertIn("warnings", bundle)
         self.assertFalse(bundle["services"]["available"])
-        self.assertEqual(bundle["integrations"]["routeCount"], 0)
+        self.assertTrue(bundle["integrations"]["available"])
+        self.assertGreater(bundle["integrations"]["routeCount"], 0)
+        self.assertTrue(bundle["environments"]["available"])
         self.assertEqual(
             bundle["warnings"][0],
             "Missing required control config files: monado/helios-control/config/cloud-runtime.json",
@@ -119,6 +121,7 @@ class HeliosCliTests(unittest.TestCase):
         with redirect_stdout(output):
             HELIOS.print_human(bundle)
         self.assertIn("routes:", output.getvalue())
+
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             contract = HELIOS.oidc_contract(
