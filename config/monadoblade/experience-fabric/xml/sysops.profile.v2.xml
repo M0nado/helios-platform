@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProfileManifest xmlns="https://helios-platform.dev/schemas/monado-profile-v2"
+                 schemaVersion="2.0.0"
+                 profileId="sysops">
+  <SemanticUi>operations-cockpit</SemanticUi>
+  <ServiceMode>observability-security-priority</ServiceMode>
+  <NetworkMode>infra-monitored</NetworkMode>
+  <TelemetryClass>confidential</TelemetryClass>
+  <AlvisMaxToolCallsPerPlan>80</AlvisMaxToolCallsPerPlan>
+</ProfileManifest>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProfileManifest xmlns="https://helios-platform.dev/schemas/monado-profile-v2"
+                 schemaVersion="2.0.0"
+                 profileId="core">
+  <SemanticUi>neutral-foundation</SemanticUi>
+  <ServiceMode>minimal-shared</ServiceMode>
+  <NetworkMode>deny-by-default-allowlisted</NetworkMode>
+  <TelemetryClass>internal</TelemetryClass>
+  <AlvisMaxToolCallsPerPlan>20</AlvisMaxToolCallsPerPlan>
+</ProfileManifest>

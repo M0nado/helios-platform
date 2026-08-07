@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProfileManifest xmlns="https://helios-platform.dev/schemas/monado-profile-v2"
+                 schemaVersion="2.0.0"
+                 profileId="sysadmin">
+  <SemanticUi>sealed-vault</SemanticUi>
+  <ServiceMode>integrity-and-recovery</ServiceMode>
+  <NetworkMode>local-first-restricted</NetworkMode>
+  <TelemetryClass>restricted</TelemetryClass>
+  <AlvisMaxToolCallsPerPlan>30</AlvisMaxToolCallsPerPlan>
+</ProfileManifest>

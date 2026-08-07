@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-storage-v2",
+  "destructiveApplyDefault": false,
+  "requireWhatIf": true,
+  "executionMode": "proposal-only",
+  "exactSizeLock": {
+    "status": "unresolved",
+    "allowMutationBeforeResolution": false
+  },
+  "topology": {
+    "disk0": {
+      "role": "windows-core-recovery-cross",
+      "partitions": [
+        { "id": "windows-core", "label": "MONADO_SYSTEM", "targetLetter": "C", "fileSystem": "NTFS" },
+        { "id": "recovery", "label": "MONADO_RECOVERY", "targetLetter": "R", "fileSystem": "NTFS" },
+        { "id": "core-cross-physical", "label": "CORE_CROSS", "targetLetter": "X", "fileSystem": "NTFS", "physicalVolume": true }
+      ]
+    },
+    "disk1": {
+      "role": "domains-and-vhdx-host",
+      "domainsVolume": {
+        "label": "MONADO_DOMAINS",
+        "fileSystem": "NTFS",
+        "aclSeparatedRoots": [
+          "Games",
+          "MusicStudio",
+          "Personal",
+          "Airgap",
+          "AIServer",
+          "VM",
+          "Common",
+          "SoftwareVault",
+          "Evidence"
+        ]
+      },
+      "vhdx": [
+        {
+          "id": "devdrive",
+          "targetLetter": "D",
+          "fileSystem": "ReFS",
+          "kind": "dynamic",
+          "hostPath": "MONADO_DOMAINS/VM/vhdx/devdrive.vhdx",
+          "autoMount": true
+        },
+        {
+          "id": "vault",
+          "targetLetter": "V",
+          "fileSystem": "NTFS",
+          "kind": "dynamic-bitlocker-encrypted",
+          "hostPath": "MONADO_DOMAINS/SoftwareVault/vhdx/vault.vhdx",
+          "autoMount": false
+        }
+      ]
+    }
+  },
+  "guardrails": {
+    "denyBlindDiskSelection": true,
+    "denyDirectDiskMutationFromRuntime": true,
+    "requireBackupEvidenceBeforeAnyApply": true,
+    "requireRollbackPlanBeforeAnyApply": true
+  }
+}

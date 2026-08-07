@@ -10,7 +10,15 @@ on:
       - 'config/aihub/profile-optimization-policies.v1.json'
       - 'config/automation/monadoblade-14-script-manifest.v1.json'
       - 'config/runtime/helios-fabric-services.v1.json'
+      - 'config/monadoblade/experience-fabric/**'
       - 'docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md'
+      - 'docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md'
+      - 'scripts/control/validate_monado_enterprise_experience_v2.py'
+      - 'scripts/control/tests/test_validate_monado_enterprise_experience_v2.py'
+      - 'tests/analytics/HELIOS.Analytics.FSharp.Tests/ProfilePolicyOptimizerTests.fs'
+      - 'src/native/HELIOS.Native.Performance/include/helios/monadoblade_profile_optimizer.hpp'
+      - 'tests/native/monadoblade_profile_optimizer_smoke.cpp'
+      - 'src/native/HELIOS.Native.Performance/CMakeLists.txt'
       - '.github/workflows/validate-monadoblade-profile-contracts.yml'
   push:
     branches:
@@ -23,6 +31,13 @@ on:
       - 'config/aihub/profile-optimization-policies.v1.json'
       - 'config/automation/monadoblade-14-script-manifest.v1.json'
       - 'config/runtime/helios-fabric-services.v1.json'
+      - 'config/monadoblade/experience-fabric/**'
+      - 'scripts/control/validate_monado_enterprise_experience_v2.py'
+      - 'scripts/control/tests/test_validate_monado_enterprise_experience_v2.py'
+      - 'tests/analytics/HELIOS.Analytics.FSharp.Tests/ProfilePolicyOptimizerTests.fs'
+      - 'src/native/HELIOS.Native.Performance/include/helios/monadoblade_profile_optimizer.hpp'
+      - 'tests/native/monadoblade_profile_optimizer_smoke.cpp'
+      - 'src/native/HELIOS.Native.Performance/CMakeLists.txt'
   workflow_dispatch:
 
 permissions:
@@ -40,6 +55,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
       - name: Parse JSON contracts
         shell: bash
@@ -155,6 +175,47 @@ jobs:
           if not all('risk' in item and 'applyRequires' in item for item in scripts):
               raise SystemExit('Every script must declare risk and apply gates')
           print('AIHub and automation invariants passed')
+          PY
+
+      - name: Validate Monado enterprise experience v2 contracts
+        shell: bash
+        run: |
+          python scripts/control/validate_monado_enterprise_experience_v2.py
+
+      - name: Run v2 Python validator unit tests
+        shell: bash
+        run: |
+          python -m unittest scripts.control.tests.test_validate_monado_enterprise_experience_v2
+
+      - name: Run F# bounded profile scoring tests
+        shell: bash
+        run: |
+          dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --filter ProfilePolicyOptimizerTests
+
+      - name: Run native read-only extraction smoke tests
+        shell: bash
+        run: |
+          cmake -S src/native/HELIOS.Native.Performance -B build/native -DBUILD_TESTING=ON
+          cmake --build build/native --config Release
+          ctest --test-dir build/native --output-on-failure -R monadoblade_profile_optimizer_smoke
+
+      - name: Verify v2 code and documentation links
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          required = [
+              Path("config/monadoblade/experience-fabric/monado-enterprise-experience-fabric.v2.json"),
+              Path("docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md"),
+              Path("src/core/HELIOS.Platform.Contracts/MonadoEnterpriseExperienceFabricV2Contracts.cs"),
+              Path("tests/analytics/HELIOS.Analytics.FSharp.Tests/ProfilePolicyOptimizerTests.fs"),
+              Path("src/native/HELIOS.Native.Performance/include/helios/monadoblade_profile_optimizer.hpp"),
+              Path("tests/native/monadoblade_profile_optimizer_smoke.cpp"),
+          ]
+          missing = [str(path) for path in required if not path.exists()]
+          if missing:
+              raise SystemExit(f"missing v2 code/doc link target(s): {missing}")
+          print("v2 code/document links passed")
           PY
 
       - name: Secret-pattern scan

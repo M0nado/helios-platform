@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-repository-ownership-v2",
+  "canonicalPlatform": "M0nado/helios-platform",
+  "ownership": {
+    "helios-platform": "canonical-contracts-event-routing-policy-docs-pages-wiki-source-validation",
+    "helios-monado-blade": "dedicated-gui-engine-and-themed-interaction",
+    "PHASE-0-USB-Creator": "dedicated-removable-media-builder-and-privileged-device-operations",
+    "helios-ai-hub": "provider-runtime-adapters-and-governed-learning"
+  },
+  "codeownersReadyPaths": [
+    "/config/monadoblade/experience-fabric/** @M0nado/platform-architecture",
+    "/docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md @M0nado/platform-architecture",
+    "/scripts/control/validate_monado_enterprise_experience_v2.py @M0nado/security-engineering",
+    "/scripts/control/tests/test_validate_monado_enterprise_experience_v2.py @M0nado/security-engineering",
+    "/.github/workflows/validate-monadoblade-profile-contracts.yml @M0nado/devops"
+  ],
+  "nonOwnershipRules": [
+    "do-not-duplicate-gui-implementation-in-canonical-platform",
+    "do-not-duplicate-usb-wizard-implementation-in-canonical-platform"
+  ]
+}

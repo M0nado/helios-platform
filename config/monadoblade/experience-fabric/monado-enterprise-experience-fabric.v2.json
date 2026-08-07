@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-enterprise-experience-fabric-v2",
+  "status": "authoritative-proposal-only",
+  "canonicalRepository": "M0nado/helios-platform",
+  "issue": "https://github.com/M0nado/helios-platform/issues/206",
+  "preserveHistoricalInputs": true,
+  "execution": {
+    "destructiveApplyDefault": false,
+    "runtimeSideEffectsAllowed": false,
+    "privilegedActions": "typed-proposal-with-approval-expiry-evidence-rollback"
+  },
+  "contracts": {
+    "storage": "config/monadoblade/experience-fabric/storage.contract.v2.json",
+    "profileCatalog": "config/monadoblade/experience-fabric/profile-catalog.v2.json",
+    "profileExperience": "config/monadoblade/experience-fabric/profile-experience.contract.v2.json",
+    "chromaWyvern": "config/monadoblade/experience-fabric/chroma-wyvern.contract.v2.json",
+    "alvisBudget": "config/monadoblade/experience-fabric/alvis-tool-budgets.v2.json",
+    "repositoryOwnership": "config/monadoblade/experience-fabric/repository-ownership.contract.v2.json",
+    "synchronization": "config/monadoblade/experience-fabric/synchronization.contract.v2.json",
+    "openAiProposalSchema": "config/monadoblade/experience-fabric/openai-proposal.schema.v2.json",
+    "profileXmlSchema": "config/monadoblade/experience-fabric/xml/profile-manifest.v2.xsd"
+  }
+}

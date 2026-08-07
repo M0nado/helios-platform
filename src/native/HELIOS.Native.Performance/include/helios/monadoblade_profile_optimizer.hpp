@@ -39,6 +39,10 @@ struct OptimizationResult {
   bool requiresApproval{};
 };
 
+struct ReadOnlyFeatureSnapshot {
+  std::array<double, 10> values{};
+};
+
 [[nodiscard]] constexpr double clamp01(const double value) noexcept {
   return std::clamp(value, 0.0, 1.0);
 }
@@ -115,6 +119,24 @@ struct OptimizationResult {
           signals.memoryUtilization >= 88.0 || signals.vmMemoryPressure >= 85.0,
       .isolateRiskyWorkload = signals.securityRisk >= 60.0,
       .requiresApproval = profile == Profile::SysAdmin || signals.securityRisk >= 60.0,
+  };
+}
+
+[[nodiscard]] constexpr ReadOnlyFeatureSnapshot extract_read_only_features(
+    const RuntimeSignals& signals) noexcept {
+  return ReadOnlyFeatureSnapshot{
+      .values = {
+          normalized_percent(signals.cpuUtilization),
+          normalized_percent(signals.gpuUtilization),
+          normalized_percent(signals.memoryUtilization),
+          inverse_normalized(30.0, signals.storageLatencyMs),
+          inverse_normalized(150.0, signals.networkLatencyMs),
+          normalized_percent(signals.thermalPressure),
+          normalized_percent(signals.securityRisk),
+          normalized_percent(signals.vmMemoryPressure),
+          inverse_normalized(250.0, signals.modelLatencyMs),
+          inverse_normalized(10.0, signals.audioXruns),
+      },
   };
 }
 

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-sync-v2",
+  "defaultMode": "propose-and-validate-only",
+  "idempotency": {
+    "algorithm": "sha256",
+    "components": ["routeId", "sourceDeliveryId", "targetLogicalId", "operation"],
+    "normalization": "nfc-trim-casefold-registered-identifiers"
+  },
+  "envelope": {
+    "schemaVersion": "1.0",
+    "requiredFields": [
+      "eventId",
+      "source",
+      "eventType",
+      "repository",
+      "correlationId",
+      "environment",
+      "occurredAt",
+      "dataClassification",
+      "links",
+      "payload"
+    ]
+  },
+  "systems": {
+    "github": { "mode": "authoritative-source" },
+    "linear": { "mode": "work-authority" },
+    "slack": { "mode": "status-only", "maxCheckpointsPerBranch": 1 },
+    "sharepoint": { "mode": "governed-evidence" },
+    "azure-devops": { "mode": "read-only-mirror-until-separate-approved-identity" },
+    "adobe-design": { "mode": "approved-original-assets-and-link-evidence-only" }
+  },
+  "prohibitions": [
+    "direct-to-main-write",
+    "implicit-external-message-side-effect",
+    "azure-apply-from-runtime",
+    "tenant-consent-from-runtime"
+  ]
+}
