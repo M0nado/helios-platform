@@ -32,6 +32,10 @@ jobs:
           global-json-file: global.json
       - shell: pwsh
         run: dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj --configuration Release --filter "FullyQualifiedName!~Integration&FullyQualifiedName!~Security"
+      - shell: pwsh
+        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+      - shell: pwsh
+        run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
 
   privileged:
     name: Tests / Privileged
@@ -46,6 +50,8 @@ jobs:
         run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
       - shell: pwsh
         run: dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj --configuration Release
+      - shell: pwsh
+        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
 
   integration:
     name: Tests / Integration
@@ -70,6 +76,8 @@ jobs:
           global-json-file: global.json
       - shell: pwsh
         run: dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj --configuration Release --filter "FullyQualifiedName~Performance|FullyQualifiedName~ScalingTest"
+      - shell: pwsh
+        run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
 
   end-to-end:
     name: Tests / End-to-End
@@ -81,3 +89,5 @@ jobs:
           global-json-file: global.json
       - shell: pwsh
         run: dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj --configuration Release --filter "FullyQualifiedName~Integration|FullyQualifiedName~Workflow"
+      - shell: pwsh
+        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release

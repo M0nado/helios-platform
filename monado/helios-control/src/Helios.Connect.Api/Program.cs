@@ -9,6 +9,7 @@ builder.Services.AddHttpClient<OpenAiResponsesProvider>();
 builder.Services.AddHttpClient<IAzureInventoryService, AzureInventoryService>();
 builder.Services.AddHttpClient("helios-connectors", client => client.Timeout = TimeSpan.FromSeconds(15))
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton(_ => AgentCorePolicyLoader.Load(builder.Configuration, builder.Environment.ContentRootPath));
 builder.Services.AddSingleton<IEdgeAutomationPlanner, EdgeAutomationPlanner>();
 builder.Services.AddSingleton<ISetupWizardService, SetupWizardService>();
 builder.Services.AddSingleton<IConnectorDispatcher, ConnectorDispatcher>();
@@ -1085,10 +1086,11 @@ static object BuildSystemFetchOutputSchema() => new
 static object BuildControlPlaneStatusOutputSchema() => new
 {
     type = "object",
-    required = new[] { "version", "generatedAt", "source", "systems" },
+    required = new[] { "version", "policyVersion", "generatedAt", "source", "systems" },
     properties = new
     {
         version = new { type = "string" },
+        policyVersion = new { type = "string" },
         generatedAt = new { type = "string", format = "date-time" },
         source = new { type = "string" },
         systems = new
@@ -1314,9 +1316,11 @@ static object BuildSystemFetchResult(JsonElement parameters, IConfiguration conf
 
 static object BuildControlPlaneStatusResult(IConfiguration configuration, bool render)
 {
+    var policy = AgentCorePolicyLoader.Load(configuration);
     var status = new
     {
         version = HeliosMcpDefaults.Version,
+        policyVersion = policy.PolicyVersion,
         generatedAt = DateTimeOffset.UtcNow,
         source = "governed-configuration-snapshot",
         systems = BuildHeliosSystemRecords(configuration)
