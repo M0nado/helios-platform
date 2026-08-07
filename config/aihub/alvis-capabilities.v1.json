@@ -1,0 +1,13 @@
+{
+  "$schema": "../../schemas/alvis-capabilities.v1.schema.json",
+  "version": "1.0.0",
+  "agent": "ALVIS",
+  "capabilities": {
+    "search": ["search_*", "fetch_*"],
+    "plan": ["plan_*"],
+    "request": ["request_*"]
+  },
+  "directExecutorToolsDenied": true,
+  "approvalModel": "request_* remains pending until explicit approval evidence is attached"
+}
+

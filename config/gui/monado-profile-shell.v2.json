@@ -1,0 +1,30 @@
+{
+  "$schema": "../../schemas/monado-profile-shell.v2.schema.json",
+  "version": "2.0.0",
+  "shellId": "monadoblade-profile-shell",
+  "securityBoundary": {
+    "runsAfterWindowsAuthentication": true,
+    "replacesWindowsCredentialProvider": false,
+    "networkRequiredForLogin": false,
+    "fallbackShell": "safe-neutral"
+  },
+  "postAuthStateMachine": ["safe-boot", "identity-verified", "wheel-ready", "profile-selected", "shell-ready"],
+  "profileWheel": {
+    "orientation": "radial",
+    "selection": ["mouse", "keyboard", "controller", "touch"],
+    "sectors": [
+      { "profile": "core", "kanji": "核", "glyph": "CORE", "color": "#BBD7FF", "angle": 0 },
+      { "profile": "developer", "kanji": "創", "glyph": "DEV", "color": "#00D8FF", "angle": 60 },
+      { "profile": "studio", "kanji": "響", "glyph": "WAVE", "color": "#D64DFF", "angle": 120 },
+      { "profile": "gamer", "kanji": "迅", "glyph": "PLAY", "color": "#62FF4A", "angle": 180 },
+      { "profile": "ai-server", "kanji": "智", "glyph": "AI", "color": "#6D7B8D", "angle": 240 },
+      { "profile": "sysadmin-offline", "kanji": "統", "glyph": "ROOT", "color": "#FFB000", "angle": 300, "hiddenUntilAuthorized": true }
+    ]
+  },
+  "stateGuards": {
+    "identityVerifiedRequiredBeforeWheel": true,
+    "sysadminRequiresLocalOfflineAuthorization": true,
+    "safeNeutralOnGuardFailure": true
+  }
+}
+

@@ -1,0 +1,23 @@
+{
+  "$schema": "../../schemas/helios-fabric-services.v2.schema.json",
+  "version": "2.0.0",
+  "fabricId": "monadoblade-delivery-fabric",
+  "contractMode": "deterministic-and-versioned",
+  "libraries": [
+    { "id": "policy-contract", "package": "HELIOS.Contracts.Policy", "version": "2.0.0" },
+    { "id": "evidence-contract", "package": "HELIOS.Contracts.Evidence", "version": "2.0.0" },
+    { "id": "control-client", "package": "HELIOS.Control.Client", "version": "2.0.0" },
+    { "id": "shellkit", "package": "HELIOS.ShellKit", "version": "2.0.0" },
+    { "id": "renderer", "package": "HELIOS.Renderer.WinUI", "version": "2.0.0" },
+    { "id": "chroma", "package": "HELIOS.Chroma", "version": "2.0.0" },
+    { "id": "wyvern", "package": "HELIOS.Wyvern", "version": "2.0.0" },
+    { "id": "usb-device-broker-requests", "package": "HELIOS.USB.DeviceBroker.Contracts", "version": "2.0.0" }
+  ],
+  "governance": {
+    "failClosed": true,
+    "idempotentWritesOnly": true,
+    "approvalRequiredForPrivilegedApply": true,
+    "noDirectExecutorSurfaceInPresentationLayers": true
+  }
+}
+

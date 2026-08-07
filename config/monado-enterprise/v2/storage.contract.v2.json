@@ -1,0 +1,118 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v2/storage.contract.v2.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-enterprise-storage-v2",
+  "executionPolicy": {
+    "mode": "proposal-only",
+    "destructiveApplyDefault": false,
+    "requireWhatIf": true,
+    "requireApproval": true,
+    "requireRollbackPlan": true,
+    "requireImmutableEvidence": true
+  },
+  "exactSizeLock": {
+    "status": "unresolved",
+    "applyBlocked": true,
+    "notes": "Disk geometry remains machine-specific and cannot be hard-locked in source."
+  },
+  "disks": [
+    {
+      "id": "disk0",
+      "role": "windows-core",
+      "volumes": [
+        {
+          "id": "windows-core",
+          "preferredLetter": "C",
+          "label": "MONADO_WINDOWS_CORE",
+          "fileSystem": "NTFS",
+          "purpose": [
+            "windows",
+            "core-runtime",
+            "signed-drivers"
+          ]
+        },
+        {
+          "id": "recovery",
+          "preferredLetter": "R",
+          "label": "MONADO_RECOVERY",
+          "fileSystem": "NTFS",
+          "purpose": [
+            "winre",
+            "offline-repair",
+            "rollback-packages"
+          ]
+        },
+        {
+          "id": "core-cross",
+          "preferredLetter": "X",
+          "label": "CORE_CROSS",
+          "fileSystem": "NTFS",
+          "physicalVolume": true,
+          "purpose": [
+            "cross-profile-approved-exchange",
+            "chain-of-custody-receipts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "disk1",
+      "role": "domains-and-vhdx-host",
+      "domainsVolume": {
+        "preferredLetter": "E",
+        "label": "MONADO_DOMAINS",
+        "fileSystem": "NTFS",
+        "aclSeparatedDomains": [
+          "games",
+          "music-studio",
+          "personal",
+          "airgap",
+          "ai-server",
+          "vm",
+          "common",
+          "software-vault",
+          "evidence"
+        ]
+      },
+      "virtualDisks": [
+        {
+          "id": "dev-drive-vhdx",
+          "preferredLetter": "D",
+          "label": "MONADO_DEVDRIVE",
+          "type": "VHDX",
+          "allocation": "dynamic",
+          "fileSystem": "ReFS",
+          "hostedOnVolume": "MONADO_DOMAINS",
+          "hostRelativePath": "vm/devdrive/monado-devdrive.vhdx",
+          "autoMount": true
+        },
+        {
+          "id": "vault-vhdx",
+          "preferredLetter": "V",
+          "label": "MONADO_VAULT",
+          "type": "VHDX",
+          "allocation": "dynamic",
+          "fileSystem": "NTFS",
+          "hostedOnVolume": "MONADO_DOMAINS",
+          "hostRelativePath": "software-vault/vault/monado-vault.vhdx",
+          "bitLocker": "required",
+          "autoMount": false
+        }
+      ]
+    }
+  ],
+  "guardrails": {
+    "denyBlindDiskClear": true,
+    "denyUnreviewedFormat": true,
+    "denyAutoMountVault": true,
+    "requirePhysicalApprovalForApply": true,
+    "requireCorrelationId": true,
+    "requireRollbackEvidenceLink": true
+  },
+  "forbiddenRuntimeActions": [
+    "physical-usb-write",
+    "drive-or-vhdx-create-without-approval",
+    "sysadmin-activation-without-local-two-factor",
+    "production-tenant-change"
+  ]
+}

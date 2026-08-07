@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.local/monadoblade-collaboration-projection.v1.schema.json",
+  "title": "MonadoBlade collaboration projection v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "projectionId",
+    "sourceOfTruth",
+    "projectableRecords",
+    "targets",
+    "allowExecutionFromProjectedSystems",
+    "targetBehavior"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": "1.0.0"
+    },
+    "projectionId": {
+      "const": "monadoblade-collaboration-evidence"
+    },
+    "sourceOfTruth": {
+      "const": "github"
+    },
+    "projectableRecords": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "linear",
+          "slack",
+          "teams",
+          "sharepoint",
+          "azure-devops"
+        ]
+      }
+    },
+    "allowExecutionFromProjectedSystems": {
+      "type": "boolean"
+    },
+    "targetBehavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "linear",
+        "slack",
+        "teams",
+        "sharepoint",
+        "azure-devops"
+      ],
+      "properties": {
+        "linear": {
+          "const": "tracking-only"
+        },
+        "slack": {
+          "const": "notification-only"
+        },
+        "teams": {
+          "const": "notification-only"
+        },
+        "sharepoint": {
+          "const": "governed-evidence-storage"
+        },
+        "azure-devops": {
+          "const": "discovery-and-sync-only"
+        }
+      }
+    }
+  }
+}
