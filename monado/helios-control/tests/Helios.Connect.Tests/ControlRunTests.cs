@@ -115,6 +115,30 @@ public sealed class ControlRunTests
     }
 
     [Fact]
+    public async Task Persisted_legacy_environment_is_normalized_before_planning()
+    {
+        var store = new InMemoryControlRunStore();
+        var now = DateTimeOffset.UtcNow;
+        var persisted = new ControlRunSnapshot(
+            "0123456789abcdef0123456789abcdea", "control-runs", new string('a', 64), "correlation-legacy-environment", "principal-1",
+            "provision-resources", "preview", "helios-dev-rg", [], "queued", "diagnose-plan-sync", now, now, [], []);
+        await store.CreateOrGetAsync(persisted, CancellationToken.None);
+
+        using var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var completed = await WaitForTerminalAsync(coordinator, persisted.Id);
+            Assert.Equal("awaiting-approval", completed.Status);
+            Assert.Equal("x-tier-xcore", completed.Environment);
+        }
+        finally
+        {
+            await coordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task Empty_connector_selection_is_respected_and_runs_are_owner_scoped()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);

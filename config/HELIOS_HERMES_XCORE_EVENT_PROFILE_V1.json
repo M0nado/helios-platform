@@ -20,6 +20,7 @@
     "classifications": [
       "public",
       "internal",
+      "confidential",
       "restricted"
     ],
     "correlationIdRequired": true,

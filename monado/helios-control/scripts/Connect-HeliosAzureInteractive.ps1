@@ -1557,16 +1557,55 @@ function Get-TagValue {
 }
 
 function Assert-DedicatedHeliosRegistry {
-    param([Parameter(Mandatory)] [pscustomobject] $Registry)
+    param(
+        [Parameter(Mandatory)] [pscustomobject] $Registry,
+        [Parameter(Mandatory)] [pscustomobject] $Context,
+        [Parameter(Mandatory)] [string] $ResourceGroupName
+    )
 
-    if ((Get-TagValue -Resource $Registry -Name 'system') -ne 'helios' -or
-        (Get-TagValue -Resource $Registry -Name 'environment') -ne $EnvironmentName -or
-        (Get-TagValue -Resource $Registry -Name 'managed-by') -ne 'helios-operator') {
-        throw "Registry '$($Registry.name)' is not tagged as a dedicated Helios $EnvironmentName registry. Refusing to adopt or modify a shared registry."
+    $systemTag = Get-TagValue -Resource $Registry -Name 'system'
+    $managedByTag = Get-TagValue -Resource $Registry -Name 'managed-by'
+    $environmentTag = Get-TagValue -Resource $Registry -Name 'environment'
+    if ($systemTag -ne 'helios' -or $managedByTag -ne 'helios-operator') {
+        throw "Registry '$($Registry.name)' is not tagged as a dedicated Helios registry. Refusing to adopt or modify a shared registry."
     }
+
+    if ($environmentTag -cne $EnvironmentName) {
+        $legacyMapped = Resolve-LegacyEnvironmentAlias -TagValue $environmentTag
+        if ($legacyMapped -ceq $EnvironmentName) {
+            if ($Mode -ne 'Configure') {
+                throw "Registry '$($Registry.name)' is still tagged with legacy environment '$environmentTag'. Run -Mode Configure once to migrate the registry tag to '$EnvironmentName' before publish."
+            }
+            [void] (Invoke-AzJson `
+                -Arguments @(
+                    'tag', 'update',
+                    '--resource-id', ([string] $Registry.id),
+                    '--operation', 'Merge',
+                    '--tags', "environment=$EnvironmentName"
+                ) `
+                -Operation "Migrating registry '$($Registry.name)' environment tag to '$EnvironmentName'")
+            $Registry = Invoke-AzJson `
+                -Arguments @(
+                    'acr', 'show',
+                    '--subscription', $Context.SubscriptionId,
+                    '--resource-group', $ResourceGroupName,
+                    '--name', ([string] $Registry.name)
+                ) `
+                -Operation "Re-reading registry '$($Registry.name)' after environment-tag migration"
+            if ((Get-TagValue -Resource $Registry -Name 'environment') -cne $EnvironmentName) {
+                throw "Registry '$($Registry.name)' did not retain environment=$EnvironmentName after legacy-tag migration."
+            }
+        }
+        else {
+            throw "Registry '$($Registry.name)' is tagged with environment '$environmentTag'. Refusing to adopt it as dedicated Helios $EnvironmentName."
+        }
+    }
+
     if ([bool] $Registry.adminUserEnabled) {
         throw "Registry '$($Registry.name)' has the admin user enabled. Disable it before Helios can use this registry."
     }
+
+    return $Registry
 }
 
 function Resolve-ContainerRegistryName {
@@ -1628,7 +1667,10 @@ function Resolve-ContainerRegistryName {
         if (-not [string]::Equals([string] $matching.location, $ResourceLocation, [StringComparison]::OrdinalIgnoreCase)) {
             throw "Registry '$resolvedName' is in location '$($matching.location)', but the Helios deployment location is '$ResourceLocation'."
         }
-        Assert-DedicatedHeliosRegistry -Registry $matching
+        $matching = Assert-DedicatedHeliosRegistry `
+            -Registry $matching `
+            -Context $Context `
+            -ResourceGroupName $ResourceGroupName
         return [pscustomobject]@{
             Name = $resolvedName
             Exists = $true
@@ -1699,7 +1741,10 @@ function New-ConfirmedContainerRegistry {
         -not [string]::Equals([string] $registry.resourceGroup, $ResourceGroupName, [StringComparison]::OrdinalIgnoreCase)) {
         throw 'Azure returned an unexpected registry after creation.'
     }
-    Assert-DedicatedHeliosRegistry -Registry $registry
+    $registry = Assert-DedicatedHeliosRegistry `
+        -Registry $registry `
+        -Context $Context `
+        -ResourceGroupName $ResourceGroupName
     return $registry
 }
 

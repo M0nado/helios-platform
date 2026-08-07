@@ -183,6 +183,17 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             "requiredFields missing payload",
         )
 
+    def test_event_profile_rejects_noncanonical_classification(self) -> None:
+        candidate = copy.deepcopy(self.event)
+        candidate["eventEnvelope"]["classifications"] = ["public", "internal", "secret"]
+        self.assert_has_error(
+            self.environment,
+            self.capability,
+            candidate,
+            self.approval,
+            "classifications must be exactly public, internal, confidential, and restricted",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

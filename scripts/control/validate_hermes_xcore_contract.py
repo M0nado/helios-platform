@@ -71,6 +71,12 @@ EXPECTED_EVENT_REQUIRED_FIELDS = {
     "links",
     "payload",
 }
+EXPECTED_EVENT_CLASSIFICATIONS = {
+    "public",
+    "internal",
+    "confidential",
+    "restricted",
+}
 
 
 def _name_set(value: object) -> set[str]:
@@ -329,6 +335,12 @@ def validate_event_contract(contract: object) -> list[str]:
         if "evidenceLinks" in required_fields:
             errors.append(
                 "event profile contract: requiredFields must use links instead of evidenceLinks"
+            )
+        classifications = _name_set(envelope.get("classifications"))
+        if classifications != EXPECTED_EVENT_CLASSIFICATIONS:
+            errors.append(
+                "event profile contract: classifications must be exactly "
+                "public, internal, confidential, and restricted"
             )
 
     delivery = _mapping(document.get("delivery"))

@@ -54,6 +54,7 @@ $ExpectedOidcConfirmation = 'CONFIGURE HELIOS X-TIER-DEV OIDC'
 $ExpectedGitHubEnvironmentConfirmation = 'CONFIGURE HELIOS X-TIER-DEV ENVIRONMENT'
 $CanonicalRepository = 'M0nado/helios-platform'
 $CanonicalGitHubEnvironment = 'x-tier-dev'
+$LegacyEntraAppDisplayName = 'HELIOS GitHub azure-dev'
 $CanonicalIssuer = 'https://token.actions.githubusercontent.com'
 $GitHubApiVersion = '2026-03-10'
 $FederationSubject = $null
@@ -87,6 +88,54 @@ function Invoke-JsonCommand {
     $text = $output -join [Environment]::NewLine
     if ([string]::IsNullOrWhiteSpace($text)) { return $null }
     $text | ConvertFrom-Json -Depth 100
+}
+
+function Get-EntraApplicationByDisplayName {
+    param(
+        [Parameter(Mandatory)][string]$AzPath,
+        [Parameter(Mandatory)][string]$DisplayName
+    )
+
+    Invoke-JsonCommand -FilePath $AzPath -ArgumentList @(
+        'ad', 'app', 'list', '--display-name', $DisplayName,
+        '--query', '[0].{appId:appId,id:id,displayName:displayName}', '--output', 'json'
+    )
+}
+
+function Test-IsLegacyAzureDevFederationSubject {
+    param([AllowEmptyString()][string]$Subject)
+
+    if ([string]::IsNullOrWhiteSpace($Subject)) { return $false }
+    return $Subject.EndsWith(':environment:azure-dev', [StringComparison]::OrdinalIgnoreCase) -or
+        $Subject.EndsWith(':environment:dev', [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Assert-NoLegacyAzureDevOidcTrust {
+    param(
+        [Parameter(Mandatory)][string]$AzPath,
+        [Parameter(Mandatory)][string]$AppObjectId,
+        [Parameter(Mandatory)][string]$AppDisplayName
+    )
+
+    $credentials = @(Invoke-JsonCommand -FilePath $AzPath -ArgumentList @(
+        'ad', 'app', 'federated-credential', 'list', '--id', $AppObjectId,
+        '--output', 'json'
+    ))
+    $legacyCredentials = @($credentials | Where-Object {
+        [string]::Equals([string]$_.name, 'github-azure-dev', [StringComparison]::OrdinalIgnoreCase) -or
+            (Test-IsLegacyAzureDevFederationSubject -Subject ([string]$_.subject))
+    })
+    if ($legacyCredentials.Count -eq 0) { return }
+
+    $descriptors = $legacyCredentials | ForEach-Object {
+        $name = [string]$_.name
+        $subject = [string]$_.subject
+        if ([string]::IsNullOrWhiteSpace($name)) {
+            return "<unnamed>:$subject"
+        }
+        return "${name}:$subject"
+    } | Sort-Object -Unique
+    throw "Retired azure-dev OIDC trust remains on '$AppDisplayName' ($($descriptors -join ', ')). Remove or migrate legacy federated credentials before proceeding."
 }
 
 function Resolve-GitHubOidcTrust {
@@ -266,10 +315,11 @@ $servicePrincipalObjectId = $null
 if ($ConfigureOidc) {
     Require-Confirmation -Actual $OidcConfirmation -Expected $ExpectedOidcConfirmation
 
-    $app = Invoke-JsonCommand -FilePath $az -ArgumentList @(
-        'ad', 'app', 'list', '--display-name', $EntraAppDisplayName,
-        '--query', '[0].{appId:appId,id:id,displayName:displayName}', '--output', 'json'
-    )
+    $app = Get-EntraApplicationByDisplayName -AzPath $az -DisplayName $EntraAppDisplayName
+    $legacyApp = Get-EntraApplicationByDisplayName -AzPath $az -DisplayName $LegacyEntraAppDisplayName
+    if ($legacyApp -and (-not $app -or [string]$legacyApp.id -cne [string]$app.id)) {
+        throw "Retired app '$LegacyEntraAppDisplayName' is still present. Retire or migrate the legacy azure-dev OIDC app before configuring '$EntraAppDisplayName'."
+    }
     if (-not $app) {
         if ($PSCmdlet.ShouldProcess($EntraAppDisplayName, 'Create secretless Entra application')) {
             $app = Invoke-JsonCommand -FilePath $az -ArgumentList @(
@@ -283,6 +333,7 @@ if ($ConfigureOidc) {
 
     $clientId = [string]$app.appId
     $appObjectId = [string]$app.id
+    Assert-NoLegacyAzureDevOidcTrust -AzPath $az -AppObjectId $appObjectId -AppDisplayName $EntraAppDisplayName
 
     $servicePrincipal = Invoke-JsonCommand -FilePath $az -ArgumentList @(
         'ad', 'sp', 'list', '--filter', "appId eq '$clientId'",
@@ -346,10 +397,13 @@ if ($ConfigureGitHubEnvironment) {
         throw 'ConfigureGitHubEnvironment requires a positive numeric -RequiredReviewerId. Environment creation fails closed without a reviewer.'
     }
     if (-not $clientId) {
-        $app = Invoke-JsonCommand -FilePath $az -ArgumentList @(
-            'ad', 'app', 'list', '--display-name', $EntraAppDisplayName,
-            '--query', '[0].{appId:appId,id:id}', '--output', 'json'
-        )
+        $app = Get-EntraApplicationByDisplayName -AzPath $az -DisplayName $EntraAppDisplayName
+        if (-not $app) {
+            $legacyApp = Get-EntraApplicationByDisplayName -AzPath $az -DisplayName $LegacyEntraAppDisplayName
+            if ($legacyApp) {
+                throw "Retired app '$LegacyEntraAppDisplayName' still exists. Run ConfigureOidc and complete explicit retirement/migration before configuring GitHub environment variables."
+            }
+        }
         if (-not $app) { throw 'Configure OIDC first or provide an existing HELIOS Entra application.' }
         $clientId = [string]$app.appId
     }

@@ -418,6 +418,16 @@ public sealed partial class ControlRunCoordinator(
 {
     private const string DefaultRepository = "M0nado/helios-platform";
     private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "x-tier-dev", "x-tier-xcore", "x-tier-prod" };
+    private static readonly Dictionary<string, string> LegacyEnvironmentAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["dev"] = "x-tier-dev",
+        ["azure-dev"] = "x-tier-dev",
+        ["test"] = "x-tier-xcore",
+        ["preview"] = "x-tier-xcore",
+        ["azure-test"] = "x-tier-xcore",
+        ["prod"] = "x-tier-prod",
+        ["azure-prod"] = "x-tier-prod"
+    };
     private static readonly HashSet<string> Intents = new(StringComparer.OrdinalIgnoreCase) { "provision-resources", "cleanup-owned-resources" };
     private static readonly HashSet<string> Connectors = new(StringComparer.OrdinalIgnoreCase) { "github", "linear", "slack", "sharepoint", "teams", "copilot" };
     private readonly ControlRunCoordinatorTiming _timing = ControlRunCoordinatorTiming.Validate(timing);
@@ -610,6 +620,8 @@ public sealed partial class ControlRunCoordinator(
         }
         catch (ControlRunConcurrencyException) { return; }
 
+        run = await NormalizePersistedEnvironmentAsync(run, cancellationToken);
+
         using var leaseLostCts = new CancellationTokenSource();
         using var heartbeatStopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var workCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, leaseLostCts.Token);
@@ -794,6 +806,27 @@ public sealed partial class ControlRunCoordinator(
             AuthenticationFailedException or
             OperationCanceledException;
 
+    private async Task<ControlRunSnapshot> NormalizePersistedEnvironmentAsync(ControlRunSnapshot run, CancellationToken cancellationToken)
+    {
+        var canonicalEnvironment = NormalizePersistedEnvironmentName(run.Environment);
+        if (string.Equals(run.Environment, canonicalEnvironment, StringComparison.Ordinal))
+            return run;
+        if (!Environments.Contains(canonicalEnvironment))
+            throw new InvalidOperationException(
+                $"Persisted control run environment '{run.Environment}' is not supported.");
+
+        logger.LogInformation(
+            "Normalizing persisted legacy environment '{LegacyEnvironment}' to '{CanonicalEnvironment}' for run {RunId}.",
+            run.Environment,
+            canonicalEnvironment,
+            run.Id);
+        return await ReplaceAsync(run, run with
+        {
+            Environment = canonicalEnvironment,
+            UpdatedAt = DateTimeOffset.UtcNow
+        }, cancellationToken);
+    }
+
     private async Task<ControlRunSnapshot> TransitionLifecycleAsync(ControlRunSnapshot run, string nextState, CancellationToken cancellationToken)
     {
         var currentState = NormalizeLifecycleState(run.LifecycleState);
@@ -870,6 +903,14 @@ public sealed partial class ControlRunCoordinator(
     {
         var repository = Environment.GetEnvironmentVariable("HELIOS_CANONICAL_REPOSITORY");
         return string.IsNullOrWhiteSpace(repository) ? DefaultRepository : repository.Trim();
+    }
+
+    private static string NormalizePersistedEnvironmentName(string environment)
+    {
+        var normalized = environment.Trim().ToLowerInvariant();
+        return LegacyEnvironmentAliases.TryGetValue(normalized, out var canonical)
+            ? canonical
+            : normalized;
     }
 
     private string NormalizeLifecycleState(string? lifecycleState)
