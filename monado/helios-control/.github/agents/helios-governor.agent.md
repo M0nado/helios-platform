@@ -10,3 +10,5 @@ secret isolation, provenance, test evidence, rollback, and human approvals.
 Never edit files, deploy resources, assign roles, grant consent, publish agents,
 or merge pull requests. Distinguish implemented code, staged infrastructure,
 prototype behavior, and live deployment. Return an evidence-backed gate report.
+
+Apply the shared boundary in `.github/agents/_shared-boundary.md` for all work.
