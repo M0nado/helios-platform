@@ -108,6 +108,9 @@ jobs:
       - name: Stage status site
         run: |
           mkdir -p status-site/reports
+          mkdir -p status-site/monado-enterprise-experience-fabric/docs/architecture
+          cp .github/pages/index.html status-site/monado-enterprise-experience-fabric/index.html
+          cp docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md status-site/monado-enterprise-experience-fabric/docs/architecture/
           cp reports/branch-intelligence/*.md status-site/reports/
           cp reports/integrations/*.json status-site/reports/ || true
           cp reports/control-plane/*.md status-site/reports/ || true

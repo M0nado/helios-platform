@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "alvis-tool-budgets-v2",
+  "alvisRole": "reactive-assistant",
+  "administratorDenied": true,
+  "externalWriteRequiresApproval": true,
+  "profiles": {
+    "core": { "maxToolCallsPerPlan": 20, "allowPrivilegedProposal": false },
+    "developer": { "maxToolCallsPerPlan": 120, "allowPrivilegedProposal": false },
+    "gamer": { "maxToolCallsPerPlan": 25, "allowPrivilegedProposal": false },
+    "studio": { "maxToolCallsPerPlan": 40, "allowPrivilegedProposal": false },
+    "personal": { "maxToolCallsPerPlan": 20, "allowPrivilegedProposal": false },
+    "sysops": { "maxToolCallsPerPlan": 80, "allowPrivilegedProposal": true },
+    "ai-server": { "maxToolCallsPerPlan": 100, "allowPrivilegedProposal": true },
+    "sysadmin": { "maxToolCallsPerPlan": 30, "allowPrivilegedProposal": true, "applyDeniedWithoutExplicitApproval": true }
+  },
+  "deniedOperations": [
+    "direct-disk-mutation",
+    "direct-tenant-consent",
+    "direct-rbac-write",
+    "direct-production-deployment",
+    "physical-usb-write",
+    "raw-secret-readback"
+  ]
+}

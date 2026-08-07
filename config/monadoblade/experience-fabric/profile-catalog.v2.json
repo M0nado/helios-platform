@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-profile-catalog-v2",
+  "defaultProfile": "personal",
+  "profiles": [
+    { "id": "core", "interactive": true, "administrator": false },
+    { "id": "developer", "interactive": true, "administrator": false },
+    { "id": "gamer", "interactive": true, "administrator": false },
+    { "id": "studio", "interactive": true, "administrator": false },
+    { "id": "personal", "interactive": true, "administrator": false },
+    { "id": "sysops", "interactive": true, "administrator": false },
+    { "id": "ai-server", "interactive": false, "administrator": false },
+    {
+      "id": "sysadmin",
+      "interactive": true,
+      "administrator": true,
+      "hidden": true,
+      "enabledByDefault": false,
+      "activation": {
+        "physicalPresenceRequired": true,
+        "minimumFactors": 2,
+        "remoteActivationDenied": true,
+        "cloudActivationDenied": true,
+        "aiActivationDenied": true
+      }
+    }
+  ],
+  "states": ["recovery", "quarantine"],
+  "overlays": ["airgap"]
+}

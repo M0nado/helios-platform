@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProfileManifest xmlns="https://helios-platform.dev/schemas/monado-profile-v2"
+                 schemaVersion="2.0.0"
+                 profileId="gamer">
+  <SemanticUi>low-latency-green-overlay</SemanticUi>
+  <ServiceMode>frame-time-priority</ServiceMode>
+  <NetworkMode>gaming-low-latency-protected</NetworkMode>
+  <TelemetryClass>internal</TelemetryClass>
+  <AlvisMaxToolCallsPerPlan>25</AlvisMaxToolCallsPerPlan>
+</ProfileManifest>

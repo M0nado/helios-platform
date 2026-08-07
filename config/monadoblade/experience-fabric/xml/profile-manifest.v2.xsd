@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="https://helios-platform.dev/schemas/monado-profile-v2"
+           xmlns="https://helios-platform.dev/schemas/monado-profile-v2"
+           elementFormDefault="qualified">
+  <xs:simpleType name="ProfileIdType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="ai-server"/>
+      <xs:enumeration value="core"/>
+      <xs:enumeration value="developer"/>
+      <xs:enumeration value="gamer"/>
+      <xs:enumeration value="personal"/>
+      <xs:enumeration value="studio"/>
+      <xs:enumeration value="sysadmin"/>
+      <xs:enumeration value="sysops"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="ProfileManifest">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SemanticUi" type="xs:string"/>
+        <xs:element name="ServiceMode" type="xs:string"/>
+        <xs:element name="NetworkMode" type="xs:string"/>
+        <xs:element name="TelemetryClass" type="xs:string"/>
+        <xs:element name="AlvisMaxToolCallsPerPlan" type="xs:positiveInteger"/>
+      </xs:sequence>
+      <xs:attribute name="schemaVersion" type="xs:string" use="required" fixed="2.0.0"/>
+      <xs:attribute name="profileId" type="ProfileIdType" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

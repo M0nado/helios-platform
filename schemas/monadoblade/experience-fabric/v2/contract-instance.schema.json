@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json",
+  "title": "MonadoBlade Experience Fabric V2 Contract Instance",
+  "type": "object",
+  "required": ["schemaVersion", "contractId"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "2.0.0" },
+    "contractId": { "type": "string", "minLength": 3 }
+  },
+  "additionalProperties": true
+}

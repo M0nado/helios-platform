@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProfileManifest xmlns="https://helios-platform.dev/schemas/monado-profile-v2"
+                 schemaVersion="2.0.0"
+                 profileId="studio">
+  <SemanticUi>violet-waveform-spatial</SemanticUi>
+  <ServiceMode>audio-realtime-priority</ServiceMode>
+  <NetworkMode>plugin-cloud-approved</NetworkMode>
+  <TelemetryClass>internal</TelemetryClass>
+  <AlvisMaxToolCallsPerPlan>40</AlvisMaxToolCallsPerPlan>
+</ProfileManifest>

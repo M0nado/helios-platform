@@ -1,0 +1,61 @@
+{
+  "$schema": "../../../schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-profile-experience-v2",
+  "profiles": {
+    "core": {
+      "uiSemantic": "neutral-foundation",
+      "serviceMode": "minimal-shared",
+      "networkMode": "deny-by-default-allowlisted",
+      "telemetryClass": "internal"
+    },
+    "developer": {
+      "uiSemantic": "cyan-build-grid",
+      "serviceMode": "build-and-devtool-priority",
+      "networkMode": "developer-approved-egress",
+      "telemetryClass": "internal"
+    },
+    "gamer": {
+      "uiSemantic": "low-latency-green-overlay",
+      "serviceMode": "frame-time-priority",
+      "networkMode": "gaming-low-latency-protected",
+      "telemetryClass": "internal"
+    },
+    "studio": {
+      "uiSemantic": "violet-waveform-spatial",
+      "serviceMode": "audio-realtime-priority",
+      "networkMode": "plugin-cloud-approved",
+      "telemetryClass": "internal"
+    },
+    "personal": {
+      "uiSemantic": "calm-privacy-first",
+      "serviceMode": "quiet-balanced",
+      "networkMode": "normal-protected",
+      "telemetryClass": "internal"
+    },
+    "sysops": {
+      "uiSemantic": "operations-cockpit",
+      "serviceMode": "observability-security-priority",
+      "networkMode": "infra-monitored",
+      "telemetryClass": "confidential"
+    },
+    "ai-server": {
+      "uiSemantic": "headless-service",
+      "serviceMode": "worker-throughput",
+      "networkMode": "service-allowlist-only",
+      "telemetryClass": "confidential"
+    },
+    "sysadmin": {
+      "uiSemantic": "sealed-vault",
+      "serviceMode": "integrity-and-recovery",
+      "networkMode": "local-first-restricted",
+      "telemetryClass": "restricted"
+    }
+  },
+  "commonCoreInstall": {
+    "singleInstallAuthority": true,
+    "profileLinksOnly": true,
+    "duplicateApplicationsDenied": true,
+    "unnecessaryAlwaysRunningServicesDenied": true
+  }
+}

@@ -252,6 +252,7 @@ Annual Savings:  $10,200+
 - **[SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md)** - Complete threat model
 - **[COST_ANALYSIS.md](docs/COST_ANALYSIS.md)** - Financial breakdown
 - **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Error resolution
+- **[MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md](docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md)** - Canonical v2 system spine, ownership map, profile/storage model, USB/boot handoff boundaries, and contribution/fork strategy
 
 ## 🚀 GitHub Actions
 

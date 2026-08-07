@@ -17,6 +17,10 @@
     "prohibitions"
   ],
   "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
     "schemaVersion": {
       "const": "2.0.0"
     },

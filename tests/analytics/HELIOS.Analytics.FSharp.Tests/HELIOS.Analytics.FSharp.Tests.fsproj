@@ -9,6 +9,7 @@
     <Compile Include="AnalyticsEngineTests.fs" />
     <Compile Include="AiHubLearningEngineTests.fs" />
     <Compile Include="MonadoEnterpriseProfileScoringV2Tests.fs" />
+    <Compile Include="ProfilePolicyOptimizerTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../schemas/monadoblade/experience-fabric/v2/contract-instance.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-chroma-wyvern-v2",
+  "safeDefault": {
+    "deviceWritesDeniedWithoutApproval": true,
+    "audioEnvelopeBounded": true,
+    "persistentKernelDriverInstallDeniedAtRuntime": true
+  },
+  "profiles": {
+    "core": { "chromaScene": "minimal", "wyvernScene": "neutral-low-motion", "maxAudioDb": -18 },
+    "developer": { "chromaScene": "code-pulse-cyan", "wyvernScene": "build-orbit", "maxAudioDb": -14 },
+    "gamer": { "chromaScene": "latency-arc-green", "wyvernScene": "combat-energy", "maxAudioDb": -10 },
+    "studio": { "chromaScene": "wave-grid-violet", "wyvernScene": "audio-spectrum", "maxAudioDb": -12 },
+    "personal": { "chromaScene": "calm-silver-blue", "wyvernScene": "quiet-flow", "maxAudioDb": -20 },
+    "sysops": { "chromaScene": "ops-alert-blue-amber", "wyvernScene": "telemetry-cockpit", "maxAudioDb": -16 },
+    "ai-server": { "chromaScene": "daemon-muted", "wyvernScene": "headless", "maxAudioDb": -90 },
+    "sysadmin": { "chromaScene": "vault-amber", "wyvernScene": "sealed-core", "maxAudioDb": -22 }
+  }
+}
