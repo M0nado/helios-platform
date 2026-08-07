@@ -10,30 +10,27 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
 {
     internal static class QuarantineTestPrerequisites
     {
+        private const string DestructiveOptInVariable = "HELIOS_ENABLE_DESTRUCTIVE_QUARANTINE_TESTS";
+
+        public static string? GetInitializationSkipReason()
+        {
+            string? optInValue = Environment.GetEnvironmentVariable(DestructiveOptInVariable);
+            if (!string.Equals(optInValue, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Set {DestructiveOptInVariable}=true to run quarantine initialization tests.";
+            }
+
+            if (!Directory.Exists(@"I:\"))
+            {
+                return "Mounted I: drive is required for quarantine initialization tests.";
+            }
+
+            return null;
+        }
+
         public static bool CanInitializeQuarantineSystem()
         {
-            if (Directory.Exists(@"I:\"))
-            {
-                return true;
-            }
-
-            string[] possibleVeraCryptPaths = new[]
-            {
-                @"C:\Program Files\VeraCrypt\VeraCrypt.exe",
-                @"C:\Program Files (x86)\VeraCrypt\VeraCrypt.exe",
-                @"C:\Program Files\VeraCrypt\veracrypt.exe",
-                "veracrypt.exe"
-            };
-
-            foreach (var path in possibleVeraCryptPaths)
-            {
-                if (File.Exists(path))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return GetInitializationSkipReason() is null;
         }
     }
 
@@ -42,9 +39,10 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
     {
         public RequiresQuarantinePrerequisitesFactAttribute()
         {
-            if (!QuarantineTestPrerequisites.CanInitializeQuarantineSystem())
+            string? skipReason = QuarantineTestPrerequisites.GetInitializationSkipReason();
+            if (skipReason is not null)
             {
-                Skip = "VeraCrypt or I: drive is unavailable on this host.";
+                Skip = skipReason;
             }
         }
     }
