@@ -2,13 +2,11 @@ name: Pinned submodule integrity
 
 on:
   pull_request:
-    paths:
-      - .gitmodules
-      - modules/**
-      - config/integrations/approved-submodules.json
-      - scripts/integrations/validate_pinned_submodules.py
-      - .github/workflows/pinned-submodule-integrity.yml
+  push:
+    branches:
+      - main
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -24,9 +22,19 @@ jobs:
           persist-credentials: false
           submodules: false
 
+      - name: Require scoped GitHub App credentials
+        env:
+          SUBMODULE_APP_ID: ${{ vars.SUBMODULE_APP_ID }}
+          SUBMODULE_APP_PRIVATE_KEY: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SUBMODULE_APP_ID" ] || [ -z "$SUBMODULE_APP_PRIVATE_KEY" ]; then
+            echo "BLOCKED: SUBMODULE_APP_ID and SUBMODULE_APP_PRIVATE_KEY are required."
+            exit 1
+          fi
+
       - name: Create short-lived read-only installation token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
           app-id: ${{ vars.SUBMODULE_APP_ID }}
           private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}

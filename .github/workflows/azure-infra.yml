@@ -20,7 +20,12 @@ permissions:
   contents: read
 
 jobs:
+  pinned-submodule-integrity:
+    uses: ./.github/workflows/pinned-submodule-integrity.yml
+    secrets: inherit
+
   validate:
+    needs: pinned-submodule-integrity
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

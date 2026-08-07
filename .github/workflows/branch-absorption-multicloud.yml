@@ -37,7 +37,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pinned-submodule-integrity:
+    uses: ./.github/workflows/pinned-submodule-integrity.yml
+    secrets: inherit
+
   branch-absorption-plan:
+    needs: pinned-submodule-integrity
     runs-on: ubuntu-latest
     env:
       AIHUB_MODE: ${{ inputs.mode || 'github-runner' }}

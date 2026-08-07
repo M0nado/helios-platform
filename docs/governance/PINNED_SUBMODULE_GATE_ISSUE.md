@@ -29,7 +29,11 @@ polyglot optimization are explicitly out of scope until this gate passes.
 
 For each row, the reviewer must record the full SHA, evidence URL, ownership and
 license decision, dependency/security review result, and contract/build/test
-evidence. After approval, add the exact values to
+evidence. The manifest is schema-validated against
+`config/integrations/approved-submodules.schema.json`; each `submodules[]` entry
+must include `path`, `url`, `commit`, `evidenceUrl`, `ownershipDecision`,
+`licenseDecision`, `dependencySecurityReview`, `contractEvidence`,
+`buildEvidence`, and `testEvidence`. After approval, add the exact values to
 `config/integrations/approved-submodules.json`, initialize each declared path,
 check out the approved commit in detached-HEAD state, and stage the resulting
 mode-`160000` gitlink.
@@ -46,10 +50,17 @@ python3 scripts/integrations/validate_pinned_submodules.py
 ```
 
 The first five lines are the requested Git-command gate. The Python validator
-performs the complete manifest, URL, SHA, gitlink, worktree, and recursive
-integrity checks. Repository-specific ownership, license, dependency, contract,
-security, build, and test evidence remains mandatory in this issue before an
-approval label may be applied.
+performs the complete manifest, URL, SHA, indexed gitlink-set, clean worktree,
+and recursive object-store integrity checks. Repository-specific ownership,
+license, dependency, contract, security, build, and test evidence remains
+mandatory in this issue before an approval label may be applied.
+
+## Workflow enforcement
+
+The `pinned-submodule-integrity` workflow runs on pull requests, pushes to
+`main`, direct dispatch, and as a reusable workflow (`workflow_call`). Privileged
+`workflow_dispatch` and scheduled workflows, including `azure-infra` and
+`branch-absorption-multicloud`, now require this gate job before execution.
 
 ## Least-privilege GitHub App
 

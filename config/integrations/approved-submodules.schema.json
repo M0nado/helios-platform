@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/approved-submodules-v1.schema.json",
+  "title": "HELIOS approved pinned submodules",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approved",
+    "submodules"
+  ],
+  "properties": {
+    "approved": {
+      "type": "boolean",
+      "const": true
+    },
+    "submodules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "url",
+          "commit",
+          "evidenceUrl",
+          "ownershipDecision",
+          "licenseDecision",
+          "dependencySecurityReview",
+          "contractEvidence",
+          "buildEvidence",
+          "testEvidence"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://github\\.com/[^\\s]+\\.git$"
+          },
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "evidenceUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "ownershipDecision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "licenseDecision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dependencySecurityReview": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contractEvidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "buildEvidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "testEvidence": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
