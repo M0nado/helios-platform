@@ -513,13 +513,13 @@
     },
     {
       "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoBladeSixProfileDeliveryFabricV3ContractsTests.cs",
-      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
-      "layer": "windows"
+      "project": "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj",
+      "layer": "portable"
     },
     {
       "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoEnterpriseExperienceV2ContractsTests.cs",
-      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
-      "layer": "windows"
+      "project": "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj",
+      "layer": "portable"
     },
     {
       "path": "tests/unit/CloudSync/CloudSyncIntegrationTests.cs",

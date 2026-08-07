@@ -125,7 +125,15 @@ public sealed class ControlRunTests
     {
         var store = new InMemoryControlRunStore();
         var now = DateTimeOffset.UtcNow;
-        var persistedKnaa = BuildSampleKnaaAssessment(now.AddMinutes(-20));
+        var inventory = new CountingInventory(resourceCount: 7);
+        var persistedKnaa = BuildSampleKnaaAssessment(now.AddMinutes(-20)) with
+        {
+            EvidenceLinks =
+            [
+                "run://control-runs/0123456789abcdef0123456789abcdef",
+                $"evidence://sha256/{new string('b', 64)}"
+            ]
+        };
         var steps = new[]
         {
             new ControlRunStep("context", "completed", "completed"),
@@ -153,7 +161,7 @@ public sealed class ControlRunTests
 
         using var coordinator = new ControlRunCoordinator(
             store,
-            new FakeInventory(),
+            inventory,
             new EdgeAutomationPlanner(),
             new FakeDispatcher(),
             NullLogger<ControlRunCoordinator>.Instance,
@@ -165,6 +173,9 @@ public sealed class ControlRunTests
             Assert.NotNull(completed.Knaa);
             Assert.Equal(persistedKnaa.ModelVersion, completed.Knaa!.ModelVersion);
             Assert.Equal(persistedKnaa.EvaluatedAt, completed.Knaa.EvaluatedAt);
+            Assert.Equal(persisted.ResourceCount, completed.ResourceCount);
+            Assert.Equal(persisted.EvidenceSha256, completed.EvidenceSha256);
+            Assert.Equal(0, inventory.ListResourcesCalls);
         }
         finally
         {
@@ -482,13 +493,17 @@ public sealed class ControlRunTests
         Assert.Equal("test-key-1", handler.KeyId);
         Assert.True(long.TryParse(handler.Timestamp, out _));
         Assert.DoesNotContain(new string('s', 32), handler.Body);
-        var envelope = JsonSerializer.Deserialize<HeliosEvent>(handler.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var envelope = JsonSerializer.Deserialize<HeliosIntegrationEvent>(handler.Body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         Assert.NotNull(envelope);
-        Assert.Equal("helios.control-run.status", envelope!.Type);
-        Assert.Equal("helios-control", envelope.Source);
-        Assert.Equal("control-runs/0123456789abcdef0123456789abcdef", envelope.Subject);
+        Assert.Equal("1.0", envelope!.SchemaVersion);
+        Assert.Equal("helios.control-run.status", envelope.EventType);
+        Assert.Equal("helios-platform", envelope.Source);
+        Assert.Equal("development", envelope.Environment);
         Assert.Equal("correlation-1", envelope.CorrelationId);
         Assert.Equal("internal", envelope.DataClassification);
+        Assert.Equal("0123456789abcdef0123456789abcdef", envelope.EntityId);
+        Assert.Equal("M0nado/helios-platform", envelope.Repository);
+        Assert.Contains(envelope.Links, link => link.Rel == "run");
         Assert.Equal("github", ((JsonElement)envelope.Payload["connector"]!).GetString());
         Assert.Equal("0123456789abcdef0123456789abcdef", ((JsonElement)envelope.Payload["runId"]!).GetString());
         Assert.Equal("xcore9-knaa-1.0.0", ((JsonElement)envelope.Payload["knaaModelVersion"]!).GetString());
@@ -563,6 +578,29 @@ public sealed class ControlRunTests
                 new("/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.App/containerApps/api", "api", "Microsoft.App/containerApps", "eastus2"),
                 new("/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.KeyVault/vaults/vault", "vault", "Microsoft.KeyVault/vaults", "eastus2")
             ]);
+
+        public Task<IReadOnlyList<AzureInventoryResource>> ListFoundryResourcesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AzureInventoryResource>>([]);
+    }
+
+    private sealed class CountingInventory(int resourceCount) : IAzureInventoryService
+    {
+        public int ListResourcesCalls { get; private set; }
+
+        public AzureConnectorContext GetContext() => new("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "helios-dev-rg", "read-only-resource-group", true);
+
+        public Task<IReadOnlyList<AzureInventoryResource>> ListResourcesAsync(string? typePrefix, CancellationToken cancellationToken)
+        {
+            ListResourcesCalls++;
+            var resources = Enumerable.Range(1, resourceCount)
+                .Select(index => new AzureInventoryResource(
+                    $"/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.App/containerApps/app-{index}",
+                    $"app-{index}",
+                    "Microsoft.App/containerApps",
+                    "eastus2"))
+                .ToArray();
+            return Task.FromResult<IReadOnlyList<AzureInventoryResource>>(resources);
+        }
 
         public Task<IReadOnlyList<AzureInventoryResource>> ListFoundryResourcesAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<AzureInventoryResource>>([]);
