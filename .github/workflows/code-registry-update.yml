@@ -36,7 +36,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
+          persist-credentials: false
+          submodules: false
+
+      - name: Restore approved submodule pins
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -85,7 +91,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          submodules: true
+          persist-credentials: false
+          submodules: false
+
+      - name: Restore approved submodule pins
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Setup Python
         uses: actions/setup-python@v4

@@ -32,6 +32,7 @@ jobs:
   setup:
     name: Setup Build Matrix
     runs-on: ubuntu-latest
+    environment: development
     outputs:
       modules: ${{ steps.setup.outputs.modules }}
       node-version: ${{ steps.setup.outputs.node-version }}
@@ -41,7 +42,51 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
           submodules: false
+
+      - name: Select submodule authentication mode
+        id: submodule-auth
+        env:
+          SUBMODULE_APP_ID: ${{ vars.SUBMODULE_APP_ID }}
+          SUBMODULE_APP_PRIVATE_KEY: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$SUBMODULE_APP_ID" ] && [ -n "$SUBMODULE_APP_PRIVATE_KEY" ]; then
+            echo "mode=scoped-token" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=anonymous" >> "$GITHUB_OUTPUT"
+            echo "Scoped submodule credentials are unavailable; attempting anonymous recursive checkout."
+          fi
+
+      - name: Create short-lived read-only installation token
+        if: steps.submodule-auth.outputs.mode == 'scoped-token'
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.SUBMODULE_APP_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: M0nado
+          repositories: >-
+            helios-monado-blade,helios-security-setup,helios-ai-hub,
+            helios-dev-ai-hub,helios-build-agents,helios-gui-framework,
+            helios-software-stack
+
+      - name: Checkout approved submodule pins
+        if: steps.submodule-auth.outputs.mode == 'scoped-token'
+        env:
+          SUBMODULE_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          basic_auth="$(printf 'x-access-token:%s' "$SUBMODULE_TOKEN" | base64 -w 0)"
+          echo "::add-mask::$basic_auth"
+          git submodule sync --recursive
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
+            submodule update --init --recursive
+
+      - name: Checkout submodule pins anonymously
+        if: steps.submodule-auth.outputs.mode == 'anonymous'
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Setup Build Configuration
         id: setup
@@ -67,6 +112,7 @@ jobs:
   build:
     name: Build ${{ matrix.module }}
     runs-on: ubuntu-latest
+    environment: development
     needs: setup
     if: needs.setup.outputs.has-modules == 'true'
     strategy:
@@ -78,7 +124,51 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
           submodules: false
+
+      - name: Select submodule authentication mode
+        id: submodule-auth
+        env:
+          SUBMODULE_APP_ID: ${{ vars.SUBMODULE_APP_ID }}
+          SUBMODULE_APP_PRIVATE_KEY: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -n "$SUBMODULE_APP_ID" ] && [ -n "$SUBMODULE_APP_PRIVATE_KEY" ]; then
+            echo "mode=scoped-token" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=anonymous" >> "$GITHUB_OUTPUT"
+            echo "Scoped submodule credentials are unavailable; attempting anonymous recursive checkout."
+          fi
+
+      - name: Create short-lived read-only installation token
+        if: steps.submodule-auth.outputs.mode == 'scoped-token'
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.SUBMODULE_APP_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: M0nado
+          repositories: >-
+            helios-monado-blade,helios-security-setup,helios-ai-hub,
+            helios-dev-ai-hub,helios-build-agents,helios-gui-framework,
+            helios-software-stack
+
+      - name: Checkout approved submodule pins
+        if: steps.submodule-auth.outputs.mode == 'scoped-token'
+        env:
+          SUBMODULE_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          basic_auth="$(printf 'x-access-token:%s' "$SUBMODULE_TOKEN" | base64 -w 0)"
+          echo "::add-mask::$basic_auth"
+          git submodule sync --recursive
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
+            submodule update --init --recursive
+
+      - name: Checkout submodule pins anonymously
+        if: steps.submodule-auth.outputs.mode == 'anonymous'
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -105,6 +195,13 @@ jobs:
           echo "NPM version: $(npm --version)"
           echo "Module: ${{ matrix.module }}"
           echo "Clean build: ${{ github.event.inputs.clean_build }}"
+
+      - name: Compute artifact key
+        id: artifact-key
+        run: |
+          SAFE_MODULE="${{ matrix.module }}"
+          SAFE_MODULE="${SAFE_MODULE//\//-}"
+          echo "value=$SAFE_MODULE" >> "$GITHUB_OUTPUT"
 
       - name: Install Dependencies
         run: |
@@ -156,7 +253,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-${{ matrix.module }}
+          name: build-artifacts-${{ steps.artifact-key.outputs.value }}
           path: |
             ${{ matrix.module }}/dist/
             ${{ matrix.module }}/build/
@@ -167,7 +264,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.module }}
+          name: coverage-${{ steps.artifact-key.outputs.value }}
           path: ${{ matrix.module }}/coverage/
           if-no-files-found: warn
           retention-days: 7
