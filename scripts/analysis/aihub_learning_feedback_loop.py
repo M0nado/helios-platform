@@ -16,6 +16,7 @@ SOURCES = {
     'branchAutofix': ROOT / 'reports/branch-agents/branch-test-autofix-plan.json',
     'agentFleet': ROOT / 'reports/branch-agents/agent-fleet-control-catalog.json',
     'languageProfiles': ROOT / 'reports/learning/aihub-language-skill-profiles.json',
+    'xcoreHermesRunnerSetup': ROOT / 'reports/learning/xcore-hermes-runner-setup.json',
     'moduleOrganizer': ROOT / 'reports/learning/module-submodule-organizer.json',
 }
 
@@ -33,6 +34,7 @@ def summarize() -> dict[str, object]:
     autofix = load(SOURCES['branchAutofix'], {'agentShellCombos': {}, 'autoConnectPlan': []})
     fleet = load(SOURCES['agentFleet'], {'agentTypes': [], 'promptPacks': [], 'specializationVariables': []})
     profiles = load(SOURCES['languageProfiles'], {'profiles': []})
+    runner_setup = load(SOURCES['xcoreHermesRunnerSetup'], {'runnerTopology': {}, 'idealLanguageUtilization': {}})
     organizer = load(SOURCES['moduleOrganizer'], {'modules': [], 'placements': []})
     top_keep = complex_data.get('topKeep', [])[:12]
     top_prune = complex_data.get('topPrune', [])[:12]
@@ -63,6 +65,8 @@ def summarize() -> dict[str, object]:
             'specializationVariables': fleet.get('specializationVariables', [])[:40],
         },
         'languageProfiles': profiles.get('profiles', [])[:8],
+        'runnerSetup': runner_setup.get('runnerTopology', {}),
+        'runnerLanguageUtilization': runner_setup.get('idealLanguageUtilization', {}),
         'moduleTree': organizer.get('modules', [])[:20],
         'modulePlacements': organizer.get('placements', [])[:40],
         'transferEdges': transfer_edges,
@@ -73,7 +77,7 @@ def summarize() -> dict[str, object]:
 def main() -> int:
     payload = summarize()
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(payload, indent=2) + '\n')
+    OUT.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
     lines = ['# AIHub Learning Feedback Loop', '', payload['principle'], '', f"Easy command: `{payload['easyCommand']}`", '', '## Transfer edges']
     lines += [f"- `{edge['from']}` → `{edge['to']}`: {edge['teaches']}" for edge in payload['transferEdges']]
     lines += ['', '## Top keep/absorb lessons']
@@ -84,9 +88,14 @@ def main() -> int:
     lines += [f"- `{m.get('module','')}` — {m.get('fileCount',0)} files, submodules: {', '.join(s.get('name','') for s in m.get('submodules',[])[:5])}" for m in payload.get('moduleTree',[])[:12]]
     lines += ['', '## Merge/prune learning']
     lines += [f"- `{item.get('branch','')}` recommendation `{item.get('recommendation','')}` graded lines `{item.get('gradedLineCount',0)}` keep `{item.get('complexGrade',{}).get('avgKeepScore',0)}`" for item in payload['mergeRecommendations'][:10]]
+    lines += ['', '## Runner setup synthesis']
+    lines += [f"- Queue `{q}`" for q in payload.get('runnerSetup', {}).get('serviceBusQueues', [])]
+    lines += [f"- C# focus: {payload.get('runnerLanguageUtilization', {}).get('csharp', {}).get('focus', '')}"]
+    lines += [f"- C++ focus: {payload.get('runnerLanguageUtilization', {}).get('cpp', {}).get('focus', '')}"]
+    lines += [f"- Python focus: {payload.get('runnerLanguageUtilization', {}).get('python', {}).get('focus', '')}"]
     lines += ['', '## Auto-connect plan']
     lines += [f"- `{step.get('command','')}` — {step.get('gui','')}" for step in payload['autoConnectPlan']]
-    MD.write_text('\n'.join(lines) + '\n')
+    MD.write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print(f'Wrote {OUT.relative_to(ROOT)}')
     print(f'Wrote {MD.relative_to(ROOT)}')
     return 0

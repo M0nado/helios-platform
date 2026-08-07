@@ -24,7 +24,13 @@ on:
       - 'scripts/analysis/aihub_learning_feedback_loop.py'
       - 'scripts/analysis/complex_code_grading.py'
       - 'scripts/analysis/module_submodule_organizer.py'
+      - 'scripts/analysis/aihub_language_skill_profiles.py'
+      - 'scripts/analysis/agent_language_framework.py'
+      - 'scripts/analysis/xcore_hermes_runner_setup.py'
       - 'scripts/dashboard/generate-gui.py'
+      - 'config/aihub-language-skill-profiles.json'
+      - 'infra/azure/main.bicep'
+      - 'infra/azure/modules/xcore-hermes-runner.bicep'
       - 'src/analytics/HELIOS.Analytics.FSharp/**'
       - 'src/native/HELIOS.Native.Performance/include/helios/aihub_native_engine.hpp'
       - '.github/workflows/aihub-self-learning-growth.yml'
@@ -52,12 +58,36 @@ jobs:
           python-version: '3.12'
       - name: Generate growing self-learning reports
         run: |
-          python3 -m py_compile scripts/analysis/aihub_self_learning_notes.py scripts/analysis/aihub_learning_feedback_loop.py scripts/analysis/complex_code_grading.py scripts/analysis/module_submodule_organizer.py scripts/dashboard/generate-gui.py
+          python3 -m py_compile scripts/analysis/aihub_self_learning_notes.py scripts/analysis/aihub_learning_feedback_loop.py scripts/analysis/complex_code_grading.py scripts/analysis/module_submodule_organizer.py scripts/analysis/aihub_language_skill_profiles.py scripts/analysis/agent_language_framework.py scripts/analysis/xcore_hermes_runner_setup.py scripts/dashboard/generate-gui.py
           python3 scripts/analysis/complex_code_grading.py
           python3 scripts/analysis/module_submodule_organizer.py
+          python3 scripts/analysis/aihub_language_skill_profiles.py
+          python3 scripts/analysis/agent_language_framework.py
+          python3 scripts/analysis/xcore_hermes_runner_setup.py
           python3 scripts/analysis/aihub_learning_feedback_loop.py
           python3 scripts/analysis/aihub_self_learning_notes.py
           python3 scripts/dashboard/generate-gui.py
+      - name: Validate Hermes/XCore runner Bicep
+        run: |
+          set -euo pipefail
+          az bicep install --version v0.45.6
+          az bicep build --file infra/azure/modules/xcore-hermes-runner.bicep --outfile "$RUNNER_TEMP/xcore-hermes-runner.module.json"
+          az bicep build --file infra/azure/main.bicep --outfile "$RUNNER_TEMP/xcore-hermes-runner.main.json"
+          python3 - <<'PY'
+          import json, os, pathlib
+          module_path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "xcore-hermes-runner.module.json"
+          main_path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "xcore-hermes-runner.main.json"
+          report = {
+              "ok": module_path.exists() and main_path.exists(),
+              "moduleTemplate": str(module_path),
+              "mainTemplate": str(main_path),
+              "lane": os.environ.get("AIHUB_GROWTH_LANE", "report-only"),
+              "mode": "dry-run-validation"
+          }
+          out = pathlib.Path("reports/learning/xcore-hermes-runner-bicep-validation.json")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(report, indent=2) + "\n")
+          PY
       - name: Summarize growth notes
         if: always()
         run: |
@@ -73,6 +103,12 @@ jobs:
               print(f"- Note tiers: {len(data.get('noteTiers', []))}")
               print(f"- Situation variables: {len(data.get('situationVariables', []))}")
               print(f"- Cross-file connections: {len(data.get('crossFileConnections', []))}")
+              runner = pathlib.Path('reports/learning/xcore-hermes-runner-setup.json')
+              if runner.exists():
+                  setup = json.loads(runner.read_text())
+                  queues = setup.get('runnerTopology', {}).get('serviceBusQueues', [])
+                  print(f"- Runner queues: {len(queues)}")
+                  print(f"- C# focus: {setup.get('idealLanguageUtilization', {}).get('csharp', {}).get('focus', 'n/a')}")
           PY
       - name: Upload self-learning growth artifacts
         if: always()
@@ -82,6 +118,10 @@ jobs:
           path: |
             reports/learning/aihub-self-learning-notes.*
             reports/learning/aihub-learning-feedback-loop.*
+            reports/learning/aihub-language-skill-profiles.*
+            reports/learning/agent-language-framework.*
+            reports/learning/xcore-hermes-runner-setup.*
+            reports/learning/xcore-hermes-runner-bicep-validation.json
             reports/learning/complex-code-grading.*
             reports/learning/module-submodule-organizer.*
             status-site/index.html

@@ -10,6 +10,18 @@ on:
         description: 'Azure location'
         required: false
         default: 'eastus'
+      enable_xcore_hermes_runner:
+        description: 'Enable Hermes/XCore runner baseline resources'
+        required: false
+        default: 'false'
+      enable_xcore_hermes_runner_jobs:
+        description: 'Enable Hermes/XCore manual Container Apps Jobs'
+        required: false
+        default: 'false'
+      runner_max_concurrency:
+        description: 'Max concurrent executions per manual runner job'
+        required: false
+        default: '4'
       deploy:
         description: 'Deploy after validation and what-if'
         required: false
@@ -36,17 +48,29 @@ jobs:
           az deployment group validate \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
-            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+            --parameters infra/azure/parameters/dev.json \
+              location="${{ github.event.inputs.location }}" \
+              enableHermesXcoreRunner="${{ github.event.inputs.enable_xcore_hermes_runner }}" \
+              enableHermesXcoreRunnerJobs="${{ github.event.inputs.enable_xcore_hermes_runner_jobs }}" \
+              runnerMaxConcurrentExecutions="${{ github.event.inputs.runner_max_concurrency }}"
       - name: What-if
         run: |
           az deployment group what-if \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
-            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+            --parameters infra/azure/parameters/dev.json \
+              location="${{ github.event.inputs.location }}" \
+              enableHermesXcoreRunner="${{ github.event.inputs.enable_xcore_hermes_runner }}" \
+              enableHermesXcoreRunnerJobs="${{ github.event.inputs.enable_xcore_hermes_runner_jobs }}" \
+              runnerMaxConcurrentExecutions="${{ github.event.inputs.runner_max_concurrency }}"
       - name: Deploy
         if: ${{ github.event.inputs.deploy == 'true' }}
         run: |
           az deployment group create \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
-            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+            --parameters infra/azure/parameters/dev.json \
+              location="${{ github.event.inputs.location }}" \
+              enableHermesXcoreRunner="${{ github.event.inputs.enable_xcore_hermes_runner }}" \
+              enableHermesXcoreRunnerJobs="${{ github.event.inputs.enable_xcore_hermes_runner_jobs }}" \
+              runnerMaxConcurrentExecutions="${{ github.event.inputs.runner_max_concurrency }}"

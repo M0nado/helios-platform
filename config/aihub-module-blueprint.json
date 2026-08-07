@@ -1,5 +1,5 @@
 {
-  "principle": "C# is the secure WinUI3/API/vault/orchestration foundation; C++ owns desktop performance, rendering, memory, security-sensitive native helpers, and low-cost hot paths; F# owns deep learning, prediction, ranking, security/performance analytics, and async query scoring; Python is reserved for AIHub libraries, LLM/agent/provider glue, Linux/WSL2 integration, and specialized ML libraries that immediately hand results back to C#.",
+  "principle": "C# is the secure WinUI3 front-end plus API/core/vault orchestration foundation; C++ owns desktop performance, rendering, CPU/memory/GPU fast paths, and security-sensitive native helpers; F# owns deep learning, prediction, ranking, security/performance analytics, and async query scoring; Python is reserved for AIHub libraries, LLM/agent/provider glue, Linux/WSL2 integration, and specialized ML libraries that immediately hand structured results back to C#.",
   "modules": [
     {
       "id": "gui-command-center",

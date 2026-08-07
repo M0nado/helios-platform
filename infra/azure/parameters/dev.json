@@ -3,6 +3,16 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "environmentName": { "value": "dev" },
-    "namePrefix": { "value": "helios" }
+    "namePrefix": { "value": "helios" },
+    "enableHermesXcoreRunner": { "value": false },
+    "enableHermesXcoreRunnerJobs": { "value": false },
+    "allowRunnerPreviewPlaceholder": { "value": true },
+    "hermesRunnerImage": {
+      "value": "heliosplaceholderacr.azurecr.io/hermes-runner@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "xcoreRunnerImage": {
+      "value": "heliosplaceholderacr.azurecr.io/xcore-runner@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "runnerMaxConcurrentExecutions": { "value": 4 }
   }
 }
