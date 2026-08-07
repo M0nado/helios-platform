@@ -136,11 +136,15 @@ def resolve_remote_for_repo(repo: str) -> str | None:
     remotes = [line.strip() for line in remotes_text.splitlines() if line.strip()]
     for remote in remotes:
         try:
-            remote_url = run(["git", "remote", "get-url", remote], timeout=15)
+            fetch_url = run(["git", "remote", "get-url", remote], timeout=15)
+            push_url = run(["git", "remote", "get-url", "--push", remote], timeout=15)
         except RuntimeError:
             continue
-        if parse_remote_repo(remote_url) == target:
-            return remote
+        if parse_remote_repo(fetch_url) != target:
+            continue
+        if parse_remote_repo(push_url) != target:
+            continue
+        return remote
     return None
 
 
@@ -392,7 +396,14 @@ def load_pr_detail(repo: str, number: int) -> dict[str, Any]:
     paginated_commits: list[dict[str, Any]] | None = None
     try:
         paginated_commits = normalize_pr_commits(load_paginated_list(f"repos/{repo}/pulls/{number}/commits?per_page=100"))
+        if len(paginated_commits) >= 250:
+            raise RuntimeError(
+                f"Commit list for PR #{number} hit the REST endpoint ceiling (250). "
+                "Refusing partial commit planning."
+            )
     except RuntimeError as exc:
+        if "REST endpoint ceiling (250)" in str(exc):
+            raise
         if fallback_commits:
             detail["commits"] = fallback_commits
         else:
@@ -476,7 +487,7 @@ def load_required_checks(repo: str, number: int) -> list[dict[str, str]] | None:
                 return parsed
         except json.JSONDecodeError:
             # Keep existing fallback semantics: non-JSON output is handled by return-code/marker logic below.
-            ...
+            pass
 
     if proc.returncode != 0:
         detail = f"{proc.stderr}\n{proc.stdout}".lower()
@@ -812,13 +823,20 @@ def build_trains(
                 if dep not in merge_candidate_numbers
             }
         )
+        unresolved_base_refs = sorted(
+            {
+                str(pr.get("unresolvedBaseRef", "")).strip()
+                for pr in ordered
+                if pr["disposition"] == "merge-train" and str(pr.get("unresolvedBaseRef", "")).strip()
+            }
+        )
         external_deps = [dep for dep in unresolved_deps if dep not in ordered_member_numbers]
         internal_deps = [dep for dep in unresolved_deps if dep in ordered_member_numbers]
         commands: list[str]
         if not merge_candidates:
             commands = ["# No merge-train candidates in this domain after triage."]
-        elif unresolved_deps:
-            deps_text = ", ".join(f"#{dep}" for dep in unresolved_deps)
+        elif unresolved_deps or unresolved_base_refs:
+            deps_text = ", ".join(f"#{dep}" for dep in unresolved_deps) if unresolved_deps else "none"
             commands = [
                 f"# Unresolved dependencies were detected: {deps_text}",
                 "# Resolve those dependencies (merge or integrate upstream) before using automated train commands.",
@@ -833,6 +851,11 @@ def build_trains(
                 commands.append(
                     "# Internal dependencies are present but not scheduled for integration in this train: "
                     + ", ".join(f"#{dep}" for dep in internal_deps)
+                )
+            if unresolved_base_refs:
+                commands.append(
+                    "# Non-default base branches could not be mapped to open parent PRs: "
+                    + ", ".join(unresolved_base_refs)
                 )
         elif train_remote is None:
             commands = [
@@ -892,6 +915,7 @@ def build_trains(
                 "superseded": superseded,
                 "externalDependencies": external_deps,
                 "unresolvedDependencies": unresolved_deps,
+                "unresolvedBaseRefs": unresolved_base_refs,
                 "requiredChecks": required_checks,
                 "commands": commands,
             }
@@ -1186,6 +1210,7 @@ def main() -> int:
     dependency_map: dict[int, list[int]] = {}
     for pr in prepared:
         deps: list[int] = []
+        unresolved_base_ref = ""
         base_ref = str(pr.get("baseRefName", ""))
         if base_ref and base_ref != default_branch:
             deps.extend(sorted(number for number in head_to_numbers.get(base_ref, set()) if number != pr["number"]))
@@ -1207,8 +1232,11 @@ def main() -> int:
                         head_to_numbers[base_ref].update(fetched)
                     cached = fetched
                 deps.extend(sorted(number for number in cached if number != pr["number"]))
+            if not deps:
+                unresolved_base_ref = base_ref
         dependency_map[pr["number"]] = sorted(set(deps))
         pr["dependencies"] = dependency_map[pr["number"]]
+        pr["unresolvedBaseRef"] = unresolved_base_ref
 
     overlap_rows, overlaps_by_pr = build_overlap(prepared)
     superseded = detect_superseded(prepared, overlap_rows)

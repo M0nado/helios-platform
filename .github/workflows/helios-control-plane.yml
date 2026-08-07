@@ -29,6 +29,7 @@ on:
 permissions:
   contents: read
   checks: read
+  statuses: read
   pages: write
   id-token: write
   pull-requests: read
