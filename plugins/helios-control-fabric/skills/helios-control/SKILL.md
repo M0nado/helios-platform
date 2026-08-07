@@ -69,6 +69,8 @@ python plugins/helios-control-fabric/scripts/helios.py runners
 
 `setup --write` only writes a local non-secret
 `plugins/helios-control-fabric/.env.local` scaffold.
+Load or export those values in the host environment before starting MCP hosts
+that resolve `.mcp.json` placeholders.
 
 The `oidc` command is a read-only live resolution and therefore requires an
 authenticated GitHub CLI. It must use GitHub's effective default/immutable

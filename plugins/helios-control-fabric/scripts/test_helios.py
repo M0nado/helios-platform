@@ -82,6 +82,34 @@ class HeliosCliTests(unittest.TestCase):
             parsed["HELIOS_LOCAL_MCP_URL"],
             "http://127.0.0.1:5080/runtime/webhooks/mcp",
         )
+        self.assertTrue(payload["environmentFileExisted"])
+
+    def test_setup_write_preserves_unknown_entries_and_comments(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            env_file = Path(temp_directory) / ".env.local"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "# Keep custom operator notes.",
+                        "CUSTOM_LOCAL_FLAG=enabled",
+                        "AZURE_TENANT_ID=tenant-1",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {"HELIOS_AZURE_CONNECTOR_URL": "https://helios.example"},
+                clear=True,
+            ):
+                HELIOS.setup_environment(write=True, env_file=env_file)
+            updated_content = env_file.read_text(encoding="utf-8")
+            parsed = HELIOS.parse_environment_file(env_file)
+        self.assertIn("# Keep custom operator notes.", updated_content)
+        self.assertIn("CUSTOM_LOCAL_FLAG=enabled", updated_content)
+        self.assertEqual(parsed["CUSTOM_LOCAL_FLAG"], "enabled")
+        self.assertEqual(parsed["HELIOS_AZURE_CONNECTOR_URL"], "https://helios.example")
 
     def test_setup_write_marks_missing_environment_file_as_new(self) -> None:
         with tempfile.TemporaryDirectory() as temp_directory:

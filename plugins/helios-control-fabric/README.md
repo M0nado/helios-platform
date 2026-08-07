@@ -55,8 +55,13 @@ runtime:
 - Copy `plugins/helios-control-fabric/.env.example` to
   `plugins/helios-control-fabric/.env.local`, or run
   `python plugins/helios-control-fabric/scripts/helios.py setup --write`.
-- `helios.py` automatically loads `.env.local` and never overrides explicitly
-  set process environment variables.
+- `helios.py` automatically loads `.env.local` for its own command execution
+  and never overrides explicitly set process environment variables.
+- MCP hosts resolve `.mcp.json` placeholders from the host environment, so load
+  or export `.env.local` before starting the host process.
+  Example (PowerShell): `Get-Content plugins/helios-control-fabric/.env.local |
+  ForEach-Object { if ($_ -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$')
+  { [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process') } }`
 
 - 'HELIOS_AZURE_CONNECTOR_URL' — approved HTTPS origin of the deployed HELIOS
   connector, without the '/mcp' suffix.

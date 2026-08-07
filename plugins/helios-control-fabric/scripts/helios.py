@@ -139,6 +139,39 @@ def render_environment_file(values: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
+def merge_environment_file_content(existing_content: str, values: dict[str, str]) -> str:
+    known_keys = set((*ENVIRONMENT_KEYS, *OPTIONAL_ENVIRONMENT_KEYS))
+    written_keys: set[str] = set()
+    merged_lines: list[str] = []
+
+    for line in existing_content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in line:
+            merged_lines.append(line)
+            continue
+        key, _ = line.split("=", 1)
+        normalized_key = key.strip()
+        if normalized_key in known_keys and normalized_key not in written_keys:
+            merged_lines.append(f"{normalized_key}={values.get(normalized_key, '')}")
+            written_keys.add(normalized_key)
+            continue
+        merged_lines.append(line)
+
+    missing_required = [key for key in ENVIRONMENT_KEYS if key not in written_keys]
+    missing_optional = [key for key in OPTIONAL_ENVIRONMENT_KEYS if key not in written_keys]
+    if missing_required or missing_optional:
+        if merged_lines and merged_lines[-1].strip():
+            merged_lines.append("")
+        merged_lines.append("# Added by HELIOS setup command.")
+        for key in missing_required:
+            merged_lines.append(f"{key}={values.get(key, '')}")
+        for key in missing_optional:
+            merged_lines.append(
+                f"{key}={values.get(key, DEFAULT_ENVIRONMENT_VALUES.get(key, ''))}"
+            )
+    return "\n".join(merged_lines).rstrip("\n") + "\n"
+
+
 def setup_environment(write: bool = False, env_file: Path = LOCAL_ENV_FILE) -> dict[str, Any]:
     existing_values: dict[str, str] = {}
     environment_file_existed = env_file.exists()
@@ -155,7 +188,12 @@ def setup_environment(write: bool = False, env_file: Path = LOCAL_ENV_FILE) -> d
 
     if write:
         try:
-            env_file.write_text(render_environment_file(values), encoding="utf-8")
+            if environment_file_existed:
+                existing_content = env_file.read_text(encoding="utf-8")
+                content = merge_environment_file_content(existing_content, values)
+            else:
+                content = render_environment_file(values)
+            env_file.write_text(content, encoding="utf-8")
         except OSError as error:
             raise RuntimeError(
                 f"Failed to write local environment scaffold '{env_file}'."

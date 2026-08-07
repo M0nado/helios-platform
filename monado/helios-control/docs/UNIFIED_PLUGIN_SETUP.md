@@ -44,6 +44,8 @@ Run:
 Commands are plan-first by default. `setup --write` only writes a local
 non-secret `.env.local` scaffold at
 `plugins/helios-control-fabric/.env.local`.
+`helios.py` reads that file for its own command execution only; MCP hosts still
+require these variables in the host environment before loading `.mcp.json`.
 
 ## Shared MCP app
 
