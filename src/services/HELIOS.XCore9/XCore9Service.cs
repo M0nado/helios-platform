@@ -32,6 +32,14 @@ public sealed class XCore9Service : IXCore9Service
         "dependency_health",
         "holdout_score"
     };
+    private static readonly HashSet<string> AllowedNegotiationOutcomes = new(IdentifierComparer)
+    {
+        "accepted",
+        "rejected",
+        "counter-offer",
+        "needs-review",
+        "deferred"
+    };
     private static readonly Regex DigestPattern = new("^sha256:[0-9a-f]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly IXCoreAnalytics _analytics;
@@ -43,6 +51,7 @@ public sealed class XCore9Service : IXCore9Service
     private readonly IReadOnlyDictionary<string, ToolchainDefinition> _toolchains;
     private readonly IReadOnlyDictionary<string, ToolDefinition> _tools;
     private readonly ConcurrentDictionary<Guid, WorkerLease> _leases = new();
+    private readonly ConcurrentDictionary<Guid, string> _leaseToolchains = new();
     private readonly List<RunHistoryEntry> _history = [];
     private readonly List<NegotiationRecord> _negotiations = [];
     private readonly object _gate = new();
@@ -371,6 +380,7 @@ public sealed class XCore9Service : IXCore9Service
                                 ["expiresAt"] = expiredLease.ExpiresAt
                             },
                             cancellationToken);
+                        _leaseToolchains.TryRemove(expiredLease.LeaseId, out _);
                         auditedExpirationCount++;
                     }
                 }
@@ -402,6 +412,12 @@ public sealed class XCore9Service : IXCore9Service
                         throw new InvalidOperationException("Correlation ID is already bound to a different template selection.");
                     }
 
+                    if (!_leaseToolchains.TryGetValue(existingLease.LeaseId, out var existingToolchain) ||
+                        !string.Equals(existingToolchain, toolchainId, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException("Correlation ID is already bound to a different toolchain selection.");
+                    }
+
                     lease = existingLease;
                     reusedExistingLease = true;
                 }
@@ -431,6 +447,7 @@ public sealed class XCore9Service : IXCore9Service
                         ExpiresAt: now + _options.EffectiveLeaseDuration);
 
                     _leases[lease.LeaseId] = lease;
+                    _leaseToolchains[lease.LeaseId] = toolchainId;
                 }
             }
 
@@ -460,6 +477,7 @@ public sealed class XCore9Service : IXCore9Service
                 lock (_gate)
                 {
                     _leases.TryRemove(lease.LeaseId, out _);
+                    _leaseToolchains.TryRemove(lease.LeaseId, out _);
                 }
 
                 throw;
@@ -545,6 +563,21 @@ public sealed class XCore9Service : IXCore9Service
             throw new ArgumentException("Proposal digest must be canonical sha256:<64 lowercase hex characters>.", nameof(record));
         }
 
+        if (string.IsNullOrWhiteSpace(record.Proposer) ||
+            record.Proposer.Length > _options.MaxNegotiationParticipantLength ||
+            string.IsNullOrWhiteSpace(record.Counterparty) ||
+            record.Counterparty.Length > _options.MaxNegotiationParticipantLength ||
+            string.IsNullOrWhiteSpace(record.Outcome) ||
+            record.Outcome.Length > _options.MaxNegotiationOutcomeLength)
+        {
+            throw new ArgumentException("Negotiation metadata exceeds configured bounds.", nameof(record));
+        }
+
+        if (!AllowedNegotiationOutcomes.Contains(record.Outcome))
+        {
+            throw new ArgumentException("Negotiation outcome must be allowlisted.", nameof(record));
+        }
+
         await _negotiationGate.WaitAsync(cancellationToken);
         try
         {
@@ -627,6 +660,15 @@ public sealed class XCore9Service : IXCore9Service
         await DemandAsync(actor, "policy.promote", cancellationToken);
         var evidenceLinks = request.EvidenceLinks.ToArray();
         ValidateEnvelope(request.CorrelationId, evidenceLinks);
+        RoutingPolicy candidateSnapshot;
+        try
+        {
+            candidateSnapshot = SnapshotPolicy(request.Candidate);
+        }
+        catch (ArgumentException)
+        {
+            return CurrentDecision(false, "candidate-policy-invalid");
+        }
 
         if (string.IsNullOrWhiteSpace(request.RequestedBy))
         {
@@ -643,7 +685,7 @@ public sealed class XCore9Service : IXCore9Service
             return CurrentDecision(false, "self-promotion-prohibited");
         }
 
-        if (!CandidatePolicyRulesAreBounded(request.Candidate, out var policyRuleReason))
+        if (!CandidatePolicyRulesAreBounded(candidateSnapshot, out var policyRuleReason))
         {
             return CurrentDecision(false, policyRuleReason);
         }
@@ -673,16 +715,16 @@ public sealed class XCore9Service : IXCore9Service
                 rollbackSnapshot = _rollbackPolicy;
             }
 
-            if (string.Equals(activeSnapshot.PolicyId, request.Candidate.PolicyId, StringComparison.Ordinal) &&
-                request.Candidate.Version < activeSnapshot.Version)
+            if (string.Equals(activeSnapshot.PolicyId, candidateSnapshot.PolicyId, StringComparison.Ordinal) &&
+                candidateSnapshot.Version < activeSnapshot.Version)
             {
                 return new PolicyDecision(false, "candidate-version-regression", activeSnapshot, rollbackSnapshot);
             }
 
-            if (string.Equals(activeSnapshot.PolicyId, request.Candidate.PolicyId, StringComparison.Ordinal) &&
-                activeSnapshot.Version == request.Candidate.Version)
+            if (string.Equals(activeSnapshot.PolicyId, candidateSnapshot.PolicyId, StringComparison.Ordinal) &&
+                activeSnapshot.Version == candidateSnapshot.Version)
             {
-                if (!PoliciesMatch(activeSnapshot, request.Candidate))
+                if (!PoliciesMatch(activeSnapshot, candidateSnapshot))
                 {
                     return new PolicyDecision(false, "candidate-policy-identity-collision", activeSnapshot, rollbackSnapshot);
                 }
@@ -690,7 +732,7 @@ public sealed class XCore9Service : IXCore9Service
                 return new PolicyDecision(true, "already-active", activeSnapshot, rollbackSnapshot);
             }
 
-            var promotedPolicy = SnapshotPolicy(request.Candidate, activeSnapshot.PolicyId);
+            var promotedPolicy = SnapshotPolicy(candidateSnapshot, activeSnapshot.PolicyId);
             await WriteAuditAsync(
                 eventType: "xcore9.policy.promoted",
                 actor: actor,
@@ -703,7 +745,12 @@ public sealed class XCore9Service : IXCore9Service
                     ["requestedBy"] = request.RequestedBy,
                     ["baselineLoss"] = request.Holdout.BaselineLoss,
                     ["candidateLoss"] = request.Holdout.CandidateLoss,
-                    ["minimumImprovement"] = _options.MinimumImprovement
+                    ["improvement"] = improvement,
+                    ["minimumImprovement"] = _options.MinimumImprovement,
+                    ["sampleCount"] = request.Holdout.SampleCount,
+                    ["minimumHoldoutSamples"] = _options.MinimumHoldoutSamples,
+                    ["confidence"] = request.Holdout.Confidence,
+                    ["holdoutPassed"] = request.Holdout.Passed
                 },
                 cancellationToken);
 
@@ -764,6 +811,7 @@ public sealed class XCore9Service : IXCore9Service
                         ["templateId"] = activeLease!.TemplateId
                     },
                     cancellationToken);
+                _leaseToolchains.TryRemove(activeLease!.LeaseId, out _);
             }
             catch
             {
@@ -790,6 +838,8 @@ public sealed class XCore9Service : IXCore9Service
             options.MaxRoutesPerScoringRequest < 1 ||
             options.MaxRunHistoryEntries < 1 ||
             options.MaxNegotiationEntries < 1 ||
+            options.MaxNegotiationParticipantLength < 1 ||
+            options.MaxNegotiationOutcomeLength < 1 ||
             options.MaxEvidenceLinks < 1 ||
             options.MaxEvidenceLinkLength < 1 ||
             options.MaxPolicyRules < 1 ||
@@ -903,7 +953,9 @@ public sealed class XCore9Service : IXCore9Service
 
     private static bool HoldoutIsValid(HoldoutEvaluation holdout) =>
         double.IsFinite(holdout.BaselineLoss) &&
+        holdout.BaselineLoss >= 0d &&
         double.IsFinite(holdout.CandidateLoss) &&
+        holdout.CandidateLoss >= 0d &&
         double.IsFinite(holdout.Confidence) &&
         holdout.Confidence is >= 0d and <= 1d;
 
@@ -979,10 +1031,29 @@ public sealed class XCore9Service : IXCore9Service
             throw new ArgumentException("Evidence links must use https or urn.");
         }
 
+        if (evidenceLinks.Any(link => !string.IsNullOrEmpty(link.UserInfo) || HasCredentialLikeQuery(link)))
+        {
+            throw new ArgumentException("Evidence links must not embed credentials.");
+        }
+
         if (evidenceLinks.Any(link => link.OriginalString.Length > _options.MaxEvidenceLinkLength))
         {
             throw new ArgumentException("Evidence links exceed the configured length bound.");
         }
+    }
+
+    private static bool HasCredentialLikeQuery(Uri link)
+    {
+        if (string.IsNullOrEmpty(link.Query))
+        {
+            return false;
+        }
+
+        return link.Query.Contains("token=", StringComparison.OrdinalIgnoreCase) ||
+               link.Query.Contains("apikey=", StringComparison.OrdinalIgnoreCase) ||
+               link.Query.Contains("api_key=", StringComparison.OrdinalIgnoreCase) ||
+               link.Query.Contains("password=", StringComparison.OrdinalIgnoreCase) ||
+               link.Query.Contains("secret=", StringComparison.OrdinalIgnoreCase);
     }
 
     private async ValueTask WriteAuditAsync(
@@ -1010,11 +1081,35 @@ public sealed class XCore9Service : IXCore9Service
             Environment: _auditEnvironment,
             OccurredAt: DateTimeOffset.UtcNow,
             DataClassification: EventDataClassification,
-            Actor: new XCoreEventActor(Type: "service", Id: actor, DisplayName: null),
+            Actor: new XCoreEventActor(Type: ResolveActorType(actor), Id: actor, DisplayName: null),
             Links: links,
             Payload: payloadSnapshot);
 
         await _audit.WriteAsync(envelope, cancellationToken);
+    }
+
+    private static string ResolveActorType(string actor)
+    {
+        if (actor.StartsWith("service:", StringComparison.OrdinalIgnoreCase) ||
+            actor.StartsWith("svc:", StringComparison.OrdinalIgnoreCase))
+        {
+            return "service";
+        }
+
+        if (actor.StartsWith("workflow:", StringComparison.OrdinalIgnoreCase) ||
+            actor.Contains("/", StringComparison.Ordinal))
+        {
+            return "workflow";
+        }
+
+        if (actor.StartsWith("agent:", StringComparison.OrdinalIgnoreCase) ||
+            actor.StartsWith("xcore", StringComparison.OrdinalIgnoreCase) ||
+            actor.StartsWith("hermes", StringComparison.OrdinalIgnoreCase))
+        {
+            return "agent";
+        }
+
+        return "operator";
     }
 
     private static string NormalizeAuditEnvironment(string environment)

@@ -8,6 +8,8 @@ public sealed record XCore9Options(
     int MaxRoutesPerScoringRequest = 256,
     int MaxRunHistoryEntries = 2048,
     int MaxNegotiationEntries = 1024,
+    int MaxNegotiationParticipantLength = 128,
+    int MaxNegotiationOutcomeLength = 64,
     int MaxEvidenceLinks = 16,
     int MaxEvidenceLinkLength = 2048,
     int MaxPolicyRules = 256,

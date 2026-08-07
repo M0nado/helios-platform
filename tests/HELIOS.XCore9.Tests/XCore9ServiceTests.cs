@@ -53,6 +53,7 @@ public sealed class XCore9ServiceTests
         var selectedEvent = Assert.Single(audit.Events, evt => evt.EventType == "xcore9.worker.selected");
         Assert.Equal("corr-1", selectedEvent.CorrelationId);
         Assert.Equal("reviewer", selectedEvent.Payload["templateId"]);
+        Assert.Equal("operator", selectedEvent.Actor.Type);
 
         await service.ReleaseWorkerAsync(lease, "corr-1", "operator", default);
 
@@ -79,6 +80,24 @@ public sealed class XCore9ServiceTests
 
         Assert.Equal(first.LeaseId, second.LeaseId);
         Assert.Single(audit.Events, evt => evt.EventType == "xcore9.worker.selected");
+    }
+
+    [Fact]
+    public async Task Selection_rejects_correlation_retries_with_mismatched_toolchains()
+    {
+        var template = new WorkerTemplate(
+            TemplateId: "reviewer",
+            MaxInstances: 2,
+            CpuUnits: 2,
+            MemoryMiB: 512,
+            AllowedToolchainIds: new HashSet<string> { "safe", "risky" },
+            PromptDigest: "sha256:fixed");
+        var (service, _) = Create(template: template);
+
+        _ = await service.SelectWorkerAsync("reviewer", "safe", "corr-toolchain", "operator", default);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SelectWorkerAsync("reviewer", "risky", "corr-toolchain", "operator", default).AsTask());
     }
 
     [Fact]
@@ -322,6 +341,15 @@ public sealed class XCore9ServiceTests
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
             service.IngestRunHistoryAsync(oversizedLength, "operator", default).AsTask());
+
+        var credentialLink = oversizedCount with
+        {
+            CorrelationId = "corr-links-3",
+            EvidenceLinks = [new Uri("https://user:pass@example.test/result")]
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.IngestRunHistoryAsync(credentialLink, "operator", default).AsTask());
     }
 
     [Fact]
@@ -463,6 +491,34 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public async Task Negotiation_rejects_unbounded_metadata_and_unallowlisted_outcomes()
+    {
+        var (service, _) = Create(options: new XCore9Options(MaxNegotiationParticipantLength: 8, MaxNegotiationOutcomeLength: 16));
+        var oversizeMetadata = new NegotiationRecord(
+            Guid.NewGuid(),
+            "corr-neg-meta-1",
+            "builder-too-long",
+            "reviewer",
+            "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "counter-offer",
+            DateTimeOffset.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.RecordNegotiationAsync(oversizeMetadata, "operator", default).AsTask());
+
+        var disallowedOutcome = oversizeMetadata with
+        {
+            NegotiationId = Guid.NewGuid(),
+            CorrelationId = "corr-neg-meta-2",
+            Proposer = "builder",
+            Outcome = "escalated"
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.RecordNegotiationAsync(disallowedOutcome, "operator", default).AsTask());
+    }
+
+    [Fact]
     public async Task Negotiation_is_idempotent_for_identical_ids_and_rejects_conflicts()
     {
         var (service, audit) = Create();
@@ -491,7 +547,7 @@ public sealed class XCore9ServiceTests
     [Fact]
     public async Task Promotion_requires_external_authority_and_preserves_rollback()
     {
-        var (service, _) = Create();
+        var (service, audit) = Create();
         var candidate = new RoutingPolicy("candidate", 2, new Dictionary<string, string>(), null);
         var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
         var request = new PromotionRequest("corr-p1", candidate, holdout, "xcore-9", [new Uri("https://evidence.test/1")]);
@@ -511,6 +567,11 @@ public sealed class XCore9ServiceTests
 
         Assert.True(approved.Approved);
         Assert.Equal("initial", approved.RollbackPolicy!.PolicyId);
+        var promotedEvent = Assert.Single(audit.Events, evt => evt.EventType == "xcore9.policy.promoted");
+        Assert.Equal(100, promotedEvent.Payload["sampleCount"]);
+        Assert.Equal(100, promotedEvent.Payload["minimumHoldoutSamples"]);
+        Assert.Equal(.9, promotedEvent.Payload["confidence"]);
+        Assert.Equal(true, promotedEvent.Payload["holdoutPassed"]);
     }
 
     [Fact]
@@ -543,8 +604,24 @@ public sealed class XCore9ServiceTests
             default);
 
         Assert.False(decision.Approved);
-        Assert.Equal("holdout-requirement-not-met", decision.ReasonCode);
+        Assert.Equal("holdout-values-not-finite", decision.ReasonCode);
         Assert.Equal("initial", decision.ActivePolicy.PolicyId);
+    }
+
+    [Fact]
+    public async Task Promotion_rejects_negative_holdout_losses()
+    {
+        var (service, _) = Create();
+        var candidate = new RoutingPolicy("candidate", 2, new Dictionary<string, string>(), null);
+        var holdout = new HoldoutEvaluation(100, 0, -1, .9, true);
+
+        var decision = await service.EvaluatePromotionAsync(
+            new PromotionRequest("corr-p3-negative", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]),
+            "guardian",
+            default);
+
+        Assert.False(decision.Approved);
+        Assert.Equal("holdout-values-not-finite", decision.ReasonCode);
     }
 
     [Theory]
@@ -591,6 +668,31 @@ public sealed class XCore9ServiceTests
         var promotedEvent = Assert.Single(audit.Events, evt => evt.EventType == "xcore9.policy.promoted");
         var link = Assert.Single(promotedEvent.Links);
         Assert.Equal("https://evidence.test/original", link.Href.ToString());
+    }
+
+    [Fact]
+    public async Task Promotion_snapshots_candidate_before_async_boundaries()
+    {
+        var authorization = new GatedExternalAuthorityAuthorization();
+        var rules = new Dictionary<string, string> { ["route"] = "safe" };
+        var (service, _) = Create(options: new XCore9Options(MaxPolicyRules: 1), authorization: authorization);
+        var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
+        var request = new PromotionRequest(
+            "corr-p3d",
+            new RoutingPolicy("candidate", 2, rules, null),
+            holdout,
+            "guardian",
+            [new Uri("https://evidence.test/1")]);
+
+        var decisionTask = service.EvaluatePromotionAsync(request, "guardian", default).AsTask();
+        await authorization.ExternalAuthorityStarted;
+
+        rules["extra"] = "unsafe";
+        authorization.Release();
+
+        var decision = await decisionTask;
+        Assert.True(decision.Approved);
+        Assert.Single(decision.ActivePolicy.Rules);
     }
 
     [Fact]
@@ -763,6 +865,11 @@ public sealed class XCore9ServiceTests
             [.8, .9]));
 
         Assert.Throws<ArgumentException>(() => analytics.EvaluatePredictions(
+            [1.0],
+            [1.0],
+            [2.0]));
+
+        Assert.Throws<ArgumentException>(() => analytics.EvaluatePredictions(
             [double.MaxValue],
             [-double.MaxValue],
             [.9]));
@@ -824,6 +931,12 @@ public sealed class XCore9ServiceTests
 
         Assert.Throws<ArgumentException>(() =>
             Create(options: new XCore9Options(MaxEvidenceLinkLength: 0)));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(MaxNegotiationParticipantLength: 0)));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(MaxNegotiationOutcomeLength: 0)));
 
         Assert.Throws<ArgumentException>(() =>
             Create(options: new XCore9Options(MaxPolicyRules: 0)));

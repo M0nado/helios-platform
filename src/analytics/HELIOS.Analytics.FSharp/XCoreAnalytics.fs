@@ -65,6 +65,8 @@ type XCoreAnalytics() =
                Seq.exists (fun value -> not (Double.IsFinite value)) actual ||
                Seq.exists (fun value -> not (Double.IsFinite value)) confidence then
                 invalidArg "predicted" "Prediction, actual, and confidence values must be finite."
+            if Seq.exists (fun value -> value < 0.0 || value > 1.0) confidence then
+                invalidArg "confidence" "Confidence values must be normalized to [0,1]."
             let errors =
                 Seq.map2 (fun p a ->
                     let error = p - a
@@ -83,5 +85,5 @@ type XCoreAnalytics() =
                 else
                     let normalizedSquares = errors |> Array.averageBy (fun error -> let normalized = error / maxAbsError in normalized * normalized)
                     maxAbsError * sqrt normalizedSquares
-            let calibration = Seq.map2 (fun error c -> abs(Math.Clamp(c, 0.0, 1.0) - (if abs error <= 0.1 then 1.0 else 0.0))) errors confidence |> Seq.average
+            let calibration = Seq.map2 (fun error c -> abs(c - (if abs error <= 0.1 then 1.0 else 0.0))) errors confidence |> Seq.average
             PredictionEvaluation(mae, rmse, calibration)
