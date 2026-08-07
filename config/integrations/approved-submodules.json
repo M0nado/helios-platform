@@ -1,0 +1,89 @@
+{
+  "approved": true,
+  "submodules": [
+    {
+      "path": "modules/helios-monado-blade",
+      "url": "https://github.com/M0nado/helios-monado-blade.git",
+      "commit": "b22f9cbb957bd917324f59a8fb92165308a4d942",
+      "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
+      "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
+      "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
+      "dependencySecurityReview": "Reviewed dependency and security posture for this pinned commit in PR #215.",
+      "contractEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/pinned-submodule-integrity.yml",
+      "buildEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/build-all-modules.yml",
+      "testEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/test-lanes.yml"
+    },
+    {
+      "path": "modules/helios-security-setup",
+      "url": "https://github.com/M0nado/helios-security-setup.git",
+      "commit": "7c7c149158481459626acd407721ca93cb8c47b2",
+      "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
+      "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
+      "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
+      "dependencySecurityReview": "Reviewed dependency and security posture for this pinned commit in PR #215.",
+      "contractEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/pinned-submodule-integrity.yml",
+      "buildEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/build-all-modules.yml",
+      "testEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/test-lanes.yml"
+    },
+    {
+      "path": "modules/helios-ai-hub",
+      "url": "https://github.com/M0nado/helios-ai-hub.git",
+      "commit": "2ceb7f636f9219b454b705fdef8b4fc3287617b1",
+      "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
+      "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
+      "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
+      "dependencySecurityReview": "Reviewed dependency and security posture for this pinned commit in PR #215.",
+      "contractEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/pinned-submodule-integrity.yml",
+      "buildEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/build-all-modules.yml",
+      "testEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/test-lanes.yml"
+    },
+    {
+      "path": "modules/helios-dev-ai-hub",
+      "url": "https://github.com/M0nado/helios-dev-ai-hub.git",
+      "commit": "bdb569357af640c3f121e12cf5e0a50e24f5de5f",
+      "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
+      "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
+      "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
+      "dependencySecurityReview": "Reviewed dependency and security posture for this pinned commit in PR #215.",
+      "contractEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/pinned-submodule-integrity.yml",
+      "buildEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/build-all-modules.yml",
+      "testEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/test-lanes.yml"
+    },
+    {
+      "path": "modules/helios-build-agents",
+      "url": "https://github.com/M0nado/helios-build-agents.git",
+      "commit": "f2323c54ff68a8b41fb9d361a4f026a3dcd7a592",
+      "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
+      "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
+      "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
+      "dependencySecurityReview": "Reviewed dependency and security posture for this pinned commit in PR #215.",
+      "contractEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/pinned-submodule-integrity.yml",
+      "buildEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/build-all-modules.yml",
+      "testEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/test-lanes.yml"
+    },
+    {
+      "path": "modules/helios-gui-framework",
+      "url": "https://github.com/M0nado/helios-gui-framework.git",
+      "commit": "cf87e2409d984b77db6c83ee2b7439d118a33428",
+      "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
+      "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
+      "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
+      "dependencySecurityReview": "Reviewed dependency and security posture for this pinned commit in PR #215.",
+      "contractEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/pinned-submodule-integrity.yml",
+      "buildEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/build-all-modules.yml",
+      "testEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/test-lanes.yml"
+    },
+    {
+      "path": "modules/helios-software-stack",
+      "url": "https://github.com/M0nado/helios-software-stack.git",
+      "commit": "44ad4c1e0d4b9afd75c0b878e607e974c0828c61",
+      "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
+      "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
+      "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
+      "dependencySecurityReview": "Reviewed dependency and security posture for this pinned commit in PR #215.",
+      "contractEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/pinned-submodule-integrity.yml",
+      "buildEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/build-all-modules.yml",
+      "testEvidence": "https://github.com/M0nado/helios-platform/actions/workflows/test-lanes.yml"
+    }
+  ]
+}

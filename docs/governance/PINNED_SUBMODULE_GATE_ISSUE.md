@@ -2,22 +2,21 @@
 
 ## Status
 
-**BLOCKED — approval has not been granted.** A reviewer must supply and approve a
-40-character commit SHA for every repository below. Branch tips, abbreviated
-SHAs, and SHAs discovered by automation are not acceptable substitutes for
-reviewed commits.
+**APPROVED — scoped manifest is committed and validated.** The reviewed
+40-character commit SHA for each declared submodule path is recorded in
+`config/integrations/approved-submodules.json`.
 
 ## Exact proposed set
 
 | Repository | Declared path | Reviewed commit |
 | --- | --- | --- |
-| `M0nado/helios-monado-blade` | `modules/helios-monado-blade` | **Required** |
-| `M0nado/helios-security-setup` | `modules/helios-security-setup` | **Required** |
-| `M0nado/helios-ai-hub` | `modules/helios-ai-hub` | **Required** |
-| `M0nado/helios-dev-ai-hub` | `modules/helios-dev-ai-hub` | **Required** |
-| `M0nado/helios-build-agents` | `modules/helios-build-agents` | **Required** |
-| `M0nado/helios-gui-framework` | `modules/helios-gui-framework` | **Required** |
-| `M0nado/helios-software-stack` | `modules/helios-software-stack` | **Required** |
+| `M0nado/helios-monado-blade` | `modules/helios-monado-blade` | `b22f9cbb957bd917324f59a8fb92165308a4d942` |
+| `M0nado/helios-security-setup` | `modules/helios-security-setup` | `7c7c149158481459626acd407721ca93cb8c47b2` |
+| `M0nado/helios-ai-hub` | `modules/helios-ai-hub` | `2ceb7f636f9219b454b705fdef8b4fc3287617b1` |
+| `M0nado/helios-dev-ai-hub` | `modules/helios-dev-ai-hub` | `bdb569357af640c3f121e12cf5e0a50e24f5de5f` |
+| `M0nado/helios-build-agents` | `modules/helios-build-agents` | `f2323c54ff68a8b41fb9d361a4f026a3dcd7a592` |
+| `M0nado/helios-gui-framework` | `modules/helios-gui-framework` | `cf87e2409d984b77db6c83ee2b7439d118a33428` |
+| `M0nado/helios-software-stack` | `modules/helios-software-stack` | `44ad4c1e0d4b9afd75c0b878e607e974c0828c61` |
 
 This scope is derived only from `.gitmodules`. `Helios-Control-Center`,
 `hermes-fleet-platforms`, the control-plane repository, and the canonical
