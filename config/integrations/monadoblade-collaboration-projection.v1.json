@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "projectionId": "monadoblade-collaboration-evidence",
+  "sourceOfTruth": "github",
+  "projectableRecords": ["approved-pr-link", "approved-evidence-link"],
+  "targets": ["linear", "slack", "teams", "sharepoint", "azure-devops"],
+  "allowExecutionFromProjectedSystems": false,
+  "targetBehavior": {
+    "linear": "tracking-only",
+    "slack": "notification-only",
+    "teams": "notification-only",
+    "sharepoint": "governed-evidence-storage",
+    "azure-devops": "discovery-and-sync-only"
+  }
+}

@@ -5,6 +5,10 @@ local/cloud MCP inventory, Cosmos-leased Edge control runs, and an inline signed
 relay dispatcher. Service Bus scale-out, provider-native workers, WAF/APIM policy, and a
 dead-letter operator remain later milestones.
 
+Before any runtime activation, validate `config/agent-core-policy.json` against
+its schema and run the failure-injection test suite. Activation is blocked when
+policy invariants or lifecycle safety tests fail.
+
 ## Safe order
 
 1. Resolve the GitHub repository, SharePoint library, Microsoft Foundry project, and Entra Agent Registry.
@@ -57,6 +61,9 @@ not exist and must not be documented as available before durable routing lands.
 - Duplicate delivery IDs create one target operation.
 - Disabled routes create an auditable skip.
 - Secrets never appear in logs.
+- Policy contract validation and failure-injection tests pass for lifecycle
+  transitions, lease fencing, retry classification, incident suppression, and
+  approval-governed rollback behavior.
 - After Service Bus and a governed replay tool are implemented, a dead-letter
   event can be inspected and replayed after correction. This is not a current
   verification criterion.

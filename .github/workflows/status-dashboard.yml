@@ -77,8 +77,15 @@ jobs:
       - name: Generate Status Report
         id: report
         run: |
-          REPORT=$(cat status-report.json)
-          echo "report=$REPORT" >> $GITHUB_OUTPUT
+          REPORT=$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          content = json.loads(Path("status-report.json").read_text(encoding="utf-8"))
+          print(json.dumps(content, separators=(",", ":")))
+          PY
+          )
+          echo "report=$REPORT" >> "$GITHUB_OUTPUT"
 
       - name: Upload Report
         uses: actions/upload-artifact@v4
