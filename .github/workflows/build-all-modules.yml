@@ -176,7 +176,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-${{ matrix.module }}
+          name: build-artifacts-${{ replace(matrix.module, '/', '-') }}
           path: |
             ${{ matrix.module }}/dist/
             ${{ matrix.module }}/build/
@@ -187,7 +187,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.module }}
+          name: coverage-${{ replace(matrix.module, '/', '-') }}
           path: ${{ matrix.module }}/coverage/
           if-no-files-found: warn
           retention-days: 7
