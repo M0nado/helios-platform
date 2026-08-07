@@ -104,9 +104,10 @@ jobs:
 
           linux_candidates = [
               "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+              "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
           ]
           windows_candidates = [
-              "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+              "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
           ]
 
           linux_tests = [path for path in linux_candidates if Path(path).exists()]
@@ -181,12 +182,6 @@ jobs:
               '--verbosity', 'minimal'
             )
 
-            if ('${{ matrix.platform.os }}' -eq 'windows-latest' -and $project -like '*tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj') {
-              $args += @('--filter', 'FullyQualifiedName!~Integration&FullyQualifiedName!~Performance&FullyQualifiedName!~EndToEnd&FullyQualifiedName!~E2E&FullyQualifiedName!~Security&FullyQualifiedName!~Vault&FullyQualifiedName!~Driver&FullyQualifiedName!~Malware&FullyQualifiedName!~Deployment')
-            }
-            if ('${{ matrix.platform.os }}' -eq 'windows-latest' -and $project -like '*src/tests/HELIOS.Platform.Tests.csproj') {
-              $args += @('--filter', 'FullyQualifiedName!~Integration')
-            }
             if ('${{ matrix.variant.name }}' -eq 'test') {
               $args += @('--collect', 'XPlat Code Coverage')
             }

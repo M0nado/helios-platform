@@ -64,9 +64,6 @@ jobs:
                 -not -path "./.git/*" \
                 -not -path "./modules/*" \
                 -not -path "./submodules/*"
-              if [ -f "src/core/HELIOS.Platform/HELIOS.Platform.csproj" ]; then
-                echo "./src/core/HELIOS.Platform/HELIOS.Platform.csproj"
-              fi
             } | sed 's#^./##' | sort -u | jq -R 'select(length > 0)' | jq -cs .
           )
           DOTNET_COUNT=$(jq 'length' <<< "$DOTNET_TARGETS")
