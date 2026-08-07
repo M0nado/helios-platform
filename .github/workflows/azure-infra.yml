@@ -391,6 +391,19 @@ jobs:
                 echo "container_registry_id must be a full Azure Container Registry resource ID when supplied." >&2
                 exit 1
               fi
+              set +e
+              input_container_registry_sku="$(az acr show --ids "${INPUT_CONTAINER_REGISTRY_ID}" --query sku.name --output tsv 2>&1)"
+              input_container_registry_sku_exit=$?
+              set -e
+              if [[ ${input_container_registry_sku_exit} -ne 0 || -z "${input_container_registry_sku}" || "${input_container_registry_sku}" == "null" ]]; then
+                echo "${input_container_registry_sku}" >&2
+                echo "Could not resolve SKU for container_registry_id '${INPUT_CONTAINER_REGISTRY_ID}'." >&2
+                exit 1
+              fi
+              if [[ "${input_container_registry_sku,,}" != "premium" ]]; then
+                echo "container_registry_id must reference a Premium Azure Container Registry before private-endpoint deployment. Upgrade the registry through a reviewed cutover and retry." >&2
+                exit 1
+              fi
               if [[ "${INPUT_NETWORK_ONLY}" == "true" ]]; then
                 if ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
                   echo "Production network_only bootstrap requires enabled_egress_profiles including containerRegistryDataPlane even when container_registry_id is supplied, because connector registry binding cannot be verified before first connector deployment." >&2
@@ -830,6 +843,21 @@ jobs:
             if [[ "${INPUT_NETWORK_ONLY}" != "true" && -z "${INPUT_CONTAINER_REGISTRY_ID}" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
               echo "Validated production profiles require container_registry_id (private endpoint) or containerRegistryDataPlane for ACR image-pull egress." >&2
               exit 1
+            fi
+            if [[ -n "${INPUT_CONTAINER_REGISTRY_ID}" ]]; then
+              set +e
+              validated_container_registry_sku="$(az acr show --ids "${INPUT_CONTAINER_REGISTRY_ID}" --query sku.name --output tsv 2>&1)"
+              validated_container_registry_sku_exit=$?
+              set -e
+              if [[ ${validated_container_registry_sku_exit} -ne 0 || -z "${validated_container_registry_sku}" || "${validated_container_registry_sku}" == "null" ]]; then
+                echo "${validated_container_registry_sku}" >&2
+                echo "Could not resolve SKU for validated container_registry_id '${INPUT_CONTAINER_REGISTRY_ID}'." >&2
+                exit 1
+              fi
+              if [[ "${validated_container_registry_sku,,}" != "premium" ]]; then
+                echo "Validated production container_registry_id must reference a Premium Azure Container Registry before private-endpoint deployment." >&2
+                exit 1
+              fi
             fi
           fi
 

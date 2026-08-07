@@ -1,4 +1,5 @@
 param namePrefix string
+param location string
 param environmentName string
 param hubVirtualNetworkName string
 param platformVirtualNetworkId string
@@ -9,6 +10,7 @@ param connectorRelayDestinations array
 
 var networkPathPolicy = loadJsonContent('../../../monado/helios-control/config/network-paths.json')
 var approvedDestinations = networkPathPolicy.egress.approvedDestinations
+var approvedNetworkRules = networkPathPolicy.egress.?approvedNetworkRules ?? {}
 var environmentRuleCollectionPriority = environmentName == 'prod' ? 320 : environmentName == 'test' ? 310 : 300
 var selectedProfileRules = [for profile in enabledEgressProfiles: {
   name: 'Allow-${profile}'
@@ -16,6 +18,14 @@ var selectedProfileRules = [for profile in enabledEgressProfiles: {
   protocols: [{ protocolType: 'Https', port: 443 }]
   sourceAddresses: [platformAddressSpace]
   targetFqdns: approvedDestinations[profile]
+}]
+var selectedProfileNetworkRules = [for (rule, index) in (contains(enabledEgressProfiles, 'containerAppsPlatform') && contains(approvedNetworkRules, 'containerAppsPlatform') ? approvedNetworkRules.containerAppsPlatform : []): {
+  name: 'Allow-containerAppsPlatform-network-${rule.?name ?? index}'
+  ruleType: 'NetworkRule'
+  ipProtocols: rule.ipProtocols
+  sourceAddresses: [platformAddressSpace]
+  destinationAddresses: map(rule.destinationAddresses, destination => replace(destination, '{location}', location))
+  destinationPorts: rule.destinationPorts
 }]
 var invalidRelayDestinations = filter(connectorRelayDestinations, destination => !contains(destination, 'profile') || !contains(destination, 'fqdn') || !contains(enabledEgressProfiles, destination.?profile ?? '') || empty(destination.?fqdn ?? '') || contains(destination.?fqdn ?? '', '://') || contains(destination.?fqdn ?? '', '/') || contains(destination.?fqdn ?? '', ':') || startsWith(destination.?fqdn ?? '', '.') || endsWith(destination.?fqdn ?? '', '.') || contains(destination.?fqdn ?? '', '*'))
 var validatedRelayDestinations = empty(invalidRelayDestinations) ? connectorRelayDestinations : fail('Every connector relay destination must reference an enabled profile and supply a bare callback FQDN without a scheme, port, path, or wildcard.')
@@ -56,7 +66,7 @@ resource heliosRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleColle
       priority: 100
       ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
       action: { type: 'Allow' }
-      rules: concat(selectedProfileRules, relayRules)
+      rules: concat(selectedProfileRules, selectedProfileNetworkRules, relayRules)
     }]
   }
 }

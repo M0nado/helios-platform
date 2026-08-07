@@ -9,14 +9,43 @@
     "productionDecision": "azureFirewall",
     "natGatewayAllowedProfiles": ["dev-isolated"],
     "approvedDestinations": {
-      "github": ["github.com", "api.github.com", "*.githubusercontent.com", "*.actions.githubusercontent.com"],
+      "github": [
+        "github.com",
+        "api.github.com",
+        "*.githubusercontent.com",
+        "*.actions.githubusercontent.com",
+        "*.blob.core.windows.net"
+      ],
       "microsoftIdentityAzure": ["login.microsoftonline.com", "management.azure.com", "management.core.windows.net", "documents.azure.com", "*.documents.azure.com"],
-      "containerAppsPlatform": ["mcr.microsoft.com", "*.data.mcr.microsoft.com", "packages.microsoft.com", "*.azurecontainerapps.io"],
+      "containerAppsPlatform": [
+        "mcr.microsoft.com",
+        "*.data.mcr.microsoft.com",
+        "packages.microsoft.com",
+        "packages.aks.azure.com",
+        "*.azurecontainerapps.io",
+        "*.blob.core.windows.net"
+      ],
       "containerRegistryDataPlane": ["*.azurecr.io"],
       "slack": ["slack.com", "api.slack.com"],
       "linear": ["api.linear.app"],
       "sharePointGraph": ["graph.microsoft.com", "*.sharepoint.com"],
       "modelProviders": ["api.openai.com", "*.openai.azure.com", "api.anthropic.com"]
+    },
+    "approvedNetworkRules": {
+      "containerAppsPlatform": [
+        {
+          "name": "aks-control-plane-udp-1194",
+          "ipProtocols": ["UDP"],
+          "destinationAddresses": ["AzureCloud.{location}"],
+          "destinationPorts": ["1194"]
+        },
+        {
+          "name": "aks-control-plane-tcp-9000",
+          "ipProtocols": ["TCP"],
+          "destinationAddresses": ["AzureCloud.{location}"],
+          "destinationPorts": ["9000"]
+        }
+      ]
     },
     "default": "deny",
     "profileRule": "A destination is allowed only when its integration profile is enabled. Model providers require an enabled provider profile."

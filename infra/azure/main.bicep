@@ -102,6 +102,7 @@ module hubGovernance 'modules/hub-governance.bicep' = if (validatedEgressMode ==
   scope: resourceGroup(hubVirtualNetworkSubscriptionId, hubVirtualNetworkResourceGroupName)
   params: {
     namePrefix: namePrefix
+    location: location
     environmentName: environmentName
     hubVirtualNetworkName: last(split(hubVirtualNetworkId, '/'))
     platformVirtualNetworkId: network.outputs.virtualNetworkId

@@ -15,7 +15,7 @@ account. Azure OpenAI account IDs are supplied separately so they are linked to
 
 Production must select `azureFirewall` and provide the private IP, hub VNet ID,
 and Firewall Policy ID of an approved hub firewall. The deployment creates both
-VNet peerings and application rules generated from
+VNet peerings plus application/network firewall rules generated from
 `monado/helios-control/config/network-paths.json`. `natGateway` is retained only
 for isolated development profiles because NAT does not enforce an FQDN allowlist.
 The firewall policy is default-deny and enables a destination group only when its

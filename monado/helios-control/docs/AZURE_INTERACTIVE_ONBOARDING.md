@@ -146,10 +146,15 @@ connector through `helios-cloud-deploy`, and only then rerun `azure-infra` with
 For production `network_only=false`, `azure-infra` now also verifies that
 `connector_backend_url` exactly matches the deployed connector ingress origin
 and that any `container_registry_id` matches the connector's active ACR
-resource ID before allowing private-endpoint-only image-pull egress.
+resource ID and uses the Premium SKU required for ACR private endpoints before
+allowing private-endpoint-only image-pull egress.
 For production `network_only=true`, `containerRegistryDataPlane` remains
 required even when `container_registry_id` is supplied, because connector
 registry binding is only verifiable after the first connector deployment.
+Production `azureFirewall` profile rules now also include the reviewed
+Container Apps control-plane network ports (AzureCloud regional UDP 1194 and
+TCP 9000), `packages.aks.azure.com`, and GitHub Actions artifact storage
+endpoints under `*.blob.core.windows.net`.
 
 For private-network production verification, the workflow requires a
 self-hosted runner with VNet/private-DNS reachability before deploy mode can
