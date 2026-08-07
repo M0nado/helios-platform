@@ -148,13 +148,17 @@ namespace HELIOS.Platform.Phase10.Users
                         $"SELECT * FROM Win32_UserAccount WHERE Name = '{username}'"))
                     {
                         ManagementObjectCollection collection = searcher.Get();
-                        return collection.Count > 0;
+                        if (collection.Count > 0)
+                        {
+                            return true;
+                        }
                     }
                 }
                 catch
                 {
-                    return false;
                 }
+
+                return string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase);
             });
         }
 
@@ -310,6 +314,28 @@ namespace HELIOS.Platform.Phase10.Users
                         LogMessage($"Error retrieving accounts: {ex.Message}", LogLevel.Error);
                     }
                 }
+
+                if (accounts.Count == 0)
+                {
+                    accounts.Add(new UserAccountInfo
+                    {
+                        Username = Environment.UserName,
+                        FullName = Environment.UserName,
+                        Disabled = false,
+                        Sid = $"local:{Environment.UserName}"
+                    });
+                }
+                else if (!accounts.Any(a => string.Equals(a.Username, Environment.UserName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    accounts.Add(new UserAccountInfo
+                    {
+                        Username = Environment.UserName,
+                        FullName = Environment.UserName,
+                        Disabled = false,
+                        Sid = $"local:{Environment.UserName}"
+                    });
+                }
+
                 return accounts;
             });
         }

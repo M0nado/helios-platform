@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "fromVersion": "config/profiles/monadoblade-profiles.v1.json",
+  "toVersion": "config/profiles/monadoblade-profiles.v2.json",
+  "preserveLegacyInput": true,
+  "mapV1ToV2": {
+    "developer": "developer",
+    "sysadmin": "sysadmin-offline",
+    "sysops": "ai-server",
+    "gamer": "gamer",
+    "studio": "studio",
+    "personal": "core",
+    "server-background": "ai-server"
+  },
+  "notes": [
+    "v1 remains the seven-profile legacy contract and is not rewritten.",
+    "SysOps and ServerBackground responsibilities are folded into AI/Server in v2.",
+    "Personal is consolidated into Core in v2.",
+    "Recovery and Quarantine remain Sysadmin workflows and are not independent profiles."
+  ]
+}
