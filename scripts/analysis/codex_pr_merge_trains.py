@@ -153,10 +153,14 @@ def parse_number_list(raw: str) -> list[int]:
     return sorted(set(out))
 
 
-def extract_issue_pr_numbers(body: str, issue_number: int) -> list[int]:
+def extract_issue_pr_numbers(body: str, issue_number: int, repo: str) -> list[int]:
+    repo_key = normalize_repo_key(repo)
     seen = set()
-    for match in re.findall(r"#(\d+)", body or ""):
-        number = int(match)
+    for match in re.finditer(r"https?://github\.com/([^/\s]+)/([^/\s]+)/pull/(\d+)", body or "", flags=re.IGNORECASE):
+        candidate_repo = normalize_repo_key(f"{match.group(1)}/{match.group(2)}")
+        if candidate_repo != repo_key:
+            continue
+        number = int(match.group(3))
         if number != issue_number:
             seen.add(number)
     return sorted(seen)
@@ -178,7 +182,7 @@ def load_issue_context(repo: str, issue_number: int | None) -> dict[str, Any]:
     if issue_number is None:
         return {"number": None, "title": "", "url": "", "candidateNumbers": []}
     issue = gh_json(["issue", "view", str(issue_number), "--repo", repo, "--json", "number,title,url,body"])
-    candidate_numbers = extract_issue_pr_numbers(issue.get("body", ""), issue_number)
+    candidate_numbers = extract_issue_pr_numbers(issue.get("body", ""), issue_number, repo)
     return {
         "number": issue.get("number"),
         "title": issue.get("title", ""),
@@ -324,6 +328,8 @@ def load_pr_detail(repo: str, number: int) -> dict[str, Any]:
             "changedFiles",
             "additions",
             "deletions",
+            "files",
+            "commits",
             "author",
             "createdAt",
             "updatedAt",
@@ -343,12 +349,21 @@ def load_pr_detail(repo: str, number: int) -> dict[str, Any]:
         detail["files"] = normalize_pr_files(load_paginated_list(f"repos/{repo}/pulls/{number}/files?per_page=100"))
     except RuntimeError:
         detail["files"] = fallback_files
+    paginated_commits: list[dict[str, Any]] | None = None
     try:
-        detail["commits"] = normalize_pr_commits(
-            load_paginated_list(f"repos/{repo}/pulls/{number}/commits?per_page=100")
-        )
-    except RuntimeError:
-        detail["commits"] = fallback_commits
+        paginated_commits = normalize_pr_commits(load_paginated_list(f"repos/{repo}/pulls/{number}/commits?per_page=100"))
+    except RuntimeError as exc:
+        if fallback_commits:
+            detail["commits"] = fallback_commits
+        else:
+            raise RuntimeError(f"Unable to load commits for PR #{number}: {exc}") from exc
+    else:
+        if paginated_commits:
+            detail["commits"] = paginated_commits
+        elif fallback_commits:
+            detail["commits"] = fallback_commits
+        else:
+            raise RuntimeError(f"No commits returned for PR #{number}; aborting to avoid partial train output.")
     return detail
 
 
@@ -724,30 +739,46 @@ def build_trains(
         merge_candidates = [pr["number"] for pr in ordered if pr["disposition"] == "merge-train"]
         deferred = [pr["number"] for pr in ordered if pr["disposition"] == "defer"]
         superseded = [pr["number"] for pr in ordered if pr["disposition"] == "supersede"]
-        external_deps = sorted(
+        ordered_member_numbers = {member["number"] for member in ordered}
+        merge_candidate_numbers = set(merge_candidates)
+        unresolved_deps = sorted(
             {
                 dep
                 for pr in ordered
+                if pr["disposition"] == "merge-train"
                 for dep in dependency_map.get(pr["number"], [])
-                if dep not in {member["number"] for member in ordered}
+                if dep not in merge_candidate_numbers
             }
         )
+        external_deps = [dep for dep in unresolved_deps if dep not in ordered_member_numbers]
+        internal_deps = [dep for dep in unresolved_deps if dep in ordered_member_numbers]
         commands: list[str]
         if not merge_candidates:
             commands = ["# No merge-train candidates in this domain after triage."]
-        elif external_deps:
-            deps_text = ", ".join(f"#{dep}" for dep in external_deps)
+        elif unresolved_deps:
+            deps_text = ", ".join(f"#{dep}" for dep in unresolved_deps)
             commands = [
-                f"# External dependencies outside this train were detected: {deps_text}",
+                f"# Unresolved dependencies were detected: {deps_text}",
                 "# Resolve those dependencies (merge or integrate upstream) before using automated train commands.",
                 "# Automatic command generation is intentionally suppressed for this train to avoid partial cherry-picks.",
             ]
+            if external_deps:
+                commands.append(
+                    "# External dependency PRs outside this train: "
+                    + ", ".join(f"#{dep}" for dep in external_deps)
+                )
+            if internal_deps:
+                commands.append(
+                    "# Internal dependencies are present but not scheduled for integration in this train: "
+                    + ", ".join(f"#{dep}" for dep in internal_deps)
+                )
         elif train_remote is None:
             commands = [
                 f"# No local git remote in this checkout points to {repo}.",
                 "# Run train commands from a checkout with a matching remote before applying train automation.",
             ]
         else:
+            integrated_oids: set[str] = set()
             commands = [
                 f"git checkout {default_branch}",
                 f"git pull --ff-only {train_remote} {default_branch}",
@@ -763,8 +794,16 @@ def build_trains(
                         f"# PR #{pr['number']} includes merge commits; merge branch tip to preserve parent topology."
                     )
                     commands.append(f"git merge --no-ff --no-edit pr-{pr['number']}")
+                    integrated_oids.update([oid for oid in pr["commitOids"] if oid])
                 elif pr["commitOids"]:
-                    commands.append("git cherry-pick " + " ".join(pr["commitOids"]))
+                    unique_oids = [oid for oid in pr["commitOids"] if oid and oid not in integrated_oids]
+                    if unique_oids:
+                        commands.append("git cherry-pick " + " ".join(unique_oids))
+                        integrated_oids.update(unique_oids)
+                    else:
+                        commands.append(
+                            f"# all commits for PR #{pr['number']} were already integrated earlier in this train"
+                        )
                 else:
                     commands.append(f"# no commit oids returned for PR #{pr['number']}")
             commands.append(f"git push -u {train_remote} {branch}")
@@ -782,6 +821,7 @@ def build_trains(
                 "deferred": deferred,
                 "superseded": superseded,
                 "externalDependencies": external_deps,
+                "unresolvedDependencies": unresolved_deps,
                 "requiredChecks": required_checks,
                 "commands": commands,
             }
