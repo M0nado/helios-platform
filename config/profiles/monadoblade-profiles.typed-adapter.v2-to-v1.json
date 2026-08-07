@@ -58,7 +58,11 @@
       "soundCue": "sub-bass-service",
       "background": "graphite-service-mesh",
       "aihubMode": "headless-model-worker-automation",
-      "dashboardWidgets": ["uptime", "queues", "services", "firewall", "container", "vm", "model-workers", "memory", "power", "backup"]
+      "dashboardWidgets": ["uptime", "queues", "services", "firewall", "container", "vm", "model-workers", "memory", "power", "backup"],
+      "targetScalarOverrides": {
+        "windowsRole": "service-identities",
+        "interactive": false
+      }
     },
     {
       "sourceProfile": "sysadmin-offline",
@@ -83,6 +87,7 @@
     "requiresDeterministicOneToOneRulePerTarget": true,
     "forbidRemoteActivationForSysadminTarget": true,
     "preserveOfflineOnlyForSysadminTarget": true,
+    "preserveServerBackgroundNonInteractiveTarget": true,
     "denySecretValueProjection": true
   }
 }

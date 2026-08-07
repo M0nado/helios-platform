@@ -473,12 +473,34 @@ jobs:
           }
           if sysadmin_rule.get('activationPolicyOverrides') != expected_sysadmin_activation_overrides:
               raise SystemExit('Sysadmin typed adapter projection must preserve offline-only activation boundaries')
+          server_background_rule = next(
+              (
+                  rule
+                  for rule in projection_rules
+                  if rule.get('sourceProfile') == 'ai-server' and rule.get('targetTypedProfile') == 'server-background'
+              ),
+              None,
+          )
+          if server_background_rule is None:
+              raise SystemExit('Typed adapter must include an ai-server -> server-background projection rule')
+          expected_server_background_overrides = {
+              'windowsRole': 'service-identities',
+              'interactive': False,
+          }
+          if server_background_rule.get('targetScalarOverrides') != expected_server_background_overrides:
+              raise SystemExit('Server-background typed adapter projection must force non-interactive service identity scalars')
+          ai_server_profile = by_id['ai-server']
+          if ai_server_profile.get('interactive') is not True:
+              raise SystemExit('AI/Server source profile must remain interactive in the six-profile catalog')
+          if ai_server_profile.get('windowsRole') != 'bounded-service-and-operator':
+              raise SystemExit('AI/Server source profile windowsRole drifted from bounded-service-and-operator')
           adapter_invariants = typed_adapter.get('safetyInvariants', {})
           expected_adapter_invariants = [
               'allLegacyTypedProfilesProjected',
               'requiresDeterministicOneToOneRulePerTarget',
               'forbidRemoteActivationForSysadminTarget',
               'preserveOfflineOnlyForSysadminTarget',
+              'preserveServerBackgroundNonInteractiveTarget',
               'denySecretValueProjection',
           ]
           if not all(adapter_invariants.get(key) is True for key in expected_adapter_invariants):
