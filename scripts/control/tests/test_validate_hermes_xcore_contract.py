@@ -81,6 +81,17 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             "must bind x-tier-dev to tier development",
         )
 
+    def test_chaos_policy_never_allows_production(self) -> None:
+        candidate = copy.deepcopy(self.environment)
+        candidate["chaosAndRegressionPolicy"]["forbidProductionChaos"] = False
+        self.assert_has_error(
+            candidate,
+            self.capability,
+            self.event,
+            self.approval,
+            "forbidProductionChaos must be true",
+        )
+
     def test_non_authoritative_surface_deploy_permission_fails_closed(self) -> None:
         candidate = copy.deepcopy(self.capability)
         teams_surface = next(
@@ -181,6 +192,17 @@ class HermesXcoreContractValidationTests(unittest.TestCase):
             candidate,
             self.approval,
             "requiredFields missing payload",
+        )
+
+    def test_event_profile_rejects_unknown_required_field(self) -> None:
+        candidate = copy.deepcopy(self.event)
+        candidate["eventEnvelope"]["requiredFields"].append("arbitraryNonEnvelopeField")
+        self.assert_has_error(
+            self.environment,
+            self.capability,
+            candidate,
+            self.approval,
+            "requiredFields contains unexpected arbitraryNonEnvelopeField",
         )
 
     def test_event_profile_rejects_noncanonical_classification(self) -> None:

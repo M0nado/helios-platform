@@ -43,6 +43,7 @@ EXPECTED_TRANSITIONS = {
     ("x-tier-dev", "x-tier-xcore"),
     ("x-tier-xcore", "x-tier-prod"),
 }
+EXPECTED_CHAOS_ENVIRONMENTS = {"x-tier-dev", "x-tier-xcore"}
 EXPECTED_DEPLOYMENT_SURFACES = {"github-actions-workflow"}
 EXPECTED_APPROVAL_SURFACES = {
     "github-protected-environment-reviewers",
@@ -201,6 +202,29 @@ def validate_environment_contract(contract: object) -> list[str]:
                 "environment contract: template/request digest match must be required"
             )
 
+    chaos = _mapping(document.get("chaosAndRegressionPolicy"))
+    if chaos is None:
+        errors.append("environment contract: chaosAndRegressionPolicy must be an object")
+    else:
+        allowed_environments = _name_set(chaos.get("allowedChaosEnvironments"))
+        if allowed_environments != EXPECTED_CHAOS_ENVIRONMENTS:
+            errors.append(
+                "environment contract: allowedChaosEnvironments must be exactly "
+                "x-tier-dev and x-tier-xcore"
+            )
+        if chaos.get("forbidProductionChaos") is not True:
+            errors.append("environment contract: forbidProductionChaos must be true")
+        if chaos.get("requirePromotionGatesForChaosRecommendations") is not True:
+            errors.append(
+                "environment contract: requirePromotionGatesForChaosRecommendations must be true"
+            )
+        if chaos.get("xcoreRegressionFailClosed") is not True:
+            errors.append("environment contract: xcoreRegressionFailClosed must be true")
+        if chaos.get("requireReviewableRegressionEvidence") is not True:
+            errors.append(
+                "environment contract: requireReviewableRegressionEvidence must be true"
+            )
+
     return errors
 
 
@@ -329,9 +353,14 @@ def validate_event_contract(contract: object) -> list[str]:
         if envelope.get("linksRequired") is not True:
             errors.append("event profile contract: linksRequired must be true")
         required_fields = _name_set(envelope.get("requiredFields"))
-        for required in EXPECTED_EVENT_REQUIRED_FIELDS:
-            if required not in required_fields:
-                errors.append(f"event profile contract: requiredFields missing {required}")
+        missing_fields = sorted(EXPECTED_EVENT_REQUIRED_FIELDS - required_fields)
+        for required in missing_fields:
+            errors.append(f"event profile contract: requiredFields missing {required}")
+        unexpected_fields = sorted(required_fields - EXPECTED_EVENT_REQUIRED_FIELDS)
+        for unexpected in unexpected_fields:
+            errors.append(
+                f"event profile contract: requiredFields contains unexpected {unexpected}"
+            )
         if "evidenceLinks" in required_fields:
             errors.append(
                 "event profile contract: requiredFields must use links instead of evidenceLinks"

@@ -11,7 +11,8 @@
     "environments",
     "promotionGraph",
     "hotfix",
-    "immutableArtifactContinuity"
+    "immutableArtifactContinuity",
+    "chaosAndRegressionPolicy"
   ],
   "properties": {
     "contractSchema": {
@@ -86,6 +87,48 @@
           "const": true
         },
         "requireTemplateAndRequestDigestMatch": {
+          "const": true
+        }
+      }
+    },
+    "chaosAndRegressionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowedChaosEnvironments",
+        "forbidProductionChaos",
+        "requirePromotionGatesForChaosRecommendations",
+        "xcoreRegressionFailClosed",
+        "requireReviewableRegressionEvidence"
+      ],
+      "properties": {
+        "allowedChaosEnvironments": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "allOf": [
+            { "contains": { "const": "x-tier-dev" } },
+            { "contains": { "const": "x-tier-xcore" } }
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "x-tier-dev",
+              "x-tier-xcore"
+            ]
+          }
+        },
+        "forbidProductionChaos": {
+          "const": true
+        },
+        "requirePromotionGatesForChaosRecommendations": {
+          "const": true
+        },
+        "xcoreRegressionFailClosed": {
+          "const": true
+        },
+        "requireReviewableRegressionEvidence": {
           "const": true
         }
       }

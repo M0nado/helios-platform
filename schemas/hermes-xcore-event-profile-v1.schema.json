@@ -33,11 +33,39 @@
       "properties": {
         "requiredFields": {
           "type": "array",
-          "minItems": 1,
+          "minItems": 12,
+          "maxItems": 12,
           "uniqueItems": true,
+          "allOf": [
+            { "contains": { "const": "schemaVersion" } },
+            { "contains": { "const": "eventId" } },
+            { "contains": { "const": "correlationId" } },
+            { "contains": { "const": "source" } },
+            { "contains": { "const": "eventType" } },
+            { "contains": { "const": "repository" } },
+            { "contains": { "const": "environment" } },
+            { "contains": { "const": "dataClassification" } },
+            { "contains": { "const": "actor" } },
+            { "contains": { "const": "links" } },
+            { "contains": { "const": "payload" } },
+            { "contains": { "const": "occurredAt" } }
+          ],
           "items": {
             "type": "string",
-            "minLength": 1
+            "enum": [
+              "schemaVersion",
+              "eventId",
+              "correlationId",
+              "source",
+              "eventType",
+              "repository",
+              "environment",
+              "dataClassification",
+              "actor",
+              "links",
+              "payload",
+              "occurredAt"
+            ]
           }
         },
         "classifications": {

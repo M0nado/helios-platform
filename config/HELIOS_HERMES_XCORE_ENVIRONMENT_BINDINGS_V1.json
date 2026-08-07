@@ -48,5 +48,15 @@
     "required": true,
     "forbidRebuildAfterApproval": true,
     "requireTemplateAndRequestDigestMatch": true
+  },
+  "chaosAndRegressionPolicy": {
+    "allowedChaosEnvironments": [
+      "x-tier-dev",
+      "x-tier-xcore"
+    ],
+    "forbidProductionChaos": true,
+    "requirePromotionGatesForChaosRecommendations": true,
+    "xcoreRegressionFailClosed": true,
+    "requireReviewableRegressionEvidence": true
   }
 }
