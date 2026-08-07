@@ -123,7 +123,20 @@ public static class XCore9KnaaEvaluator
         var weightTotal = weightedValues.Sum(value => value.Weight);
         if (weightTotal <= 0)
         {
-            throw new InvalidOperationException("Known KNAA dimensions must include at least one positive weight.");
+            var unknownRecommendation = XCore9Recommendation.Unknown;
+            var audit = new XCore9KnaaAuditPayload(
+                policy.ModelVersion,
+                policy.Thresholds,
+                cleanedEvidence,
+                policyMode,
+                unknownRecommendation,
+                confidence);
+            return new XCore9KnaaEvaluation(
+                unknownRecommendation,
+                null,
+                confidence,
+                "insufficient-scoring-weight",
+                audit);
         }
 
         var score = weightedValues.Sum(value => value.Value * value.Weight) / weightTotal;
@@ -535,6 +548,6 @@ public sealed class XCore9SpecializationRegistry
 
         normalized["correlationId"] = correlationId.Trim();
         normalized["evidenceLinks"] = string.Join(",", evidenceLinks);
-        return normalized;
+        return new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(normalized);
     }
 }

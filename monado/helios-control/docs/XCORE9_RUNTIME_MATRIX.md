@@ -33,6 +33,6 @@ Use the following contract smoke commands and attach output in PR evidence:
 
 1. Local Windows: `dotnet test monado/helios-control/Helios.Connect.sln --configuration Release`
 2. Local Docker: `docker image inspect <immutableDigest>`, then `docker run --rm --read-only --detach --name helios-connect-local --publish 127.0.0.1:8080:8080 <immutableDigest>`, then `docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' helios-connect-local`
-3. Hybrid fleet: `pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Plan`, `pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Status`, and `dotnet test monado/helios-control/Helios.Connect.sln --configuration Release --filter "FullyQualifiedName~XCore9GovernanceTests"`
+3. Hybrid fleet: `pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Plan`, then `pwsh -Command "$p = Start-Process dotnet -ArgumentList @('run','--project','monado/helios-control/src/Helios.Connect.Api/Helios.Connect.Api.csproj','--configuration','Release','--no-build','--','--urls','http://127.0.0.1:8080') -PassThru; Start-Sleep -Seconds 15; if ($p.HasExited) { throw 'Helios Connect API exited before hybrid health checks.' }"`, then `pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Status`, and `dotnet test monado/helios-control/Helios.Connect.sln --configuration Release --filter "FullyQualifiedName~XCore9GovernanceTests"`
 
 These are validation-only checks and do not grant deploy/apply authority.

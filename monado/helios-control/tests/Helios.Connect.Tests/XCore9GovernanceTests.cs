@@ -71,6 +71,11 @@ public sealed class XCore9GovernanceTests
             .Select(cmd => cmd.GetString())
             .ToList();
         Assert.Contains("pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Plan", hybridCommands);
+        Assert.Contains(
+            hybridCommands,
+            command => !string.IsNullOrWhiteSpace(command)
+                && command.Contains("Start-Process dotnet", StringComparison.Ordinal)
+                && command.Contains("Helios.Connect.Api.csproj", StringComparison.Ordinal));
         Assert.Contains("pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Status", hybridCommands);
     }
 
@@ -180,6 +185,24 @@ public sealed class XCore9GovernanceTests
         Assert.Equal(XCore9Recommendation.Pass, evaluation.Recommendation);
         Assert.Equal(0.8, evaluation.CompositeScore);
         Assert.Equal(0.5, evaluation.Confidence);
+    }
+
+    [Fact]
+    public void Knaa_evaluator_returns_unknown_when_known_dimensions_have_no_scoring_weight()
+    {
+        var policy = new XCore9KnaaPolicy(
+            "knaa-2026-08-06",
+            new XCore9KnaaThresholds(0.35, 0.55, 0.75),
+            Weights: new XCore9KnaaWeights(1.0, 0.0, 0.0, 0.0));
+        var evaluation = XCore9KnaaEvaluator.Evaluate(
+            new XCore9KnaaVector(null, 0.7, 0.6, null),
+            policy,
+            new[] { "https://example.test/evidence/no-score-weight" });
+
+        Assert.Equal(XCore9Recommendation.Unknown, evaluation.Recommendation);
+        Assert.Null(evaluation.CompositeScore);
+        Assert.Equal(0.5, evaluation.Confidence);
+        Assert.Equal("insufficient-scoring-weight", evaluation.Reason);
     }
 
     [Fact]
@@ -326,6 +349,18 @@ public sealed class XCore9GovernanceTests
         Assert.Equal("corr-123", decision.Evidence.Provenance["correlationId"]);
         Assert.Equal("abc123", decision.Evidence.Provenance["sourceCommit"]);
         Assert.Equal("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", decision.Evidence.Provenance["traceParent"]);
+    }
+
+    [Fact]
+    public void Specialization_registry_exposes_read_only_provenance()
+    {
+        var registry = CreateRegistry();
+        var decision = registry.Evaluate(CreateInvocation());
+
+        Assert.True(decision.Allowed);
+        Assert.NotNull(decision.Evidence);
+        var mutableView = Assert.IsAssignableFrom<IDictionary<string, string>>(decision.Evidence!.Provenance);
+        Assert.Throws<NotSupportedException>(() => mutableView["correlationId"] = "tampered");
     }
 
     [Fact]
