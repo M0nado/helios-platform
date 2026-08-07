@@ -109,7 +109,7 @@ jobs:
           assert "redirect_domains" in program
           assert "/access_as_user" in program
           assert "user_impersonation" not in program
-          expected_resource = "api://" + "${{" + "PUBLIC_HOSTNAME" + "}}/" + "${{" + "ENTRA_APP_ID" + "}}"
+          expected_resource = "api://" + "$" + "{{PUBLIC_HOSTNAME}}/" + "$" + "{{ENTRA_APP_ID}}"
           assert expected_resource in manifest
           PY
 
