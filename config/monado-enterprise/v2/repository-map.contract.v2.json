@@ -1,0 +1,114 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v2/repository-map.contract.v2.schema.json",
+  "schemaVersion": "2.0.0",
+  "contractId": "monado-enterprise-repository-map-v2",
+  "canonicalRepository": "M0nado/helios-platform",
+  "crossRepositorySource": "config/integrations/repositories.json",
+  "ownershipBoundaries": [
+    {
+      "repository": "M0nado/helios-platform",
+      "role": "canonical-product-and-execution",
+      "authority": [
+        "contracts",
+        "event-routing",
+        "policy",
+        "docs",
+        "ci",
+        "release"
+      ]
+    },
+    {
+      "repository": "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
+      "role": "cross-repository-control-plane",
+      "authority": [
+        "bootstrap-policy",
+        "integration-contract-governance",
+        "fleet-evaluation"
+      ]
+    },
+    {
+      "repository": "Yolkster64/hermes-fleet-platforms",
+      "role": "companion-fleet",
+      "authority": [
+        "hermes-workers",
+        "xcore-workers",
+        "fleet-experiments"
+      ]
+    }
+  ],
+  "dedicatedTargets": {
+    "gui": {
+      "workItems": [
+        172,
+        195
+      ],
+      "ownership": "dedicated-gui-module",
+      "integrationMode": "linked-not-duplicated"
+    },
+    "usbWizard": {
+      "workItems": [
+        171
+      ],
+      "ownership": "dedicated-usb-module",
+      "integrationMode": "linked-not-duplicated"
+    }
+  },
+  "codeownersReadyPaths": [
+    {
+      "path": "config/monado-enterprise/v2/**",
+      "ownerRole": "contracts-and-platform-architecture",
+      "reason": "Canonical v2 machine-readable contracts."
+    },
+    {
+      "path": "schemas/monado-enterprise/v2/**",
+      "ownerRole": "contracts-and-platform-architecture",
+      "reason": "Schema and XML boundary enforcement."
+    },
+    {
+      "path": "src/core/HELIOS.Platform.Contracts/**",
+      "ownerRole": "platform-contracts",
+      "reason": "Typed C# contract surfaces."
+    },
+    {
+      "path": "src/analytics/HELIOS.Analytics.FSharp/**",
+      "ownerRole": "aihub-fsharp-analytics",
+      "reason": "Bounded profile scoring and optimization."
+    },
+    {
+      "path": "src/native/HELIOS.Native.Performance/**",
+      "ownerRole": "native-performance-and-xcore",
+      "reason": "C++ read-only extraction and performance kernels."
+    },
+    {
+      "path": "tests/native/**",
+      "ownerRole": "native-performance-and-xcore",
+      "reason": "Native smoke and boundary tests."
+    },
+    {
+      "path": "docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md",
+      "ownerRole": "architecture-and-governance",
+      "reason": "Authoritative architecture map and operational boundaries."
+    },
+    {
+      "path": ".github/workflows/validate-monadoblade-profile-contracts.yml",
+      "ownerRole": "ci-governance",
+      "reason": "Required v1+v2 contract validation pipeline."
+    }
+  ],
+  "projectStatusSources": {
+    "githubIssue": "https://github.com/M0nado/helios-platform/issues/206",
+    "linearIssue": "https://linear.app/641974/issue/JOH-45/monado-enterprise-experience-fabric-v2",
+    "sharepointRecord": "HELIOS_MONADO_ENTERPRISE_EXPERIENCE_V2.md",
+    "slackPolicy": "single concise milestone checkpoint after branch publication"
+  },
+  "nonAuthorities": {
+    "slack": "coordination-surface",
+    "teams": "operations-surface",
+    "adobe": "design-source-system"
+  },
+  "constraints": {
+    "noCompetingPlatformRoots": true,
+    "noDirectToMainWrites": true,
+    "noSecretMaterialInContracts": true
+  }
+}

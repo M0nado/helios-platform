@@ -1,0 +1,106 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v3/profiles.contract.v3.schema.json",
+  "schemaVersion": "3.0.0",
+  "contractId": "monadoblade-six-profile-contract-v3",
+  "defaultProfile": "core",
+  "profiles": [
+    {
+      "id": "core",
+      "displayName": "Core",
+      "glyph": "核",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "offlineCapable": true
+    },
+    {
+      "id": "developer",
+      "displayName": "Developer",
+      "glyph": "創",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "offlineCapable": true
+    },
+    {
+      "id": "studio",
+      "displayName": "Studio",
+      "glyph": "響",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "offlineCapable": true
+    },
+    {
+      "id": "gamer",
+      "displayName": "Gamer",
+      "glyph": "迅",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "offlineCapable": true
+    },
+    {
+      "id": "ai-server",
+      "displayName": "AI / Server",
+      "glyph": "智",
+      "windowsRole": "service-identities",
+      "interactive": false,
+      "administrator": false,
+      "hidden": false,
+      "enabledByDefault": true,
+      "offlineCapable": true
+    },
+    {
+      "id": "sysadmin",
+      "displayName": "SysAdmin (Local/Offline)",
+      "glyph": "統",
+      "windowsRole": "local-administrator",
+      "interactive": true,
+      "administrator": true,
+      "hidden": true,
+      "enabledByDefault": false,
+      "offlineCapable": true,
+      "localOnly": true,
+      "offlineRequired": true,
+      "activation": {
+        "physicalPresenceRequired": true,
+        "minimumFactors": 2,
+        "remoteActivationDenied": true,
+        "cloudActivationDenied": true,
+        "aiActivationDenied": true
+      }
+    }
+  ],
+  "workflows": [
+    {
+      "id": "recovery",
+      "displayName": "Recovery",
+      "kind": "sysadmin-workflow",
+      "interactiveProfile": "sysadmin",
+      "entryRequiresApproval": true
+    },
+    {
+      "id": "quarantine",
+      "displayName": "Quarantine",
+      "kind": "sysadmin-workflow",
+      "interactiveProfile": "sysadmin",
+      "entryRequiresApproval": true
+    }
+  ],
+  "invariants": {
+    "profileCountIsSix": true,
+    "onlySysAdminIsAdministrator": true,
+    "sysAdminHiddenAndDisabledByDefault": true,
+    "sysAdminIsLocalOfflineOnly": true,
+    "recoveryAndQuarantineAreWorkflowsNotProfiles": true
+  }
+}

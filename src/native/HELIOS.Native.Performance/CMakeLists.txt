@@ -33,4 +33,16 @@ if(BUILD_TESTING)
     target_compile_options(monadoblade_profile_optimizer_smoke PRIVATE -Wall -Wextra -Werror -pedantic)
   endif()
   add_test(NAME monadoblade_profile_optimizer_smoke COMMAND monadoblade_profile_optimizer_smoke)
+
+  add_executable(
+    monado_enterprise_feature_extractor_smoke
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../../tests/native/monado_enterprise_feature_extractor_smoke.cpp
+  )
+  target_link_libraries(monado_enterprise_feature_extractor_smoke PRIVATE HELIOSNativePerformance)
+  if(MSVC)
+    target_compile_options(monado_enterprise_feature_extractor_smoke PRIVATE /W4 /WX /permissive-)
+  else()
+    target_compile_options(monado_enterprise_feature_extractor_smoke PRIVATE -Wall -Wextra -Werror -pedantic)
+  endif()
+  add_test(NAME monado_enterprise_feature_extractor_smoke COMMAND monado_enterprise_feature_extractor_smoke)
 endif()
