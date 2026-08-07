@@ -56,6 +56,7 @@ class PinnedSubmoduleApprovalTests(unittest.TestCase):
         manifest_payload: dict,
         git_outputs: dict[tuple[str, ...], str] | None = None,
         git_errors: dict[tuple[str, ...], str] | None = None,
+        argv: list[str] | None = None,
     ) -> tuple[int, str]:
         manifest = root / "config/integrations/approved-submodules.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
@@ -83,7 +84,7 @@ class PinnedSubmoduleApprovalTests(unittest.TestCase):
         try:
             output = io.StringIO()
             with redirect_stdout(output):
-                result = VALIDATOR.main()
+                result = VALIDATOR.main(argv or [])
         finally:
             VALIDATOR.ROOT = original_root
             VALIDATOR.MANIFEST = original_manifest
@@ -285,6 +286,20 @@ class PinnedSubmoduleApprovalTests(unittest.TestCase):
 
         self.assertEqual(1, result)
         self.assertIn("modules/example: submodule worktree is not initialized", output)
+
+    def test_metadata_only_mode_allows_uninitialized_worktree(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry = self._entry()
+            result, output = self._run_validator(
+                root,
+                {"approved": True, "submodules": [entry]},
+                git_outputs=self._git_outputs(root, entry),
+                argv=["--metadata-only"],
+            )
+
+        self.assertEqual(0, result)
+        self.assertIn("validated against manifest and index metadata", output)
 
     def test_checked_out_commit_mismatch_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

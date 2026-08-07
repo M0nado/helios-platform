@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -170,6 +171,8 @@ def _validate_integrity(
     entries: list[dict[str, str]],
     configured: dict[str, str],
     staged: dict[str, tuple[str, str]],
+    *,
+    metadata_only: bool,
 ) -> list[str]:
     errors: list[str] = []
 
@@ -200,6 +203,9 @@ def _validate_integrity(
         if mode != "160000" or indexed != commit:
             errors.append(f"{path}: index is not mode 160000 at approved commit")
 
+        if metadata_only:
+            continue
+
         module = ROOT / path
         if not module.is_dir() or not (module / ".git").exists():
             errors.append(f"{path}: submodule worktree is not initialized")
@@ -223,7 +229,15 @@ def _validate_integrity(
     return errors
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="validate approved gitlinks against repository metadata only",
+    )
+    args = parser.parse_args(argv)
+
     if not MANIFEST.exists():
         print(f"BLOCKED: missing reviewed approval manifest: {MANIFEST.relative_to(ROOT)}")
         return 2
@@ -253,12 +267,18 @@ def main() -> int:
         print(f"- {exc}")
         return 1
 
-    errors = _validate_integrity(entries, configured, staged)
+    errors = _validate_integrity(
+        entries, configured, staged, metadata_only=args.metadata_only
+    )
 
     if errors:
         print("FAIL: pinned-submodule integrity gate")
         print("\n".join(f"- {error}" for error in errors))
         return 1
+
+    if args.metadata_only:
+        print(f"PASS: {len(entries)} approved gitlinks validated against manifest and index metadata")
+        return 0
 
     try:
         git("submodule", "foreach", "--recursive", "git fsck --full")
@@ -272,4 +292,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(None))

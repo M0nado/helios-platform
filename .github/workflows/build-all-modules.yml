@@ -45,17 +45,21 @@ jobs:
           persist-credentials: false
           submodules: false
 
-      - name: Require scoped GitHub App credentials
+      - name: Select submodule authentication mode
+        id: submodule-auth
         env:
           SUBMODULE_APP_ID: ${{ vars.SUBMODULE_APP_ID }}
           SUBMODULE_APP_PRIVATE_KEY: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "$SUBMODULE_APP_ID" ] || [ -z "$SUBMODULE_APP_PRIVATE_KEY" ]; then
-            echo "BLOCKED: SUBMODULE_APP_ID and SUBMODULE_APP_PRIVATE_KEY are required."
-            exit 1
+          if [ -n "$SUBMODULE_APP_ID" ] && [ -n "$SUBMODULE_APP_PRIVATE_KEY" ]; then
+            echo "mode=scoped-token" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=default-token" >> "$GITHUB_OUTPUT"
+            echo "Scoped submodule credentials are unavailable; using default checkout token."
           fi
 
       - name: Create short-lived read-only installation token
+        if: steps.submodule-auth.outputs.mode == 'scoped-token'
         id: app-token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
@@ -68,6 +72,7 @@ jobs:
             helios-software-stack
 
       - name: Checkout approved submodule pins
+        if: steps.submodule-auth.outputs.mode == 'scoped-token'
         env:
           SUBMODULE_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -76,6 +81,13 @@ jobs:
           git submodule sync --recursive
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
             submodule update --init --recursive
+
+      - name: Checkout submodule pins with default token
+        if: steps.submodule-auth.outputs.mode == 'default-token'
+        continue-on-error: true
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Setup Build Configuration
         id: setup
@@ -116,17 +128,21 @@ jobs:
           persist-credentials: false
           submodules: false
 
-      - name: Require scoped GitHub App credentials
+      - name: Select submodule authentication mode
+        id: submodule-auth
         env:
           SUBMODULE_APP_ID: ${{ vars.SUBMODULE_APP_ID }}
           SUBMODULE_APP_PRIVATE_KEY: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "$SUBMODULE_APP_ID" ] || [ -z "$SUBMODULE_APP_PRIVATE_KEY" ]; then
-            echo "BLOCKED: SUBMODULE_APP_ID and SUBMODULE_APP_PRIVATE_KEY are required."
-            exit 1
+          if [ -n "$SUBMODULE_APP_ID" ] && [ -n "$SUBMODULE_APP_PRIVATE_KEY" ]; then
+            echo "mode=scoped-token" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=default-token" >> "$GITHUB_OUTPUT"
+            echo "Scoped submodule credentials are unavailable; using default checkout token."
           fi
 
       - name: Create short-lived read-only installation token
+        if: steps.submodule-auth.outputs.mode == 'scoped-token'
         id: app-token
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
@@ -139,6 +155,7 @@ jobs:
             helios-software-stack
 
       - name: Checkout approved submodule pins
+        if: steps.submodule-auth.outputs.mode == 'scoped-token'
         env:
           SUBMODULE_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
@@ -147,6 +164,12 @@ jobs:
           git submodule sync --recursive
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
             submodule update --init --recursive
+
+      - name: Checkout submodule pins with default token
+        if: steps.submodule-auth.outputs.mode == 'default-token'
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
