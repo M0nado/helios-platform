@@ -153,6 +153,21 @@ public sealed class XCore9GovernanceTests
     }
 
     [Fact]
+    public void Knaa_evaluator_rejects_non_finite_weights()
+    {
+        var policy = new XCore9KnaaPolicy(
+            "knaa-2026-08-06",
+            new XCore9KnaaThresholds(0.35, 0.55, 0.75),
+            Weights: new XCore9KnaaWeights(double.NaN, 0.2, 0.3, 0.5));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            XCore9KnaaEvaluator.Evaluate(
+                new XCore9KnaaVector(0.8, 0.8, 0.8, 0.8),
+                policy,
+                new[] { "https://example.test/evidence/non-finite-weight" }));
+    }
+
+    [Fact]
     public void Specialization_manifest_requires_lane_provenance_and_parallel_limits()
     {
         using var registry = ReadConfig("xcore9-specialization-packs.v1.json");
@@ -160,6 +175,8 @@ public sealed class XCore9GovernanceTests
 
         Assert.Equal("1.0.0", root.GetProperty("schemaVersion").GetString());
         Assert.True(root.GetProperty("pluginBindings").GetProperty("requiresCapabilityContracts").GetBoolean());
+        Assert.True(root.GetProperty("globalPolicy").GetProperty("maxFanOut").GetInt32() > 0);
+        Assert.True(root.GetProperty("globalPolicy").GetProperty("maxFanIn").GetInt32() > 0);
 
         var lanes = root.GetProperty("multimodalRouting").GetProperty("lanes").EnumerateArray().ToList();
         Assert.NotEmpty(lanes);
@@ -202,6 +219,26 @@ public sealed class XCore9GovernanceTests
 
         Assert.False(decision.Allowed);
         Assert.Equal("parallelism-exceeded", decision.Code);
+    }
+
+    [Fact]
+    public void Specialization_registry_rejects_fan_out_above_global_limit()
+    {
+        var registry = CreateRegistry();
+        var decision = registry.Evaluate(CreateInvocation(coordinatorFanOut: 5));
+
+        Assert.False(decision.Allowed);
+        Assert.Equal("fan-out-exceeded", decision.Code);
+    }
+
+    [Fact]
+    public void Specialization_registry_rejects_fan_in_above_global_limit()
+    {
+        var registry = CreateRegistry();
+        var decision = registry.Evaluate(CreateInvocation(coordinatorFanIn: 5));
+
+        Assert.False(decision.Allowed);
+        Assert.Equal("fan-in-exceeded", decision.Code);
     }
 
     [Fact]
@@ -266,6 +303,8 @@ public sealed class XCore9GovernanceTests
         string tool = "repo.read",
         int requestedParallelism = 2,
         IReadOnlyList<string>? capabilityContracts = null,
+        int coordinatorFanOut = 1,
+        int coordinatorFanIn = 1,
         IReadOnlyDictionary<string, string>? provenance = null) =>
         new(
             PackId: "xcore9-code-analysis",
@@ -277,6 +316,8 @@ public sealed class XCore9GovernanceTests
             IdempotencyKey: "idem-123",
             EvidenceLinks: new[] { "https://example.test/evidence/10", "https://example.test/evidence/10", "https://example.test/evidence/11" },
             CapabilityContracts: capabilityContracts ?? new[] { "capability.repo.read-only", "capability.tests.non-destructive" },
+            CoordinatorFanOut: coordinatorFanOut,
+            CoordinatorFanIn: coordinatorFanIn,
             Provenance: provenance ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["sourceCommit"] = "abc123",
@@ -323,6 +364,12 @@ public sealed class XCore9GovernanceTests
             throw new ArgumentException("All path segments must be non-empty relative paths.", nameof(segments));
         }
 
-        return Path.Combine(basePath, Path.Combine(segments));
+        var combined = basePath;
+        foreach (var segment in segments)
+        {
+            combined = Path.Combine(combined, segment);
+        }
+
+        return combined;
     }
 }

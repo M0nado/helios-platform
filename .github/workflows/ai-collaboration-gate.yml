@@ -58,8 +58,22 @@ jobs:
           api_url = os.environ["GITHUB_API_URL"].rstrip("/")
           repository = os.environ["GITHUB_REPOSITORY"]
           pr_number = os.environ["PR_NUMBER"]
-          body_lower = body.lower()
           placeholder_values = {"", "n/a", "na", "todo", "tbd", "none"}
+          top_level_field_labels = (
+              "Correlation ID:",
+              "Evidence links:",
+              "Codex scope:",
+              "Claude scope:",
+              "Privileged operations touched:",
+              "Proposal-only controls acknowledged:",
+              "Protected approval workflow link:",
+              "Rollback plan:",
+          )
+          top_level_field_keys = {
+              label.rstrip(":").strip().lower()
+              for label in top_level_field_labels
+          }
+          parsed_fields = {}
 
           def api_get(url):
               request = urllib.request.Request(
@@ -93,26 +107,50 @@ jobs:
                   url = next_page(link_header)
               return files
 
-          def extract_inline_field(label):
-              match = re.search(rf"(?im)^\s*-\s*{re.escape(label)}\s*(.*)$", body)
-              return "" if match is None else match.group(1).strip()
+          for match in re.finditer(r"(?im)^\s*-\s*([^:\n]+):\s*(.*)$", body):
+              key = match.group(1).strip().lower()
+              value = match.group(2).strip()
+              parsed_fields.setdefault(key, []).append(value)
+
+          def extract_field_values(label):
+              key = label.rstrip(":").strip().lower()
+              return parsed_fields.get(key, [])
+
+          def require_single_field(label):
+              values = extract_field_values(label)
+              if len(values) != 1:
+                  print(
+                      f"Field '{label}' must appear exactly once (found {len(values)}).",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              return values[0]
 
           def extract_evidence_links():
               links = []
-              in_block = False
-              for line in body.splitlines():
+              lines = body.splitlines()
+              start_index = None
+              for index, line in enumerate(lines):
                   if re.match(r"^\s*-\s*Evidence links:\s*$", line, flags=re.IGNORECASE):
-                      in_block = True
-                      continue
-                  if in_block and re.match(r"^\s*-\s*[A-Za-z].*:\s*$", line):
+                      start_index = index + 1
                       break
-                  if not in_block:
-                      continue
-                  link_match = re.match(r"^\s*-\s*(.+?)\s*$", line)
+
+              if start_index is None:
+                  return links
+
+              for line in lines[start_index:]:
+                  top_level_match = re.match(r"^\s*-\s*([^:\n]+):\s*(.*)$", line)
+                  if top_level_match and top_level_match.group(1).strip().lower() in top_level_field_keys:
+                      break
+                  link_match = re.match(r"^\s{2,}-\s*(.+?)\s*$", line)
                   if link_match:
                       value = link_match.group(1).strip()
                       if value:
                           links.append(value)
+                      continue
+                  if not line.strip():
+                      continue
+                  break
               return links
 
           def is_placeholder(value):
@@ -124,11 +162,11 @@ jobs:
               "Claude scope:",
               "Rollback plan:",
           )
-          missing_inline_fields = [
-              field_name
-              for field_name in required_inline_fields
-              if is_placeholder(extract_inline_field(field_name))
-          ]
+          missing_inline_fields = []
+          for field_name in required_inline_fields:
+              value = require_single_field(field_name)
+              if is_placeholder(value):
+                  missing_inline_fields.append(field_name)
           if missing_inline_fields:
               print(
                   "Missing required AI collaboration evidence values: "
@@ -155,6 +193,8 @@ jobs:
               r"^monado/helios-control/infra/",
               r"^scripts/",
               r"^monado/helios-control/scripts/",
+              r"^tools/",
+              r"^monado/helios-control/tools/",
               r"^\.github/workflows/.*\.ya?ml$",
           ]
 
@@ -165,20 +205,15 @@ jobs:
           ]
 
           if privileged_files:
-              required_privileged_markers = [
-                  "privileged operations touched: yes",
-                  "proposal-only controls acknowledged: yes",
-              ]
-              missing = [
-                  marker for marker in required_privileged_markers if marker not in body_lower
-              ]
-              if missing:
+              privileged_operations = require_single_field("Privileged operations touched:")
+              proposal_only = require_single_field("Proposal-only controls acknowledged:")
+              if privileged_operations.strip().lower() != "yes" or proposal_only.strip().lower() != "yes":
                   print(
                       "Privileged file changes require explicit proposal-only acknowledgement.",
                       file=sys.stderr,
                   )
                   print(
-                      "Missing markers: " + ", ".join(missing),
+                      "Required fields:\n- Privileged operations touched: yes\n- Proposal-only controls acknowledged: yes",
                       file=sys.stderr,
                   )
                   print(
@@ -187,7 +222,7 @@ jobs:
                   )
                   raise SystemExit(1)
 
-              protected_approval = extract_inline_field("Protected approval workflow link:")
+              protected_approval = require_single_field("Protected approval workflow link:")
               if is_placeholder(protected_approval):
                   print(
                       "Privileged changes require a protected approval workflow link.",

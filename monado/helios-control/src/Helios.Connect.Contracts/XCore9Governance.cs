@@ -45,7 +45,7 @@ public sealed record XCore9KnaaWeights(
     public void Validate()
     {
         var values = new[] { Knowledge, Novelty, Actionability, Alignment };
-        if (values.Any(weight => weight is < 0 or > 1))
+        if (values.Any(weight => !double.IsFinite(weight) || weight is < 0 or > 1))
         {
             throw new ArgumentOutOfRangeException(nameof(Knowledge), "KNAA weights must be between 0 and 1.");
         }
@@ -221,6 +221,24 @@ public sealed record XCore9SpecializationPack(
     int TimeoutSeconds,
     bool RequireIdempotencyKey);
 
+public sealed record XCore9SpecializationGlobalPolicy(
+    int MaxFanOut = 4,
+    int MaxFanIn = 4)
+{
+    public void Validate()
+    {
+        if (MaxFanOut < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxFanOut), "MaxFanOut must be greater than zero.");
+        }
+
+        if (MaxFanIn < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxFanIn), "MaxFanIn must be greater than zero.");
+        }
+    }
+}
+
 public sealed record XCore9SpecializationInvocation(
     string PackId,
     string Tool,
@@ -231,6 +249,8 @@ public sealed record XCore9SpecializationInvocation(
     string? IdempotencyKey,
     IReadOnlyList<string> EvidenceLinks,
     IReadOnlyList<string> CapabilityContracts,
+    int CoordinatorFanOut = 1,
+    int CoordinatorFanIn = 1,
     IReadOnlyDictionary<string, string>? Provenance = null);
 
 public sealed record XCore9RoutingEvidence(
@@ -251,6 +271,7 @@ public sealed class XCore9SpecializationRegistry
 {
     private readonly IReadOnlyDictionary<string, XCore9SpecializationPack> _packs;
     private readonly IReadOnlyDictionary<string, IReadOnlySet<string>> _laneProvenanceRequirements;
+    private readonly XCore9SpecializationGlobalPolicy _globalPolicy;
 
     private static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> DefaultLaneProvenanceRequirements =
         new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase)
@@ -289,7 +310,8 @@ public sealed class XCore9SpecializationRegistry
 
     public XCore9SpecializationRegistry(
         IEnumerable<XCore9SpecializationPack> packs,
-        IReadOnlyDictionary<string, IReadOnlyCollection<string>>? laneProvenanceRequirements = null)
+        IReadOnlyDictionary<string, IReadOnlyCollection<string>>? laneProvenanceRequirements = null,
+        XCore9SpecializationGlobalPolicy? globalPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(packs);
         _packs = packs.ToDictionary(
@@ -300,6 +322,8 @@ public sealed class XCore9SpecializationRegistry
         _laneProvenanceRequirements = laneProvenanceRequirements is null
             ? DefaultLaneProvenanceRequirements
             : NormalizeLaneProvenanceRequirements(laneProvenanceRequirements);
+        _globalPolicy = globalPolicy ?? new XCore9SpecializationGlobalPolicy();
+        _globalPolicy.Validate();
     }
 
     public XCore9SpecializationDecision Evaluate(XCore9SpecializationInvocation invocation)
@@ -324,6 +348,7 @@ public sealed class XCore9SpecializationRegistry
         {
             return Deny("missing-correlation-id", "CorrelationId is required.");
         }
+        var normalizedCorrelationId = invocation.CorrelationId.Trim();
 
         var evidence = CleanValues(invocation.EvidenceLinks);
         if (evidence.Count == 0)
@@ -372,7 +397,26 @@ public sealed class XCore9SpecializationRegistry
             return Deny("invalid-pack-timeout", "Pack timeoutSeconds must be greater than zero.");
         }
 
-        var provenance = NormalizeProvenance(invocation.Provenance, invocation.CorrelationId, evidence);
+        if (invocation.CoordinatorFanOut < 1 || invocation.CoordinatorFanIn < 1)
+        {
+            return Deny("invalid-coordinator-load", "Coordinator fan-out and fan-in must be greater than zero.");
+        }
+
+        if (invocation.CoordinatorFanOut > _globalPolicy.MaxFanOut)
+        {
+            return Deny(
+                "fan-out-exceeded",
+                $"Coordinator fan-out exceeds maxFanOut ({_globalPolicy.MaxFanOut}).");
+        }
+
+        if (invocation.CoordinatorFanIn > _globalPolicy.MaxFanIn)
+        {
+            return Deny(
+                "fan-in-exceeded",
+                $"Coordinator fan-in exceeds maxFanIn ({_globalPolicy.MaxFanIn}).");
+        }
+
+        var provenance = NormalizeProvenance(invocation.Provenance, normalizedCorrelationId, evidence);
         var requiredProvenance = RequiredProvenanceForModalities(invocation.InputModality, invocation.OutputModality);
         var missingProvenance = requiredProvenance
             .Where(required => !provenance.ContainsKey(required))
@@ -385,7 +429,7 @@ public sealed class XCore9SpecializationRegistry
         }
 
         var routingEvidence = new XCore9RoutingEvidence(
-            invocation.CorrelationId,
+            normalizedCorrelationId,
             invocation.InputModality,
             invocation.OutputModality,
             evidence,
@@ -412,12 +456,9 @@ public sealed class XCore9SpecializationRegistry
     private IReadOnlySet<string> RequiredProvenanceForModalities(params string[] modalities)
     {
         var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var modality in modalities)
+        foreach (var modality in modalities.Where(modality => _laneProvenanceRequirements.ContainsKey(modality)))
         {
-            if (_laneProvenanceRequirements.TryGetValue(modality, out var modalityRequirements))
-            {
-                required.UnionWith(modalityRequirements);
-            }
+            required.UnionWith(_laneProvenanceRequirements[modality]);
         }
 
         return required;

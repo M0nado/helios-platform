@@ -60,7 +60,7 @@ jobs:
           fi
 
           echo "modules=$MODULES" >> $GITHUB_OUTPUT
-          echo "node-version=18" >> $GITHUB_OUTPUT
+          echo "node-version=22" >> $GITHUB_OUTPUT
           echo "has-modules=$HAS_MODULES" >> $GITHUB_OUTPUT
           echo "Build matrix configured"
 
@@ -113,6 +113,15 @@ jobs:
             npm ci --prefer-offline --no-audit
           else
             npm install --prefer-offline --no-audit
+          fi
+
+      - name: Validate Module
+        run: |
+          cd ${{ matrix.module }}
+          if [ -f "package.json" ] && grep -q '"check"' package.json; then
+            npm run check
+          else
+            echo "No check script found"
           fi
 
       - name: Lint Code
