@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.invalid/hermes-xcore-event-profile-v1.schema.json",
+  "title": "HELIOS Hermes/XCore event profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractSchema",
+    "schemaVersion",
+    "contractId",
+    "eventEnvelope",
+    "delivery"
+  ],
+  "properties": {
+    "contractSchema": {
+      "const": "schemas/hermes-xcore-event-profile-v1.schema.json"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "contractId": {
+      "const": "helios-hermes-xcore-event-profile-v1"
+    },
+    "eventEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredFields",
+        "classifications",
+        "correlationIdRequired",
+        "linksRequired"
+      ],
+      "properties": {
+        "requiredFields": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "allOf": [
+            { "contains": { "const": "schemaVersion" } },
+            { "contains": { "const": "eventId" } },
+            { "contains": { "const": "correlationId" } },
+            { "contains": { "const": "source" } },
+            { "contains": { "const": "eventType" } },
+            { "contains": { "const": "repository" } },
+            { "contains": { "const": "environment" } },
+            { "contains": { "const": "dataClassification" } },
+            { "contains": { "const": "actor" } },
+            { "contains": { "const": "links" } },
+            { "contains": { "const": "payload" } },
+            { "contains": { "const": "occurredAt" } }
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "schemaVersion",
+              "eventId",
+              "correlationId",
+              "source",
+              "eventType",
+              "repository",
+              "environment",
+              "dataClassification",
+              "actor",
+              "links",
+              "payload",
+              "occurredAt"
+            ]
+          }
+        },
+        "classifications": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "allOf": [
+            { "contains": { "const": "public" } },
+            { "contains": { "const": "internal" } },
+            { "contains": { "const": "confidential" } },
+            { "contains": { "const": "restricted" } }
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "public",
+              "internal",
+              "confidential",
+              "restricted"
+            ]
+          }
+        },
+        "correlationIdRequired": {
+          "const": true
+        },
+        "linksRequired": {
+          "const": true
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semantics",
+        "idempotency",
+        "replayProtection",
+        "leaseFencing"
+      ],
+      "properties": {
+        "semantics": {
+          "const": "at-least-once"
+        },
+        "idempotency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "keyFields"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "keyFields": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "uniqueItems": true,
+              "allOf": [
+                { "contains": { "const": "eventId" } },
+                { "contains": { "const": "correlationId" } },
+                { "contains": { "const": "source" } },
+                { "contains": { "const": "eventType" } }
+              ],
+              "items": {
+                "type": "string",
+                "enum": [
+                  "eventId",
+                  "correlationId",
+                  "source",
+                  "eventType"
+                ]
+              }
+            }
+          }
+        },
+        "replayProtection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "maxAgeMinutes",
+            "requireNonce"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "maxAgeMinutes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "requireNonce": {
+              "const": true
+            }
+          }
+        },
+        "leaseFencing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "leaseOwnerField",
+            "leaseExpiryField",
+            "etagField",
+            "compareAndSwapRequired"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "leaseOwnerField": {
+              "type": "string",
+              "minLength": 1
+            },
+            "leaseExpiryField": {
+              "type": "string",
+              "minLength": 1
+            },
+            "etagField": {
+              "type": "string",
+              "minLength": 1
+            },
+            "compareAndSwapRequired": {
+              "const": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

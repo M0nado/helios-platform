@@ -14,11 +14,11 @@ on:
         description: Protected GitHub environment containing the Azure OIDC variables
         required: true
         type: choice
-        default: azure-dev
+        default: x-tier-dev
         options:
-          - azure-dev
-          - azure-test
-          - azure-prod
+          - x-tier-dev
+          - x-tier-xcore
+          - x-tier-prod
       mode:
         description: Preview is the default; deploy requires a second protected-environment approval
         required: true
@@ -28,7 +28,22 @@ on:
           - what-if
           - deploy
       confirmDeployment:
-        description: Enter DEPLOY when mode is deploy; ignored for what-if
+        description: Enter DEPLOY for standard deploys or HOTFIX for expedited production deploys
+        required: false
+        type: string
+        default: ""
+      hotfix:
+        description: Require incident-bound expedited governance for production deploys
+        required: true
+        type: boolean
+        default: false
+      hotfixIncidentId:
+        description: Required when hotfix is true (for example INC-12345)
+        required: false
+        type: string
+        default: ""
+      hotfixReason:
+        description: Required when hotfix is true
         required: false
         type: string
         default: ""
@@ -75,11 +90,38 @@ jobs:
         env:
           DEPLOYMENT_MODE: ${{ inputs.mode || 'what-if' }}
           DEPLOYMENT_CONFIRMATION: ${{ inputs.confirmDeployment || '' }}
+          DEPLOYMENT_HOTFIX: ${{ inputs.hotfix || false }}
+          HOTFIX_INCIDENT_ID: ${{ inputs.hotfixIncidentId || '' }}
+          HOTFIX_REASON: ${{ inputs.hotfixReason || '' }}
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment || '' }}
         run: |
           set -euo pipefail
+          if [[ "${DEPLOYMENT_HOTFIX}" == "true" && "${DEPLOYMENT_MODE}" != "deploy" ]]; then
+            echo "hotfix=true is only valid when mode=deploy." >&2
+            exit 1
+          fi
           if [[ "${DEPLOYMENT_MODE}" == "deploy" ]]; then
-            if [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
-              echo "A deploy run requires confirmDeployment=DEPLOY." >&2
+            if [[ "${DEPLOYMENT_HOTFIX}" == "true" ]]; then
+              hotfix_incident_trimmed="$(printf '%s' "${HOTFIX_INCIDENT_ID}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+              hotfix_reason_trimmed="$(printf '%s' "${HOTFIX_REASON}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+              if [[ "${TARGET_ENVIRONMENT}" != "x-tier-prod" ]]; then
+                echo "hotfix=true requires targetEnvironment=x-tier-prod." >&2
+                exit 1
+              fi
+              if [[ "${DEPLOYMENT_CONFIRMATION}" != "HOTFIX" ]]; then
+                echo "A hotfix deploy requires confirmDeployment=HOTFIX." >&2
+                exit 1
+              fi
+              if [[ -z "${hotfix_incident_trimmed}" || -z "${hotfix_reason_trimmed}" ]]; then
+                echo "A hotfix deploy requires both hotfixIncidentId and hotfixReason." >&2
+                exit 1
+              fi
+              if [[ "${HOTFIX_INCIDENT_ID}" != "${hotfix_incident_trimmed}" || "${HOTFIX_REASON}" != "${hotfix_reason_trimmed}" ]]; then
+                echo "hotfixIncidentId and hotfixReason must not have leading or trailing whitespace." >&2
+                exit 1
+              fi
+            elif [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
+              echo "A standard deploy run requires confirmDeployment=DEPLOY." >&2
               exit 1
             fi
           fi
@@ -121,6 +163,7 @@ jobs:
       artifact_digest: ${{ steps.upload.outputs.artifact-digest }}
       image_reference: ${{ steps.image.outputs.image_reference }}
       resource_group_location: ${{ steps.registry.outputs.resource_group_location }}
+      resource_name_environment: ${{ steps.registry.outputs.resource_name_environment }}
       registry_name: ${{ steps.registry.outputs.registry_name }}
       template_sha256: ${{ steps.template.outputs.template_sha256 }}
       what_if_sha256: ${{ steps.whatif.outputs.what_if_sha256 }}
@@ -131,6 +174,7 @@ jobs:
       - name: Validate protected environment variables
         shell: bash
         env:
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
@@ -138,6 +182,7 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HELIOS_RESOURCE_NAME_ENVIRONMENT: ${{ vars.HELIOS_RESOURCE_NAME_ENVIRONMENT }}
         run: |
           set -euo pipefail
           required=(
@@ -148,6 +193,7 @@ jobs:
             HELIOS_ENTRA_CLIENT_ID
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID
             HELIOS_CONTAINER_REGISTRY_NAME
+            HELIOS_RESOURCE_NAME_ENVIRONMENT
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
@@ -159,6 +205,34 @@ jobs:
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
             exit 1
           fi
+          if [[ ! "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" =~ ^(dev|test|preview|prod)$ ]]; then
+            echo "HELIOS_RESOURCE_NAME_ENVIRONMENT must be one of dev, test, preview, or prod." >&2
+            exit 1
+          fi
+          case "${TARGET_ENVIRONMENT}" in
+            x-tier-dev)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "dev" ]]; then
+                echo "x-tier-dev must use HELIOS_RESOURCE_NAME_ENVIRONMENT=dev." >&2
+                exit 1
+              fi
+              ;;
+            x-tier-prod)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "prod" ]]; then
+                echo "x-tier-prod must use HELIOS_RESOURCE_NAME_ENVIRONMENT=prod." >&2
+                exit 1
+              fi
+              ;;
+            x-tier-xcore)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "test" && "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "preview" ]]; then
+                echo "x-tier-xcore must use HELIOS_RESOURCE_NAME_ENVIRONMENT=test or preview." >&2
+                exit 1
+              fi
+              ;;
+            *)
+              echo "Unsupported target environment ${TARGET_ENVIRONMENT}." >&2
+              exit 1
+              ;;
+          esac
 
       - name: Azure login with GitHub OIDC
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
@@ -208,9 +282,11 @@ jobs:
         id: registry
         shell: bash
         env:
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HELIOS_RESOURCE_NAME_ENVIRONMENT: ${{ vars.HELIOS_RESOURCE_NAME_ENVIRONMENT }}
         run: |
           set -euo pipefail
 
@@ -253,10 +329,35 @@ jobs:
             echo "Azure returned an unsupported registry role-assignment mode." >&2
             exit 1
           fi
+          case "${TARGET_ENVIRONMENT}" in
+            x-tier-dev)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "dev" ]]; then
+                echo "x-tier-dev must use HELIOS_RESOURCE_NAME_ENVIRONMENT=dev." >&2
+                exit 1
+              fi
+              ;;
+            x-tier-prod)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "prod" ]]; then
+                echo "x-tier-prod must use HELIOS_RESOURCE_NAME_ENVIRONMENT=prod." >&2
+                exit 1
+              fi
+              ;;
+            x-tier-xcore)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "test" && "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "preview" ]]; then
+                echo "x-tier-xcore must use HELIOS_RESOURCE_NAME_ENVIRONMENT=test or preview." >&2
+                exit 1
+              fi
+              ;;
+            *)
+              echo "Unsupported target environment ${TARGET_ENVIRONMENT}." >&2
+              exit 1
+              ;;
+          esac
           echo "registry_name=${HELIOS_CONTAINER_REGISTRY_NAME}" >> "${GITHUB_OUTPUT}"
           echo "registry_server=${registry_server}" >> "${GITHUB_OUTPUT}"
           echo "registry_role_assignment_mode=${registry_role_assignment_mode}" >> "${GITHUB_OUTPUT}"
           echo "resource_group_location=${resource_group_location}" >> "${GITHUB_OUTPUT}"
+          echo "resource_name_environment=${HELIOS_RESOURCE_NAME_ENVIRONMENT}" >> "${GITHUB_OUTPUT}"
 
       - name: Build exact checked-out commit and resolve immutable digest
         id: image
@@ -333,6 +434,7 @@ jobs:
           IMAGE_REFERENCE: ${{ steps.image.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ steps.registry.outputs.registry_name }}
           RESOURCE_GROUP_LOCATION: ${{ steps.registry.outputs.resource_group_location }}
+          RESOURCE_NAME_ENVIRONMENT: ${{ steps.registry.outputs.resource_name_environment }}
           SERVICE_NAME: helios-connector
           TEMPLATE_PATH: ${{ steps.template.outputs.template_path }}
           TEMPLATE_SHA256: ${{ steps.template.outputs.template_sha256 }}
@@ -341,9 +443,12 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          HOTFIX_LANE: ${{ inputs.hotfix || false }}
+          HOTFIX_INCIDENT_ID: ${{ inputs.hotfixIncidentId || '' }}
+          HOTFIX_REASON: ${{ inputs.hotfixReason || '' }}
         run: |
           set -euo pipefail
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          environment_name="${TARGET_ENVIRONMENT}"
           artifact_dir="${RUNNER_TEMP}/helios-what-if"
           raw_what_if="${RUNNER_TEMP}/helios-what-if.raw.json"
           mkdir -p "${artifact_dir}"
@@ -355,6 +460,7 @@ jobs:
             --parameters \
               location="${RESOURCE_GROUP_LOCATION}" \
               environmentName="${environment_name}" \
+              resourceNameEnvironment="${RESOURCE_NAME_ENVIRONMENT}" \
               serviceName="${SERVICE_NAME}" \
               containerImage="${IMAGE_REFERENCE}" \
               containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
@@ -395,6 +501,7 @@ jobs:
             --arg templateSha256 "${TEMPLATE_SHA256}" \
             --arg location "${RESOURCE_GROUP_LOCATION}" \
             --arg environmentName "${environment_name}" \
+            --arg resourceNameEnvironment "${RESOURCE_NAME_ENVIRONMENT}" \
             --arg serviceName "${SERVICE_NAME}" \
             --arg imageReference "${IMAGE_REFERENCE}" \
             --arg registryName "${CONTAINER_REGISTRY_NAME}" \
@@ -405,7 +512,10 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            --arg hotfixLane "${HOTFIX_LANE}" \
+            --arg hotfixIncidentId "${HOTFIX_INCIDENT_ID}" \
+            --arg hotfixReason "${HOTFIX_REASON}" \
+            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, hotfix: {requested: ($hotfixLane == "true"), incidentId: $hotfixIncidentId, reason: $hotfixReason}, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, resourceNameEnvironment: $resourceNameEnvironment, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -417,6 +527,9 @@ jobs:
             echo "- Compiled template SHA-256: \`${TEMPLATE_SHA256}\`"
             echo "- Full canonical what-if SHA-256: \`${what_if_sha256}\`"
             echo "- Review-safe artifact content SHA-256: \`${review_sha256}\`"
+            if [[ "${HOTFIX_LANE}" == "true" ]]; then
+              echo "- Hotfix lane: incident \`${HOTFIX_INCIDENT_ID}\`"
+            fi
             echo "- A deploy request now requires a second protected-environment approval."
           } >> "${GITHUB_STEP_SUMMARY}"
 
@@ -443,7 +556,7 @@ jobs:
 
   deploy:
     name: Deploy after second approval (${{ inputs.targetEnvironment }})
-    if: ${{ inputs.mode == 'deploy' && inputs.confirmDeployment == 'DEPLOY' }}
+    if: ${{ inputs.mode == 'deploy' }}
     needs:
       - validate
       - preview
@@ -462,6 +575,7 @@ jobs:
       - name: Validate protected environment variables again
         shell: bash
         env:
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
@@ -469,6 +583,7 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HELIOS_RESOURCE_NAME_ENVIRONMENT: ${{ vars.HELIOS_RESOURCE_NAME_ENVIRONMENT }}
         run: |
           set -euo pipefail
           required=(
@@ -479,6 +594,7 @@ jobs:
             HELIOS_ENTRA_CLIENT_ID
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID
             HELIOS_CONTAINER_REGISTRY_NAME
+            HELIOS_RESOURCE_NAME_ENVIRONMENT
           )
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
@@ -490,6 +606,34 @@ jobs:
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
             exit 1
           fi
+          if [[ ! "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" =~ ^(dev|test|preview|prod)$ ]]; then
+            echo "HELIOS_RESOURCE_NAME_ENVIRONMENT must be one of dev, test, preview, or prod." >&2
+            exit 1
+          fi
+          case "${TARGET_ENVIRONMENT}" in
+            x-tier-dev)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "dev" ]]; then
+                echo "x-tier-dev must use HELIOS_RESOURCE_NAME_ENVIRONMENT=dev." >&2
+                exit 1
+              fi
+              ;;
+            x-tier-prod)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "prod" ]]; then
+                echo "x-tier-prod must use HELIOS_RESOURCE_NAME_ENVIRONMENT=prod." >&2
+                exit 1
+              fi
+              ;;
+            x-tier-xcore)
+              if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "test" && "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "preview" ]]; then
+                echo "x-tier-xcore must use HELIOS_RESOURCE_NAME_ENVIRONMENT=test or preview." >&2
+                exit 1
+              fi
+              ;;
+            *)
+              echo "Unsupported target environment ${TARGET_ENVIRONMENT}." >&2
+              exit 1
+              ;;
+          esac
 
       - name: Azure login with GitHub OIDC after second approval
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
@@ -548,6 +692,7 @@ jobs:
           EXPECTED_IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
           EXPECTED_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
           EXPECTED_RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
+          EXPECTED_RESOURCE_NAME_ENVIRONMENT: ${{ needs.preview.outputs.resource_name_environment }}
           EXPECTED_TEMPLATE_SHA256: ${{ needs.preview.outputs.template_sha256 }}
           ACTUAL_TEMPLATE_SHA256: ${{ steps.template.outputs.template_sha256 }}
           SERVICE_NAME: helios-connector
@@ -558,10 +703,13 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HOTFIX_LANE: ${{ inputs.hotfix || false }}
+          HOTFIX_INCIDENT_ID: ${{ inputs.hotfixIncidentId || '' }}
+          HOTFIX_REASON: ${{ inputs.hotfixReason || '' }}
         run: |
           set -euo pipefail
           evidence_dir="${RUNNER_TEMP}/approved-what-if"
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          environment_name="${TARGET_ENVIRONMENT}"
           actual_review_sha256="$(sha256sum "${evidence_dir}/what-if.json" | cut -d' ' -f1)"
           expected_review_sha256="$(jq --raw-output '.reviewSha256' "${evidence_dir}/request.json")"
           if [[ "${actual_review_sha256}" != "${expected_review_sha256}" ]]; then
@@ -583,6 +731,7 @@ jobs:
             --arg templateSha256 "${ACTUAL_TEMPLATE_SHA256}" \
             --arg location "${EXPECTED_RESOURCE_GROUP_LOCATION}" \
             --arg environmentName "${environment_name}" \
+            --arg resourceNameEnvironment "${EXPECTED_RESOURCE_NAME_ENVIRONMENT}" \
             --arg serviceName "${SERVICE_NAME}" \
             --arg imageReference "${EXPECTED_IMAGE_REFERENCE}" \
             --arg registryName "${EXPECTED_REGISTRY_NAME}" \
@@ -593,7 +742,10 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            --arg hotfixLane "${HOTFIX_LANE}" \
+            --arg hotfixIncidentId "${HOTFIX_INCIDENT_ID}" \
+            --arg hotfixReason "${HOTFIX_REASON}" \
+            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .hotfix == {requested: ($hotfixLane == "true"), incidentId: $hotfixIncidentId, reason: $hotfixReason} and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, resourceNameEnvironment: $resourceNameEnvironment, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${evidence_dir}/request.json" > /dev/null
 
       - name: Re-verify configured registry and published digest
@@ -605,6 +757,8 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
           EXPECTED_RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
+          EXPECTED_RESOURCE_NAME_ENVIRONMENT: ${{ needs.preview.outputs.resource_name_environment }}
+          HELIOS_RESOURCE_NAME_ENVIRONMENT: ${{ vars.HELIOS_RESOURCE_NAME_ENVIRONMENT }}
         run: |
           set -euo pipefail
           if [[ ! "${IMAGE_REFERENCE}" =~ ^[a-z0-9]{5,50}\.azurecr\.io/helios-connect@sha256:[0-9a-f]{64}$ ]]; then
@@ -642,6 +796,10 @@ jobs:
             echo "The configured resource-group location changed after preview; start a new workflow run." >&2
             exit 1
           fi
+          if [[ "${HELIOS_RESOURCE_NAME_ENVIRONMENT}" != "${EXPECTED_RESOURCE_NAME_ENVIRONMENT}" ]]; then
+            echo "The configured resource naming lane changed after preview; start a new workflow run." >&2
+            exit 1
+          fi
 
           image_path="${IMAGE_REFERENCE#*/}"
           repository="${image_path%@sha256:*}"
@@ -670,6 +828,7 @@ jobs:
           IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
           RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
+          RESOURCE_NAME_ENVIRONMENT: ${{ needs.preview.outputs.resource_name_environment }}
           SERVICE_NAME: helios-connector
           TEMPLATE_PATH: ${{ steps.template.outputs.template_path }}
           EXPECTED_WHAT_IF_SHA256: ${{ needs.preview.outputs.what_if_sha256 }}
@@ -679,7 +838,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
         run: |
           set -euo pipefail
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          environment_name="${TARGET_ENVIRONMENT}"
           raw_what_if="${RUNNER_TEMP}/helios-drift-check.raw.json"
           canonical_what_if="${RUNNER_TEMP}/helios-drift-check.json"
           az deployment group what-if \
@@ -689,6 +848,7 @@ jobs:
             --parameters \
               location="${RESOURCE_GROUP_LOCATION}" \
               environmentName="${environment_name}" \
+              resourceNameEnvironment="${RESOURCE_NAME_ENVIRONMENT}" \
               serviceName="${SERVICE_NAME}" \
               containerImage="${IMAGE_REFERENCE}" \
               containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
@@ -712,6 +872,7 @@ jobs:
           IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
           RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
+          RESOURCE_NAME_ENVIRONMENT: ${{ needs.preview.outputs.resource_name_environment }}
           SERVICE_NAME: helios-connector
           TEMPLATE_PATH: ${{ steps.template.outputs.template_path }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
@@ -720,7 +881,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
         run: |
           set -euo pipefail
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          environment_name="${TARGET_ENVIRONMENT}"
           deployment_json="$(az deployment group create \
             --name "helios-cloud-${environment_name}-${GITHUB_RUN_ID}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
@@ -728,6 +889,7 @@ jobs:
             --parameters \
               location="${RESOURCE_GROUP_LOCATION}" \
               environmentName="${environment_name}" \
+              resourceNameEnvironment="${RESOURCE_NAME_ENVIRONMENT}" \
               serviceName="${SERVICE_NAME}" \
               containerImage="${IMAGE_REFERENCE}" \
               containerRegistryName="${CONTAINER_REGISTRY_NAME}" \

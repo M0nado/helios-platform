@@ -15,11 +15,11 @@ fi
 : "${AZ_SUBSCRIPTION_ID:?Set AZ_SUBSCRIPTION_ID}"
 : "${AZ_RESOURCE_GROUP:=helios-rg}"
 : "${AZ_LOCATION:=eastus2}"
-: "${HELIOS_ENVIRONMENT:=dev}"
+: "${HELIOS_ENVIRONMENT:=x-tier-dev}"
 : "${HELIOS_CONTAINER_IMAGE:=heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000}"
 : "${GITHUB_ORG:=M0nado}"
 : "${GITHUB_REPO:=helios-platform}"
-: "${GITHUB_ENVIRONMENT:=azure-dev}"
+: "${GITHUB_ENVIRONMENT:=x-tier-dev}"
 : "${HELIOS_CONNECTOR_APP_NAME:=helios-azure-connector}"
 : "${HELIOS_GITHUB_APP_NAME:=helios-github-oidc}"
 

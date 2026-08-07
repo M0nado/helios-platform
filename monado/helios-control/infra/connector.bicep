@@ -1,11 +1,19 @@
 param location string = resourceGroup().location
 @allowed([
+  'x-tier-dev'
+  'x-tier-xcore'
+  'x-tier-prod'
+])
+param environmentName string = 'x-tier-dev'
+@description('Optional compatibility lane for resource names. Leave empty for canonical defaults; for x-tier-xcore, set preview only when preserving reviewed preview-era resources.')
+@allowed([
+  ''
   'dev'
   'test'
   'preview'
   'prod'
 ])
-param environmentName string = 'dev'
+param resourceNameEnvironment string = ''
 param serviceName string = 'helios-connector'
 @description('Immutable OCI image reference. Replace the all-zero preview placeholder with an approved registry/repository@sha256:digest value before deployment.')
 @minLength(80)
@@ -32,7 +40,16 @@ param sourceCommitSha string
 @description('Additional organization tags. Reserved HELIOS governance tags cannot be overridden.')
 param commonTags object = {}
 
-var suffix = uniqueString(resourceGroup().id, environmentName, serviceName)
+var defaultResourceNameEnvironment = environmentName == 'x-tier-dev'
+  ? 'dev'
+  : (environmentName == 'x-tier-xcore' ? 'test' : 'prod')
+var requestedResourceNameEnvironment = empty(resourceNameEnvironment)
+  ? defaultResourceNameEnvironment
+  : toLower(resourceNameEnvironment)
+var resourceNameEnvironmentResolved = ((environmentName == 'x-tier-dev' && requestedResourceNameEnvironment == 'dev') || (environmentName == 'x-tier-prod' && requestedResourceNameEnvironment == 'prod') || (environmentName == 'x-tier-xcore' && (requestedResourceNameEnvironment == 'test' || requestedResourceNameEnvironment == 'preview')))
+  ? requestedResourceNameEnvironment
+  : fail('resourceNameEnvironment is not valid for the selected canonical environment.')
+var suffix = uniqueString(resourceGroup().id, resourceNameEnvironmentResolved, serviceName)
 var governedTags = union(commonTags, {
   'helios-managed': 'true'
   'helios-service': serviceName
@@ -42,10 +59,10 @@ var governedTags = union(commonTags, {
   'helios-repository': 'M0nado/helios-platform'
   'helios-source-commit': toLower(sourceCommitSha)
 })
-var globalNamePrefix = take(replace('${serviceName}${environmentName}', '-', ''), 9)
-var cosmosNamePrefix = take(replace('${serviceName}${environmentName}', '-', ''), 20)
+var globalNamePrefix = take(replace('${serviceName}${resourceNameEnvironmentResolved}', '-', ''), 9)
+var cosmosNamePrefix = take(replace('${serviceName}${resourceNameEnvironmentResolved}', '-', ''), 20)
 var containerRegistryServer = '${containerRegistryName}.azurecr.io'
-var defaultPublicHostname = '${serviceName}-${environmentName}-api.${environment.properties.defaultDomain}'
+var defaultPublicHostname = '${serviceName}-${resourceNameEnvironmentResolved}-api.${environment.properties.defaultDomain}'
 var suppliedPublicHostname = replace(toLower(publicBaseUrl), 'https://', '')
 var publicBaseUrlIsOrigin = empty(publicBaseUrl) || (startsWith(toLower(publicBaseUrl), 'https://') && !contains(suppliedPublicHostname, '/') && !contains(suppliedPublicHostname, '?') && !contains(suppliedPublicHostname, '#'))
 var validatedPublicHostname = publicBaseUrlIsOrigin
@@ -67,13 +84,13 @@ var validatedContainerImage = containerImageRegistryMatches && containerImageIsI
 // role is the account-scoped Cosmos built-in contributor below; local keys are
 // disabled and the routine GitHub OIDC principal remains resource-group Contributor.
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: '${serviceName}-${environmentName}-id'
+  name: '${serviceName}-${resourceNameEnvironmentResolved}-id'
   location: location
   tags: governedTags
 }
 
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: '${serviceName}-${environmentName}-law'
+  name: '${serviceName}-${resourceNameEnvironmentResolved}-law'
   location: location
   tags: governedTags
   properties: {
@@ -83,7 +100,7 @@ resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 }
 
 resource insights 'Microsoft.Insights/components@2020-02-02' = {
-  name: '${serviceName}-${environmentName}-appi'
+  name: '${serviceName}-${resourceNameEnvironmentResolved}-appi'
   location: location
   tags: governedTags
   kind: 'web'
@@ -160,7 +177,7 @@ resource cosmosDataContributor 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAss
 }
 
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: '${serviceName}-${environmentName}-cae'
+  name: '${serviceName}-${resourceNameEnvironmentResolved}-cae'
   location: location
   tags: governedTags
   properties: {
@@ -175,7 +192,7 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
 }
 
 resource api 'Microsoft.App/containerApps@2024-03-01' = {
-  name: '${serviceName}-${environmentName}-api'
+  name: '${serviceName}-${resourceNameEnvironmentResolved}-api'
   location: location
   tags: governedTags
   identity: {
@@ -251,7 +268,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
           }
         ]
       }]
-      scale: { minReplicas: environmentName == 'prod' ? 1 : 0, maxReplicas: 3 }
+      scale: { minReplicas: environmentName == 'x-tier-prod' ? 1 : 0, maxReplicas: 3 }
     }
   }
 }

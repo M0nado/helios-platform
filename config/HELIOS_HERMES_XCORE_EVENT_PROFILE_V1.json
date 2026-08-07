@@ -1,0 +1,53 @@
+{
+  "contractSchema": "schemas/hermes-xcore-event-profile-v1.schema.json",
+  "schemaVersion": "1.0.0",
+  "contractId": "helios-hermes-xcore-event-profile-v1",
+  "eventEnvelope": {
+    "requiredFields": [
+      "schemaVersion",
+      "eventId",
+      "correlationId",
+      "source",
+      "eventType",
+      "repository",
+      "environment",
+      "dataClassification",
+      "actor",
+      "links",
+      "payload",
+      "occurredAt"
+    ],
+    "classifications": [
+      "public",
+      "internal",
+      "confidential",
+      "restricted"
+    ],
+    "correlationIdRequired": true,
+    "linksRequired": true
+  },
+  "delivery": {
+    "semantics": "at-least-once",
+    "idempotency": {
+      "required": true,
+      "keyFields": [
+        "eventId",
+        "correlationId",
+        "source",
+        "eventType"
+      ]
+    },
+    "replayProtection": {
+      "required": true,
+      "maxAgeMinutes": 1440,
+      "requireNonce": true
+    },
+    "leaseFencing": {
+      "required": true,
+      "leaseOwnerField": "leaseOwner",
+      "leaseExpiryField": "leaseExpiresAt",
+      "etagField": "etag",
+      "compareAndSwapRequired": true
+    }
+  }
+}

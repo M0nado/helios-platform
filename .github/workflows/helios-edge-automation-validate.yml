@@ -75,8 +75,8 @@ jobs:
           jq --exit-status '
             ([.bindings[] | select(.workload == "helios-api" and .scope == "selected-resource-group") | .roles[]] | index("Reader")) != null and
             ([.bindings[] | select(.workload == "helios-api" and .scope == "control-runs-container") | .roles[]] | index("Cosmos DB Built-in Data Contributor")) != null and
-            .environmentPolicy.protectedDeployment == ["dev", "test", "prod"] and
-            .environmentPolicy.planOnly == ["preview"]
+            .environmentPolicy.protectedDeployment == ["x-tier-dev", "x-tier-xcore", "x-tier-prod"] and
+            .environmentPolicy.planOnly == []
           ' monado/helios-control/config/identity-bindings.json > /dev/null
           jq --exit-status '
             .schemaVersion == 2 and
@@ -129,6 +129,9 @@ jobs:
           fi
           grep -Fq 'common_tags_sha256' "${cloud_workflow}"
           grep -Fq 'commonTagsSha256' "${cloud_workflow}"
+          grep -Fq 'hotfixIncidentId' "${cloud_workflow}"
+          grep -Fq 'hotfixReason' "${cloud_workflow}"
+          grep -Fq 'confirmDeployment=HOTFIX' "${cloud_workflow}"
 
           runtime='monado/helios-control/src/Helios.Connect.Api/Program.cs'
           verifier='monado/helios-control/scripts/Test-HeliosCloudConnection.ps1'

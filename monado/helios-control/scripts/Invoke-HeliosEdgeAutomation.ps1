@@ -15,8 +15,10 @@ separately reviewed protected workflow.
 param(
     [ValidateSet('Diagnose', 'Plan')]
     [string] $Mode = 'Diagnose',
-    [ValidateSet('dev', 'test', 'preview', 'prod')]
-    [string] $EnvironmentName = 'dev',
+    [ValidateSet('x-tier-dev', 'x-tier-xcore', 'x-tier-prod')]
+    [string] $EnvironmentName = 'x-tier-dev',
+    [ValidateSet('', 'dev', 'test', 'preview', 'prod')]
+    [string] $ResourceNameEnvironment = $env:HELIOS_RESOURCE_NAME_ENVIRONMENT,
     [Parameter(Mandatory)] [string] $TenantId,
     [Parameter(Mandatory)] [string] $SubscriptionId,
     [Parameter(Mandatory)] [string] $ResourceGroup,
@@ -111,7 +113,52 @@ function Assert-AzureContext {
         resourceGroup = [string] $group.name
         location = [string] $group.location
         environment = if ($group.tags) { [string] $group.tags.'helios-environment' } else { '' }
+        resourceNameEnvironment = if ($group.tags) { [string] $group.tags.'helios-resource-name-environment' } else { '' }
     }
+}
+
+function Resolve-DefaultResourceNameEnvironment {
+    switch ($EnvironmentName) {
+        'x-tier-dev' { return 'dev' }
+        'x-tier-xcore' { return 'test' }
+        'x-tier-prod' { return 'prod' }
+        default { throw "Unsupported environment '$EnvironmentName'." }
+    }
+}
+
+function Resolve-ResourceNameEnvironment {
+    param([Parameter(Mandatory)] [pscustomobject] $Context)
+
+    $default = Resolve-DefaultResourceNameEnvironment
+    $candidate = if (-not [string]::IsNullOrWhiteSpace($ResourceNameEnvironment)) {
+        $ResourceNameEnvironment.Trim().ToLowerInvariant()
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace([string] $Context.resourceNameEnvironment)) {
+        ([string] $Context.resourceNameEnvironment).Trim().ToLowerInvariant()
+    }
+    else {
+        $default
+    }
+
+    if ($candidate -cnotin @('dev', 'test', 'preview', 'prod')) {
+        throw "ResourceNameEnvironment must be one of dev, test, preview, or prod."
+    }
+
+    switch ($EnvironmentName) {
+        'x-tier-dev' {
+            if ($candidate -cne 'dev') { throw "x-tier-dev requires ResourceNameEnvironment=dev." }
+        }
+        'x-tier-prod' {
+            if ($candidate -cne 'prod') { throw "x-tier-prod requires ResourceNameEnvironment=prod." }
+        }
+        'x-tier-xcore' {
+            if ($candidate -cne 'test' -and $candidate -cne 'preview') {
+                throw "x-tier-xcore requires ResourceNameEnvironment=test or preview."
+            }
+        }
+    }
+
+    return $candidate
 }
 
 function Assert-DeploymentInputs {
@@ -131,10 +178,12 @@ function Assert-DeploymentInputs {
         if (-not [guid]::TryParse([string] $binding.Value, [ref] $parsed)) { throw "$($binding.Name) must be a GUID." }
     }
     if ($SourceCommitSha -notmatch '^[0-9a-fA-F]{40}$') { throw 'SourceCommitSha must be the exact 40-character Git commit built into the image.' }
+    $script:ResolvedResourceNameEnvironment = Resolve-ResourceNameEnvironment -Context $context
     $script:ResolvedDeploymentParameters = @(
         '--parameters',
         "@$script:ResolvedParameters",
         "environmentName=$EnvironmentName",
+        "resourceNameEnvironment=$script:ResolvedResourceNameEnvironment",
         "containerImage=$ContainerImage",
         "containerRegistryName=$ContainerRegistryName",
         'allowPreviewPlaceholder=false',
@@ -200,6 +249,7 @@ $request = [ordered]@{
     parametersFile = $script:ResolvedParameters
     resolvedParameters = [ordered]@{
         environmentName = $EnvironmentName
+        resourceNameEnvironment = $script:ResolvedResourceNameEnvironment
         containerImage = $ContainerImage
         containerRegistryName = $ContainerRegistryName
         allowPreviewPlaceholder = $false

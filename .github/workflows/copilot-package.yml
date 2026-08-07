@@ -75,7 +75,7 @@ jobs:
         run: |
           set -euo pipefail
           python plugins/helios-control-fabric/scripts/helios.py \
-            oidc --environment azure-dev --json > /tmp/helios-oidc.json
+            oidc --environment x-tier-dev --json > /tmp/helios-oidc.json
           python - <<'PY'
           import json
           import os
@@ -92,7 +92,7 @@ jobs:
               )
           else:
               repository_segment = f"{owner}/{repository}"
-          expected = f"repo:{repository_segment}:environment:azure-dev"
+          expected = f"repo:{repository_segment}:environment:x-tier-dev"
           assert oidc["selectedSubject"] == expected
           assert oidc["secretsStoredInGitHub"] is False
           PY

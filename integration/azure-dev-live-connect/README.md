@@ -7,7 +7,7 @@ It provides:
 - a runnable PowerShell Azure CLI connector;
 - browser or device-code Azure login plus an interactive subscription picker;
 - optional secretless Entra application and GitHub OIDC federation;
-- optional protected `azure-dev` GitHub environment configuration;
+- optional protected `x-tier-dev` GitHub environment configuration;
 - environment variables for GitHub Actions OIDC;
 - Bicep compilation and resource-group validation;
 - a development-only Azure what-if operation;
@@ -67,7 +67,7 @@ pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Connect-Helio
   -ResourceGroup 'rg-helios-dev' `
   -Location 'eastus2' `
   -CreateResourceGroup `
-  -ResourceGroupConfirmation 'CREATE HELIOS AZURE DEV RESOURCE GROUP' `
+  -ResourceGroupConfirmation 'CREATE HELIOS X-TIER-DEV RESOURCE GROUP' `
   -RunWhatIf
 ```
 
@@ -95,15 +95,15 @@ pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Connect-Helio
   -TenantId '<approved-tenant-id>' `
   -ResourceGroup 'rg-helios-dev' `
   -ConfigureOidc `
-  -OidcConfirmation 'CONFIGURE HELIOS AZURE DEV OIDC'
+  -OidcConfirmation 'CONFIGURE HELIOS X-TIER-DEV OIDC'
 ```
 
 No client secret is generated.
 
 The repository and environment are fixed for this connector:
-`M0nado/helios-platform` and `azure-dev`. The resolved subject itself is not
+`M0nado/helios-platform` and `x-tier-dev`. The resolved subject itself is not
 copied into this guide because GitHub owns that effective policy. An existing
-`github-azure-dev` federated credential must exactly match the live-resolved
+`github-x-tier-dev` federated credential must exactly match the live-resolved
 issuer, subject, and audience; a mismatch fails closed and is never
 overwritten.
 
@@ -124,7 +124,7 @@ pwsh -NoProfile -File .\integration\azure-dev-live-connect\scripts\Connect-Helio
   -ResourceGroup 'rg-helios-dev' `
   -ConfigureGitHubEnvironment `
   -RequiredReviewerId '<github-user-id>' `
-  -GitHubEnvironmentConfirmation 'CONFIGURE HELIOS AZURE DEV ENVIRONMENT'
+  -GitHubEnvironmentConfirmation 'CONFIGURE HELIOS X-TIER-DEV ENVIRONMENT'
 ```
 
 The script writes these non-secret environment variables:
@@ -160,7 +160,7 @@ integration/azure-dev-live-connect/config/connections.json
 
 Remote MCP OAuth is completed by the MCP client when the server is first used. The registry contains no OAuth tokens.
 
-`-CheckCloudConnections` performs authenticated reads only: Azure account/context, resource-group lookup, resource inventory, GitHub repository lookup, and `azure-dev` environment lookup. It never requests an access token, changes RBAC, updates an environment, or invokes an MCP tool.
+`-CheckCloudConnections` performs authenticated reads only: Azure account/context, resource-group lookup, resource inventory, GitHub repository lookup, and `x-tier-dev` environment lookup. It never requests an access token, changes RBAC, updates an environment, or invokes an MCP tool.
 
 ## 7. Run the protected GitHub what-if
 
@@ -169,8 +169,8 @@ After the reconciliation PR is reviewed and merged to protected `main`:
 1. Open **Actions → HELIOS Azure Dev Live Connect**.
 2. Select **Run workflow** on `main`.
 3. Set `run_what_if=true`.
-4. Approve the `azure-dev` environment request.
-5. Download the `helios-azure-dev-what-if-<sha>` artifact.
+4. Approve the `x-tier-dev` environment request.
+5. Download the `helios-x-tier-dev-what-if-<sha>` artifact.
 
 The workflow requests an OIDC token and runs `az deployment group what-if`. It contains no Azure apply job.
 

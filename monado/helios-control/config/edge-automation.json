@@ -2,10 +2,9 @@
   "schemaVersion": 1,
   "defaultMode": "plan",
   "allowedEnvironments": [
-    "dev",
-    "test",
-    "preview",
-    "prod"
+    "x-tier-dev",
+    "x-tier-xcore",
+    "x-tier-prod"
   ],
   "intents": {
     "provision-resources": {

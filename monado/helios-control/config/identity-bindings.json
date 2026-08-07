@@ -1,20 +1,17 @@
 {
   "schemaVersion": 1,
   "environments": [
-    "dev",
-    "test",
-    "preview",
-    "prod"
+    "x-tier-dev",
+    "x-tier-xcore",
+    "x-tier-prod"
   ],
   "environmentPolicy": {
     "protectedDeployment": [
-      "dev",
-      "test",
-      "prod"
+      "x-tier-dev",
+      "x-tier-xcore",
+      "x-tier-prod"
     ],
-    "planOnly": [
-      "preview"
-    ]
+    "planOnly": []
   },
   "bindings": [
     {

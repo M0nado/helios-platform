@@ -1,7 +1,7 @@
 #Requires -Version 7.2
 <#
 .SYNOPSIS
-Connects the HELIOS development control plane to Azure and GitHub OIDC.
+Connects the HELIOS x-tier-dev control plane to Azure and GitHub OIDC.
 
 .DESCRIPTION
 Performs explicit, auditable phases:
@@ -9,7 +9,7 @@ Performs explicit, auditable phases:
 2. Azure subscription selection.
 3. Optional resource-group creation.
 4. Optional secretless Entra application and GitHub environment federation.
-5. Optional GitHub azure-dev environment/variable configuration.
+5. Optional GitHub x-tier-dev environment/variable configuration.
 6. Bicep validation and development what-if.
 
 No client secret is created. No Azure deployment is performed.
@@ -25,8 +25,8 @@ param(
     [string]$ResourceGroup = 'rg-helios-dev',
     [string]$Location = 'eastus2',
     [string]$Repository = 'M0nado/helios-platform',
-    [string]$GitHubEnvironment = 'azure-dev',
-    [string]$EntraAppDisplayName = 'HELIOS GitHub azure-dev',
+    [string]$GitHubEnvironment = 'x-tier-dev',
+    [string]$EntraAppDisplayName = 'HELIOS GitHub x-tier-dev',
     [string]$TemplateFile = (Join-Path $PSScriptRoot '..\infra\main.bicep'),
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '..\evidence'),
 
@@ -49,11 +49,12 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ExpectedResourceGroupConfirmation = 'CREATE HELIOS AZURE DEV RESOURCE GROUP'
-$ExpectedOidcConfirmation = 'CONFIGURE HELIOS AZURE DEV OIDC'
-$ExpectedGitHubEnvironmentConfirmation = 'CONFIGURE HELIOS AZURE DEV ENVIRONMENT'
+$ExpectedResourceGroupConfirmation = 'CREATE HELIOS X-TIER-DEV RESOURCE GROUP'
+$ExpectedOidcConfirmation = 'CONFIGURE HELIOS X-TIER-DEV OIDC'
+$ExpectedGitHubEnvironmentConfirmation = 'CONFIGURE HELIOS X-TIER-DEV ENVIRONMENT'
 $CanonicalRepository = 'M0nado/helios-platform'
-$CanonicalGitHubEnvironment = 'azure-dev'
+$CanonicalGitHubEnvironment = 'x-tier-dev'
+$LegacyEntraAppDisplayName = 'HELIOS GitHub azure-dev'
 $CanonicalIssuer = 'https://token.actions.githubusercontent.com'
 $GitHubApiVersion = '2026-03-10'
 $FederationSubject = $null
@@ -87,6 +88,54 @@ function Invoke-JsonCommand {
     $text = $output -join [Environment]::NewLine
     if ([string]::IsNullOrWhiteSpace($text)) { return $null }
     $text | ConvertFrom-Json -Depth 100
+}
+
+function Get-EntraApplicationByDisplayName {
+    param(
+        [Parameter(Mandatory)][string]$AzPath,
+        [Parameter(Mandatory)][string]$DisplayName
+    )
+
+    Invoke-JsonCommand -FilePath $AzPath -ArgumentList @(
+        'ad', 'app', 'list', '--display-name', $DisplayName,
+        '--query', '[0].{appId:appId,id:id,displayName:displayName}', '--output', 'json'
+    )
+}
+
+function Test-IsLegacyAzureDevFederationSubject {
+    param([AllowEmptyString()][string]$Subject)
+
+    if ([string]::IsNullOrWhiteSpace($Subject)) { return $false }
+    return $Subject.EndsWith(':environment:azure-dev', [StringComparison]::OrdinalIgnoreCase) -or
+        $Subject.EndsWith(':environment:dev', [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Assert-NoLegacyAzureDevOidcTrust {
+    param(
+        [Parameter(Mandatory)][string]$AzPath,
+        [Parameter(Mandatory)][string]$AppObjectId,
+        [Parameter(Mandatory)][string]$AppDisplayName
+    )
+
+    $credentials = @(Invoke-JsonCommand -FilePath $AzPath -ArgumentList @(
+        'ad', 'app', 'federated-credential', 'list', '--id', $AppObjectId,
+        '--output', 'json'
+    ))
+    $legacyCredentials = @($credentials | Where-Object {
+        [string]::Equals([string]$_.name, 'github-azure-dev', [StringComparison]::OrdinalIgnoreCase) -or
+            (Test-IsLegacyAzureDevFederationSubject -Subject ([string]$_.subject))
+    })
+    if ($legacyCredentials.Count -eq 0) { return }
+
+    $descriptors = $legacyCredentials | ForEach-Object {
+        $name = [string]$_.name
+        $subject = [string]$_.subject
+        if ([string]::IsNullOrWhiteSpace($name)) {
+            return "<unnamed>:$subject"
+        }
+        return "${name}:$subject"
+    } | Sort-Object -Unique
+    throw "Retired azure-dev OIDC trust remains on '$AppDisplayName' ($($descriptors -join ', ')). Remove or migrate legacy federated credentials before proceeding."
 }
 
 function Resolve-GitHubOidcTrust {
@@ -254,7 +303,7 @@ if (-not $groupExists) {
     }
     Require-Confirmation -Actual $ResourceGroupConfirmation -Expected $ExpectedResourceGroupConfirmation
     if ($PSCmdlet.ShouldProcess($ResourceGroup, 'Create Azure development resource group')) {
-        & $az group create --name $ResourceGroup --location $Location --tags system=HELIOS environment=dev managedBy=Connect-HeliosAzureDev --output none
+        & $az group create --name $ResourceGroup --location $Location --tags system=HELIOS environment=x-tier-dev managedBy=Connect-HeliosAzureDev --output none
         if ($LASTEXITCODE -ne 0) { throw 'Resource-group creation failed.' }
     }
 }
@@ -266,10 +315,11 @@ $servicePrincipalObjectId = $null
 if ($ConfigureOidc) {
     Require-Confirmation -Actual $OidcConfirmation -Expected $ExpectedOidcConfirmation
 
-    $app = Invoke-JsonCommand -FilePath $az -ArgumentList @(
-        'ad', 'app', 'list', '--display-name', $EntraAppDisplayName,
-        '--query', '[0].{appId:appId,id:id,displayName:displayName}', '--output', 'json'
-    )
+    $app = Get-EntraApplicationByDisplayName -AzPath $az -DisplayName $EntraAppDisplayName
+    $legacyApp = Get-EntraApplicationByDisplayName -AzPath $az -DisplayName $LegacyEntraAppDisplayName
+    if ($legacyApp -and (-not $app -or [string]$legacyApp.id -cne [string]$app.id)) {
+        throw "Retired app '$LegacyEntraAppDisplayName' is still present. Retire or migrate the legacy azure-dev OIDC app before configuring '$EntraAppDisplayName'."
+    }
     if (-not $app) {
         if ($PSCmdlet.ShouldProcess($EntraAppDisplayName, 'Create secretless Entra application')) {
             $app = Invoke-JsonCommand -FilePath $az -ArgumentList @(
@@ -283,6 +333,7 @@ if ($ConfigureOidc) {
 
     $clientId = [string]$app.appId
     $appObjectId = [string]$app.id
+    Assert-NoLegacyAzureDevOidcTrust -AzPath $az -AppObjectId $appObjectId -AppDisplayName $EntraAppDisplayName
 
     $servicePrincipal = Invoke-JsonCommand -FilePath $az -ArgumentList @(
         'ad', 'sp', 'list', '--filter', "appId eq '$clientId'",
@@ -299,7 +350,7 @@ if ($ConfigureOidc) {
     if (-not $servicePrincipal) { throw 'Unable to resolve the HELIOS service principal.' }
     $servicePrincipalObjectId = [string]$servicePrincipal.id
 
-    $credentialName = 'github-azure-dev'
+    $credentialName = 'github-x-tier-dev'
     $existingCredential = Invoke-JsonCommand -FilePath $az -ArgumentList @(
         'ad', 'app', 'federated-credential', 'list', '--id', $appObjectId,
         '--query', "[?name=='$credentialName'] | [0]", '--output', 'json'
@@ -320,9 +371,9 @@ if ($ConfigureOidc) {
             issuer = $CanonicalIssuer
             subject = $FederationSubject
             audiences = @($FederationAudience)
-            description = 'HELIOS GitHub Actions azure-dev environment'
+            description = 'HELIOS GitHub Actions x-tier-dev environment'
         }
-        $credentialFile = Join-Path $env:TEMP "helios-azure-dev-federation-$([guid]::NewGuid().ToString('N')).json"
+        $credentialFile = Join-Path $env:TEMP "helios-x-tier-dev-federation-$([guid]::NewGuid().ToString('N')).json"
         try {
             $credential | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $credentialFile -Encoding utf8NoBOM
             if ($PSCmdlet.ShouldProcess($FederationSubject, 'Create GitHub OIDC federated credential')) {
@@ -346,10 +397,13 @@ if ($ConfigureGitHubEnvironment) {
         throw 'ConfigureGitHubEnvironment requires a positive numeric -RequiredReviewerId. Environment creation fails closed without a reviewer.'
     }
     if (-not $clientId) {
-        $app = Invoke-JsonCommand -FilePath $az -ArgumentList @(
-            'ad', 'app', 'list', '--display-name', $EntraAppDisplayName,
-            '--query', '[0].{appId:appId,id:id}', '--output', 'json'
-        )
+        $app = Get-EntraApplicationByDisplayName -AzPath $az -DisplayName $EntraAppDisplayName
+        if (-not $app) {
+            $legacyApp = Get-EntraApplicationByDisplayName -AzPath $az -DisplayName $LegacyEntraAppDisplayName
+            if ($legacyApp) {
+                throw "Retired app '$LegacyEntraAppDisplayName' still exists. Run ConfigureOidc and complete explicit retirement/migration before configuring GitHub environment variables."
+            }
+        }
         if (-not $app) { throw 'Configure OIDC first or provide an existing HELIOS Entra application.' }
         $clientId = [string]$app.appId
     }
@@ -415,7 +469,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Bicep compilation failed.' }
     --resource-group $ResourceGroup `
     --name 'helios-dev-live-connect-validate' `
     --template-file $resolvedTemplate `
-    --parameters environmentName=dev `
+    --parameters environmentName=x-tier-dev `
     --mode Incremental `
     --validation-level ProviderNoRbac `
     --output json | Set-Content -LiteralPath (Join-Path $resolvedEvidence 'validation.json') -Encoding utf8NoBOM
@@ -427,7 +481,7 @@ if ($RunWhatIf) {
         --resource-group $ResourceGroup `
         --name 'helios-dev-live-connect' `
         --template-file $resolvedTemplate `
-        --parameters environmentName=dev `
+        --parameters environmentName=x-tier-dev `
         --mode Incremental `
         --no-prompt true `
         --result-format FullResourcePayloads `

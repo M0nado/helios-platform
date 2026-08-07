@@ -40,7 +40,7 @@
 
       <div class="settings">
         <label>Environment
-          <select id="runEnvironment"><option>dev</option><option>test</option><option>preview</option><option>prod</option></select>
+          <select id="runEnvironment"><option>x-tier-dev</option><option>x-tier-xcore</option><option>x-tier-prod</option></select>
         </label>
         <label>Run type
           <select id="runIntent"><option value="provision-resources">Diagnose and plan</option><option value="cleanup-owned-resources">Plan governed cleanup</option></select>
@@ -79,7 +79,7 @@
         <label>Tenant ID<input id="tenant" autocomplete="off" placeholder="00000000-0000-0000-0000-000000000000"></label>
         <label>Subscription ID (optional)<input id="subscription" autocomplete="off" placeholder="Auto-detect or ask in Cloud Shell"></label>
         <label>Resource group<input id="group" value="helios-dev-rg"></label>
-        <label>Environment<select id="environment"><option>dev</option><option>test</option><option>preview</option><option>prod</option></select></label>
+        <label>Environment<select id="environment"><option>x-tier-dev</option><option>x-tier-xcore</option><option>x-tier-prod</option></select></label>
       </div>
       <button id="generate" class="primary">Generate Diagnose → Plan script</button>
       <div id="setupStatus" class="status"></div>

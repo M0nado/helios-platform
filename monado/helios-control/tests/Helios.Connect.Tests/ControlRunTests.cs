@@ -20,7 +20,7 @@ public sealed class ControlRunTests
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
-            var request = new ControlRunRequest("provision-resources", "dev", null, ["github", "linear", "slack", "sharepoint"]);
+            var request = new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github", "linear", "slack", "sharepoint"]);
             var first = await coordinator.StartAsync(request, "edge-one-button-0001", "principal-1", CancellationToken.None);
             var duplicate = await coordinator.StartAsync(request, "edge-one-button-0001", "principal-1", CancellationToken.None);
             Assert.Equal(first.Id, duplicate.Id);
@@ -49,9 +49,9 @@ public sealed class ControlRunTests
     public async Task One_button_run_rejects_unknown_connectors_and_unsafe_idempotency_keys()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
-        var unknown = new ControlRunRequest("provision-resources", "dev", null, ["unknown"]);
+        var unknown = new ControlRunRequest("provision-resources", "x-tier-dev", null, ["unknown"]);
         await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(unknown, "edge-one-button-0002", "principal-1", CancellationToken.None));
-        var valid = new ControlRunRequest("provision-resources", "dev");
+        var valid = new ControlRunRequest("provision-resources", "x-tier-dev");
         await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(valid, "bad key; delete", "principal-1", CancellationToken.None));
     }
 
@@ -59,7 +59,7 @@ public sealed class ControlRunTests
     public async Task Resource_group_override_is_rejected_before_a_run_is_saved()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
-        var request = new ControlRunRequest("provision-resources", "dev", "different-resource-group", ["github"]);
+        var request = new ControlRunRequest("provision-resources", "x-tier-dev", "different-resource-group", ["github"]);
 
         var error = await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(
             request, "edge-boundary-0001", "principal-1", CancellationToken.None));
@@ -71,13 +71,52 @@ public sealed class ControlRunTests
     public async Task Reusing_an_idempotency_key_for_a_different_request_is_rejected()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
-        await coordinator.StartAsync(new ControlRunRequest("provision-resources", "dev", null, ["github"]), "edge-conflict-0001", "principal-1", CancellationToken.None);
+        await coordinator.StartAsync(new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]), "edge-conflict-0001", "principal-1", CancellationToken.None);
 
         await Assert.ThrowsAsync<ControlRunIdempotencyConflictException>(() => coordinator.StartAsync(
-            new ControlRunRequest("provision-resources", "dev", null, ["slack"]),
+            new ControlRunRequest("provision-resources", "x-tier-dev", null, ["slack"]),
             "edge-conflict-0001",
             "principal-1",
             CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Persisted_legacy_request_hash_is_normalized_before_idempotency_comparison()
+    {
+        var store = new InMemoryControlRunStore();
+        var requestedBy = "principal-1";
+        var idempotencyKey = "edge-legacy-hash-0001";
+        var runId = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes($"{requestedBy}\n{idempotencyKey}"))).ToLowerInvariant()[..32];
+        var now = DateTimeOffset.UtcNow;
+        var legacyRequestSha = ComputeRequestSha256ForTest(
+            "provision-resources",
+            "preview",
+            "helios-dev-rg",
+            ["github"]);
+        var persisted = new ControlRunSnapshot(
+            runId, "control-runs", legacyRequestSha, "correlation-legacy-hash", requestedBy,
+            "provision-resources", "preview", "helios-dev-rg", ["github"], "queued", "diagnose-plan-sync", now, now, [], [],
+            ArtifactDigest: legacyRequestSha);
+        await store.CreateOrGetAsync(persisted, CancellationToken.None);
+
+        using var coordinator = new ControlRunCoordinator(
+            store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(),
+            NullLogger<ControlRunCoordinator>.Instance);
+        var retried = await coordinator.StartAsync(
+            new ControlRunRequest("provision-resources", "x-tier-xcore", null, ["github"]),
+            idempotencyKey,
+            requestedBy,
+            CancellationToken.None);
+
+        Assert.Equal(runId, retried.Id);
+        Assert.Equal("x-tier-xcore", retried.Environment);
+        var expectedRequestSha = ComputeRequestSha256ForTest(
+            "provision-resources",
+            "x-tier-xcore",
+            "helios-dev-rg",
+            ["github"]);
+        Assert.Equal(expectedRequestSha, retried.RequestSha256);
+        Assert.Equal(expectedRequestSha, retried.ArtifactDigest);
     }
 
     [Fact]
@@ -96,7 +135,7 @@ public sealed class ControlRunTests
         };
         var persisted = new ControlRunSnapshot(
             "abcdefabcdefabcdefabcdefabcdefab", "control-runs", new string('a', 64), "correlation-recovery", "principal-1",
-            "provision-resources", "dev", "helios-dev-rg", [], "queued", "diagnose-plan-sync", now, now, steps, []);
+            "provision-resources", "x-tier-dev", "helios-dev-rg", [], "queued", "diagnose-plan-sync", now, now, steps, []);
         await store.CreateOrGetAsync(persisted, CancellationToken.None);
 
         using var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
@@ -115,6 +154,30 @@ public sealed class ControlRunTests
     }
 
     [Fact]
+    public async Task Persisted_legacy_environment_is_normalized_before_planning()
+    {
+        var store = new InMemoryControlRunStore();
+        var now = DateTimeOffset.UtcNow;
+        var persisted = new ControlRunSnapshot(
+            "0123456789abcdef0123456789abcdea", "control-runs", new string('a', 64), "correlation-legacy-environment", "principal-1",
+            "provision-resources", "preview", "helios-dev-rg", [], "queued", "diagnose-plan-sync", now, now, [], []);
+        await store.CreateOrGetAsync(persisted, CancellationToken.None);
+
+        using var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var completed = await WaitForTerminalAsync(coordinator, persisted.Id);
+            Assert.Equal("awaiting-approval", completed.Status);
+            Assert.Equal("x-tier-xcore", completed.Environment);
+        }
+        finally
+        {
+            await coordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task Empty_connector_selection_is_respected_and_runs_are_owner_scoped()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
@@ -122,7 +185,7 @@ public sealed class ControlRunTests
         try
         {
             var started = await coordinator.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, []),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, []),
                 "edge-no-connectors-0001", "principal-1", CancellationToken.None);
             var completed = await WaitForTerminalAsync(coordinator, started.Id);
 
@@ -144,10 +207,63 @@ public sealed class ControlRunTests
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
-            var run = await coordinator.StartAsync(new ControlRunRequest("cleanup-owned-resources", "dev"), "edge-cleanup-0001", "principal-1", CancellationToken.None);
+            var run = await coordinator.StartAsync(new ControlRunRequest("cleanup-owned-resources", "x-tier-dev"), "edge-cleanup-0001", "principal-1", CancellationToken.None);
             var completed = await WaitForTerminalAsync(coordinator, run.Id);
             Assert.Equal("awaiting-approval", completed.Status);
             Assert.Contains(completed.Plan!.Steps, step => step.Gate == "unknown-or-shared-resources-protected");
+        }
+        finally
+        {
+            await coordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task Legacy_prod_run_exceeding_max_attempts_keeps_production_severity()
+    {
+        var basePolicy = AgentCorePolicy.Default;
+        var boundedPolicy = basePolicy with
+        {
+            EventBus = basePolicy.EventBus with
+            {
+                Retry = basePolicy.EventBus.Retry with { MaxAttempts = 0 }
+            }
+        };
+        var store = new InMemoryControlRunStore();
+        var now = DateTimeOffset.UtcNow;
+        var persisted = new ControlRunSnapshot(
+            "abcdefabcdefabcdefabcdefabcdef12",
+            "control-runs",
+            ComputeRequestSha256ForTest("provision-resources", "prod", "helios-dev-rg", ["github"]),
+            "correlation-legacy-prod",
+            "principal-1",
+            "provision-resources",
+            "prod",
+            "helios-dev-rg",
+            ["github"],
+            "queued",
+            "diagnose-plan-sync",
+            now,
+            now,
+            [],
+            [],
+            ArtifactDigest: ComputeRequestSha256ForTest("provision-resources", "prod", "helios-dev-rg", ["github"]));
+        await store.CreateOrGetAsync(persisted, CancellationToken.None);
+
+        using var coordinator = new ControlRunCoordinator(
+            store,
+            new FakeInventory(),
+            new EdgeAutomationPlanner(),
+            new FakeDispatcher(),
+            NullLogger<ControlRunCoordinator>.Instance,
+            policy: boundedPolicy);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var failed = await WaitForTerminalAsync(coordinator, persisted.Id);
+            Assert.Equal("failed", failed.Status);
+            Assert.Equal("x-tier-prod", failed.Environment);
+            Assert.Equal("S0", failed.IncidentSeverity);
         }
         finally
         {
@@ -175,7 +291,7 @@ public sealed class ControlRunTests
         try
         {
             var run = await firstCoordinator.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]),
                 "edge-heartbeat-0001", "principal-1", CancellationToken.None);
             await dispatcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
@@ -211,7 +327,7 @@ public sealed class ControlRunTests
         try
         {
             var run = await coordinator.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]),
                 "edge-heartbeat-loss-0001", "principal-1", CancellationToken.None);
             await dispatcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
@@ -266,7 +382,7 @@ public sealed class ControlRunTests
         try
         {
             var started = await coordinator.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]),
                 "edge-failure-0001",
                 "principal-1",
                 CancellationToken.None);
@@ -306,7 +422,7 @@ public sealed class ControlRunTests
         try
         {
             var started = await coordinator.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]),
                 "edge-max-attempts-0001",
                 "principal-1",
                 CancellationToken.None);
@@ -355,12 +471,12 @@ public sealed class ControlRunTests
         try
         {
             var runA = await coordinatorA.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]),
                 idempotencyKey,
                 requestedBy,
                 CancellationToken.None);
             var runB = await coordinatorB.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]),
                 idempotencyKey,
                 requestedBy,
                 CancellationToken.None);
@@ -397,7 +513,7 @@ public sealed class ControlRunTests
         var dispatcher = new ConnectorDispatcher(new StaticHttpClientFactory(httpClient), configuration);
         var now = DateTimeOffset.UtcNow;
         var run = new ControlRunSnapshot("0123456789abcdef0123456789abcdef", "control-runs", "edge-relay-0001", "correlation-1", "principal-1",
-            "provision-resources", "dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
+            "provision-resources", "x-tier-dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
             EvidenceSha256: new string('a', 64), ResourceCount: 2, LifecycleState: "AWAIT_APPROVAL", PolicyVersion: "1.0.0",
             TenantId: "tenant-a", Repository: "M0nado/helios-platform", ArtifactDigest: new string('b', 64), AttemptCount: 1, HopCount: 4,
             ApprovalState: "awaiting-approval");
@@ -437,6 +553,24 @@ public sealed class ControlRunTests
         Assert.Equal("tenant-a", ((JsonElement)envelope.Payload["tenant"]!).GetString());
         Assert.Equal("M0nado/helios-platform", ((JsonElement)envelope.Payload["repository"]!).GetString());
         Assert.Equal("awaiting-approval", ((JsonElement)envelope.Payload["approvalState"]!).GetString());
+    }
+
+    private static string ComputeRequestSha256ForTest(string intent, string environment, string target, IReadOnlyList<string> connectors)
+    {
+        var normalizedConnectors = connectors
+            .Select(value => value.Trim().ToLowerInvariant())
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var canonicalRequest = JsonSerializer.Serialize(new
+        {
+            intent = intent.Trim().ToLowerInvariant(),
+            environment = environment.Trim().ToLowerInvariant(),
+            target = target.Trim().ToLowerInvariant(),
+            connectors = normalizedConnectors
+        });
+        return Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(canonicalRequest))).ToLowerInvariant();
     }
 
     private static async Task<ControlRunSnapshot> WaitForTerminalAsync(ControlRunCoordinator coordinator, string id)

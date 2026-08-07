@@ -38,7 +38,7 @@ public sealed class EdgeAutomationPlanner : IEdgeAutomationPlanner
 {
     private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase)
     {
-        "dev", "test", "preview", "prod"
+        "x-tier-dev", "x-tier-xcore", "x-tier-prod"
     };
 
     private static readonly HashSet<string> Connectors = new(StringComparer.OrdinalIgnoreCase)
@@ -52,7 +52,7 @@ public sealed class EdgeAutomationPlanner : IEdgeAutomationPlanner
         var intent = NormalizeRequired(request.Intent, nameof(request.Intent), 64).ToLowerInvariant();
         var environment = NormalizeRequired(request.Environment, nameof(request.Environment), 16).ToLowerInvariant();
         if (!Environments.Contains(environment))
-            throw new ArgumentException("Environment must be dev, test, preview, or prod.", nameof(request.Environment));
+            throw new ArgumentException("Environment must be x-tier-dev, x-tier-xcore, or x-tier-prod.", nameof(request.Environment));
 
         var target = NormalizeOptional(request.Target, nameof(request.Target), 256);
         var connector = NormalizeOptional(request.Connector, nameof(request.Connector), 32)?.ToLowerInvariant();
@@ -71,7 +71,7 @@ public sealed class EdgeAutomationPlanner : IEdgeAutomationPlanner
 
         var approvals = new List<string> { "reviewed-plan-sha256" };
         if (steps.Any(step => step.Mutating)) approvals.Add("protected-environment-reviewer");
-        if (environment == "prod") approvals.Add("production-owner");
+        if (environment == "x-tier-prod") approvals.Add("production-owner");
         if (intent == "rotate-secret") approvals.Add("secret-owner");
 
         var canonical = string.Join("\n", new[]

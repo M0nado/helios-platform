@@ -1,0 +1,118 @@
+{
+  "contractSchema": "schemas/hermes-xcore-capability-bindings-v1.schema.json",
+  "schemaVersion": "1.0.0",
+  "contractId": "helios-hermes-xcore-capability-bindings-v1",
+  "surfaces": [
+    {
+      "name": "github-actions-workflow",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": true,
+      "canExecuteApprovalWorkflow": true,
+      "notes": "Protected workflow performs what-if and deployment after approvals."
+    },
+    {
+      "name": "github-protected-environment-reviewers",
+      "canRequest": false,
+      "canApprove": true,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Primary deployment approval gate."
+    },
+    {
+      "name": "azure-change-control",
+      "canRequest": false,
+      "canApprove": true,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Secondary governance approval authority."
+    },
+    {
+      "name": "hermes-router",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Advisory routing only."
+    },
+    {
+      "name": "xcore-evaluator",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Evaluation and policy scoring only."
+    },
+    {
+      "name": "microsoft-copilot",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Business-facing request surface via broker APIs."
+    },
+    {
+      "name": "copilot-studio",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Business-facing request surface via approved connectors."
+    },
+    {
+      "name": "teams",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Notification-only collaboration surface."
+    },
+    {
+      "name": "slack",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Notification-only collaboration surface."
+    },
+    {
+      "name": "outlook",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Notification-only collaboration surface."
+    },
+    {
+      "name": "edge-extension",
+      "canRequest": true,
+      "canApprove": false,
+      "canDeploy": false,
+      "canExecuteApprovalWorkflow": false,
+      "notes": "Operator-assist surface with no deployment authority."
+    }
+  ],
+  "authoritativeDeploymentSurfaces": [
+    "github-actions-workflow"
+  ],
+  "authoritativeApprovalSurfaces": [
+    "github-protected-environment-reviewers",
+    "azure-change-control"
+  ],
+  "nonAuthoritativeSurfaces": [
+    "hermes-router",
+    "xcore-evaluator",
+    "microsoft-copilot",
+    "copilot-studio",
+    "teams",
+    "slack",
+    "outlook",
+    "edge-extension"
+  ],
+  "advisoryOnlySurfaces": [
+    "hermes-router",
+    "xcore-evaluator",
+    "microsoft-copilot",
+    "copilot-studio"
+  ]
+}

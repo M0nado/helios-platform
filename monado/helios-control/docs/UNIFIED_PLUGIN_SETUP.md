@@ -33,9 +33,9 @@ Run:
 
     python plugins/helios-control-fabric/scripts/helios.py doctor
     python plugins/helios-control-fabric/scripts/helios.py targets
-    python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
-    python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
-    python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
+    python plugins/helios-control-fabric/scripts/helios.py plan --environment x-tier-dev
+    python plugins/helios-control-fabric/scripts/helios.py oidc --environment x-tier-dev
+    python plugins/helios-control-fabric/scripts/helios.py edge --environment x-tier-dev
     python plugins/helios-control-fabric/scripts/helios.py devops-sync
     python plugins/helios-control-fabric/scripts/helios.py runners
 
@@ -76,11 +76,11 @@ return matching 'structuredContent'.
 3. Verify the protected-resource metadata at
    '<approved-origin>/.well-known/oauth-protected-resource/mcp'.
 4. Run 'scripts/Connect-HeliosAzureInteractive.ps1'.
-5. Create the protected GitHub 'azure-dev' environment.
+5. Create the protected GitHub 'x-tier-dev' environment.
 6. Grant workflow permission 'id-token: write' and 'contents: read'.
 7. Configure issuer 'https://token.actions.githubusercontent.com', audience
    'api://AzureADTokenExchange', and exact subject
-   'repo:M0nado/helios-platform:environment:azure-dev'.
+   'repo:M0nado/helios-platform:environment:x-tier-dev'.
 8. Assign least-privilege RBAC at the reviewed scope.
 9. Publish a digest-pinned immutable image.
 10. Review the exact Bicep, parameter, image, and what-if hashes.

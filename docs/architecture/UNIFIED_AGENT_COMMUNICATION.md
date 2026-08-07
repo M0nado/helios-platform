@@ -73,6 +73,8 @@ GitHub Actions authenticates through workload identity federation. Azure resourc
 
 Every Azure infrastructure change starts with Bicep validation and what-if. Production deployment requires a protected GitHub environment and explicit approval.
 
+Canonical deployment environments are `x-tier-dev`, `x-tier-xcore`, and `x-tier-prod`. Hotfix remains an incident-bound `x-tier-prod` path, not a separate privileged environment. Teams, Slack, Outlook, Edge, and other conversational surfaces cannot approve or execute deployment.
+
 ## Privileged commands
 
 The following cannot execute from a conversational request alone:

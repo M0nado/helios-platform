@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.invalid/hermes-xcore-approval-governance-v1.schema.json",
+  "title": "HELIOS Hermes/XCore approval governance v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractSchema",
+    "schemaVersion",
+    "contractId",
+    "authorities",
+    "approvals",
+    "hotfix",
+    "artifactContinuity",
+    "xcorePromotionPolicy"
+  ],
+  "properties": {
+    "contractSchema": {
+      "const": "schemas/hermes-xcore-approval-governance-v1.schema.json"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "contractId": {
+      "const": "helios-hermes-xcore-approval-governance-v1"
+    },
+    "authorities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approvalSurfaces",
+        "deploymentSurfaces",
+        "disallowedApprovalAndDeploymentSurfaces"
+      ],
+      "properties": {
+        "approvalSurfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "deploymentSurfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "disallowedApprovalAndDeploymentSurfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minApprovals",
+        "secondApprovalRequiredForProd"
+      ],
+      "properties": {
+        "minApprovals": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "x-tier-dev",
+            "x-tier-xcore",
+            "x-tier-prod"
+          ],
+          "properties": {
+            "x-tier-dev": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "x-tier-xcore": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "x-tier-prod": {
+              "type": "integer",
+              "minimum": 2
+            }
+          }
+        },
+        "secondApprovalRequiredForProd": {
+          "const": true
+        }
+      }
+    },
+    "hotfix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetEnvironment",
+        "requiresIncidentId",
+        "requiresReason",
+        "autoApprove",
+        "autoDeploy"
+      ],
+      "properties": {
+        "targetEnvironment": {
+          "const": "x-tier-prod"
+        },
+        "requiresIncidentId": {
+          "const": true
+        },
+        "requiresReason": {
+          "const": true
+        },
+        "autoApprove": {
+          "const": false
+        },
+        "autoDeploy": {
+          "const": false
+        }
+      }
+    },
+    "artifactContinuity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "transitions",
+        "forbidRebuildAfterApproval",
+        "requireTemplateAndRequestDigestMatch"
+      ],
+      "properties": {
+        "transitions": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/transition"
+          }
+        },
+        "forbidRebuildAfterApproval": {
+          "const": true
+        },
+        "requireTemplateAndRequestDigestMatch": {
+          "const": true
+        }
+      }
+    },
+    "xcorePromotionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requireRecordedDigestFromEvaluation",
+        "allowRebuiltArtifactPromotion",
+        "requireEvidenceLink"
+      ],
+      "properties": {
+        "requireRecordedDigestFromEvaluation": {
+          "const": true
+        },
+        "allowRebuiltArtifactPromotion": {
+          "const": false
+        },
+        "requireEvidenceLink": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to",
+        "requireExactDigest"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": [
+            "x-tier-dev",
+            "x-tier-xcore",
+            "x-tier-prod"
+          ]
+        },
+        "to": {
+          "type": "string",
+          "enum": [
+            "x-tier-dev",
+            "x-tier-xcore",
+            "x-tier-prod"
+          ]
+        },
+        "requireExactDigest": {
+          "const": true
+        }
+      }
+    }
+  }
+}

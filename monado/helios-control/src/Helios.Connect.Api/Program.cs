@@ -85,7 +85,7 @@ app.MapGet("/openapi/v1.json", (HttpRequest request) =>
                         required = new[] { "intent", "environment" },
                         properties = new {
                             intent = new { type = "string", @enum = new[] { "provision-resources", "cleanup-owned-resources" } },
-                            environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } },
+                            environment = new { type = "string", @enum = new[] { "x-tier-dev", "x-tier-xcore", "x-tier-prod" } },
                             target = new { type = "string", maxLength = 90 },
                             connectors = new { type = "array", items = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "teams", "copilot" } }, uniqueItems = true }
                         },
@@ -951,7 +951,7 @@ static object[] BuildAzureToolList(IConfiguration configuration)
             "helios_plan_automation",
             "Plan HELIOS automation",
             "Use this when you need a deterministic, non-executing plan for Azure provisioning, Key Vault rotation, issue repair, governed cleanup, or cross-system release synchronization.",
-            new { type = "object", required = new[] { "intent", "environment" }, properties = new { intent = new { type = "string", @enum = new[] { "provision-resources", "rotate-secret", "repair-issue", "sync-release", "cleanup-owned-resources" } }, environment = new { type = "string", @enum = new[] { "dev", "test", "preview", "prod" } }, target = new { type = "string", description = "Required for secret, issue, release, and cleanup plans." }, connector = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "copilot", "codex", "all" } } }, additionalProperties = false },
+            new { type = "object", required = new[] { "intent", "environment" }, properties = new { intent = new { type = "string", @enum = new[] { "provision-resources", "rotate-secret", "repair-issue", "sync-release", "cleanup-owned-resources" } }, environment = new { type = "string", @enum = new[] { "x-tier-dev", "x-tier-xcore", "x-tier-prod" } }, target = new { type = "string", description = "Required for secret, issue, release, and cleanup plans." }, connector = new { type = "string", @enum = new[] { "github", "linear", "slack", "sharepoint", "copilot", "codex", "all" } } }, additionalProperties = false },
             configuration),
         BuildMcpToolDescriptor(
             "helios_propose_upgrade",

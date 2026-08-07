@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.invalid/hermes-xcore-environment-bindings-v1.schema.json",
+  "title": "HELIOS Hermes/XCore environment bindings v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractSchema",
+    "schemaVersion",
+    "contractId",
+    "environments",
+    "promotionGraph",
+    "hotfix",
+    "immutableArtifactContinuity",
+    "chaosAndRegressionPolicy"
+  ],
+  "properties": {
+    "contractSchema": {
+      "const": "schemas/hermes-xcore-environment-bindings-v1.schema.json"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "contractId": {
+      "const": "helios-hermes-xcore-environment-bindings-v1"
+    },
+    "environments": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/environment"
+      }
+    },
+    "promotionGraph": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/promotion"
+      }
+    },
+    "hotfix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetEnvironment",
+        "separateEnvironment",
+        "requiresIncidentId",
+        "requiresReason",
+        "autoApprove",
+        "autoDeploy"
+      ],
+      "properties": {
+        "targetEnvironment": {
+          "const": "x-tier-prod"
+        },
+        "separateEnvironment": {
+          "const": false
+        },
+        "requiresIncidentId": {
+          "const": true
+        },
+        "requiresReason": {
+          "const": true
+        },
+        "autoApprove": {
+          "const": false
+        },
+        "autoDeploy": {
+          "const": false
+        }
+      }
+    },
+    "immutableArtifactContinuity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "forbidRebuildAfterApproval",
+        "requireTemplateAndRequestDigestMatch"
+      ],
+      "properties": {
+        "required": {
+          "const": true
+        },
+        "forbidRebuildAfterApproval": {
+          "const": true
+        },
+        "requireTemplateAndRequestDigestMatch": {
+          "const": true
+        }
+      }
+    },
+    "chaosAndRegressionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowedChaosEnvironments",
+        "forbidProductionChaos",
+        "requirePromotionGatesForChaosRecommendations",
+        "xcoreRegressionFailClosed",
+        "requireReviewableRegressionEvidence"
+      ],
+      "properties": {
+        "allowedChaosEnvironments": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "allOf": [
+            { "contains": { "const": "x-tier-dev" } },
+            { "contains": { "const": "x-tier-xcore" } }
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "x-tier-dev",
+              "x-tier-xcore"
+            ]
+          }
+        },
+        "forbidProductionChaos": {
+          "const": true
+        },
+        "requirePromotionGatesForChaosRecommendations": {
+          "const": true
+        },
+        "xcoreRegressionFailClosed": {
+          "const": true
+        },
+        "requireReviewableRegressionEvidence": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "tier",
+        "eventEnvironment",
+        "deploymentWorkflow",
+        "approvalRequired"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "x-tier-dev",
+            "x-tier-xcore",
+            "x-tier-prod"
+          ]
+        },
+        "tier": {
+          "type": "string",
+          "enum": [
+            "development",
+            "evaluation",
+            "production"
+          ]
+        },
+        "eventEnvironment": {
+          "type": "string",
+          "enum": [
+            "local",
+            "development",
+            "test",
+            "staging",
+            "production"
+          ]
+        },
+        "deploymentWorkflow": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "approvalRequired": {
+          "const": true
+        }
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to",
+        "requiresExactArtifactDigest",
+        "requiresEvidenceLink"
+      ],
+      "properties": {
+        "from": {
+          "type": "string",
+          "enum": [
+            "x-tier-dev",
+            "x-tier-xcore",
+            "x-tier-prod"
+          ]
+        },
+        "to": {
+          "type": "string",
+          "enum": [
+            "x-tier-dev",
+            "x-tier-xcore",
+            "x-tier-prod"
+          ]
+        },
+        "requiresExactArtifactDigest": {
+          "const": true
+        },
+        "requiresEvidenceLink": {
+          "const": true
+        }
+      }
+    }
+  }
+}

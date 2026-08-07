@@ -18,7 +18,7 @@ public interface ISetupWizardService
 public sealed partial class SetupWizardService : ISetupWizardService
 {
     private const string UnconfiguredSourceSha = "0000000000000000000000000000000000000000";
-    private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "dev", "test", "preview", "prod" };
+    private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "x-tier-dev", "x-tier-xcore", "x-tier-prod" };
     private readonly string _sourceCommitSha;
 
     public SetupWizardService(IConfiguration? configuration = null)
@@ -36,7 +36,7 @@ public sealed partial class SetupWizardService : ISetupWizardService
         var subscription = string.IsNullOrWhiteSpace(request.SubscriptionId) ? null : RequireGuid(request.SubscriptionId, nameof(request.SubscriptionId));
         var group = RequireMatch(request.ResourceGroup, nameof(request.ResourceGroup), ResourceGroupPattern(), 90);
         var environment = RequireMatch(request.Environment, nameof(request.Environment), SimpleNamePattern(), 16).ToLowerInvariant();
-        if (!Environments.Contains(environment)) throw new ArgumentException("Environment must be dev, test, preview, or prod.", nameof(request.Environment));
+        if (!Environments.Contains(environment)) throw new ArgumentException("Environment must be x-tier-dev, x-tier-xcore, or x-tier-prod.", nameof(request.Environment));
 
         var script = string.Join("\n", new[]
         {

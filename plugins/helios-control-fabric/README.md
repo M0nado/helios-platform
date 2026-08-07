@@ -25,16 +25,16 @@ DevOps mirror, or activate external connector delivery.
 
     python plugins/helios-control-fabric/scripts/helios.py doctor
     python plugins/helios-control-fabric/scripts/helios.py targets
-    python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
-    python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
-    python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
+    python plugins/helios-control-fabric/scripts/helios.py plan --environment x-tier-dev
+    python plugins/helios-control-fabric/scripts/helios.py oidc --environment x-tier-dev
+    python plugins/helios-control-fabric/scripts/helios.py edge --environment x-tier-dev
     python plugins/helios-control-fabric/scripts/helios.py devops-sync
     python plugins/helios-control-fabric/scripts/helios.py runners
 
 PowerShell:
 
     ./plugins/helios-control-fabric/scripts/helios.ps1 doctor
-    ./plugins/helios-control-fabric/scripts/helios.ps1 oidc --environment azure-dev
+    ./plugins/helios-control-fabric/scripts/helios.ps1 oidc --environment x-tier-dev
 
 Every command above is read-only. Add '--json' for machine-readable output.
 The `oidc` command requires an authenticated GitHub CLI session because it
