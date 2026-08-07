@@ -1,0 +1,127 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v3/migration-map.contract.v3.schema.json",
+  "schemaVersion": "3.0.0",
+  "contractId": "monadoblade-profile-migration-map-v3",
+  "legacySources": [
+    {
+      "version": "v1",
+      "path": "config/profiles/monadoblade-profiles.v1.json"
+    },
+    {
+      "version": "v2",
+      "path": "config/monado-enterprise/v2/profiles.contract.v2.json"
+    }
+  ],
+  "mappings": [
+    {
+      "sourceVersion": "v1",
+      "sourceProfileId": "developer",
+      "targetProfileId": "developer",
+      "strategy": "direct",
+      "reason": "Developer profile remains a first-class profile in v3."
+    },
+    {
+      "sourceVersion": "v1",
+      "sourceProfileId": "sysadmin",
+      "targetProfileId": "sysadmin",
+      "strategy": "direct",
+      "reason": "SysAdmin remains local/offline and approval-gated in v3."
+    },
+    {
+      "sourceVersion": "v1",
+      "sourceProfileId": "sysops",
+      "targetProfileId": "core",
+      "strategy": "merge",
+      "reason": "SysOps responsibilities move into Core governance workflows."
+    },
+    {
+      "sourceVersion": "v1",
+      "sourceProfileId": "gamer",
+      "targetProfileId": "gamer",
+      "strategy": "direct",
+      "reason": "Gamer remains a first-class profile in v3."
+    },
+    {
+      "sourceVersion": "v1",
+      "sourceProfileId": "studio",
+      "targetProfileId": "studio",
+      "strategy": "direct",
+      "reason": "Studio remains a first-class profile in v3."
+    },
+    {
+      "sourceVersion": "v1",
+      "sourceProfileId": "personal",
+      "targetProfileId": "core",
+      "strategy": "merge",
+      "reason": "Personal mode merges into the governed Core profile."
+    },
+    {
+      "sourceVersion": "v1",
+      "sourceProfileId": "server-background",
+      "targetProfileId": "ai-server",
+      "strategy": "rename",
+      "reason": "ServerBackground naming is normalized to AI/Server."
+    },
+    {
+      "sourceVersion": "v2",
+      "sourceProfileId": "core",
+      "targetProfileId": "core",
+      "strategy": "direct",
+      "reason": "Core remains unchanged."
+    },
+    {
+      "sourceVersion": "v2",
+      "sourceProfileId": "developer",
+      "targetProfileId": "developer",
+      "strategy": "direct",
+      "reason": "Developer remains unchanged."
+    },
+    {
+      "sourceVersion": "v2",
+      "sourceProfileId": "gamer",
+      "targetProfileId": "gamer",
+      "strategy": "direct",
+      "reason": "Gamer remains unchanged."
+    },
+    {
+      "sourceVersion": "v2",
+      "sourceProfileId": "studio",
+      "targetProfileId": "studio",
+      "strategy": "direct",
+      "reason": "Studio remains unchanged."
+    },
+    {
+      "sourceVersion": "v2",
+      "sourceProfileId": "personal",
+      "targetProfileId": "core",
+      "strategy": "merge",
+      "reason": "Personal is merged into Core in v3."
+    },
+    {
+      "sourceVersion": "v2",
+      "sourceProfileId": "sysops",
+      "targetProfileId": "core",
+      "strategy": "merge",
+      "reason": "SysOps responsibilities move into Core governance workflows."
+    },
+    {
+      "sourceVersion": "v2",
+      "sourceProfileId": "ai-server",
+      "targetProfileId": "ai-server",
+      "strategy": "direct",
+      "reason": "AI/Server remains unchanged."
+    },
+    {
+      "sourceVersion": "v2",
+      "sourceProfileId": "sysadmin",
+      "targetProfileId": "sysadmin",
+      "strategy": "direct",
+      "reason": "SysAdmin remains unchanged in authority but constrained to local/offline."
+    }
+  ],
+  "invariants": {
+    "legacyArtifactsRemainUnmodified": true,
+    "noHistoryRewrite": true,
+    "targetProfileSetIsSix": true
+  }
+}

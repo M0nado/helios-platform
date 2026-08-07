@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monado-enterprise/v3/profiles.contract.v3.schema.json",
+  "title": "Monadoblade six-profile contract v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "defaultProfile",
+    "profiles",
+    "workflows",
+    "invariants"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "3.0.0"
+    },
+    "contractId": {
+      "const": "monadoblade-six-profile-contract-v3"
+    },
+    "defaultProfile": {
+      "const": "core"
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/profile"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "core"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "developer"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "studio"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "gamer"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "ai-server"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id",
+              "administrator",
+              "hidden",
+              "enabledByDefault",
+              "localOnly",
+              "offlineRequired",
+              "activation"
+            ],
+            "properties": {
+              "id": {
+                "const": "sysadmin"
+              },
+              "administrator": {
+                "const": true
+              },
+              "hidden": {
+                "const": true
+              },
+              "enabledByDefault": {
+                "const": false
+              },
+              "localOnly": {
+                "const": true
+              },
+              "offlineRequired": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "workflows": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/workflow"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "recovery"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "quarantine"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "invariants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profileCountIsSix",
+        "onlySysAdminIsAdministrator",
+        "sysAdminHiddenAndDisabledByDefault",
+        "sysAdminIsLocalOfflineOnly",
+        "recoveryAndQuarantineAreWorkflowsNotProfiles"
+      ],
+      "properties": {
+        "profileCountIsSix": {
+          "const": true
+        },
+        "onlySysAdminIsAdministrator": {
+          "const": true
+        },
+        "sysAdminHiddenAndDisabledByDefault": {
+          "const": true
+        },
+        "sysAdminIsLocalOfflineOnly": {
+          "const": true
+        },
+        "recoveryAndQuarantineAreWorkflowsNotProfiles": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "displayName",
+        "glyph",
+        "windowsRole",
+        "interactive",
+        "administrator",
+        "hidden",
+        "enabledByDefault",
+        "offlineCapable"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "core",
+            "developer",
+            "studio",
+            "gamer",
+            "ai-server",
+            "sysadmin"
+          ]
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "glyph": {
+          "type": "string",
+          "minLength": 1
+        },
+        "windowsRole": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interactive": {
+          "type": "boolean"
+        },
+        "administrator": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "enabledByDefault": {
+          "type": "boolean"
+        },
+        "offlineCapable": {
+          "type": "boolean"
+        },
+        "localOnly": {
+          "type": "boolean"
+        },
+        "offlineRequired": {
+          "type": "boolean"
+        },
+        "activation": {
+          "$ref": "#/$defs/activation"
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "physicalPresenceRequired",
+        "minimumFactors",
+        "remoteActivationDenied",
+        "cloudActivationDenied",
+        "aiActivationDenied"
+      ],
+      "properties": {
+        "physicalPresenceRequired": {
+          "type": "boolean"
+        },
+        "minimumFactors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "remoteActivationDenied": {
+          "type": "boolean"
+        },
+        "cloudActivationDenied": {
+          "type": "boolean"
+        },
+        "aiActivationDenied": {
+          "type": "boolean"
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "displayName",
+        "kind",
+        "interactiveProfile",
+        "entryRequiresApproval"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "recovery",
+            "quarantine"
+          ]
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "const": "sysadmin-workflow"
+        },
+        "interactiveProfile": {
+          "const": "sysadmin"
+        },
+        "entryRequiresApproval": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
