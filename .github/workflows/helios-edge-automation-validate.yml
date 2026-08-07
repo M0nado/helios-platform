@@ -6,6 +6,8 @@ on:
       - '.github/workflows/helios-edge-automation-validate.yml'
       - '.github/workflows/helios-cloud-deploy.yml'
       - 'monado/helios-control/config/edge-automation.json'
+      - 'monado/helios-control/config/agent-core-policy.json'
+      - 'monado/helios-control/config/agent-core-policy.schema.json'
       - 'monado/helios-control/config/identity-bindings.json'
       - 'monado/helios-control/config/integrations.json'
       - 'monado/helios-control/infra/**'
@@ -78,9 +80,37 @@ jobs:
           ' monado/helios-control/config/identity-bindings.json > /dev/null
           jq --exit-status '
             .schemaVersion == 2 and
+            .agentCorePolicy.contract == "config/agent-core-policy.json" and
+            .agentCorePolicy.schema == "config/agent-core-policy.schema.json" and
+            .agentCorePolicy.enforcement == "fail-closed" and
             .routing[0].event == "helios.control-run.status" and
             .relayAuthentication.canonicalTuple == "unixTimestamp + newline + idempotencyKey + newline + exactJsonBody"
           ' monado/helios-control/config/integrations.json > /dev/null
+          jq --exit-status '
+            .schemaVersion == "1.0" and
+            .lifecycle.initialState == "INIT" and
+            (.lifecycle.states | index("AWAIT_APPROVAL")) != null and
+            (.lifecycle.states | index("ROLLED_BACK")) != null and
+            any(.lifecycle.transitions[]; .from == "INIT" and .to == "PRECHECK") and
+            any(.lifecycle.transitions[]; .from == "PRECHECK" and .to == "PLAN") and
+            any(.lifecycle.transitions[]; .from == "PLAN" and .to == "AWAIT_APPROVAL") and
+            any(.lifecycle.transitions[]; .from == "NOTIFY" and .to == "COMPLETE") and
+            .eventBus.delivery == "at-least-once-idempotent-consumers" and
+            .rollback.automaticRollbackOnAgentError == false and
+            .rollback.requiresGovernedRequest == true and
+            .capabilities.denyByDefault == true and
+            .capabilities.runtimeSelfEscalationAllowed == false and
+            .sandboxing.reusableCredentialsExposedToAgents == false and
+            .sandboxing.protectedBranchDirectPushAllowed == false and
+            (.incident.suppression.neverSuppress | index("S0")) != null and
+            (.incident.suppression.neverSuppress | index("S1")) != null
+          ' monado/helios-control/config/agent-core-policy.json > /dev/null
+          jq --exit-status '
+            ."$schema" == "https://json-schema.org/draft/2020-12/schema" and
+            .properties.lifecycle.type == "object" and
+            .properties.rollback.type == "object" and
+            .properties.audit.type == "object"
+          ' monado/helios-control/config/agent-core-policy.schema.json > /dev/null
           jq --exit-status '
             .webApplicationInfo.resource == ("api://" + "$" + "{{PUBLIC_HOSTNAME}}/" + "$" + "{{ENTRA_APP_ID}}")
           ' monado/helios-control/appPackage/manifest.json > /dev/null
