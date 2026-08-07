@@ -66,6 +66,35 @@ the wizard discovers the Container App FQDN and adds the Teams-required
 `api://<public-hostname>/<client-id>` Application ID URI. Install the Teams
 package only after that origin-bound URI is verified.
 
+### GitHub-only fallback for missing `azure-*` environment variables
+
+When Azure identity/bootstrap already exists but GitHub protected-environment
+variables are missing, use the GitHub-only bootstrap script. This path does not
+sign in to Azure or mutate Azure resources.
+
+```powershell
+pwsh -NoProfile -File ./scripts/Set-HeliosGitHubAzureEnvironment.ps1 `
+  -Mode apply `
+  -TargetEnvironment azure-dev `
+  -RequiredReviewerId '<github-user-id>' `
+  -AzureClientId '<azure-oidc-app-client-id>' `
+  -AzureTenantId '<tenant-id>' `
+  -AzureSubscriptionId '<subscription-id>' `
+  -AzureResourceGroup '<resource-group>' `
+  -HeliosEntraClientId '<connector-api-app-client-id>' `
+  -HeliosAllowedPrincipalObjectId '<allowed-principal-object-id>' `
+  -HeliosContainerRegistryName '<acr-name>' `
+  -HeliosAzureConnectorUrl 'https://<container-app-host>'
+```
+
+Run the same command again for `azure-test` and `azure-prod` with their own
+approved values instead of reusing one binding set across environments.
+
+For a browser-only handoff, run GitHub Actions →
+`helios-azure-env-bootstrap` with the same values and `mode=apply`. The
+workflow requires `HELIOS_REPO_ADMIN_TOKEN` for `apply` (environment writes)
+and allows `github.token` only for `validate`.
+
 ## 3. Prepare and dispatch the protected cloud build
 
 Publish does not build from the operator workstation. It revalidates the exact
