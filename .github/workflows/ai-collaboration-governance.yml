@@ -30,17 +30,32 @@ jobs:
             exit 1
           fi
           git fetch origin "${BASE_REF}" --depth=1
-          git diff --name-only --diff-filter=ACMRD "origin/${BASE_REF}...HEAD" > changed-files.txt
+          # Disable rename detection so both the deleted source and added
+          # destination are evaluated. Otherwise a privileged source can be
+          # renamed outside the protected prefixes and disappear from this list.
+          git diff --no-renames --name-only --diff-filter=ACMRD "origin/${BASE_REF}...HEAD" > changed-files.txt
 
       - name: Load trusted validator from base branch
+        id: trusted-validator
         shell: bash
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
-          git show "origin/${BASE_REF}:scripts/control/validate_ai_collaboration_pr.py" > trusted_validate_ai_collaboration_pr.py
+          validator_path="scripts/control/validate_ai_collaboration_pr.py"
+          if git cat-file -e "origin/${BASE_REF}:${validator_path}" 2>/dev/null; then
+            git show "origin/${BASE_REF}:${validator_path}" > trusted_validate_ai_collaboration_pr.py
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            # The validator cannot be trusted from the pull-request revision.
+            # During the one-time bootstrap, defer enforcement until this
+            # workflow and validator have landed on the protected base branch.
+            echo "Trusted validator is not present on ${BASE_REF}; bootstrap validation is deferred."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Validate governed PR metadata and proposal-only boundary
+        if: steps.trusted-validator.outputs.available == 'true'
         run: |
           python3 trusted_validate_ai_collaboration_pr.py \
             --event-path "$GITHUB_EVENT_PATH" \
@@ -54,4 +69,5 @@ jobs:
             echo "## AI collaboration governance check"
             echo ""
             echo "- Changed files scanned: $(wc -l < changed-files.txt)"
+            echo "- Trusted validator available: ${{ steps.trusted-validator.outputs.available }}"
           } >> "$GITHUB_STEP_SUMMARY"
