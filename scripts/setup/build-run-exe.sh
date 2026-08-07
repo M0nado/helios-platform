@@ -14,7 +14,8 @@ if [[ "$SKIP_FINISH" != "1" ]]; then
   scripts/setup/simple-build.sh save-run
 fi
 for rid in win-x64 linux-x64; do
-  dotnet publish "$PROJECT" -c "$CONFIGURATION" -r "$rid" --self-contained false -p:PublishSingleFile=false -o "$OUT_ROOT/$rid" --nologo
+  dotnet publish "$PROJECT" -c "$CONFIGURATION" -r "$rid" --self-contained true \
+    -p:PublishSingleFile=true -p:DebugType=embedded -o "$OUT_ROOT/$rid" --nologo
 done
 cat > "$OUT_ROOT/run-helios.cmd" <<'EOF'
 @echo off
@@ -29,19 +30,15 @@ EOF
 cat > "$OUT_ROOT/run-helios.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$(dirname "$0")/linux-x64"
-if [[ -x ./HELIOS.Platform ]]; then
-  "$ROOT/.tools/dotnet/dotnet" HELIOS.Platform.dll "$@" 2>/dev/null || dotnet HELIOS.Platform.dll "$@"
-else
-  "$ROOT/.tools/dotnet/dotnet" HELIOS.Platform.dll "$@" 2>/dev/null || dotnet HELIOS.Platform.dll "$@"
-fi
+HERE="$(cd "$(dirname "$0")" && pwd)"
+exec "$HERE/linux-x64/HELIOS.Platform" "$@"
 EOF
 chmod +x "$OUT_ROOT/run-helios.sh" || true
 cat > "$OUT_ROOT/README.md" <<'EOF'
 # HELIOS runnable build
 
-This folder contains framework-dependent HELIOS runnable outputs.
+This folder contains self-contained, single-file HELIOS launchers. A separate
+.NET installation is not required.
 
 ## Windows
 
@@ -51,7 +48,7 @@ Double-click or run:
 run-helios.cmd
 ```
 
-Direct executable:
+Direct executable (run it inside the HELIOS checkout, or pass `--repo PATH`):
 
 ```cmd
 win-x64\HELIOS.Platform.exe
@@ -63,6 +60,29 @@ win-x64\HELIOS.Platform.exe
 ./run-helios.sh
 ```
 
+## One-button start
+
+From the HELIOS repository root:
+
+```cmd
+path\to\run-helios.cmd start
+```
+
+or:
+
+```bash
+path/to/run-helios.sh start
+```
+
+Use `dashboard` instead of `start` to validate and serve the local dashboard.
+Use `--dry-run` to preview the exact safe pipeline command.
+
+## Safety
+
+The launcher invokes the repository's existing safe setup and reporting paths.
+It does not merge branches, publish releases, mutate Azure resources, or deploy
+to production. Those actions remain behind repository and Azure approval gates.
+
 ## Dashboard bundle
 
 If generated, the latest AIHub dashboard bundle path is recorded in:
@@ -71,9 +91,23 @@ If generated, the latest AIHub dashboard bundle path is recorded in:
 .run/latest-aihub-bundle.txt
 ```
 
-This build is framework-dependent. Install .NET 8 runtime on the target machine if needed, or run from this repo with `.tools/dotnet` available.
+The HELIOS source checkout is still required because the launcher executes the
+versioned scripts and configuration from that checkout.
 EOF
+(
+  cd "$OUT_ROOT"
+  if command -v zip >/dev/null 2>&1; then
+    zip -q -r helios-win-x64.zip win-x64 run-helios.cmd README.md
+  fi
+  tar -czf helios-linux-x64.tar.gz linux-x64 run-helios.sh README.md
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum win-x64/HELIOS.Platform.exe linux-x64/HELIOS.Platform \
+      helios-linux-x64.tar.gz ${ZIP_CHECKSUM_FILE:-helios-win-x64.zip} 2>/dev/null > SHA256SUMS || \
+      sha256sum win-x64/HELIOS.Platform.exe linux-x64/HELIOS.Platform helios-linux-x64.tar.gz > SHA256SUMS
+  fi
+)
 printf '%s\n' "$OUT_ROOT" > .run/latest-helios-exe.txt
 printf 'Built runnable HELIOS outputs in %s\n' "$OUT_ROOT"
 printf 'Windows exe: %s\n' "$OUT_ROOT/win-x64/HELIOS.Platform.exe"
 printf 'Linux launcher: %s\n' "$OUT_ROOT/run-helios.sh"
+printf 'Checksums: %s\n' "$OUT_ROOT/SHA256SUMS"
