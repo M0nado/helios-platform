@@ -32,6 +32,11 @@ on:
         required: false
         type: string
         default: ""
+      privateRunnerRequired:
+        description: Use the VNet-capable self-hosted runner (set true for subnet-backed non-production runs)
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -135,7 +140,7 @@ jobs:
     name: Reviewed Azure what-if (${{ inputs.targetEnvironment }})
     if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: validate
-    runs-on: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID != '' && fromJSON('["self-hosted","linux","x64","helios-azure"]') || fromJSON('["ubuntu-24.04"]') }}
+    runs-on: ${{ (inputs.targetEnvironment == 'azure-prod' || inputs.privateRunnerRequired) && fromJSON('["self-hosted","linux","x64","helios-azure"]') || fromJSON('["ubuntu-24.04"]') }}
     timeout-minutes: 30
     # The operator bootstrap verifies this environment's reviewer protection via
     # the GitHub API before creating OIDC federation; a variable is not evidence.
@@ -603,7 +608,7 @@ jobs:
     needs:
       - validate
       - preview
-    runs-on: ${{ vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID != '' && fromJSON('["self-hosted","linux","x64","helios-azure"]') || fromJSON('["ubuntu-24.04"]') }}
+    runs-on: ${{ (inputs.targetEnvironment == 'azure-prod' || inputs.privateRunnerRequired) && fromJSON('["self-hosted","linux","x64","helios-azure"]') || fromJSON('["ubuntu-24.04"]') }}
     timeout-minutes: 30
     # A second environment deployment creates a distinct approval gate after
     # the immutable what-if artifact is available to reviewers.

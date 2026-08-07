@@ -156,6 +156,9 @@ self-hosted runner with VNet/private-DNS reachability before deploy mode can
 proceed. This preserves full live boundary checks (anonymous 401, forged
 principal rejection, OAuth metadata, and MCP challenge) instead of replacing
 them with control-plane-only assertions.
+For subnet-backed non-production runs, set workflow input
+`privateRunnerRequired=true` so runner selection happens on the self-hosted
+pool before environment-scoped variables are available.
 
 After the deployment returns the connector hostname, re-run `-Mode Configure`
 with the same reviewed inputs and confirmation. For Front Door cutover, include

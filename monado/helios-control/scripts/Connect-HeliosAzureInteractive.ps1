@@ -2120,6 +2120,7 @@ try {
     Write-Host '  runtime: Azure Container Apps only; local runtime disabled'
 
     if ($Mode -eq 'Publish') {
+        $privateRunnerRequired = if ([string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) { 'false' } else { 'true' }
         Assert-ExactConfirmation `
             -Expected 'DISPATCH HELIOS WHAT-IF' `
             -Purpose "Dispatching the protected $GitHubEnvironment workflow from '$GitHubDeploymentBranch'"
@@ -2129,7 +2130,8 @@ try {
                 '--repo', "$GitHubOwner/$GitHubRepository",
                 '--ref', $GitHubDeploymentBranch,
                 '--field', "targetEnvironment=$GitHubEnvironment",
-                '--field', 'mode=what-if'
+                '--field', 'mode=what-if',
+                '--field', "privateRunnerRequired=$privateRunnerRequired"
             ) `
             -Operation 'Dispatching the protected Helios what-if workflow'
     }

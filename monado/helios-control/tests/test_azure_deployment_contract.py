@@ -32,7 +32,7 @@ class AzureDeploymentContractTests(unittest.TestCase):
                 invocation.count(f'{SUBNET_PARAMETER}="${{HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID}}"'),
             )
 
-        self.assertIn("vars.HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID != ''", workflow)
+        self.assertIn("inputs.targetEnvironment == 'azure-prod' || inputs.privateRunnerRequired", workflow)
         self.assertGreaterEqual(workflow.count("Production requires protected environment variable"), 2)
 
     def test_review_evidence_binds_subnet_parameter(self) -> None:
@@ -64,6 +64,8 @@ class AzureDeploymentContractTests(unittest.TestCase):
 
     def test_private_production_requires_self_hosted_runner_for_boundary_checks(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("privateRunnerRequired:", workflow)
+        self.assertIn("inputs.targetEnvironment == 'azure-prod' || inputs.privateRunnerRequired", workflow)
         self.assertIn('Require self-hosted runner for private subnet boundary verification', workflow)
         self.assertIn('RUNNER_ENVIRONMENT: ${{ runner.environment }}', workflow)
         self.assertGreaterEqual(
@@ -145,6 +147,7 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID", interactive)
         self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL", interactive)
         self.assertIn("HELIOS_ENTRA_APPLICATION_ID_URI", interactive)
+        self.assertIn("privateRunnerRequired=$privateRunnerRequired", interactive)
         self.assertIn("'api', '--method', 'DELETE'", interactive)
         self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL = $configuredPublicBaseUrl", interactive)
         self.assertRegex(
@@ -196,6 +199,7 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("must match the policy attached to the Azure Firewall using", workflow)
         self.assertIn("must belong to an Azure Firewall IP configuration in hub_virtual_network_id.", workflow)
         self.assertIn("Revalidate reviewed Azure Firewall binding before production apply", workflow)
+        self.assertIn("must include github so reviewed self-hosted runner egress to GitHub and Actions endpoints remains available.", workflow)
         self.assertIn("network_only bootstrap requires enabled_egress_profiles including containerRegistryDataPlane", workflow)
         self.assertIn("--resource-type \"Microsoft.Cdn/profiles/afdEndpoints/routes\"", workflow)
         self.assertIn("Input location '", workflow)

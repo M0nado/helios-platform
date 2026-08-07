@@ -351,6 +351,10 @@ jobs:
               echo "Production azureFirewall deployments require enabled_egress_profiles to include containerAppsPlatform for Container Apps platform egress." >&2
               exit 1
             fi
+            if ! jq -e 'index("github") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Production azureFirewall deployments require enabled_egress_profiles to include github so reviewed self-hosted runner egress to GitHub and Actions endpoints remains available." >&2
+              exit 1
+            fi
             if [[ "${INPUT_NETWORK_ONLY}" != "true" ]]; then
               if [[ ! "${INPUT_CONNECTOR_BACKEND_URL}" =~ ^https://[^/?#]+$ ]]; then
                 echo "Production connector_backend_url must be one HTTPS origin without path, query, or fragment when network_only=false." >&2
@@ -813,6 +817,10 @@ jobs:
             fi
             if ! jq -e 'index("containerAppsPlatform") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
               echo "Validated production profiles must include containerAppsPlatform for Container Apps platform egress." >&2
+              exit 1
+            fi
+            if ! jq -e 'index("github") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Validated production profiles must include github so reviewed self-hosted runner egress to GitHub and Actions endpoints remains available." >&2
               exit 1
             fi
             if [[ "${INPUT_NETWORK_ONLY}" == "true" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
