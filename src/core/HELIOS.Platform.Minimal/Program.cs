@@ -236,10 +236,14 @@ public static class CommandBuilder
         switch (options.Command)
         {
             case LauncherCommand.Start:
-                arguments.AddRange(["setup", "--profile", options.Profile, "--changed-only", "--max-workers", options.MaxWorkers.ToString()]);
+                arguments.AddRange(["setup", "--profile", options.Profile]);
+                AddChangedOnlyForQuickProfile(arguments, options.Profile, "--changed-only");
+                arguments.AddRange(["--max-workers", options.MaxWorkers.ToString()]);
                 break;
             case LauncherCommand.Dashboard:
-                arguments.AddRange(["dashboard", "--profile", options.Profile, "--changed-only", "--max-workers", options.MaxWorkers.ToString()]);
+                arguments.AddRange(["dashboard", "--profile", options.Profile]);
+                AddChangedOnlyForQuickProfile(arguments, options.Profile, "--changed-only");
+                arguments.AddRange(["--max-workers", options.MaxWorkers.ToString()]);
                 break;
             case LauncherCommand.Doctor:
                 arguments.Add("doctor");
@@ -271,10 +275,14 @@ public static class CommandBuilder
         switch (options.Command)
         {
             case LauncherCommand.Start:
-                arguments.AddRange(["-Profile", options.Profile, "-ChangedOnly", "-MaxWorkers", options.MaxWorkers.ToString()]);
+                arguments.AddRange(["-Profile", options.Profile]);
+                AddChangedOnlyForQuickProfile(arguments, options.Profile, "-ChangedOnly");
+                arguments.AddRange(["-MaxWorkers", options.MaxWorkers.ToString()]);
                 break;
             case LauncherCommand.Dashboard:
-                arguments.AddRange(["-Profile", options.Profile, "-ChangedOnly", "-MaxWorkers", options.MaxWorkers.ToString(), "-Serve"]);
+                arguments.AddRange(["-Profile", options.Profile]);
+                AddChangedOnlyForQuickProfile(arguments, options.Profile, "-ChangedOnly");
+                arguments.AddRange(["-MaxWorkers", options.MaxWorkers.ToString(), "-Serve"]);
                 break;
             case LauncherCommand.Doctor:
                 arguments.Add("-Doctor");
@@ -293,6 +301,12 @@ public static class CommandBuilder
         }
 
         return new("powershell.exe", arguments, repository);
+    }
+
+    private static void AddChangedOnlyForQuickProfile(List<string> arguments, string profile, string option)
+    {
+        if (profile == "quick")
+            arguments.Add(option);
     }
 }
 

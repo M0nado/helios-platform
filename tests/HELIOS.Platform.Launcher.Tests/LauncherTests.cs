@@ -101,6 +101,28 @@ public sealed class LauncherTests
             Assert.Contains(Path.Combine(root, "scripts", "setup", "helios-dev.ps1"), invocation.Arguments);
             Assert.Contains("-Serve", invocation.Arguments);
             Assert.Contains("6", invocation.Arguments);
+            Assert.DoesNotContain("-ChangedOnly", invocation.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CommandBuilder_does_not_filter_full_profile_on_linux()
+    {
+        var root = CreateRepository();
+        try
+        {
+            var options = new LauncherOptions(LauncherCommand.Dashboard, root, "full", 6, false);
+
+            var invocation = CommandBuilder.Build(root, options, isWindows: false);
+
+            Assert.Equal(
+                ["dashboard", "--profile", "full", "--max-workers", "6"],
+                invocation.Arguments.Skip(1));
+            Assert.DoesNotContain("--changed-only", invocation.Arguments);
         }
         finally
         {
