@@ -1,0 +1,173 @@
+name: helios-azure-env-bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Validate checks inputs only; apply writes GitHub environment settings
+        required: true
+        type: choice
+        default: validate
+        options:
+          - validate
+          - apply
+      targetEnvironment:
+        description: Target HELIOS environment set
+        required: true
+        type: choice
+        default: azure-dev
+        options:
+          - azure-dev
+          - azure-test
+          - azure-prod
+          - all
+      requiredReviewerId:
+        description: Numeric GitHub user ID required for protected-environment approvals
+        required: true
+        type: string
+      azureClientId:
+        description: AZURE_CLIENT_ID (GitHub OIDC application client ID)
+        required: false
+        type: string
+      azureTenantId:
+        description: AZURE_TENANT_ID
+        required: false
+        type: string
+      azureSubscriptionId:
+        description: AZURE_SUBSCRIPTION_ID
+        required: false
+        type: string
+      azureResourceGroup:
+        description: AZURE_RESOURCE_GROUP
+        required: false
+        type: string
+      heliosEntraClientId:
+        description: HELIOS_ENTRA_CLIENT_ID (connector API app client ID)
+        required: false
+        type: string
+      heliosAllowedPrincipalObjectId:
+        description: HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID
+        required: false
+        type: string
+      heliosContainerRegistryName:
+        description: HELIOS_CONTAINER_REGISTRY_NAME
+        required: false
+        type: string
+      heliosAzureConnectorUrl:
+        description: Optional HELIOS_AZURE_CONNECTOR_URL (HTTPS origin without /mcp)
+        required: false
+        type: string
+      azureDevopsOrganization:
+        description: Optional AZURE_DEVOPS_ORGANIZATION
+        required: false
+        type: string
+      repository:
+        description: Repository to configure (owner/name)
+        required: true
+        type: string
+        default: M0nado/helios-platform
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  bootstrap:
+    name: Bootstrap HELIOS GitHub environment metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Configure GH token source
+        shell: pwsh
+        env:
+          HELIOS_REPO_ADMIN_TOKEN: ${{ secrets.HELIOS_REPO_ADMIN_TOKEN }}
+          GITHUB_TOKEN_FALLBACK: ${{ github.token }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:HELIOS_REPO_ADMIN_TOKEN)) {
+            $selectedToken = $env:GITHUB_TOKEN_FALLBACK
+          } else {
+            $selectedToken = $env:HELIOS_REPO_ADMIN_TOKEN
+          }
+          if ([string]::IsNullOrWhiteSpace($selectedToken)) {
+            throw 'No GitHub token is available for environment bootstrap.'
+          }
+          "GH_TOKEN=$selectedToken" >> $env:GITHUB_ENV
+
+      - name: Validate or apply HELIOS environment settings
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID_SECRET: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID_SECRET: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID_SECRET: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP_SECRET: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          HELIOS_ENTRA_CLIENT_ID_SECRET: ${{ secrets.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID_SECRET: ${{ secrets.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          HELIOS_CONTAINER_REGISTRY_NAME_SECRET: ${{ secrets.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HELIOS_AZURE_CONNECTOR_URL_SECRET: ${{ secrets.HELIOS_AZURE_CONNECTOR_URL }}
+          AZURE_DEVOPS_ORGANIZATION_SECRET: ${{ secrets.AZURE_DEVOPS_ORGANIZATION }}
+        run: |
+          function Resolve-RequiredValue {
+            param(
+              [Parameter(Mandatory)][string]$Name,
+              [AllowEmptyString()][string]$InputValue,
+              [AllowEmptyString()][string]$SecretValue
+            )
+
+            if (-not [string]::IsNullOrWhiteSpace($InputValue)) {
+              return $InputValue
+            }
+            if (-not [string]::IsNullOrWhiteSpace($SecretValue)) {
+              return $SecretValue
+            }
+            throw "Missing required value '$Name'. Provide workflow input '$Name' or configure a secret with the same name."
+          }
+
+          function Resolve-OptionalValue {
+            param(
+              [AllowEmptyString()][string]$InputValue,
+              [AllowEmptyString()][string]$SecretValue
+            )
+
+            if (-not [string]::IsNullOrWhiteSpace($InputValue)) {
+              return $InputValue
+            }
+            if (-not [string]::IsNullOrWhiteSpace($SecretValue)) {
+              return $SecretValue
+            }
+            return $null
+          }
+
+          $resolvedAzureClientId = Resolve-RequiredValue -Name 'AZURE_CLIENT_ID' -InputValue '${{ inputs.azureClientId }}' -SecretValue $env:AZURE_CLIENT_ID_SECRET
+          $resolvedAzureTenantId = Resolve-RequiredValue -Name 'AZURE_TENANT_ID' -InputValue '${{ inputs.azureTenantId }}' -SecretValue $env:AZURE_TENANT_ID_SECRET
+          $resolvedAzureSubscriptionId = Resolve-RequiredValue -Name 'AZURE_SUBSCRIPTION_ID' -InputValue '${{ inputs.azureSubscriptionId }}' -SecretValue $env:AZURE_SUBSCRIPTION_ID_SECRET
+          $resolvedAzureResourceGroup = Resolve-RequiredValue -Name 'AZURE_RESOURCE_GROUP' -InputValue '${{ inputs.azureResourceGroup }}' -SecretValue $env:AZURE_RESOURCE_GROUP_SECRET
+          $resolvedHeliosEntraClientId = Resolve-RequiredValue -Name 'HELIOS_ENTRA_CLIENT_ID' -InputValue '${{ inputs.heliosEntraClientId }}' -SecretValue $env:HELIOS_ENTRA_CLIENT_ID_SECRET
+          $resolvedAllowedPrincipalObjectId = Resolve-RequiredValue -Name 'HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID' -InputValue '${{ inputs.heliosAllowedPrincipalObjectId }}' -SecretValue $env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID_SECRET
+          $resolvedContainerRegistryName = Resolve-RequiredValue -Name 'HELIOS_CONTAINER_REGISTRY_NAME' -InputValue '${{ inputs.heliosContainerRegistryName }}' -SecretValue $env:HELIOS_CONTAINER_REGISTRY_NAME_SECRET
+          $resolvedConnectorUrl = Resolve-OptionalValue -InputValue '${{ inputs.heliosAzureConnectorUrl }}' -SecretValue $env:HELIOS_AZURE_CONNECTOR_URL_SECRET
+          $resolvedDevOpsOrganization = Resolve-OptionalValue -InputValue '${{ inputs.azureDevopsOrganization }}' -SecretValue $env:AZURE_DEVOPS_ORGANIZATION_SECRET
+
+          $params = @{
+            Mode = '${{ inputs.mode }}'
+            TargetEnvironment = '${{ inputs.targetEnvironment }}'
+            Repository = '${{ inputs.repository }}'
+            RequiredReviewerId = '${{ inputs.requiredReviewerId }}'
+            AzureClientId = $resolvedAzureClientId
+            AzureTenantId = $resolvedAzureTenantId
+            AzureSubscriptionId = $resolvedAzureSubscriptionId
+            AzureResourceGroup = $resolvedAzureResourceGroup
+            HeliosEntraClientId = $resolvedHeliosEntraClientId
+            HeliosAllowedPrincipalObjectId = $resolvedAllowedPrincipalObjectId
+            HeliosContainerRegistryName = $resolvedContainerRegistryName
+          }
+          if (-not [string]::IsNullOrWhiteSpace($resolvedConnectorUrl)) {
+            $params.HeliosAzureConnectorUrl = $resolvedConnectorUrl
+          }
+          if (-not [string]::IsNullOrWhiteSpace($resolvedDevOpsOrganization)) {
+            $params.AzureDevOpsOrganization = $resolvedDevOpsOrganization
+          }
+
+          & ./monado/helios-control/scripts/Set-HeliosGitHubAzureEnvironment.ps1 @params
