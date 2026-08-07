@@ -8,7 +8,7 @@ param(
     [string]$TenantId,
     [string]$ResourceGroup = 'rg-helios-dev',
     [string]$Repository = 'M0nado/helios-platform',
-    [string]$GitHubEnvironment = 'azure-dev',
+    [string]$GitHubEnvironment = 'x-tier-dev',
     [switch]$CheckCloudConnections,
     [switch]$CheckLocalServices,
     [switch]$CheckAzureDevOps,
@@ -18,7 +18,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $CanonicalRepository = 'M0nado/helios-platform'
-$CanonicalGitHubEnvironment = 'azure-dev'
+$CanonicalGitHubEnvironment = 'x-tier-dev'
 
 if ($Repository -cne $CanonicalRepository) {
     throw "Repository must be the canonical value: $CanonicalRepository"
@@ -152,7 +152,7 @@ if ($CheckCloudConnections) {
                 -FilePath $ghCommand.Source `
                 -ArgumentList @('repo', 'view', $CanonicalRepository, '--json', 'nameWithOwner,visibility,defaultBranchRef')
             $report['cloudConnections'] += Invoke-ReadOnlyJsonCommand `
-                -Name 'github-azure-dev-environment' `
+                -Name 'github-x-tier-dev-environment' `
                 -FilePath $ghCommand.Source `
                 -ArgumentList @('api', "repos/$CanonicalRepository/environments/$CanonicalGitHubEnvironment")
         }

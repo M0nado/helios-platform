@@ -20,7 +20,7 @@ public sealed class ControlRunTests
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
-            var request = new ControlRunRequest("provision-resources", "dev", null, ["github", "linear", "slack", "sharepoint"]);
+            var request = new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github", "linear", "slack", "sharepoint"]);
             var first = await coordinator.StartAsync(request, "edge-one-button-0001", "principal-1", CancellationToken.None);
             var duplicate = await coordinator.StartAsync(request, "edge-one-button-0001", "principal-1", CancellationToken.None);
             Assert.Equal(first.Id, duplicate.Id);
@@ -44,9 +44,9 @@ public sealed class ControlRunTests
     public async Task One_button_run_rejects_unknown_connectors_and_unsafe_idempotency_keys()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
-        var unknown = new ControlRunRequest("provision-resources", "dev", null, ["unknown"]);
+        var unknown = new ControlRunRequest("provision-resources", "x-tier-dev", null, ["unknown"]);
         await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(unknown, "edge-one-button-0002", "principal-1", CancellationToken.None));
-        var valid = new ControlRunRequest("provision-resources", "dev");
+        var valid = new ControlRunRequest("provision-resources", "x-tier-dev");
         await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(valid, "bad key; delete", "principal-1", CancellationToken.None));
     }
 
@@ -54,7 +54,7 @@ public sealed class ControlRunTests
     public async Task Resource_group_override_is_rejected_before_a_run_is_saved()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
-        var request = new ControlRunRequest("provision-resources", "dev", "different-resource-group", ["github"]);
+        var request = new ControlRunRequest("provision-resources", "x-tier-dev", "different-resource-group", ["github"]);
 
         var error = await Assert.ThrowsAsync<ArgumentException>(() => coordinator.StartAsync(
             request, "edge-boundary-0001", "principal-1", CancellationToken.None));
@@ -66,10 +66,10 @@ public sealed class ControlRunTests
     public async Task Reusing_an_idempotency_key_for_a_different_request_is_rejected()
     {
         using var coordinator = new ControlRunCoordinator(new InMemoryControlRunStore(), new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
-        await coordinator.StartAsync(new ControlRunRequest("provision-resources", "dev", null, ["github"]), "edge-conflict-0001", "principal-1", CancellationToken.None);
+        await coordinator.StartAsync(new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]), "edge-conflict-0001", "principal-1", CancellationToken.None);
 
         await Assert.ThrowsAsync<ControlRunIdempotencyConflictException>(() => coordinator.StartAsync(
-            new ControlRunRequest("provision-resources", "dev", null, ["slack"]),
+            new ControlRunRequest("provision-resources", "x-tier-dev", null, ["slack"]),
             "edge-conflict-0001",
             "principal-1",
             CancellationToken.None));
@@ -91,7 +91,7 @@ public sealed class ControlRunTests
         };
         var persisted = new ControlRunSnapshot(
             "abcdefabcdefabcdefabcdefabcdefab", "control-runs", new string('a', 64), "correlation-recovery", "principal-1",
-            "provision-resources", "dev", "helios-dev-rg", [], "queued", "diagnose-plan-sync", now, now, steps, []);
+            "provision-resources", "x-tier-dev", "helios-dev-rg", [], "queued", "diagnose-plan-sync", now, now, steps, []);
         await store.CreateOrGetAsync(persisted, CancellationToken.None);
 
         using var coordinator = new ControlRunCoordinator(store, new FakeInventory(), new EdgeAutomationPlanner(), new FakeDispatcher(), NullLogger<ControlRunCoordinator>.Instance);
@@ -117,7 +117,7 @@ public sealed class ControlRunTests
         try
         {
             var started = await coordinator.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, []),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, []),
                 "edge-no-connectors-0001", "principal-1", CancellationToken.None);
             var completed = await WaitForTerminalAsync(coordinator, started.Id);
 
@@ -139,7 +139,7 @@ public sealed class ControlRunTests
         await coordinator.StartAsync(CancellationToken.None);
         try
         {
-            var run = await coordinator.StartAsync(new ControlRunRequest("cleanup-owned-resources", "dev"), "edge-cleanup-0001", "principal-1", CancellationToken.None);
+            var run = await coordinator.StartAsync(new ControlRunRequest("cleanup-owned-resources", "x-tier-dev"), "edge-cleanup-0001", "principal-1", CancellationToken.None);
             var completed = await WaitForTerminalAsync(coordinator, run.Id);
             Assert.Equal("awaiting-approval", completed.Status);
             Assert.Contains(completed.Plan!.Steps, step => step.Gate == "unknown-or-shared-resources-protected");
@@ -170,7 +170,7 @@ public sealed class ControlRunTests
         try
         {
             var run = await firstCoordinator.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]),
                 "edge-heartbeat-0001", "principal-1", CancellationToken.None);
             await dispatcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
@@ -206,7 +206,7 @@ public sealed class ControlRunTests
         try
         {
             var run = await coordinator.StartAsync(
-                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                new ControlRunRequest("provision-resources", "x-tier-dev", null, ["github"]),
                 "edge-heartbeat-loss-0001", "principal-1", CancellationToken.None);
             await dispatcher.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
 
@@ -264,7 +264,7 @@ public sealed class ControlRunTests
         var dispatcher = new ConnectorDispatcher(new StaticHttpClientFactory(httpClient), configuration);
         var now = DateTimeOffset.UtcNow;
         var run = new ControlRunSnapshot("0123456789abcdef0123456789abcdef", "control-runs", "edge-relay-0001", "correlation-1", "principal-1",
-            "provision-resources", "dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
+            "provision-resources", "x-tier-dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
             EvidenceSha256: new string('a', 64), ResourceCount: 2);
 
         var receipts = await dispatcher.DispatchAsync(run, CancellationToken.None);

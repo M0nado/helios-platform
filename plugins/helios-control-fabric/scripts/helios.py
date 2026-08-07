@@ -44,7 +44,7 @@ ENVIRONMENT_KEYS = (
     "AZURE_CLIENT_ID",
 )
 
-SUPPORTED_ENVIRONMENTS = ("azure-dev", "azure-test", "azure-prod")
+SUPPORTED_ENVIRONMENTS = ("x-tier-dev", "x-tier-xcore", "x-tier-prod")
 GITHUB_API_VERSION = "2026-03-10"
 GitHubApiReader = Callable[[str], dict[str, Any]]
 
@@ -111,7 +111,7 @@ def doctor() -> dict[str, Any]:
 
 def validate_environment(environment: str) -> None:
     if environment not in SUPPORTED_ENVIRONMENTS:
-        raise ValueError("environment must be azure-dev, azure-test, or azure-prod")
+        raise ValueError("environment must be x-tier-dev, x-tier-xcore, or x-tier-prod")
 
 
 def run_gh_api(endpoint: str) -> dict[str, Any]:
@@ -373,8 +373,8 @@ def print_human(payload: dict[str, Any]) -> None:
 def add_environment_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--environment",
-        default="azure-dev",
-        choices=("azure-dev", "azure-test", "azure-prod"),
+        default="x-tier-dev",
+        choices=("x-tier-dev", "x-tier-xcore", "x-tier-prod"),
     )
     parser.add_argument("--json", action="store_true")
 

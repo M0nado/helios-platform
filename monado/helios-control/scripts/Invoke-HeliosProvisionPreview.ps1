@@ -4,8 +4,8 @@ param(
     [ValidateNotNullOrEmpty()]
     [string] $ResourceGroup,
 
-    [ValidateSet('dev', 'test', 'preview', 'prod')]
-    [string] $EnvironmentName = 'dev',
+    [ValidateSet('x-tier-dev', 'x-tier-xcore', 'x-tier-prod')]
+    [string] $EnvironmentName = 'x-tier-dev',
 
     [ValidatePattern('^[a-zA-Z0-9-]{2,48}[a-zA-Z0-9]$')]
     [string] $ServiceName = 'helios-connector',

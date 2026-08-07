@@ -4,9 +4,9 @@
   "audience": "api://AzureADTokenExchange",
   "repository": "M0nado/helios-platform",
   "environments": [
-    "azure-dev",
-    "azure-test",
-    "azure-prod"
+    "x-tier-dev",
+    "x-tier-xcore",
+    "x-tier-prod"
   ],
   "subjectResolution": {
     "mode": "authenticated-github-api",

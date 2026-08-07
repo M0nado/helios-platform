@@ -6,7 +6,7 @@ param(
     [Parameter(Mandatory)] [string] $EntraTenantId,
     [Parameter(Mandatory)] [string] $AllowedPrincipalObjectId,
     [string] $ImageReference = 'heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000',
-    [ValidateSet('dev', 'test', 'prod')] [string] $EnvironmentName = 'dev',
+    [ValidateSet('x-tier-dev', 'x-tier-xcore', 'x-tier-prod')] [string] $EnvironmentName = 'x-tier-dev',
     [switch] $Apply
 )
 

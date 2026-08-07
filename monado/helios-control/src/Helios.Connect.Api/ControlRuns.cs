@@ -394,7 +394,7 @@ public sealed partial class ControlRunCoordinator(
     ILogger<ControlRunCoordinator> logger,
     ControlRunCoordinatorTiming? timing = null) : BackgroundService
 {
-    private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "dev", "test", "preview", "prod" };
+    private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "x-tier-dev", "x-tier-xcore", "x-tier-prod" };
     private static readonly HashSet<string> Intents = new(StringComparer.OrdinalIgnoreCase) { "provision-resources", "cleanup-owned-resources" };
     private static readonly HashSet<string> Connectors = new(StringComparer.OrdinalIgnoreCase) { "github", "linear", "slack", "sharepoint", "teams", "copilot" };
     private readonly ControlRunCoordinatorTiming _timing = ControlRunCoordinatorTiming.Validate(timing);
@@ -414,7 +414,7 @@ public sealed partial class ControlRunCoordinator(
         var intent = Normalize(request.Intent, "intent", 64).ToLowerInvariant();
         if (!Intents.Contains(intent)) throw new ArgumentException("One-button runs support provision-resources or cleanup-owned-resources.", nameof(request.Intent));
         var environment = Normalize(request.Environment, "environment", 16).ToLowerInvariant();
-        if (!Environments.Contains(environment)) throw new ArgumentException("Environment must be dev, test, preview, or prod.", nameof(request.Environment));
+        if (!Environments.Contains(environment)) throw new ArgumentException("Environment must be x-tier-dev, x-tier-xcore, or x-tier-prod.", nameof(request.Environment));
         var context = inventory.GetContext();
         var target = context.ResourceGroup;
         if (!context.Configured || string.IsNullOrWhiteSpace(target))

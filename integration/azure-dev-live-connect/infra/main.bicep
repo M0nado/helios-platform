@@ -1,9 +1,9 @@
 targetScope = 'resourceGroup'
 
 @allowed([
-  'dev'
+  'x-tier-dev'
 ])
-param environmentName string = 'dev'
+param environmentName string = 'x-tier-dev'
 param location string = resourceGroup().location
 param resourcePrefix string = 'helios'
 

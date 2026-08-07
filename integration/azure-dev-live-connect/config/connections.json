@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.1",
-  "environment": "azure-dev",
+  "environment": "x-tier-dev",
   "productionEnabled": false,
   "github": {
     "repository": "M0nado/helios-platform",
-    "environment": "azure-dev",
+    "environment": "x-tier-dev",
     "federationSubjectResolution": "authenticated GitHub repository metadata and effective OIDC policy; fail closed",
     "issuer": "https://token.actions.githubusercontent.com",
     "audience": "api://AzureADTokenExchange"

@@ -1,0 +1,52 @@
+{
+  "contractSchema": "schemas/hermes-xcore-environment-bindings-v1.schema.json",
+  "schemaVersion": "1.0.0",
+  "contractId": "helios-hermes-xcore-environment-bindings-v1",
+  "environments": [
+    {
+      "name": "x-tier-dev",
+      "tier": "development",
+      "deploymentWorkflow": "helios-cloud-deploy.yml",
+      "approvalRequired": true
+    },
+    {
+      "name": "x-tier-xcore",
+      "tier": "evaluation",
+      "deploymentWorkflow": "helios-cloud-deploy.yml",
+      "approvalRequired": true
+    },
+    {
+      "name": "x-tier-prod",
+      "tier": "production",
+      "deploymentWorkflow": "helios-cloud-deploy.yml",
+      "approvalRequired": true
+    }
+  ],
+  "promotionGraph": [
+    {
+      "from": "x-tier-dev",
+      "to": "x-tier-xcore",
+      "requiresExactArtifactDigest": true,
+      "requiresEvidenceLink": true
+    },
+    {
+      "from": "x-tier-xcore",
+      "to": "x-tier-prod",
+      "requiresExactArtifactDigest": true,
+      "requiresEvidenceLink": true
+    }
+  ],
+  "hotfix": {
+    "targetEnvironment": "x-tier-prod",
+    "separateEnvironment": false,
+    "requiresIncidentId": true,
+    "requiresReason": true,
+    "autoApprove": false,
+    "autoDeploy": false
+  },
+  "immutableArtifactContinuity": {
+    "required": true,
+    "forbidRebuildAfterApproval": true,
+    "requireTemplateAndRequestDigestMatch": true
+  }
+}

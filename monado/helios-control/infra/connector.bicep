@@ -1,11 +1,10 @@
 param location string = resourceGroup().location
 @allowed([
-  'dev'
-  'test'
-  'preview'
-  'prod'
+  'x-tier-dev'
+  'x-tier-xcore'
+  'x-tier-prod'
 ])
-param environmentName string = 'dev'
+param environmentName string = 'x-tier-dev'
 param serviceName string = 'helios-connector'
 @description('Immutable OCI image reference. Replace the all-zero preview placeholder with an approved registry/repository@sha256:digest value before deployment.')
 @minLength(80)
@@ -251,7 +250,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
           }
         ]
       }]
-      scale: { minReplicas: environmentName == 'prod' ? 1 : 0, maxReplicas: 3 }
+      scale: { minReplicas: environmentName == 'x-tier-prod' ? 1 : 0, maxReplicas: 3 }
     }
   }
 }

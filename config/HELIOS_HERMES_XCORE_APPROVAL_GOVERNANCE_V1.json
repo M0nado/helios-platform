@@ -1,0 +1,58 @@
+{
+  "contractSchema": "schemas/hermes-xcore-approval-governance-v1.schema.json",
+  "schemaVersion": "1.0.0",
+  "contractId": "helios-hermes-xcore-approval-governance-v1",
+  "authorities": {
+    "approvalSurfaces": [
+      "github-protected-environment-reviewers",
+      "azure-change-control"
+    ],
+    "deploymentSurfaces": [
+      "github-actions-workflow"
+    ],
+    "disallowedApprovalAndDeploymentSurfaces": [
+      "teams",
+      "slack",
+      "outlook",
+      "edge-extension",
+      "microsoft-copilot",
+      "copilot-studio"
+    ]
+  },
+  "approvals": {
+    "minApprovals": {
+      "x-tier-dev": 1,
+      "x-tier-xcore": 1,
+      "x-tier-prod": 2
+    },
+    "secondApprovalRequiredForProd": true
+  },
+  "hotfix": {
+    "targetEnvironment": "x-tier-prod",
+    "requiresIncidentId": true,
+    "requiresReason": true,
+    "autoApprove": false,
+    "autoDeploy": false
+  },
+  "artifactContinuity": {
+    "transitions": [
+      {
+        "from": "x-tier-dev",
+        "to": "x-tier-xcore",
+        "requireExactDigest": true
+      },
+      {
+        "from": "x-tier-xcore",
+        "to": "x-tier-prod",
+        "requireExactDigest": true
+      }
+    ],
+    "forbidRebuildAfterApproval": true,
+    "requireTemplateAndRequestDigestMatch": true
+  },
+  "xcorePromotionPolicy": {
+    "requireRecordedDigestFromEvaluation": true,
+    "allowRebuiltArtifactPromotion": false,
+    "requireEvidenceLink": true
+  }
+}

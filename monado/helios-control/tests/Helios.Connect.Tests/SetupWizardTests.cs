@@ -14,7 +14,7 @@ public sealed class SetupWizardTests
     [Fact]
     public void Bootstrap_is_deterministic_plan_only_and_contains_no_secret()
     {
-        var request = new SetupBootstrapRequest("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "helios-dev-rg", "dev");
+        var request = new SetupBootstrapRequest("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "helios-dev-rg", "x-tier-dev");
         var first = _wizard.CreateBootstrap(request);
         var second = _wizard.CreateBootstrap(request);
         Assert.Equal(first.ScriptSha256, second.ScriptSha256);
@@ -35,14 +35,14 @@ public sealed class SetupWizardTests
     [InlineData("group\nmalicious")]
     public void Bootstrap_rejects_shell_injection(string group)
     {
-        var request = new SetupBootstrapRequest("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", group, "dev");
+        var request = new SetupBootstrapRequest("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", group, "x-tier-dev");
         Assert.Throws<ArgumentException>(() => _wizard.CreateBootstrap(request));
     }
 
     [Fact]
     public void Bootstrap_can_select_subscription_and_persist_multi_shell_evidence()
     {
-        var request = new SetupBootstrapRequest("11111111-1111-1111-1111-111111111111", "", "helios-dev-rg", "dev");
+        var request = new SetupBootstrapRequest("11111111-1111-1111-1111-111111111111", "", "helios-dev-rg", "x-tier-dev");
         var result = _wizard.CreateBootstrap(request);
 
         Assert.Equal("unique-resource-group-match-then-interactive-fallback", result.SubscriptionSelection);
@@ -56,7 +56,7 @@ public sealed class SetupWizardTests
     [Fact]
     public void Cleanup_plan_protects_unknown_and_shared_resources()
     {
-        var plan = new EdgeAutomationPlanner().CreatePlan(new("cleanup-owned-resources", "dev", "helios-dev-rg"));
+        var plan = new EdgeAutomationPlanner().CreatePlan(new("cleanup-owned-resources", "x-tier-dev", "helios-dev-rg"));
 
         Assert.False(plan.CanApplyFromMcp);
         Assert.Equal("plan-only", plan.Mode);

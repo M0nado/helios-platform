@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       run_what_if:
-        description: Authenticate with azure-dev OIDC and run the development Bicep what-if
+        description: Authenticate with x-tier-dev OIDC and run the development Bicep what-if
         required: true
         type: boolean
         default: false
@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: helios-azure-dev-live-connect-${{ github.ref }}
+  group: helios-x-tier-dev-live-connect-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -80,7 +80,7 @@ jobs:
               throw "OIDC resolver guardrail is missing: $required"
             }
           }
-          if ($connector -match [regex]::Escape('repo:M0nado/helios-platform:environment:azure-dev')) {
+          if ($connector -match [regex]::Escape('repo:M0nado/helios-platform:environment:x-tier-dev')) {
             throw 'The connector must not carry a static legacy OIDC subject.'
           }
 
@@ -97,7 +97,7 @@ jobs:
           }
 
   what_if:
-    name: Authenticate and run azure-dev what-if
+    name: Authenticate and run x-tier-dev what-if
     if: >-
       github.event_name == 'workflow_dispatch' &&
       inputs.run_what_if == true &&
@@ -107,7 +107,7 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: azure-dev
+    environment: x-tier-dev
     permissions:
       actions: read
       contents: read
@@ -118,13 +118,13 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
     steps:
-      - name: Require exact azure-dev bindings
+      - name: Require exact x-tier-dev bindings
         shell: bash
         run: |
           set -euo pipefail
           for name in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP; do
             if [ -z "${!name:-}" ]; then
-              echo "Missing required azure-dev variable: $name" >&2
+              echo "Missing required x-tier-dev variable: $name" >&2
               exit 1
             fi
           done
@@ -143,7 +143,7 @@ jobs:
           set -euo pipefail
           oidc_path="$RUNNER_TEMP/helios-oidc.json"
           python plugins/helios-control-fabric/scripts/helios.py \
-            oidc --environment azure-dev --json > "$oidc_path"
+            oidc --environment x-tier-dev --json > "$oidc_path"
           subject="$(jq -er '.selectedSubject' "$oidc_path")"
           immutable="$(jq -er '.useImmutableSubject' "$oidc_path")"
           case "$immutable" in
@@ -208,7 +208,7 @@ jobs:
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --name helios-dev-live-connect-validate \
             --template-file "$TEMPLATE_FILE" \
-            --parameters environmentName=dev \
+            --parameters environmentName=x-tier-dev \
             --mode Incremental \
             --validation-level ProviderNoRbac \
             --output json > "$EVIDENCE_DIR/validation.json"
@@ -221,7 +221,7 @@ jobs:
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --name helios-dev-live-connect \
             --template-file "$TEMPLATE_FILE" \
-            --parameters environmentName=dev \
+            --parameters environmentName=x-tier-dev \
             --mode Incremental \
             --no-prompt true \
             --result-format FullResourcePayloads \
@@ -240,7 +240,7 @@ jobs:
           evidence = {
               'repository': os.environ['GITHUB_REPOSITORY'],
               'sourceSha': os.environ['GITHUB_SHA'],
-              'environment': 'azure-dev',
+              'environment': 'x-tier-dev',
               'subscriptionId': os.environ['AZURE_SUBSCRIPTION_ID'],
               'tenantId': os.environ['AZURE_TENANT_ID'],
               'resourceGroup': os.environ['AZURE_RESOURCE_GROUP'],
@@ -257,7 +257,7 @@ jobs:
       - name: Upload what-if evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: helios-azure-dev-what-if-${{ github.sha }}
+          name: helios-x-tier-dev-what-if-${{ github.sha }}
           path: artifacts/azure-dev-live-connect/
           if-no-files-found: error
           retention-days: 30

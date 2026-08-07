@@ -243,7 +243,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.DoesNotContain("HMAC_SECRET", connectorBody, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("https://", connectorBody, StringComparison.OrdinalIgnoreCase);
 
-        using var content = new StringContent("{\"intent\":\"provision-resources\",\"environment\":\"dev\"}", Encoding.UTF8, "application/json");
+        using var content = new StringContent("{\"intent\":\"provision-resources\",\"environment\":\"x-tier-dev\"}", Encoding.UTF8, "application/json");
         using var response = await _client.PostAsync("/control/runs", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -253,7 +253,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/control/runs")
         {
-            Content = new ChunkedJsonContent(Encoding.UTF8.GetBytes($"{{\"intent\":\"provision-resources\",\"environment\":\"dev\",\"padding\":\"{new string('a', 20_000)}\"}}"))
+            Content = new ChunkedJsonContent(Encoding.UTF8.GetBytes($"{{\"intent\":\"provision-resources\",\"environment\":\"x-tier-dev\",\"padding\":\"{new string('a', 20_000)}\"}}"))
         };
         request.Headers.Add("Idempotency-Key", "chunked-control-0001");
 
@@ -598,7 +598,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Automation_plan_is_deterministic_and_never_applies_from_rest()
     {
-        const string payload = "{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}";
+        const string payload = "{\"intent\":\"repair-issue\",\"environment\":\"x-tier-dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}";
         using var firstContent = new StringContent(payload, Encoding.UTF8, "application/json");
         using var secondContent = new StringContent(payload, Encoding.UTF8, "application/json");
         using var first = await _client.PostAsync("/automation/plan", firstContent);
@@ -617,7 +617,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Automation_plan_rejects_secret_rotation_without_target()
     {
-        using var content = new StringContent("{\"intent\":\"rotate-secret\",\"environment\":\"dev\"}", Encoding.UTF8, "application/json");
+        using var content = new StringContent("{\"intent\":\"rotate-secret\",\"environment\":\"x-tier-dev\"}", Encoding.UTF8, "application/json");
         using var response = await _client.PostAsync("/automation/plan", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -640,7 +640,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Azure_mcp_returns_issue_repair_plan_without_apply_capability()
     {
-        const string payload = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_plan_automation\",\"arguments\":{\"intent\":\"repair-issue\",\"environment\":\"dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}}}";
+        const string payload = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"helios_plan_automation\",\"arguments\":{\"intent\":\"repair-issue\",\"environment\":\"x-tier-dev\",\"target\":\"JOH-36\",\"connector\":\"linear\"}}}";
         using var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
@@ -661,7 +661,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         Assert.Contains("Azure Setup Wizard", html);
 
-        const string payload = "{\"tenantId\":\"11111111-1111-1111-1111-111111111111\",\"subscriptionId\":\"22222222-2222-2222-2222-222222222222\",\"resourceGroup\":\"helios-dev-rg\",\"environment\":\"dev\"}";
+        const string payload = "{\"tenantId\":\"11111111-1111-1111-1111-111111111111\",\"subscriptionId\":\"22222222-2222-2222-2222-222222222222\",\"resourceGroup\":\"helios-dev-rg\",\"environment\":\"x-tier-dev\"}";
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
         using var response = await _client.PostAsync("/setup/bootstrap", content);
         var body = await response.Content.ReadAsStringAsync();

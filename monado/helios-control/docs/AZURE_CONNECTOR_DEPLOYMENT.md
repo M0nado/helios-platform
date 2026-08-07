@@ -78,7 +78,7 @@ token; ordinary jobs do not emit the reusable-workflow-only `job_workflow_ref`.
 ```powershell
 pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -Mode Configure `
-  -EnvironmentName dev `
+  -EnvironmentName x-tier-dev `
   -ResourceGroup rg-helios-dev `
   -ContainerRegistryName '<globally-unique-acr-name>' `
   -RequiredReviewerId '<github-user-id>'

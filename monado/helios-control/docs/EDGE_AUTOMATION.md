@@ -50,7 +50,7 @@ az login --tenant <tenant-id>
 Generate a Bicep what-if plan and evidence digest. Plan resolves every azd placeholder with explicit non-secret values and requests `FullResourcePayloads`, so property-level changes are part of the approved hash:
 
 ~~~powershell
-./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -EnvironmentName dev -ContainerImage <registry>/helios-connect@sha256:<digest> -ContainerRegistryName <registry> -EntraClientId <client-id> -AllowedPrincipalObjectId <object-id> -SourceCommitSha <git-sha>
+./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId <tenant-id> -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -EnvironmentName x-tier-dev -ContainerImage <registry>/helios-connect@sha256:<digest> -ContainerRegistryName <registry> -EntraClientId <client-id> -AllowedPrincipalObjectId <object-id> -SourceCommitSha <git-sha>
 ~~~
 
 The generated `request.json` is a handoff contract, not proof of approval. Reviewers use the protected GitHub workflow to build the immutable image, capture what-if evidence, approve a second environment gate, verify no drift, and deploy. The local helper has no apply or vault-write code path.
@@ -62,7 +62,7 @@ Authenticated callers can request a deterministic plan:
 ~~~json
 {
   "intent": "repair-issue",
-  "environment": "dev",
+  "environment": "x-tier-dev",
   "target": "JOH-36",
   "connector": "all"
 }

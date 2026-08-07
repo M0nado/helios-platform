@@ -14,11 +14,11 @@ on:
         description: Protected GitHub environment containing the Azure OIDC variables
         required: true
         type: choice
-        default: azure-dev
+        default: x-tier-dev
         options:
-          - azure-dev
-          - azure-test
-          - azure-prod
+          - x-tier-dev
+          - x-tier-xcore
+          - x-tier-prod
       mode:
         description: Preview is the default; deploy requires a second protected-environment approval
         required: true
@@ -28,7 +28,22 @@ on:
           - what-if
           - deploy
       confirmDeployment:
-        description: Enter DEPLOY when mode is deploy; ignored for what-if
+        description: Enter DEPLOY for standard deploys or HOTFIX for expedited production deploys
+        required: false
+        type: string
+        default: ""
+      hotfix:
+        description: Require incident-bound expedited governance for production deploys
+        required: true
+        type: boolean
+        default: false
+      hotfixIncidentId:
+        description: Required when hotfix is true (for example INC-12345)
+        required: false
+        type: string
+        default: ""
+      hotfixReason:
+        description: Required when hotfix is true
         required: false
         type: string
         default: ""
@@ -75,11 +90,32 @@ jobs:
         env:
           DEPLOYMENT_MODE: ${{ inputs.mode || 'what-if' }}
           DEPLOYMENT_CONFIRMATION: ${{ inputs.confirmDeployment || '' }}
+          DEPLOYMENT_HOTFIX: ${{ inputs.hotfix || false }}
+          HOTFIX_INCIDENT_ID: ${{ inputs.hotfixIncidentId || '' }}
+          HOTFIX_REASON: ${{ inputs.hotfixReason || '' }}
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment || '' }}
         run: |
           set -euo pipefail
+          if [[ "${DEPLOYMENT_HOTFIX}" == "true" && "${DEPLOYMENT_MODE}" != "deploy" ]]; then
+            echo "hotfix=true is only valid when mode=deploy." >&2
+            exit 1
+          fi
           if [[ "${DEPLOYMENT_MODE}" == "deploy" ]]; then
-            if [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
-              echo "A deploy run requires confirmDeployment=DEPLOY." >&2
+            if [[ "${DEPLOYMENT_HOTFIX}" == "true" ]]; then
+              if [[ "${TARGET_ENVIRONMENT}" != "x-tier-prod" ]]; then
+                echo "hotfix=true requires targetEnvironment=x-tier-prod." >&2
+                exit 1
+              fi
+              if [[ "${DEPLOYMENT_CONFIRMATION}" != "HOTFIX" ]]; then
+                echo "A hotfix deploy requires confirmDeployment=HOTFIX." >&2
+                exit 1
+              fi
+              if [[ -z "${HOTFIX_INCIDENT_ID}" || -z "${HOTFIX_REASON}" ]]; then
+                echo "A hotfix deploy requires both hotfixIncidentId and hotfixReason." >&2
+                exit 1
+              fi
+            elif [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
+              echo "A standard deploy run requires confirmDeployment=DEPLOY." >&2
               exit 1
             fi
           fi
@@ -341,9 +377,12 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
+          HOTFIX_LANE: ${{ inputs.hotfix || false }}
+          HOTFIX_INCIDENT_ID: ${{ inputs.hotfixIncidentId || '' }}
+          HOTFIX_REASON: ${{ inputs.hotfixReason || '' }}
         run: |
           set -euo pipefail
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          environment_name="${TARGET_ENVIRONMENT}"
           artifact_dir="${RUNNER_TEMP}/helios-what-if"
           raw_what_if="${RUNNER_TEMP}/helios-what-if.raw.json"
           mkdir -p "${artifact_dir}"
@@ -405,7 +444,10 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            --arg hotfixLane "${HOTFIX_LANE}" \
+            --arg hotfixIncidentId "${HOTFIX_INCIDENT_ID}" \
+            --arg hotfixReason "${HOTFIX_REASON}" \
+            '{schemaVersion: 1, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, hotfix: {requested: ($hotfixLane == "true"), incidentId: $hotfixIncidentId, reason: $hotfixReason}, template: {sha256: $templateSha256}, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -417,6 +459,9 @@ jobs:
             echo "- Compiled template SHA-256: \`${TEMPLATE_SHA256}\`"
             echo "- Full canonical what-if SHA-256: \`${what_if_sha256}\`"
             echo "- Review-safe artifact content SHA-256: \`${review_sha256}\`"
+            if [[ "${HOTFIX_LANE}" == "true" ]]; then
+              echo "- Hotfix lane: incident \`${HOTFIX_INCIDENT_ID}\`"
+            fi
             echo "- A deploy request now requires a second protected-environment approval."
           } >> "${GITHUB_STEP_SUMMARY}"
 
@@ -443,7 +488,7 @@ jobs:
 
   deploy:
     name: Deploy after second approval (${{ inputs.targetEnvironment }})
-    if: ${{ inputs.mode == 'deploy' && inputs.confirmDeployment == 'DEPLOY' }}
+    if: ${{ inputs.mode == 'deploy' }}
     needs:
       - validate
       - preview
@@ -558,10 +603,13 @@ jobs:
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
+          HOTFIX_LANE: ${{ inputs.hotfix || false }}
+          HOTFIX_INCIDENT_ID: ${{ inputs.hotfixIncidentId || '' }}
+          HOTFIX_REASON: ${{ inputs.hotfixReason || '' }}
         run: |
           set -euo pipefail
           evidence_dir="${RUNNER_TEMP}/approved-what-if"
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          environment_name="${TARGET_ENVIRONMENT}"
           actual_review_sha256="$(sha256sum "${evidence_dir}/what-if.json" | cut -d' ' -f1)"
           expected_review_sha256="$(jq --raw-output '.reviewSha256' "${evidence_dir}/request.json")"
           if [[ "${actual_review_sha256}" != "${expected_review_sha256}" ]]; then
@@ -593,7 +641,10 @@ jobs:
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            --arg hotfixLane "${HOTFIX_LANE}" \
+            --arg hotfixIncidentId "${HOTFIX_INCIDENT_ID}" \
+            --arg hotfixReason "${HOTFIX_REASON}" \
+            '.schemaVersion == 1 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .hotfix == {requested: ($hotfixLane == "true"), incidentId: $hotfixIncidentId, reason: $hotfixReason} and .template == {sha256: $templateSha256} and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
             "${evidence_dir}/request.json" > /dev/null
 
       - name: Re-verify configured registry and published digest
@@ -679,7 +730,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
         run: |
           set -euo pipefail
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          environment_name="${TARGET_ENVIRONMENT}"
           raw_what_if="${RUNNER_TEMP}/helios-drift-check.raw.json"
           canonical_what_if="${RUNNER_TEMP}/helios-drift-check.json"
           az deployment group what-if \
@@ -720,7 +771,7 @@ jobs:
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
         run: |
           set -euo pipefail
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
+          environment_name="${TARGET_ENVIRONMENT}"
           deployment_json="$(az deployment group create \
             --name "helios-cloud-${environment_name}-${GITHUB_RUN_ID}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \

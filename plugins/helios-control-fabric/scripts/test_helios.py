@@ -53,7 +53,7 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(targets["state"]["azure"], "not-live")
 
     def test_plan_is_non_executing(self) -> None:
-        plan = HELIOS.release_plan("azure-dev")
+        plan = HELIOS.release_plan("x-tier-dev")
         self.assertEqual(plan["executionMode"], "plan-only")
         self.assertIn("Azure deployment approval", plan["administratorGates"])
         self.assertIn(
@@ -65,14 +65,14 @@ class HeliosCliTests(unittest.TestCase):
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             contract = HELIOS.oidc_contract(
-                "azure-dev",
+                "x-tier-dev",
                 api_reader=github_reader(),
             )
         self.assertEqual(
             contract["selectedSubject"],
             (
                 "repo:M0nado@274244942/"
-                "helios-platform@1207349837:environment:azure-dev"
+                "helios-platform@1207349837:environment:x-tier-dev"
             ),
         )
         self.assertTrue(contract["useImmutableSubject"])
@@ -85,19 +85,19 @@ class HeliosCliTests(unittest.TestCase):
 
     def test_oidc_contract_honors_github_legacy_default_when_effective(self) -> None:
         contract = HELIOS.oidc_contract(
-            "azure-test",
+            "x-tier-xcore",
             api_reader=github_reader(immutable=False),
         )
         self.assertEqual(
             contract["selectedSubject"],
-            "repo:M0nado/helios-platform:environment:azure-test",
+            "repo:M0nado/helios-platform:environment:x-tier-xcore",
         )
         self.assertFalse(contract["useImmutableSubject"])
 
     def test_oidc_contract_rejects_custom_subject_templates(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "customized OIDC"):
             HELIOS.oidc_contract(
-                "azure-dev",
+                "x-tier-dev",
                 api_reader=github_reader(use_default=False),
             )
 
@@ -108,7 +108,7 @@ class HeliosCliTests(unittest.TestCase):
             return {"use_default": True}
 
         with self.assertRaisesRegex(RuntimeError, "use_immutable_subject"):
-            HELIOS.oidc_contract("azure-dev", api_reader=reader)
+            HELIOS.oidc_contract("x-tier-dev", api_reader=reader)
 
     def test_oidc_contract_rejects_missing_repository_ids(self) -> None:
         repository_info = {
@@ -122,7 +122,7 @@ class HeliosCliTests(unittest.TestCase):
             return {"use_default": True, "use_immutable_subject": True}
 
         with self.assertRaisesRegex(RuntimeError, "immutable owner ID"):
-            HELIOS.oidc_contract("azure-dev", api_reader=reader)
+            HELIOS.oidc_contract("x-tier-dev", api_reader=reader)
 
     def test_static_oidc_asset_contains_no_subject_values(self) -> None:
         asset = HELIOS.read_asset("oidc.json")
@@ -137,7 +137,7 @@ class HeliosCliTests(unittest.TestCase):
         with patch.object(HELIOS.shutil, "which", return_value=None):
             with redirect_stderr(stderr):
                 result = HELIOS.main(
-                    ["oidc", "--environment", "azure-dev", "--json"]
+                    ["oidc", "--environment", "x-tier-dev", "--json"]
                 )
         self.assertEqual(result, 2)
         self.assertIn("GitHub CLI is required", stderr.getvalue())
@@ -156,7 +156,7 @@ class HeliosCliTests(unittest.TestCase):
         self.assertTrue(topology["release"]["immutableImageRequired"])
 
     def test_edge_plan_requires_private_link_and_separate_approval(self) -> None:
-        plan = HELIOS.edge_plan("azure-dev")
+        plan = HELIOS.edge_plan("x-tier-dev")
         self.assertEqual(plan["targetEdge"]["service"], "Azure Front Door Premium")
         self.assertEqual(plan["targetEdge"]["connectivity"], "Private Link")
         self.assertFalse(plan["automaticApply"])

@@ -15,8 +15,8 @@ separately reviewed protected workflow.
 param(
     [ValidateSet('Diagnose', 'Plan')]
     [string] $Mode = 'Diagnose',
-    [ValidateSet('dev', 'test', 'preview', 'prod')]
-    [string] $EnvironmentName = 'dev',
+    [ValidateSet('x-tier-dev', 'x-tier-xcore', 'x-tier-prod')]
+    [string] $EnvironmentName = 'x-tier-dev',
     [Parameter(Mandatory)] [string] $TenantId,
     [Parameter(Mandatory)] [string] $SubscriptionId,
     [Parameter(Mandatory)] [string] $ResourceGroup,

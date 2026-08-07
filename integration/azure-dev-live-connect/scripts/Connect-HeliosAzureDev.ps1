@@ -1,7 +1,7 @@
 #Requires -Version 7.2
 <#
 .SYNOPSIS
-Connects the HELIOS development control plane to Azure and GitHub OIDC.
+Connects the HELIOS x-tier-dev control plane to Azure and GitHub OIDC.
 
 .DESCRIPTION
 Performs explicit, auditable phases:
@@ -9,7 +9,7 @@ Performs explicit, auditable phases:
 2. Azure subscription selection.
 3. Optional resource-group creation.
 4. Optional secretless Entra application and GitHub environment federation.
-5. Optional GitHub azure-dev environment/variable configuration.
+5. Optional GitHub x-tier-dev environment/variable configuration.
 6. Bicep validation and development what-if.
 
 No client secret is created. No Azure deployment is performed.
@@ -25,8 +25,8 @@ param(
     [string]$ResourceGroup = 'rg-helios-dev',
     [string]$Location = 'eastus2',
     [string]$Repository = 'M0nado/helios-platform',
-    [string]$GitHubEnvironment = 'azure-dev',
-    [string]$EntraAppDisplayName = 'HELIOS GitHub azure-dev',
+    [string]$GitHubEnvironment = 'x-tier-dev',
+    [string]$EntraAppDisplayName = 'HELIOS GitHub x-tier-dev',
     [string]$TemplateFile = (Join-Path $PSScriptRoot '..\infra\main.bicep'),
     [string]$EvidenceDirectory = (Join-Path $PSScriptRoot '..\evidence'),
 
@@ -49,11 +49,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ExpectedResourceGroupConfirmation = 'CREATE HELIOS AZURE DEV RESOURCE GROUP'
-$ExpectedOidcConfirmation = 'CONFIGURE HELIOS AZURE DEV OIDC'
-$ExpectedGitHubEnvironmentConfirmation = 'CONFIGURE HELIOS AZURE DEV ENVIRONMENT'
+$ExpectedResourceGroupConfirmation = 'CREATE HELIOS X-TIER-DEV RESOURCE GROUP'
+$ExpectedOidcConfirmation = 'CONFIGURE HELIOS X-TIER-DEV OIDC'
+$ExpectedGitHubEnvironmentConfirmation = 'CONFIGURE HELIOS X-TIER-DEV ENVIRONMENT'
 $CanonicalRepository = 'M0nado/helios-platform'
-$CanonicalGitHubEnvironment = 'azure-dev'
+$CanonicalGitHubEnvironment = 'x-tier-dev'
 $CanonicalIssuer = 'https://token.actions.githubusercontent.com'
 $GitHubApiVersion = '2026-03-10'
 $FederationSubject = $null
@@ -254,7 +254,7 @@ if (-not $groupExists) {
     }
     Require-Confirmation -Actual $ResourceGroupConfirmation -Expected $ExpectedResourceGroupConfirmation
     if ($PSCmdlet.ShouldProcess($ResourceGroup, 'Create Azure development resource group')) {
-        & $az group create --name $ResourceGroup --location $Location --tags system=HELIOS environment=dev managedBy=Connect-HeliosAzureDev --output none
+        & $az group create --name $ResourceGroup --location $Location --tags system=HELIOS environment=x-tier-dev managedBy=Connect-HeliosAzureDev --output none
         if ($LASTEXITCODE -ne 0) { throw 'Resource-group creation failed.' }
     }
 }
@@ -299,7 +299,7 @@ if ($ConfigureOidc) {
     if (-not $servicePrincipal) { throw 'Unable to resolve the HELIOS service principal.' }
     $servicePrincipalObjectId = [string]$servicePrincipal.id
 
-    $credentialName = 'github-azure-dev'
+    $credentialName = 'github-x-tier-dev'
     $existingCredential = Invoke-JsonCommand -FilePath $az -ArgumentList @(
         'ad', 'app', 'federated-credential', 'list', '--id', $appObjectId,
         '--query', "[?name=='$credentialName'] | [0]", '--output', 'json'
@@ -320,9 +320,9 @@ if ($ConfigureOidc) {
             issuer = $CanonicalIssuer
             subject = $FederationSubject
             audiences = @($FederationAudience)
-            description = 'HELIOS GitHub Actions azure-dev environment'
+            description = 'HELIOS GitHub Actions x-tier-dev environment'
         }
-        $credentialFile = Join-Path $env:TEMP "helios-azure-dev-federation-$([guid]::NewGuid().ToString('N')).json"
+        $credentialFile = Join-Path $env:TEMP "helios-x-tier-dev-federation-$([guid]::NewGuid().ToString('N')).json"
         try {
             $credential | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $credentialFile -Encoding utf8NoBOM
             if ($PSCmdlet.ShouldProcess($FederationSubject, 'Create GitHub OIDC federated credential')) {
@@ -415,7 +415,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Bicep compilation failed.' }
     --resource-group $ResourceGroup `
     --name 'helios-dev-live-connect-validate' `
     --template-file $resolvedTemplate `
-    --parameters environmentName=dev `
+    --parameters environmentName=x-tier-dev `
     --mode Incremental `
     --validation-level ProviderNoRbac `
     --output json | Set-Content -LiteralPath (Join-Path $resolvedEvidence 'validation.json') -Encoding utf8NoBOM
@@ -427,7 +427,7 @@ if ($RunWhatIf) {
         --resource-group $ResourceGroup `
         --name 'helios-dev-live-connect' `
         --template-file $resolvedTemplate `
-        --parameters environmentName=dev `
+        --parameters environmentName=x-tier-dev `
         --mode Incremental `
         --no-prompt true `
         --result-format FullResourcePayloads `

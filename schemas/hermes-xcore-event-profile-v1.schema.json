@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.invalid/hermes-xcore-event-profile-v1.schema.json",
+  "title": "HELIOS Hermes/XCore event profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractSchema",
+    "schemaVersion",
+    "contractId",
+    "eventEnvelope",
+    "delivery"
+  ],
+  "properties": {
+    "contractSchema": {
+      "const": "schemas/hermes-xcore-event-profile-v1.schema.json"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "contractId": {
+      "const": "helios-hermes-xcore-event-profile-v1"
+    },
+    "eventEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredFields",
+        "classifications",
+        "correlationIdRequired",
+        "evidenceLinksRequired"
+      ],
+      "properties": {
+        "requiredFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "classifications": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "correlationIdRequired": {
+          "const": true
+        },
+        "evidenceLinksRequired": {
+          "const": true
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semantics",
+        "idempotency",
+        "replayProtection",
+        "leaseFencing"
+      ],
+      "properties": {
+        "semantics": {
+          "const": "at-least-once"
+        },
+        "idempotency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "keyFields"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "keyFields": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "replayProtection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "maxAgeMinutes",
+            "requireNonce"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "maxAgeMinutes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "requireNonce": {
+              "const": true
+            }
+          }
+        },
+        "leaseFencing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "leaseOwnerField",
+            "leaseExpiryField",
+            "etagField",
+            "compareAndSwapRequired"
+          ],
+          "properties": {
+            "required": {
+              "const": true
+            },
+            "leaseOwnerField": {
+              "type": "string",
+              "minLength": 1
+            },
+            "leaseExpiryField": {
+              "type": "string",
+              "minLength": 1
+            },
+            "etagField": {
+              "type": "string",
+              "minLength": 1
+            },
+            "compareAndSwapRequired": {
+              "const": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

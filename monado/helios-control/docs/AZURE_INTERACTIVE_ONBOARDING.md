@@ -18,7 +18,7 @@ and what-if. Supply an existing ACR name or select one interactively.
 ```powershell
 pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -Mode Plan `
-  -EnvironmentName dev `
+  -EnvironmentName x-tier-dev `
   -UseDeviceCode
 ```
 
@@ -49,7 +49,7 @@ confirmation, and a positive numeric GitHub reviewer ID is mandatory.
 ```powershell
 pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -Mode Configure `
-  -EnvironmentName dev `
+  -EnvironmentName x-tier-dev `
   -ResourceGroup rg-helios-dev `
   -ContainerRegistryName '<globally-unique-acr-name>' `
   -RequiredReviewerId '<github-user-id>' `
@@ -85,7 +85,7 @@ modes, and never weakens the policy.
 ```powershell
 pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -Mode Publish `
-  -EnvironmentName dev `
+  -EnvironmentName x-tier-dev `
   -ResourceGroup rg-helios-dev `
   -ContainerRegistryName '<globally-unique-acr-name>'
 ```
@@ -115,6 +115,10 @@ waits at the preview environment, builds the exact selected commit and records
 its registry digest, produces and hashes canonical ARM what-if evidence, then
 waits at the separate deploy approval before rechecking drift and applying that
 same revision.
+
+For an expedited incident path, use the same workflow with `targetEnvironment=x-tier-prod`,
+`hotfix=true`, `confirmDeployment=HOTFIX`, and both `hotfixIncidentId` and
+`hotfixReason`. This path still requires approval and never auto-deploys.
 
 After the deployment returns the connector hostname, re-run `-Mode Configure`
 with the same reviewed inputs and confirmation. This idempotent pass discovers

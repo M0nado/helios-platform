@@ -4,12 +4,11 @@ targetScope = 'resourceGroup'
 param location string = resourceGroup().location
 
 @allowed([
-  'dev'
-  'test'
-  'preview'
-  'prod'
+  'x-tier-dev'
+  'x-tier-xcore'
+  'x-tier-prod'
 ])
-param environmentName string = 'dev'
+param environmentName string = 'x-tier-dev'
 
 param serviceName string = 'helios-connector'
 

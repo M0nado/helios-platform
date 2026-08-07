@@ -52,11 +52,11 @@ jobs:
           EXPECTED_REPOSITORY_ID: ${{ github.repository_id }}
           EXPECTED_REPOSITORY_OWNER_ID: ${{ github.repository_owner_id }}
         run: |
-          python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev --json > /tmp/helios-plan.json
-          python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev --json > /tmp/helios-oidc.json
+          python plugins/helios-control-fabric/scripts/helios.py plan --environment x-tier-dev --json > /tmp/helios-plan.json
+          python plugins/helios-control-fabric/scripts/helios.py oidc --environment x-tier-dev --json > /tmp/helios-oidc.json
           python plugins/helios-control-fabric/scripts/helios.py devops-sync --json > /tmp/helios-devops.json
           python plugins/helios-control-fabric/scripts/helios.py runners --json > /tmp/helios-runners.json
-          python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev --json > /tmp/helios-edge.json
+          python plugins/helios-control-fabric/scripts/helios.py edge --environment x-tier-dev --json > /tmp/helios-edge.json
           python - <<'PY'
           import json
           import os
@@ -79,7 +79,7 @@ jobs:
               )
           else:
               repository_segment = f"{owner}/{repository}"
-          expected_subject = f"repo:{repository_segment}:environment:azure-dev"
+          expected_subject = f"repo:{repository_segment}:environment:x-tier-dev"
           assert oidc["selectedSubject"] == expected_subject
           assert oidc["secretsStoredInGitHub"] is False
           assert devops["azureDevOps"]["readOnly"] is True

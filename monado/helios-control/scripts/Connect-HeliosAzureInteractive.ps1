@@ -17,10 +17,10 @@ intentionally available only through the two-stage protected GitHub workflow.
 ./scripts/Connect-HeliosAzureInteractive.ps1 -UseDeviceCode
 
 .EXAMPLE
-./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Configure -EnvironmentName dev -ContainerRegistryName heliosdev12345 -RequiredReviewerId 12345678
+./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Configure -EnvironmentName x-tier-dev -ContainerRegistryName heliosdev12345 -RequiredReviewerId 12345678
 
 .EXAMPLE
-./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Publish -EnvironmentName dev -ContainerRegistryName heliosdev12345
+./scripts/Connect-HeliosAzureInteractive.ps1 -Mode Publish -EnvironmentName x-tier-dev -ContainerRegistryName heliosdev12345
 #>
 
 [CmdletBinding()]
@@ -28,8 +28,8 @@ param(
     [ValidateSet('Plan', 'Configure', 'Publish')]
     [string] $Mode = 'Plan',
 
-    [ValidateSet('dev', 'test', 'prod')]
-    [string] $EnvironmentName = 'dev',
+    [ValidateSet('x-tier-dev', 'x-tier-xcore', 'x-tier-prod')]
+    [string] $EnvironmentName = 'x-tier-dev',
 
     [string] $TenantId,
     [string] $SubscriptionId,
@@ -1723,12 +1723,12 @@ try {
     }
     $script:AzPath = $azCommand.Source
 
-    $expectedGitHubEnvironment = "azure-$EnvironmentName"
+    $expectedGitHubEnvironment = $EnvironmentName
     if ([string]::IsNullOrWhiteSpace($GitHubEnvironment)) {
         $GitHubEnvironment = $expectedGitHubEnvironment
     }
     elseif ($GitHubEnvironment -cne $expectedGitHubEnvironment) {
-        throw "GitHubEnvironment must be '$expectedGitHubEnvironment' for EnvironmentName '$EnvironmentName'. The workflow has no alternate preview alias."
+        throw "GitHubEnvironment must be '$expectedGitHubEnvironment' for EnvironmentName '$EnvironmentName'."
     }
     if ($GitHubOwner -notmatch '^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$') {
         throw 'GitHubOwner is not a valid GitHub account or organization name.'
