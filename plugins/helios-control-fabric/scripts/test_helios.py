@@ -44,6 +44,54 @@ def github_reader(*, immutable: bool = True, use_default: bool = True) -> Mock:
 
 
 class HeliosCliTests(unittest.TestCase):
+    def test_check_tool_reports_resolved_path(self) -> None:
+        with patch.object(
+            HELIOS,
+            "resolve_command_path",
+            return_value=r"C:\Program Files\dotnet\dotnet.exe",
+        ):
+            with patch.object(HELIOS.subprocess, "run") as run:
+                run.return_value = Mock(returncode=0, stdout="9.0.314\n", stderr="")
+                result = HELIOS.check_tool("dotnet", ("--version",), required=True)
+
+        self.assertTrue(result["available"])
+        self.assertTrue(result["healthy"])
+        self.assertEqual(result["path"], r"C:\Program Files\dotnet\dotnet.exe")
+        self.assertEqual(result["version"], "9.0.314")
+
+    def test_check_tool_uses_cmd_for_windows_batch_fallback(self) -> None:
+        with patch.object(HELIOS.os, "name", "nt"):
+            with patch.dict(HELIOS.os.environ, {"ComSpec": r"C:\Windows\System32\cmd.exe"}):
+                with patch.object(
+                    HELIOS,
+                    "resolve_command_path",
+                    return_value=r"C:\Program Files\nodejs\npm.cmd",
+                ):
+                    with patch.object(HELIOS.subprocess, "run") as run:
+                        run.return_value = Mock(returncode=0, stdout="10.8.1\n", stderr="")
+                        result = HELIOS.check_tool("npm", ("--version",), required=True)
+
+        run.assert_called_once()
+        probe_command = run.call_args.args[0]
+        self.assertEqual(probe_command[0], r"C:\Windows\System32\cmd.exe")
+        self.assertEqual(probe_command[1:4], ["/d", "/s", "/c"])
+        self.assertIn("npm.cmd", probe_command[4])
+        self.assertTrue(result["available"])
+        self.assertTrue(result["healthy"])
+
+    def test_preferred_python_invocation_uses_windows_launcher_when_needed(self) -> None:
+        with patch.object(HELIOS.os, "name", "nt"):
+            with patch.object(
+                HELIOS,
+                "resolve_command_path",
+                side_effect=lambda command: {
+                    "python": None,
+                    "py": r"C:\Windows\py.exe",
+                    "python3": None,
+                }.get(command),
+            ):
+                self.assertEqual(HELIOS.preferred_python_invocation(), "py -3")
+
     def test_targets_are_canonical(self) -> None:
         targets = HELIOS.read_targets()
         self.assertEqual(
@@ -61,6 +109,10 @@ class HeliosCliTests(unittest.TestCase):
             plan["federationSubjectResolution"],
         )
         self.assertNotIn("federationSubject", plan)
+        self.assertIn(
+            "python plugins/helios-control-fabric/scripts/helios.py doctor --json",
+            plan["commands"],
+        )
 
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):

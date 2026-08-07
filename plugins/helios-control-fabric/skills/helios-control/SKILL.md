@@ -57,12 +57,19 @@ evidence.
 Run the plugin doctor, then generate a plan:
 
 ```bash
-python plugins/helios-control-fabric/scripts/helios.py doctor
-python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
-python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
-python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
-python plugins/helios-control-fabric/scripts/helios.py devops-sync
-python plugins/helios-control-fabric/scripts/helios.py runners
+./plugins/helios-control-fabric/scripts/helios.sh doctor
+./plugins/helios-control-fabric/scripts/helios.sh plan --environment azure-dev
+./plugins/helios-control-fabric/scripts/helios.sh oidc --environment azure-dev
+./plugins/helios-control-fabric/scripts/helios.sh edge --environment azure-dev
+./plugins/helios-control-fabric/scripts/helios.sh devops-sync
+./plugins/helios-control-fabric/scripts/helios.sh runners
+```
+
+Windows PowerShell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\helios-control-fabric\scripts\helios.ps1 doctor
+powershell -NoProfile -ExecutionPolicy Bypass -File .\plugins\helios-control-fabric\scripts\helios.ps1 oidc --environment azure-dev
 ```
 
 The `oidc` command is a read-only live resolution and therefore requires an

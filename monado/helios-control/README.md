@@ -20,7 +20,10 @@ through managed identity after their separate administrator gate.
    connectors you need. `Start-HeliosLocal.ps1` never reads a parent-workspace
    environment file.
 2. Install .NET 8 SDK.
-3. Run `dotnet restore && dotnet test`.
+3. Run:
+   - `dotnet restore`
+   - `dotnet test`
+   (Windows if `dotnet` is not on PATH: `& "C:\Program Files\dotnet\dotnet.exe" restore` then `& "C:\Program Files\dotnet\dotnet.exe" test`)
 4. Run `pwsh ./scripts/Start-HeliosLocal.ps1`.
 5. Point webhook providers to `https://<host>/webhooks/{provider}`.
 
