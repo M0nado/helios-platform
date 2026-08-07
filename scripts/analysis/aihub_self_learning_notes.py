@@ -30,7 +30,7 @@ SMALL_FILE_VARIABLES = [
 def load(path: Path, fallback):
     if not path.exists():
         return fallback
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding='utf-8'))
 
 
 def thought_tiers(notes: list[dict[str, object]], organizer: dict[str, object]) -> dict[str, list[str]]:
@@ -152,7 +152,7 @@ def main() -> int:
         'topPruneMemory': grading.get('topPrune', [])[:8],
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(payload, indent=2) + '\n')
+    OUT.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
     lines = ['# AIHub Self-Learning Notes', '', payload['purpose'], '', f"Easy command: `{payload['easyCommand']}`", '', '## Help cards']
     lines += [f"- **{card['question']}** {card['answer']}" for card in help_cards]
     lines += ['', '## Thought tiers']
@@ -173,7 +173,7 @@ def main() -> int:
     lines += [f"- **{note['title']}** ({note['type']}): {note['note']}" for note in notes]
     lines += ['', '## Top keep memory']
     lines += [f"- `{item.get('path','')}` keep `{item.get('metrics',{}).get('keepScore')}`" for item in payload['topKeepMemory']]
-    MD.write_text('\n'.join(lines) + '\n')
+    MD.write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print(f'Wrote {OUT.relative_to(ROOT)}')
     print(f'Wrote {MD.relative_to(ROOT)}')
     return 0
