@@ -8,6 +8,10 @@ CONFIGURATION="${CONFIGURATION:-Release}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT_ROOT="${1:-.run/helios-exe-$STAMP}"
 SKIP_FINISH="${SKIP_FINISH:-0}"
+if [[ -d "$OUT_ROOT" ]] && find "$OUT_ROOT" -mindepth 1 -print -quit | grep -q .; then
+  printf 'Launcher output directory must be empty: %s\n' "$OUT_ROOT" >&2
+  exit 1
+fi
 mkdir -p "$OUT_ROOT"
 OUT_ROOT="$(cd "$OUT_ROOT" && pwd)"
 if [[ "$SKIP_FINISH" != "1" ]]; then
@@ -17,7 +21,12 @@ fi
 # Materialize the committed source before publishing. This ensures local staged
 # or unstaged edits can never leak into an executable attributed to HEAD.
 SOURCE_COMMIT="$(git rev-parse --verify HEAD)"
-PROJECT_REL="$(git ls-files --full-name --error-unmatch -- "$PROJECT")" || {
+PROJECT_REL="${PROJECT#./}"
+if [[ "$PROJECT_REL" = /* || "/$PROJECT_REL/" = *"/../"* ]]; then
+  printf 'Launcher project must be a repository-relative path: %s\n' "$PROJECT" >&2
+  exit 1
+fi
+[[ "$(git cat-file -t "${SOURCE_COMMIT}:${PROJECT_REL}" 2>/dev/null || true)" == "blob" ]] || {
   printf 'Launcher project must be a tracked path in the source commit: %s\n' "$PROJECT" >&2
   exit 1
 }
@@ -25,10 +34,15 @@ mkdir -p "$OUT_ROOT/repository"
 git archive --format=tar "$SOURCE_COMMIT" | tar -xf - -C "$OUT_ROOT/repository"
 git ls-tree -r --name-only "$SOURCE_COMMIT" > "$OUT_ROOT/repository/.helios-tracked-files"
 printf '%s\n' "$SOURCE_COMMIT" > "$OUT_ROOT/repository/HELIOS_PACKAGE_COMMIT"
+BUILD_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/helios-launcher-source.XXXXXX")"
+trap 'rm -rf "$BUILD_ROOT"' EXIT
+git archive --format=tar "$SOURCE_COMMIT" | tar -xf - -C "$BUILD_ROOT"
 for rid in win-x64 linux-x64; do
-  dotnet publish "$OUT_ROOT/repository/$PROJECT_REL" -c "$CONFIGURATION" -r "$rid" --self-contained true \
+  dotnet publish "$BUILD_ROOT/$PROJECT_REL" -c "$CONFIGURATION" -r "$rid" --self-contained true \
     -p:PublishSingleFile=true -p:DebugType=embedded -o "$OUT_ROOT/$rid" --nologo
 done
+rm -rf "$BUILD_ROOT"
+trap - EXIT
 # Include an immutable source snapshot so the package is immediately usable
 # without a second clone. git archive excludes .git, ignored local state,
 # credentials, caches, databases, build output, and other generated files.
@@ -123,6 +137,7 @@ EOF
       sha256sum win-x64/HELIOS.Platform.exe linux-x64/HELIOS.Platform helios-portable-linux-x64.tar.gz > SHA256SUMS
   fi
 )
+mkdir -p .run
 printf '%s\n' "$OUT_ROOT" > .run/latest-helios-exe.txt
 printf 'Built runnable HELIOS outputs in %s\n' "$OUT_ROOT"
 printf 'Windows exe: %s\n' "$OUT_ROOT/win-x64/HELIOS.Platform.exe"

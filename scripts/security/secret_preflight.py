@@ -25,11 +25,12 @@ def allowed(path, prefixes):
 def tracked_files():
     p=subprocess.run(['git','ls-files'],cwd=ROOT,text=True,capture_output=True)
     if p.returncode==0:
-        return [ROOT/line for line in p.stdout.splitlines() if line.strip()]
+        return [ROOT/line for line in p.stdout.splitlines() if line.strip()],'git'
     manifest=ROOT/'.helios-tracked-files'
     if manifest.is_file():
-        return [ROOT/line for line in manifest.read_text().splitlines() if line.strip() and (ROOT/line).resolve().is_relative_to(ROOT.resolve())]
-    return [path for path in ROOT.rglob('*') if path.is_file() and should_scan(path)]
+        files=[ROOT/line for line in manifest.read_text().splitlines() if line.strip() and (ROOT/line).resolve().is_relative_to(ROOT.resolve())]
+        return files,'manifest'
+    return [path for path in ROOT.rglob('*') if path.is_file() and should_scan(path)],'filesystem'
 
 def should_scan(path):
     rel=path.relative_to(ROOT)
@@ -42,9 +43,11 @@ def main():
     args=parser.parse_args()
     findings=[]
     prefixes=load_allowlist()
-    for path in tracked_files():
+    files,discovery_source=tracked_files()
+    scanned=0
+    for path in files:
         if not path.exists() or not should_scan(path) or allowed(path,prefixes): continue
-        try: lines=path.read_text(errors='ignore').splitlines()
+        try: lines=path.read_text(errors='ignore').splitlines(); scanned+=1
         except OSError: continue
         for no,line in enumerate(lines,1):
             if 'example' in path.name.lower() or 'template' in path.name.lower():
@@ -56,12 +59,14 @@ def main():
                 if pattern.search(line):
                     findings.append({'path':str(path.relative_to(ROOT)),'line':no,'pattern':name})
     OUT.parent.mkdir(parents=True,exist_ok=True)
-    payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'ok':not findings,'allowlistPathPrefixes':prefixes,'findings':findings}
+    scan_error=None if scanned else 'no eligible files were scanned'
+    payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'ok':not findings and not scan_error,'discoverySource':discovery_source,'candidateFileCount':len(files),'scannedFileCount':scanned,'scanError':scan_error,'allowlistPathPrefixes':prefixes,'findings':findings}
     OUT.write_text(json.dumps(payload,indent=2)+'\n')
-    lines=['# Secret Preflight','',f"Generated: `{payload['generatedUtc']}`",'',f"Status: {'PASS' if payload['ok'] else 'FAIL'}"]
+    lines=['# Secret Preflight','',f"Generated: `{payload['generatedUtc']}`",'',f"Status: {'PASS' if payload['ok'] else 'ERROR' if scan_error else 'FAIL'}",'',f"Discovery: `{discovery_source}`",f"Candidates: `{len(files)}`",f"Files scanned: `{scanned}`"]
+    if scan_error: lines += ['',f"Error: {scan_error}"]
     if findings:
         lines += ['','| Path | Line | Pattern |','| --- | --- | --- |']+[f"| `{f['path']}` | {f['line']} | {f['pattern']} |" for f in findings]
     MD.write_text('\n'.join(lines)+'\n')
-    print(f"Secret preflight: {'PASS' if payload['ok'] else 'FAIL'} ({len(findings)} findings)")
-    return 0 if payload['ok'] or not args.strict else 1
+    print(f"Secret preflight: {'PASS' if payload['ok'] else 'ERROR' if scan_error else 'FAIL'} ({len(findings)} findings, {scanned} files scanned via {discovery_source})")
+    return 1 if scan_error or (args.strict and findings) else 0
 if __name__=='__main__': sys.exit(main())
