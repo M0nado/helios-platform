@@ -11,7 +11,7 @@ This wrapper keeps all existing protection boundaries in place:
 - Environment approvals, reviewer checks, and exact confirmations remain required.
 
 The script helps close the last operational blockers by checking readiness, resolving
-the reviewer ID from GitHub when omitted, dispatching deploy mode intentionally,
+or validating a distinct reviewer ID, dispatching deploy mode intentionally,
 and binding HELIOS_AZURE_CONNECTOR_URL after deployment.
 #>
 
@@ -281,25 +281,102 @@ function Get-GitHubEnvironmentVariables {
     return $map
 }
 
-function Get-GitHubReviewerId {
-    if (-not [string]::IsNullOrWhiteSpace($RequiredReviewerId)) {
-        [int64] $parsed = 0
-        if (-not [int64]::TryParse($RequiredReviewerId, [ref] $parsed) -or $parsed -le 0) {
-            throw 'RequiredReviewerId must be a positive numeric GitHub user ID.'
-        }
-        return [string] $parsed
+function Get-AuthenticatedGitHubUser {
+    Assert-GitHubCliReady
+    $user = Invoke-GhJson `
+        -Arguments @('api', '--method', 'GET', 'user') `
+        -Operation 'Resolving the authenticated GitHub user'
+
+    [int64] $userId = 0
+    if (-not [int64]::TryParse([string] $user.id, [ref] $userId) -or $userId -le 0) {
+        throw 'GitHub did not return a valid authenticated user ID.'
+    }
+    $login = [string] $user.login
+    if ([string]::IsNullOrWhiteSpace($login)) {
+        throw 'GitHub did not return an authenticated user login.'
     }
 
-    Assert-GitHubCliReady
-    $raw = Invoke-NativeCommand `
-        -FilePath $script:GhPath `
-        -ArgumentList @('api', '--method', 'GET', '--jq', '.id', 'user') `
-        -Operation 'Resolving the authenticated GitHub user ID'
-    [int64] $reviewerId = 0
-    if (-not [int64]::TryParse($raw.Trim(), [ref] $reviewerId) -or $reviewerId -le 0) {
-        throw 'GitHub did not return a valid numeric reviewer ID.'
+    return [pscustomobject]@{
+        Id = $userId
+        Login = $login
     }
-    return [string] $reviewerId
+}
+
+function ConvertTo-ReviewerId {
+    param(
+        [Parameter(Mandatory)] [string] $Value,
+        [Parameter(Mandatory)] [string] $Source
+    )
+
+    [int64] $parsed = 0
+    if (-not [int64]::TryParse($Value.Trim(), [ref] $parsed) -or $parsed -le 0) {
+        throw "$Source must be a positive numeric GitHub user ID."
+    }
+    return [string] $parsed
+}
+
+function Get-GitHubReviewerId {
+    param([hashtable] $Variables = @{})
+
+    $dispatcher = Get-AuthenticatedGitHubUser
+    $candidate = $null
+    $source = $null
+
+    if (-not [string]::IsNullOrWhiteSpace($RequiredReviewerId)) {
+        $candidate = ConvertTo-ReviewerId -Value $RequiredReviewerId -Source 'RequiredReviewerId'
+        $source = 'RequiredReviewerId argument'
+    }
+    elseif ($Variables.ContainsKey('HELIOS_REQUIRED_REVIEWER_ID') -and
+        -not [string]::IsNullOrWhiteSpace([string] $Variables['HELIOS_REQUIRED_REVIEWER_ID'])) {
+        $candidate = ConvertTo-ReviewerId `
+            -Value ([string] $Variables['HELIOS_REQUIRED_REVIEWER_ID']) `
+            -Source 'HELIOS_REQUIRED_REVIEWER_ID'
+        $source = 'HELIOS_REQUIRED_REVIEWER_ID'
+    }
+    else {
+        Write-Host "Authenticated dispatcher: $($dispatcher.Login) ($($dispatcher.Id))"
+        Write-Host 'A distinct reviewer is required because protected environments enforce prevent_self_review=true.'
+        $entered = Read-Host 'Required reviewer GitHub user ID'
+        $candidate = ConvertTo-ReviewerId -Value $entered -Source 'Interactive reviewer input'
+        $source = 'interactive input'
+    }
+
+    if ([int64] $candidate -eq $dispatcher.Id) {
+        throw "Required reviewer ID '$candidate' matches the authenticated dispatcher '$($dispatcher.Login)'. Select a different reviewer."
+    }
+
+    Write-Host "Using GitHub reviewer ID: $candidate ($source)"
+    return $candidate
+}
+
+function Assert-GitHubEnvironmentProtection {
+    param([Parameter(Mandatory)] [int64] $ReviewerId)
+
+    Assert-GitHubCliReady
+    $escapedEnvironment = [uri]::EscapeDataString($script:TargetEnvironment)
+    $definition = Invoke-GhJson `
+        -Arguments @('api', '--method', 'GET', "repos/$($script:RepositoryName)/environments/$escapedEnvironment") `
+        -Operation "Verifying protected GitHub environment '$($script:TargetEnvironment)'"
+    $reviewerRules = @($definition.protection_rules | Where-Object type -eq 'required_reviewers')
+    $matchingReviewers = @($reviewerRules.reviewers | Where-Object { [int64] $_.reviewer.id -eq $ReviewerId })
+    if ($reviewerRules.Count -ne 1 -or
+        @($reviewerRules[0].reviewers).Count -ne 1 -or
+        $matchingReviewers.Count -ne 1 -or
+        -not [bool] $reviewerRules[0].prevent_self_review -or
+        -not [bool] $definition.deployment_branch_policy.custom_branch_policies -or
+        [bool] $definition.deployment_branch_policy.protected_branches) {
+        throw "GitHub environment '$($script:TargetEnvironment)' is not fail-closed with the exact required reviewer and custom branch policy."
+    }
+
+    $policies = Invoke-GhJson `
+        -Arguments @('api', '--method', 'GET', "repos/$($script:RepositoryName)/environments/$escapedEnvironment/deployment-branch-policies") `
+        -Operation "Verifying deployment branch policy for '$($script:TargetEnvironment)'"
+    $matchingPolicies = @($policies.branch_policies | Where-Object {
+        $_.name -eq $GitHubDeploymentBranch -and $_.type -eq 'branch'
+    })
+    if (@($policies.branch_policies).Count -ne 1 -or $matchingPolicies.Count -ne 1) {
+        throw "GitHub environment '$($script:TargetEnvironment)' is not restricted to branch '$GitHubDeploymentBranch'."
+    }
 }
 
 function Assert-ExactConfirmation {
@@ -367,6 +444,22 @@ function Get-StatusReport {
     if ($missing.Count -gt 0) {
         $blockers.Add("Protected workflow variables are missing: $($missing -join ', ')")
     }
+    if ($githubAuthenticated -and $environmentExists -and
+        $variables.ContainsKey('HELIOS_REQUIRED_REVIEWER_ID') -and
+        -not [string]::IsNullOrWhiteSpace([string] $variables['HELIOS_REQUIRED_REVIEWER_ID'])) {
+        try {
+            $dispatcher = Get-AuthenticatedGitHubUser
+            $reviewerId = [int64] (ConvertTo-ReviewerId `
+                -Value ([string] $variables['HELIOS_REQUIRED_REVIEWER_ID']) `
+                -Source 'HELIOS_REQUIRED_REVIEWER_ID')
+            if ($reviewerId -eq $dispatcher.Id) {
+                $blockers.Add('HELIOS_REQUIRED_REVIEWER_ID matches the authenticated dispatcher; protected approvals will stall.')
+            }
+        }
+        catch {
+            $blockers.Add('HELIOS_REQUIRED_REVIEWER_ID is invalid and must be a positive numeric GitHub user ID.')
+        }
+    }
     if (-not $connectorUrlConfigured) {
         $blockers.Add('HELIOS_AZURE_CONNECTOR_URL is not configured.')
     }
@@ -423,7 +516,9 @@ function Write-StatusReport {
 function Invoke-ConnectMode {
     param(
         [Parameter(Mandatory)] [ValidateSet('Configure', 'Publish')] [string] $ConnectMode,
-        [Parameter(Mandatory)] [string] $ReviewerId
+        [Parameter(Mandatory)] [string] $ReviewerId,
+        [string] $ResourceGroupName,
+        [string] $ContainerRegistryNameOverride
     )
 
     if (-not (Test-Path -LiteralPath $script:ConnectScript -PathType Leaf)) {
@@ -441,11 +536,13 @@ function Invoke-ConnectMode {
         '-GitHubDeploymentBranch', $GitHubDeploymentBranch,
         '-RequiredReviewerId', $ReviewerId
     )
-    if (-not [string]::IsNullOrWhiteSpace($ResourceGroup)) {
-        $arguments += @('-ResourceGroup', $ResourceGroup)
+    $effectiveResourceGroup = if (-not [string]::IsNullOrWhiteSpace($ResourceGroupName)) { $ResourceGroupName } else { $ResourceGroup }
+    if (-not [string]::IsNullOrWhiteSpace($effectiveResourceGroup)) {
+        $arguments += @('-ResourceGroup', $effectiveResourceGroup)
     }
-    if (-not [string]::IsNullOrWhiteSpace($ContainerRegistryName)) {
-        $arguments += @('-ContainerRegistryName', $ContainerRegistryName)
+    $effectiveRegistryName = if (-not [string]::IsNullOrWhiteSpace($ContainerRegistryNameOverride)) { $ContainerRegistryNameOverride } else { $ContainerRegistryName }
+    if (-not [string]::IsNullOrWhiteSpace($effectiveRegistryName)) {
+        $arguments += @('-ContainerRegistryName', $effectiveRegistryName)
     }
     if ($UseDeviceCode) {
         $arguments += '-UseDeviceCode'
@@ -477,7 +574,10 @@ function Get-LatestWorkflowRun {
 }
 
 function Dispatch-DeployWorkflow {
+    param([Parameter(Mandatory)] [string] $ReviewerId)
+
     Assert-GitHubCliReady
+    Assert-GitHubEnvironmentProtection -ReviewerId ([int64] $ReviewerId)
     Assert-ExactConfirmation `
         -Expected 'DISPATCH HELIOS DEPLOY' `
         -Purpose "Dispatching deploy mode for '$($script:TargetEnvironment)'"
@@ -513,11 +613,33 @@ function Get-RequiredVariableValue {
     return [string] $Variables[$Name]
 }
 
+function Resolve-ProtectedResourceGroupName {
+    param([Parameter(Mandatory)] [hashtable] $Variables)
+
+    $configuredResourceGroup = Get-RequiredVariableValue -Variables $Variables -Name 'AZURE_RESOURCE_GROUP'
+    if (-not [string]::IsNullOrWhiteSpace($ResourceGroup) -and
+        -not [string]::Equals($ResourceGroup, $configuredResourceGroup, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "ResourceGroup override '$ResourceGroup' does not match protected AZURE_RESOURCE_GROUP '$configuredResourceGroup'."
+    }
+    return $configuredResourceGroup
+}
+
+function Resolve-ProtectedRegistryName {
+    param([Parameter(Mandatory)] [hashtable] $Variables)
+
+    $configuredRegistry = Get-RequiredVariableValue -Variables $Variables -Name 'HELIOS_CONTAINER_REGISTRY_NAME'
+    if (-not [string]::IsNullOrWhiteSpace($ContainerRegistryName) -and
+        -not [string]::Equals($ContainerRegistryName, $configuredRegistry, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "ContainerRegistryName override '$ContainerRegistryName' does not match protected HELIOS_CONTAINER_REGISTRY_NAME '$configuredRegistry'."
+    }
+    return $configuredRegistry
+}
+
 function Resolve-ConnectorUrlFromAzure {
     param([Parameter(Mandatory)] [hashtable] $Variables)
 
     $subscriptionId = Get-RequiredVariableValue -Variables $Variables -Name 'AZURE_SUBSCRIPTION_ID'
-    $resourceGroupName = if (-not [string]::IsNullOrWhiteSpace($ResourceGroup)) { $ResourceGroup } else { Get-RequiredVariableValue -Variables $Variables -Name 'AZURE_RESOURCE_GROUP' }
+    $resourceGroupName = Resolve-ProtectedResourceGroupName -Variables $Variables
 
     Invoke-AzNoOutput `
         -Arguments @('account', 'show') `
@@ -673,7 +795,6 @@ switch ($Mode) {
     }
     'Configure' {
         $reviewerId = Get-GitHubReviewerId
-        Write-Host "Using GitHub reviewer ID: $reviewerId"
         Invoke-ConnectMode -ConnectMode 'Configure' -ReviewerId $reviewerId
         $variables = Get-GitHubEnvironmentVariables
         Persist-LocalRuntimeValues -Variables $variables
@@ -681,8 +802,8 @@ switch ($Mode) {
         Write-StatusReport -Report $report
     }
     'Publish' {
-        $reviewerId = Get-GitHubReviewerId
-        Write-Host "Using GitHub reviewer ID: $reviewerId"
+        $variables = if (Test-GitHubEnvironmentExists) { Get-GitHubEnvironmentVariables } else { @{} }
+        $reviewerId = Get-GitHubReviewerId -Variables $variables
         Invoke-ConnectMode -ConnectMode 'Publish' -ReviewerId $reviewerId
         $latestRun = Get-LatestWorkflowRun
         if ($latestRun) {
@@ -690,9 +811,21 @@ switch ($Mode) {
         }
     }
     'Deploy' {
-        Dispatch-DeployWorkflow
+        $variables = Get-GitHubEnvironmentVariables
+        $reviewerId = Get-GitHubReviewerId -Variables $variables
+        Dispatch-DeployWorkflow -ReviewerId $reviewerId
     }
     'Finalize' {
+        $variables = Get-GitHubEnvironmentVariables
+        $reviewerId = Get-GitHubReviewerId -Variables $variables
+        $protectedResourceGroup = Resolve-ProtectedResourceGroupName -Variables $variables
+        $protectedRegistryName = Resolve-ProtectedRegistryName -Variables $variables
+        Write-Host 'Running Configure to rebind the domain-qualified Entra API identifier before verification.'
+        Invoke-ConnectMode `
+            -ConnectMode 'Configure' `
+            -ReviewerId $reviewerId `
+            -ResourceGroupName $protectedResourceGroup `
+            -ContainerRegistryNameOverride $protectedRegistryName
         $variables = Get-GitHubEnvironmentVariables
         $connectorUrl = Resolve-ConnectorUrlFromAzure -Variables $variables
         Set-GitHubEnvironmentVariable -Name 'HELIOS_AZURE_CONNECTOR_URL' -Value $connectorUrl

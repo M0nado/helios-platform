@@ -177,6 +177,9 @@
   <ItemGroup>
     <Compile Remove="Phase10/BootEnvironment/Channel3USBBootInstallation.cs" />
     <Compile Remove="Phase10/BootEnvironment/Channel3SecureUSBBootInstallation.cs" />
+    <!-- Prevent nested project build artifacts from being compiled into this assembly. -->
+    <Compile Remove="**/obj/**/*.cs" />
+    <Compile Remove="**/bin/**/*.cs" />
     <Compile Remove="**/Tests/**/*.cs" />
     <Compile Remove="**/*Tests.cs" />
   </ItemGroup>

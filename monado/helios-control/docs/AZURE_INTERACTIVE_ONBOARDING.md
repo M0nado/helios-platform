@@ -142,8 +142,9 @@ pwsh -NoProfile -File ./scripts/Invoke-HeliosCloudApprovalFlow.ps1 `
   -Mode Status `
   -EnvironmentName dev
 
-# 2) Run Configure through the existing wizard and auto-resolve reviewer ID
-# from the authenticated GitHub user when -RequiredReviewerId is omitted.
+# 2) Run Configure through the existing wizard. If -RequiredReviewerId is omitted,
+# the wrapper requires a distinct reviewer ID (or uses HELIOS_REQUIRED_REVIEWER_ID)
+# and rejects the authenticated dispatcher as the sole reviewer.
 pwsh -NoProfile -File ./scripts/Invoke-HeliosCloudApprovalFlow.ps1 `
   -Mode Configure `
   -EnvironmentName dev `
