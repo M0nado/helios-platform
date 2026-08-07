@@ -45,6 +45,7 @@ public sealed class XCore9Service : IXCore9Service
     private readonly List<NegotiationRecord> _negotiations = [];
     private readonly object _gate = new();
     private readonly SemaphoreSlim _promotionGate = new(1, 1);
+    private readonly SemaphoreSlim _leaseGate = new(1, 1);
 
     private RoutingPolicy _activePolicy;
     private RoutingPolicy? _rollbackPolicy;
@@ -100,6 +101,11 @@ public sealed class XCore9Service : IXCore9Service
         cancellationToken.ThrowIfCancellationRequested();
         await DemandAsync(actor, "run-history.ingest", cancellationToken);
         ValidateEnvelope(entry.CorrelationId, entry.EvidenceLinks);
+
+        if (!_templates.ContainsKey(entry.TemplateId))
+        {
+            throw new InvalidOperationException("Run history references a non-approved template.");
+        }
 
         var sanitized = entry with { Features = ExtractFeatures(entry) };
         lock (_gate)
@@ -168,52 +174,102 @@ public sealed class XCore9Service : IXCore9Service
 
         _ = ConstructToolchain(toolchainId);
 
-        WorkerLease lease;
-        lock (_gate)
-        {
-            PruneLeases();
-
-            var activeLeases = _leases.Values.ToArray();
-            if (activeLeases.Length >= _options.MaxTotalInstances ||
-                activeLeases.Count(lease => lease.TemplateId == templateId) >= template.MaxInstances ||
-                activeLeases.Sum(lease => _templates[lease.TemplateId].CpuUnits) + template.CpuUnits > _options.MaxCpuUnits ||
-                activeLeases.Sum(lease => _templates[lease.TemplateId].MemoryMiB) + template.MemoryMiB > _options.MaxMemoryMiB)
-            {
-                throw new InvalidOperationException("Worker instance or resource limit reached.");
-            }
-
-            lease = new WorkerLease(
-                LeaseId: Guid.NewGuid(),
-                TemplateId: templateId,
-                CorrelationId: correlationId,
-                ExpiresAt: DateTimeOffset.UtcNow + _options.EffectiveLeaseDuration);
-
-            _leases[lease.LeaseId] = lease;
-        }
-
+        await _leaseGate.WaitAsync(cancellationToken);
         try
         {
-            await WriteAuditAsync(
-                eventType: "xcore9.worker.selected",
-                actor: actor,
-                correlationId: correlationId,
-                evidenceLinks: Array.Empty<Uri>(),
-                payload: new Dictionary<string, object?>(IdentifierComparer)
-                {
-                    ["leaseId"] = lease.LeaseId.ToString("N"),
-                    ["templateId"] = lease.TemplateId,
-                    ["toolchainId"] = toolchainId,
-                    ["expiresAt"] = lease.ExpiresAt
-                },
-                cancellationToken);
-        }
-        catch
-        {
-            _leases.TryRemove(lease.LeaseId, out _);
-            throw;
-        }
+            var expiredLeases = Array.Empty<WorkerLease>();
+            lock (_gate)
+            {
+                expiredLeases = PruneLeases().ToArray();
+            }
 
-        return lease;
+            if (expiredLeases.Length > 0)
+            {
+                try
+                {
+                    foreach (var expiredLease in expiredLeases)
+                    {
+                        await WriteAuditAsync(
+                            eventType: "xcore9.worker.expired",
+                            actor: actor,
+                            correlationId: expiredLease.CorrelationId,
+                            evidenceLinks: Array.Empty<Uri>(),
+                            payload: new Dictionary<string, object?>(IdentifierComparer)
+                            {
+                                ["leaseId"] = expiredLease.LeaseId.ToString("N"),
+                                ["templateId"] = expiredLease.TemplateId,
+                                ["expiresAt"] = expiredLease.ExpiresAt
+                            },
+                            cancellationToken);
+                    }
+                }
+                catch
+                {
+                    lock (_gate)
+                    {
+                        foreach (var expiredLease in expiredLeases)
+                        {
+                            _leases[expiredLease.LeaseId] = expiredLease;
+                        }
+                    }
+
+                    throw;
+                }
+            }
+
+            WorkerLease lease;
+            lock (_gate)
+            {
+                var activeLeases = _leases.Values.ToArray();
+                if (activeLeases.Length >= _options.MaxTotalInstances ||
+                    activeLeases.Count(lease => lease.TemplateId == templateId) >= template.MaxInstances ||
+                    activeLeases.Sum(lease => _templates[lease.TemplateId].CpuUnits) + template.CpuUnits > _options.MaxCpuUnits ||
+                    activeLeases.Sum(lease => _templates[lease.TemplateId].MemoryMiB) + template.MemoryMiB > _options.MaxMemoryMiB)
+                {
+                    throw new InvalidOperationException("Worker instance or resource limit reached.");
+                }
+
+                lease = new WorkerLease(
+                    LeaseId: Guid.NewGuid(),
+                    TemplateId: templateId,
+                    CorrelationId: correlationId,
+                    ExpiresAt: DateTimeOffset.UtcNow + _options.EffectiveLeaseDuration);
+
+                _leases[lease.LeaseId] = lease;
+            }
+
+            try
+            {
+                await WriteAuditAsync(
+                    eventType: "xcore9.worker.selected",
+                    actor: actor,
+                    correlationId: correlationId,
+                    evidenceLinks: Array.Empty<Uri>(),
+                    payload: new Dictionary<string, object?>(IdentifierComparer)
+                    {
+                        ["leaseId"] = lease.LeaseId.ToString("N"),
+                        ["templateId"] = lease.TemplateId,
+                        ["toolchainId"] = toolchainId,
+                        ["expiresAt"] = lease.ExpiresAt
+                    },
+                    cancellationToken);
+            }
+            catch
+            {
+                lock (_gate)
+                {
+                    _leases.TryRemove(lease.LeaseId, out _);
+                }
+
+                throw;
+            }
+
+            return lease;
+        }
+        finally
+        {
+            _leaseGate.Release();
+        }
     }
 
     public ConstructedToolchain ConstructToolchain(string toolchainId)
@@ -387,41 +443,57 @@ public sealed class XCore9Service : IXCore9Service
         await DemandAsync(actor, "worker.release", cancellationToken);
         ValidateEnvelope(correlationId, Array.Empty<Uri>());
 
-        if (!_leases.TryGetValue(lease.LeaseId, out var activeLease))
+        await _leaseGate.WaitAsync(cancellationToken);
+        try
         {
-            throw new InvalidOperationException("Worker lease is not active.");
-        }
-
-        if (!string.Equals(activeLease.CorrelationId, correlationId, StringComparison.Ordinal))
-        {
-            throw new UnauthorizedAccessException("Lease correlation does not match release request.");
-        }
-
-        await WriteAuditAsync(
-            eventType: "xcore9.worker.released",
-            actor: actor,
-            correlationId: correlationId,
-            evidenceLinks: Array.Empty<Uri>(),
-            payload: new Dictionary<string, object?>(IdentifierComparer)
+            WorkerLease? activeLease = null;
+            lock (_gate)
             {
-                ["leaseId"] = lease.LeaseId.ToString("N"),
-                ["templateId"] = activeLease.TemplateId
-            },
-            cancellationToken);
+                if (!_leases.TryGetValue(lease.LeaseId, out var storedLease) || storedLease is null)
+                {
+                    throw new InvalidOperationException("Worker lease is not active.");
+                }
 
-        if (!_leases.TryGetValue(lease.LeaseId, out var postAuditLease))
-        {
-            throw new InvalidOperationException("Worker lease is not active.");
+                activeLease = storedLease;
+
+                if (!string.Equals(activeLease.CorrelationId, correlationId, StringComparison.Ordinal))
+                {
+                    throw new UnauthorizedAccessException("Lease correlation does not match release request.");
+                }
+
+                if (!_leases.TryRemove(lease.LeaseId, out _))
+                {
+                    throw new InvalidOperationException("Worker lease release failed.");
+                }
+            }
+
+            try
+            {
+                await WriteAuditAsync(
+                    eventType: "xcore9.worker.released",
+                    actor: actor,
+                    correlationId: correlationId,
+                    evidenceLinks: Array.Empty<Uri>(),
+                    payload: new Dictionary<string, object?>(IdentifierComparer)
+                    {
+                        ["leaseId"] = lease.LeaseId.ToString("N"),
+                        ["templateId"] = activeLease!.TemplateId
+                    },
+                    cancellationToken);
+            }
+            catch
+            {
+                lock (_gate)
+                {
+                    _leases[activeLease!.LeaseId] = activeLease;
+                }
+
+                throw;
+            }
         }
-
-        if (!string.Equals(postAuditLease.CorrelationId, correlationId, StringComparison.Ordinal))
+        finally
         {
-            throw new UnauthorizedAccessException("Lease correlation does not match release request.");
-        }
-
-        if (!_leases.TryRemove(lease.LeaseId, out _))
-        {
-            throw new InvalidOperationException("Worker lease release failed.");
+            _leaseGate.Release();
         }
     }
 
@@ -660,11 +732,18 @@ public sealed class XCore9Service : IXCore9Service
         entries.Add(value);
     }
 
-    private void PruneLeases()
+    private IReadOnlyList<WorkerLease> PruneLeases()
     {
-        foreach (var lease in _leases.Values.Where(lease => lease.ExpiresAt <= DateTimeOffset.UtcNow))
+        var expiredLeases = new List<WorkerLease>();
+        var now = DateTimeOffset.UtcNow;
+        foreach (var lease in _leases.Values.Where(lease => lease.ExpiresAt <= now))
         {
-            _leases.TryRemove(lease.LeaseId, out _);
+            if (_leases.TryRemove(lease.LeaseId, out var removedLease))
+            {
+                expiredLeases.Add(removedLease);
+            }
         }
+
+        return expiredLeases;
     }
 }

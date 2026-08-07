@@ -40,11 +40,13 @@ jobs:
           dotnet restore tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj
           dotnet restore tests/HELIOS.XCore9.Tests/HELIOS.XCore9.Tests.csproj
           dotnet restore tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj
+          dotnet restore src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj -r win-x64
       - name: Build portable projects
         run: |
           dotnet build tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
           dotnet build tests/HELIOS.XCore9.Tests/HELIOS.XCore9.Tests.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
           dotnet build tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+          dotnet build src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj --configuration Release --no-restore -r win-x64 -p:ContinuousIntegrationBuild=true
       - name: Test portable analytics, contracts, and XCore
         run: |
           dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --configuration Release --no-build --logger "console;verbosity=normal"

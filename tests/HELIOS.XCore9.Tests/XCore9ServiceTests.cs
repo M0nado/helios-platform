@@ -83,6 +83,44 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public async Task Worker_release_is_serialized_and_audited_once_for_duplicate_requests()
+    {
+        var (service, audit) = Create();
+        var lease = await service.SelectWorkerAsync("reviewer", "safe", "corr-8", "operator", default);
+
+        async Task<Exception?> TryReleaseAsync()
+        {
+            try
+            {
+                await service.ReleaseWorkerAsync(lease, "corr-8", "operator", default);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
+        }
+
+        var outcomes = await Task.WhenAll(TryReleaseAsync(), TryReleaseAsync());
+        Assert.Single(outcomes, outcome => outcome is null);
+        Assert.Single(outcomes.OfType<InvalidOperationException>());
+        Assert.Single(audit.Events, evt => evt.EventType == "xcore9.worker.released");
+    }
+
+    [Fact]
+    public async Task Selection_prunes_expired_leases_and_audits_expiration()
+    {
+        var (service, audit) = Create(options: new XCore9Options(MaxTotalInstances: 1, LeaseDuration: TimeSpan.FromMilliseconds(5)));
+
+        _ = await service.SelectWorkerAsync("reviewer", "safe", "corr-9", "operator", default);
+        await Task.Delay(30);
+        _ = await service.SelectWorkerAsync("reviewer", "safe", "corr-10", "operator", default);
+
+        var expiredEvent = Assert.Single(audit.Events, evt => evt.EventType == "xcore9.worker.expired");
+        Assert.Equal("corr-9", expiredEvent.CorrelationId);
+    }
+
+    [Fact]
     public void Scoring_rejects_template_toolchain_pair_outside_allowlist()
     {
         var (service, _) = Create();
@@ -130,6 +168,24 @@ public sealed class XCore9ServiceTests
         var feature = Assert.Single(service.ExtractFeatures(entry));
         Assert.Equal("success_rate", feature.Name);
         Assert.Equal(1, feature.Value);
+    }
+
+    [Fact]
+    public async Task Run_history_rejects_non_catalog_templates()
+    {
+        var (service, _) = Create();
+        var entry = new RunHistoryEntry(
+            Guid.NewGuid(),
+            "corr-11",
+            "generated-template",
+            true,
+            TimeSpan.FromMilliseconds(300),
+            0,
+            [new SanitizedRunFeature("success_rate", 0.8)],
+            []);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.IngestRunHistoryAsync(entry, "operator", default).AsTask());
     }
 
     [Fact]
@@ -259,6 +315,39 @@ public sealed class XCore9ServiceTests
             [double.NaN, 1],
             [0, 1],
             [.8, .9]));
+    }
+
+    [Fact]
+    public void Analytics_penalizes_higher_retry_cost_and_duration_features()
+    {
+        IXCoreAnalytics analytics = new XCoreAnalytics();
+        var routes = new[]
+        {
+            new CandidateRoute(
+                "stable",
+                "reviewer",
+                "safe",
+                [
+                    new SanitizedRunFeature("success_rate", 0.8),
+                    new SanitizedRunFeature("retry_rate", 0.1),
+                    new SanitizedRunFeature("cost_ratio", 0.1),
+                    new SanitizedRunFeature("duration_ratio", 0.2)
+                ]),
+            new CandidateRoute(
+                "unstable",
+                "reviewer",
+                "safe",
+                [
+                    new SanitizedRunFeature("success_rate", 0.8),
+                    new SanitizedRunFeature("retry_rate", 0.9),
+                    new SanitizedRunFeature("cost_ratio", 0.9),
+                    new SanitizedRunFeature("duration_ratio", 0.8)
+                ])
+        };
+
+        var ranked = analytics.Rank(routes);
+        Assert.Equal("stable", ranked[0].RouteId);
+        Assert.True(ranked[0].Score > ranked[1].Score);
     }
 
     [Fact]

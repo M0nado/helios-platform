@@ -7,6 +7,14 @@ open HELIOS.Platform.Contracts.XCore9
 /// Pure, deterministic XCore-9 ranking and evaluation functions.
 type XCoreAnalytics() =
     let finite value = if Double.IsFinite value then value else 0.0
+    let scoreFeature (feature: SanitizedRunFeature) =
+        let bounded = Math.Clamp(finite feature.Value, 0.0, 1.0)
+        match feature.Name with
+        | "retry_rate"
+        | "cost_ratio"
+        | "duration_ratio" -> 1.0 - bounded
+        | _ -> bounded
+
     interface IXCoreAnalytics with
         member _.CalibrateConfidence(rawConfidence, sampleCount) =
             if sampleCount < 0 then invalidArg "sampleCount" "Sample count must be non-negative."
@@ -16,7 +24,7 @@ type XCoreAnalytics() =
             candidates
             |> Seq.map (fun candidate ->
                 let features = candidate.Features |> Seq.sortBy (fun feature -> feature.Name) |> Seq.toArray
-                let score = if features.Length = 0 then 0.0 else features |> Array.averageBy (fun f -> Math.Clamp(finite f.Value, 0.0, 1.0))
+                let score = if features.Length = 0 then 0.0 else features |> Array.averageBy scoreFeature
                 let confidence = Math.Clamp(float features.Length / 8.0, 0.0, 1.0) * 0.9
                 let anomaly = features |> Array.exists (fun f -> not (Double.IsFinite f.Value) || f.Value < 0.0 || f.Value > 1.0)
                 RouteScore(candidate.RouteId, score, confidence, anomaly, Dictionary<string,double>(dict [ "featureCount", float features.Length ])))
