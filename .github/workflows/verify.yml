@@ -21,20 +21,20 @@ jobs:
           Write-Host "🏥 HELIOS Platform Health Check" -ForegroundColor Cyan
           Write-Host ""
           
-          # Check files exist
-          $files = @(
-            'COMPONENT_ANALYSIS.md',
-            'COMPONENT_METRICS.json',
-            'PROJECT_BOARD_QUICK_START.md',
-            'GITHUB_PROJECT_SETUP.md',
-            'DELIVERY_MANIFEST.md'
+          # Check canonical docs, with legacy fallbacks where applicable.
+          $documentGroups = @(
+            @{ Name = 'Component analysis'; Candidates = @('COMPONENT_ANALYSIS.md', 'docs/architecture/README.md') },
+            @{ Name = 'Component metrics'; Candidates = @('COMPONENT_METRICS.json') },
+            @{ Name = 'Project setup'; Candidates = @('GITHUB_PROJECT_SETUP.md', '.github/GITHUB_PROJECT_SETUP.md', 'docs/GITHUB_PROJECT_SETUP.md') },
+            @{ Name = 'Delivery manifest'; Candidates = @('DELIVERY_MANIFEST.md', 'STREAM2_DELIVERY_MANIFEST.md', 'PHASE8_STREAM5_DELIVERY_MANIFEST.md') }
           )
-          
-          foreach ($file in $files) {
-            if (Test-Path $file) {
-              Write-Host "  ✅ $file" -ForegroundColor Green
+
+          foreach ($group in $documentGroups) {
+            $resolved = $group.Candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if ($resolved) {
+              Write-Host "  ✅ $($group.Name): $resolved" -ForegroundColor Green
             } else {
-              Write-Host "  ❌ $file" -ForegroundColor Red
+              Write-Host "  ❌ $($group.Name): missing ($($group.Candidates -join ', '))" -ForegroundColor Red
             }
           }
           
@@ -100,16 +100,24 @@ jobs:
       
       - name: Check Analysis Documents
         run: |
-          for file in COMPONENT_ANALYSIS.md GITHUB_PROJECT_SETUP.md DELIVERY_MANIFEST.md; do
-            if [ -f "$file" ]; then
-              size=$(wc -c < "$file")
-              lines=$(wc -l < "$file")
-              echo "✅ $file: $lines lines, $size bytes"
-            else
-              echo "❌ $file: NOT FOUND"
-              exit 1
-            fi
-          done
+          check_doc() {
+            local label="$1"
+            shift
+            for file in "$@"; do
+              if [ -f "$file" ]; then
+                size=$(wc -c < "$file")
+                lines=$(wc -l < "$file")
+                echo "✅ $label: $file ($lines lines, $size bytes)"
+                return 0
+              fi
+            done
+            echo "❌ $label: none found ($*)"
+            return 1
+          }
+
+          check_doc "component-analysis" COMPONENT_ANALYSIS.md docs/architecture/README.md
+          check_doc "project-setup" GITHUB_PROJECT_SETUP.md .github/GITHUB_PROJECT_SETUP.md docs/GITHUB_PROJECT_SETUP.md
+          check_doc "delivery-manifest" DELIVERY_MANIFEST.md STREAM2_DELIVERY_MANIFEST.md PHASE8_STREAM5_DELIVERY_MANIFEST.md
 
   generate-status-report:
     name: Generate Status Report
