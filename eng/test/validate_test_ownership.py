@@ -35,6 +35,7 @@ def owner(path):
     if path.startswith("src/core/HELIOS.Platform/Phase10/Users/Tests/"): return "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj"
     if path.startswith("src/tests/"): return "src/tests/HELIOS.Platform.Tests.csproj"
     if path.startswith("tests/analytics/"): return "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
+    if path.startswith("tests/contracts/"): return "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj"
     if path == "tests/SecurityValidationTests.cs": return "tests/SecurityValidationTests.csproj"
     if path.startswith("tests/HELIOS.Platform.Tests/Phase10/Quarantine/"): return "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj"
     return "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj"
@@ -45,7 +46,7 @@ def layer(path):
     if "endtoend" in p or "/system/" in p or "e2etest" in p: return "end-to-end"
     if "integration" in p or p.startswith("monado/helios-control/tests/"): return "integration"
     if any(x in p for x in ("security", "vault", "driver", "quarantine", "malware", "/users/tests/", "deploymenttests")): return "privileged"
-    if p.endswith(".fs") or p.startswith("tests/analytics/"): return "portable"
+    if p.endswith(".fs") or p.startswith("tests/analytics/") or p.startswith("tests/contracts/"): return "portable"
     return "windows"
 
 def generated():
