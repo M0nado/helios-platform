@@ -225,6 +225,21 @@ def _validate_integrity(
             continue
         if dirty:
             errors.append(f"{path}: submodule worktree is dirty")
+        try:
+            nested_dirty = git(
+                "-C",
+                str(module),
+                "submodule",
+                "foreach",
+                "--quiet",
+                "--recursive",
+                "git status --porcelain --untracked-files=all",
+            )
+        except GitCommandError as exc:
+            errors.append(f"{path}: cannot determine nested submodule worktree status ({exc})")
+            continue
+        if nested_dirty:
+            errors.append(f"{path}: nested submodule worktree is dirty")
 
     return errors
 
