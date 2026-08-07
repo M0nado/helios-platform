@@ -122,6 +122,70 @@ function Resolve-SourceCommitSha {
     return $null
 }
 
+function Test-IntegrationContractInvariants {
+    param(
+        [Parameter(Mandatory)] [string] $RepositoriesMapPath,
+        [Parameter(Mandatory)] [string] $EventSchemaPath
+    )
+
+    $errors = [System.Collections.Generic.List[string]]::new()
+    $requiredRepositories = @(
+        'M0nado/helios-platform',
+        'Heli0s-Dynamics/adaptive-multibrain-bootstrap',
+        'M0nado/Helios-Control-Center',
+        'M0nado/helios-ai-hub',
+        'M0nado/helios-monado-blade',
+        'Yolkster64/hermes-fleet-platforms'
+    )
+
+    $repoMap = $null
+    $schema = $null
+
+    try {
+        $repoMap = Get-Content -LiteralPath $RepositoriesMapPath -Raw | ConvertFrom-Json
+    }
+    catch {
+        $errors.Add("Unable to parse repositories map '$([IO.Path]::GetFileName($RepositoriesMapPath))': $($_.Exception.Message)")
+    }
+
+    try {
+        $schema = Get-Content -LiteralPath $EventSchemaPath -Raw | ConvertFrom-Json
+    }
+    catch {
+        $errors.Add("Unable to parse event schema '$([IO.Path]::GetFileName($EventSchemaPath))': $($_.Exception.Message)")
+    }
+
+    if ($repoMap) {
+        if ($repoMap.canonicalPlatform -ne 'M0nado/helios-platform') {
+            $errors.Add('Canonical platform must be M0nado/helios-platform.')
+        }
+        if ($repoMap.controlPlane -ne 'Heli0s-Dynamics/adaptive-multibrain-bootstrap') {
+            $errors.Add('Control plane mapping must be Heli0s-Dynamics/adaptive-multibrain-bootstrap.')
+        }
+
+        $presentNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($entry in @($repoMap.repositories)) {
+            if ($entry -and -not [string]::IsNullOrWhiteSpace([string] $entry.name)) {
+                [void] $presentNames.Add([string] $entry.name)
+            }
+        }
+
+        foreach ($requiredRepository in $requiredRepositories) {
+            if (-not $presentNames.Contains($requiredRepository)) {
+                $errors.Add("Repository role map is missing required entry '$requiredRepository'.")
+            }
+        }
+    }
+
+    if ($schema) {
+        if ($schema.title -ne 'HELIOS Integration Event') {
+            $errors.Add('Integration event schema title must be HELIOS Integration Event.')
+        }
+    }
+
+    return @($errors)
+}
+
 $moduleProjects = @(
     Get-ChildItem -LiteralPath $repoRoot -Recurse -Filter '*.csproj' -File |
         Where-Object {
@@ -248,8 +312,8 @@ else {
     foreach ($workflow in $workflowFiles) {
         $content = Get-Content -LiteralPath $workflow.FullName -Raw
         $issues = [System.Collections.Generic.List[string]]::new()
-        if ($content -notmatch '(?m)^\s*name\s*:') { $issues.Add('missing-name') }
-        if ($content -notmatch '(?m)^\s*on\s*:') { $issues.Add('missing-on') }
+        if ($content -notmatch '(?m)^name\s*:') { $issues.Add('missing-top-level-name') }
+        if ($content -notmatch '(?m)^(?:on|"on"|''on'')\s*:') { $issues.Add('missing-top-level-on') }
         if ($issues.Count -gt 0) {
             $invalidFiles.Add([pscustomobject]@{
                     file = Get-RelativePath -Path $workflow.FullName
@@ -345,6 +409,18 @@ foreach ($jsonFile in ($jsonValidationTargets | Sort-Object -Unique)) {
     }
 }
 
+$contractErrors = [System.Collections.Generic.List[object]]::new()
+$repositoriesMapPath = Join-Path $repoRoot 'config\integrations\repositories.json'
+$eventSchemaPath = Join-Path $repoRoot 'config\integrations\event-contract.schema.json'
+if ((Test-Path -LiteralPath $repositoriesMapPath) -and (Test-Path -LiteralPath $eventSchemaPath)) {
+    foreach ($contractError in (Test-IntegrationContractInvariants -RepositoriesMapPath $repositoriesMapPath -EventSchemaPath $eventSchemaPath)) {
+        $contractErrors.Add([pscustomobject]@{
+                scope = 'integration-contract'
+                error = $contractError
+            })
+    }
+}
+
 $envExample = Join-Path $controlRoot '.env.example'
 $envLocal = Join-Path $controlRoot '.env.local'
 $envLocalState = 'present'
@@ -360,9 +436,9 @@ if (-not (Test-Path -LiteralPath $envLocal)) {
 
 $configStatus = 'configured'
 $configDetail = 'Configuration files validated.'
-if ($missingFiles.Count -gt 0 -or $jsonErrors.Count -gt 0) {
+if ($missingFiles.Count -gt 0 -or $jsonErrors.Count -gt 0 -or $contractErrors.Count -gt 0) {
     $configStatus = 'blocked'
-    $configDetail = 'Missing or invalid configuration files were found.'
+    $configDetail = 'Missing, invalid, or contract-mismatched configuration files were found.'
 }
 elseif ($envLocalState -eq 'missing') {
     $configStatus = 'pending'
@@ -378,6 +454,7 @@ Add-StepResult `
         missing = @($missingFiles)
         jsonChecked = @($jsonValidationTargets | Sort-Object -Unique | ForEach-Object { Get-RelativePath -Path $_ })
         jsonErrors = @($jsonErrors)
+        contractErrors = @($contractErrors)
         envLocal = [ordered]@{
             path = Get-RelativePath -Path $envLocal
             state = $envLocalState
@@ -472,7 +549,7 @@ else {
         foreach ($bicepFile in $bicepFiles) {
             $result = Invoke-NativeCommand `
                 -Command $az.Source `
-                -Arguments @('bicep', 'build', '--file', $bicepFile.FullName) `
+                -Arguments @('bicep', 'build', '--file', $bicepFile.FullName, '--stdout') `
                 -Operation "az bicep build --file $(Get-RelativePath -Path $bicepFile.FullName)"
             if ($result.exitCode -ne 0) { $compileFailures++ }
             $compileResults.Add($result)
@@ -529,22 +606,30 @@ else {
                 })
         }
         else {
-            $previewArgs = @(
-                '-ResourceGroup', $ResourceGroup,
-                '-EnvironmentName', $EnvironmentName,
-                '-ContainerRegistryName', $ContainerRegistryName,
-                '-EntraClientId', $EntraClientId,
-                '-EntraTenantId', $EntraTenantId,
-                '-AllowedPrincipalObjectId', $AllowedPrincipalObjectId,
-                '-SourceCommitSha', $resolvedSourceCommitSha
-            )
+            $previewParams = @{
+                ResourceGroup = $ResourceGroup
+                EnvironmentName = $EnvironmentName
+                ContainerRegistryName = $ContainerRegistryName
+                EntraClientId = $EntraClientId
+                EntraTenantId = $EntraTenantId
+                AllowedPrincipalObjectId = $AllowedPrincipalObjectId
+                SourceCommitSha = $resolvedSourceCommitSha
+            }
             if (-not [string]::IsNullOrWhiteSpace($ContainerImage)) {
-                $previewArgs += @('-ContainerImage', $ContainerImage)
+                $previewParams.ContainerImage = $ContainerImage
             }
 
-            $previewOutput = & $previewScript @previewArgs 2>&1
-            $previewExitCode = $LASTEXITCODE
-            $previewLines = @($previewOutput | ForEach-Object { "$_".Trim() } | Where-Object { $_ } | Select-Object -First 15)
+            $previewExitCode = 0
+            $previewLines = @()
+            try {
+                $previewOutput = & $previewScript @previewParams 2>&1
+                $previewExitCode = $LASTEXITCODE
+                $previewLines = @($previewOutput | ForEach-Object { "$_".Trim() } | Where-Object { $_ } | Select-Object -First 15)
+            }
+            catch {
+                $previewExitCode = 1
+                $previewLines = @((@($_.Exception.Message, $_.InvocationInfo.PositionMessage) | Where-Object { $_ } | ForEach-Object { "$_".Trim() }) | Select-Object -First 15)
+            }
 
             Add-StepResult `
                 -Name 'azure-resources-what-if' `
