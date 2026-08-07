@@ -123,7 +123,7 @@ class ValidateAiCollaborationPrTests(unittest.TestCase):
         errors, _ = validator.validate_event_payload(payload, changed_files=[])
         self.assertEqual(errors, [])
 
-    def test_ai_assisted_requires_strict_safeguards(self):
+    def test_ai_assisted_non_privileged_pr_does_not_require_privileged_safeguards(self):
         body = build_body(
             ai_codex=True,
             human_only=False,
@@ -138,12 +138,7 @@ class ValidateAiCollaborationPrTests(unittest.TestCase):
             "issue-231-governed-ai-collab-contract",
         )
         errors, _ = validator.validate_event_payload(payload, changed_files=[])
-        self.assertTrue(
-            any('Proposal-Only Safeguards must check "No direct apply path was added or enabled".' in item for item in errors)
-        )
-        self.assertTrue(
-            any("Approval Gate Link is required for AI-assisted or privileged changes." in item for item in errors)
-        )
+        self.assertEqual(errors, [])
 
     def test_privileged_changes_require_privileged_declaration(self):
         body = build_body(
@@ -208,6 +203,126 @@ class ValidateAiCollaborationPrTests(unittest.TestCase):
         errors, _ = validator.validate_event_payload(payload, changed_files=[])
         self.assertTrue(
             any("Correlation ID issue number must match the linked issue number." in item for item in errors)
+        )
+
+    def test_issue_link_must_use_governed_fix_or_relates_syntax(self):
+        body = build_body().replace("Fixes #231", "Tracking discussion #231")
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertTrue(
+            any("Issue Link must include `Fixes #<issue-number>` or `Relates to #<issue-number>`." in item for item in errors)
+        )
+
+    def test_title_issue_number_must_match_issue_link(self):
+        body = build_body(issue_number=231)
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #999",
+            body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertTrue(
+            any("PR title issue number must match the linked issue number in Issue Link." in item for item in errors)
+        )
+
+    def test_branch_issue_number_must_match_issue_link(self):
+        body = build_body(issue_number=231)
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            body,
+            "issue-777-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertTrue(
+            any("Branch issue number must match the linked issue number in Issue Link." in item for item in errors)
+        )
+
+    def test_required_evidence_fields_must_include_references(self):
+        body = build_body(
+            workflow_link="wordsonly",
+            test_link="alsowordsonly",
+        )
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertTrue(
+            any("Evidence Links `workflow run` must include a concrete URL or run/issue reference." in item for item in errors)
+        )
+        self.assertTrue(
+            any("Evidence Links `test evidence` must include a concrete URL or run/issue reference." in item for item in errors)
+        )
+
+    def test_declared_privileged_requires_safeguards_even_without_detected_path(self):
+        body = build_body(
+            human_only=True,
+            declare_privileged=True,
+            safeguard_direct_apply=False,
+            safeguard_what_if=False,
+            safeguard_approval=False,
+            approval_link="N/A",
+            rollback_plan="N/A",
+        )
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertTrue(
+            any('Proposal-Only Safeguards must check "No direct apply path was added or enabled".' in item for item in errors)
+        )
+        self.assertTrue(
+            any("Approval Gate Link is required when privileged changes are declared or detected." in item for item in errors)
+        )
+        self.assertTrue(
+            any("Rollback Plan is required when privileged changes are declared or detected." in item for item in errors)
+        )
+
+    def test_privileged_approval_link_rejects_unrelated_urls(self):
+        body = build_body(
+            human_only=True,
+            declare_privileged=True,
+            safeguard_direct_apply=True,
+            safeguard_what_if=True,
+            safeguard_approval=True,
+            approval_link="https://example.com/anything",
+            rollback_plan="Revert privileged changes by restoring previous approved revision.",
+        )
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertTrue(
+            any("Approval Gate Link must reference a GitHub issue/pull, Azure DevOps work item, or `#<issue-number>`." in item for item in errors)
+        )
+
+    def test_placeholder_like_rollback_values_are_rejected(self):
+        body = build_body(
+            human_only=True,
+            declare_privileged=True,
+            safeguard_direct_apply=True,
+            safeguard_what_if=True,
+            safeguard_approval=True,
+            approval_link="#231",
+            rollback_plan="TBD: pending approval",
+        )
+        payload = build_event_payload(
+            "docs(governance): define AI collaboration contract | Fixes #231",
+            body,
+            "issue-231-governed-ai-collab-contract",
+        )
+        errors, _ = validator.validate_event_payload(payload, changed_files=[])
+        self.assertTrue(
+            any("Rollback Plan is required when privileged changes are declared or detected." in item for item in errors)
         )
 
     def test_title_must_follow_governed_pattern(self):

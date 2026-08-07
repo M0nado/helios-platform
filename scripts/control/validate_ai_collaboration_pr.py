@@ -9,17 +9,26 @@ import sys
 from pathlib import Path
 
 TITLE_PATTERN = re.compile(
-    r"^(feat|fix|docs|refactor|perf|test|ci|chore)\([^)]+\): .+\| (Fixes|Relates to) #\d+$"
+    r"^(feat|fix|docs|refactor|perf|test|ci|chore)\([^)]+\): .+\| (?P<relation>Fixes|Relates to) #(?P<issue>\d+)$"
 )
 BRANCH_PATTERN = re.compile(
-    r"^(?:[a-z0-9]+-)?issue-\d+-[a-z0-9]+(?:-[a-z0-9]+)*$"
+    r"^(?:[a-z0-9]+-)?issue-(?P<issue>\d+)-[a-z0-9]+(?:-[a-z0-9]+)*$"
 )
 CORRELATION_PATTERN = re.compile(
     r"\bhc-(?P<issue>\d+)-(?P<scope>[a-z0-9]+(?:-[a-z0-9]+)*)\b"
 )
-ISSUE_REF_PATTERN = re.compile(r"#(?P<issue>\d+)")
+ISSUE_DECLARATION_PATTERN = re.compile(
+    r"\b(?P<relation>Fixes|Relates to)\s+#(?P<issue>\d+)\b"
+)
 SECTION_PATTERN = re.compile(r"^#{2,3}\s+(.+?)\s*$")
 URL_OR_REF_PATTERN = re.compile(r"https?://|#\d+|/actions/runs/\d+")
+APPROVAL_GATE_PATTERN = re.compile(
+    r"(?:#\d+|https?://github\.com/\S+/(?:issues|pull)/\d+|https?://dev\.azure\.com/\S+/_workitems/edit/\d+)"
+)
+PLACEHOLDER_PATTERN = re.compile(
+    r"^(?:n/?a|na|none|tbd|pending|<issue-number>|<kebab-scope>)(?:[\s\.:;,_-].*)?$",
+    re.IGNORECASE,
+)
 
 PLACEHOLDER_VALUES = {
     "",
@@ -35,10 +44,28 @@ PLACEHOLDER_VALUES = {
 PRIVILEGED_PATH_PREFIXES = (
     "infra/",
     "scripts/windows/security/",
+    "scripts/windows/firewall/",
+    "scripts/windows/wdac/",
+    "scripts/windows/bitlocker/",
     "scripts/azure/",
+    "scripts/security/",
+    "scripts/microsoft-enterprise/",
+    "scripts/entra/",
+    "scripts/purview/",
     "monado/helios-control/scripts/",
 )
-PRIVILEGED_WORKFLOW_TOKENS = ("deploy", "azure", "security", "enterprise-bicep")
+PRIVILEGED_WORKFLOW_TOKENS = (
+    "deploy",
+    "azure",
+    "security",
+    "enterprise-bicep",
+    "rbac",
+    "entra",
+    "wdac",
+    "firewall",
+    "bitlocker",
+    "purview",
+)
 
 
 def parse_h3_sections(body: str) -> dict[str, str]:
@@ -95,10 +122,14 @@ def extract_branch_exception_reason(section: str) -> str:
 
 
 def is_meaningful_text(value: str) -> bool:
-    normalized = re.sub(r"\s+", " ", value.strip()).lower()
+    normalized = re.sub(r"\s+", " ", value.strip()).lower().strip("`*_")
+    if not normalized:
+        return False
+    if PLACEHOLDER_PATTERN.match(normalized):
+        return False
     if normalized in PLACEHOLDER_VALUES:
         return False
-    return bool(normalized)
+    return True
 
 
 def parse_evidence_links(section: str) -> dict[str, str]:
@@ -116,7 +147,7 @@ def parse_evidence_links(section: str) -> dict[str, str]:
 
 
 def parse_issue_number(text: str) -> int | None:
-    match = ISSUE_REF_PATTERN.search(text)
+    match = ISSUE_DECLARATION_PATTERN.search(text)
     if not match:
         return None
     return int(match.group("issue"))
@@ -180,16 +211,29 @@ def validate_event_payload(payload: dict[str, object], changed_files: list[str])
     issue_section = sections["Issue Link"]
     issue_number = parse_issue_number(issue_section)
     if issue_number is None:
-        errors.append("Issue Link must include an issue reference like `Fixes #123`.")
+        errors.append("Issue Link must include `Fixes #<issue-number>` or `Relates to #<issue-number>`.")
 
     title_section = sections["PR Title Conformance"]
-    if not is_checked(title_section, "PR title follows `<type>(<scope>): <summary> | Fixes #<issue-number>`"):
+    title_checkbox_checked = any(
+        (
+            is_checked(title_section, "PR title follows `<type>(<scope>): <summary> | Fixes #<issue-number>`"),
+            is_checked(title_section, "PR title follows `<type>(<scope>): <summary> | Relates to #<issue-number>`"),
+            is_checked(
+                title_section,
+                "PR title follows `<type>(<scope>): <summary> | (Fixes|Relates to) #<issue-number>`",
+            ),
+        )
+    )
+    if not title_checkbox_checked:
         errors.append("PR Title Conformance checkbox must be checked.")
-    if not TITLE_PATTERN.match(title):
+    title_match = TITLE_PATTERN.match(title)
+    if not title_match:
         errors.append(
             "PR title must follow `<type>(<scope>): <summary> | Fixes #<issue-number>` "
             "or `<type>(<scope>): <summary> | Relates to #<issue-number>`."
         )
+    elif issue_number is not None and int(title_match.group("issue")) != issue_number:
+        errors.append("PR title issue number must match the linked issue number in Issue Link.")
 
     branch_section = sections["Branch Naming"]
     standard_branch_checked = is_checked(
@@ -202,8 +246,11 @@ def validate_event_payload(payload: dict[str, object], changed_files: list[str])
     )
     if standard_branch_checked == exception_branch_checked:
         errors.append("Branch Naming must check exactly one branch declaration option.")
-    if standard_branch_checked and not BRANCH_PATTERN.match(branch):
+    branch_match = BRANCH_PATTERN.match(branch)
+    if standard_branch_checked and not branch_match:
         errors.append(f'Branch "{branch}" does not match the governed branch naming pattern.')
+    elif standard_branch_checked and issue_number is not None and int(branch_match.group("issue")) != issue_number:
+        errors.append("Branch issue number must match the linked issue number in Issue Link.")
     if exception_branch_checked and not is_meaningful_text(extract_branch_exception_reason(branch_section)):
         errors.append("Branch Naming exception is checked but no reason was provided.")
 
@@ -216,7 +263,6 @@ def validate_event_payload(payload: dict[str, object], changed_files: list[str])
         errors.append("AI Participation must select at least one option.")
     if human_only_checked and any((codex_checked, claude_checked, copilot_checked)):
         errors.append("AI Participation cannot select Human-only together with AI-assisted options.")
-    ai_assisted = codex_checked or claude_checked or copilot_checked
 
     correlation_section = sections["Correlation ID"]
     correlation_match = CORRELATION_PATTERN.search(correlation_section)
@@ -231,6 +277,10 @@ def validate_event_payload(payload: dict[str, object], changed_files: list[str])
         value = evidence.get(required_key, "")
         if not is_meaningful_text(value):
             errors.append(f"Evidence Links must provide a value for `{required_key}`.")
+        elif not URL_OR_REF_PATTERN.search(value):
+            errors.append(
+                f"Evidence Links `{required_key}` must include a concrete URL or run/issue reference."
+            )
 
     privileged_paths = [path for path in changed_files if is_privileged_path(path)]
     privileged_changed = bool(privileged_paths)
@@ -254,7 +304,7 @@ def validate_event_payload(payload: dict[str, object], changed_files: list[str])
             "Privileged files were detected in this PR, but the privileged proposal-only declaration was not selected."
         )
 
-    enforce_strict_proposal_checks = ai_assisted or privileged_changed
+    enforce_strict_proposal_checks = privileged_changed or declared_privileged
     if enforce_strict_proposal_checks:
         safeguards_section = sections["Proposal-Only Safeguards"]
         safeguard_labels = (
@@ -268,14 +318,15 @@ def validate_event_payload(payload: dict[str, object], changed_files: list[str])
 
         approval_section = sections["Approval Gate Link"]
         if not is_meaningful_text(approval_section):
-            errors.append("Approval Gate Link is required for AI-assisted or privileged changes.")
-        elif not URL_OR_REF_PATTERN.search(approval_section):
-            errors.append("Approval Gate Link must include an issue reference or URL.")
+            errors.append("Approval Gate Link is required when privileged changes are declared or detected.")
+        elif not APPROVAL_GATE_PATTERN.search(approval_section):
+            errors.append(
+                "Approval Gate Link must reference a GitHub issue/pull, Azure DevOps work item, or `#<issue-number>`."
+            )
 
-        if privileged_changed:
-            rollback_section = sections["Rollback Plan"]
-            if not is_meaningful_text(rollback_section):
-                errors.append("Rollback Plan is required when privileged paths are changed.")
+        rollback_section = sections["Rollback Plan"]
+        if not is_meaningful_text(rollback_section):
+            errors.append("Rollback Plan is required when privileged changes are declared or detected.")
 
         evidence_values = [value for value in evidence.values() if is_meaningful_text(value)]
         if not any(URL_OR_REF_PATTERN.search(value) for value in evidence_values):

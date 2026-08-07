@@ -6,7 +6,7 @@ Describe the change and expected outcome.
 
 ### Issue Link
 
-Fixes #<issue-number>
+Fixes #<issue-number> or Relates to #<issue-number>
 
 ### Branch Naming
 
@@ -17,7 +17,7 @@ Branch naming notes:
 
 ### PR Title Conformance
 
-- [ ] PR title follows `<type>(<scope>): <summary> | Fixes #<issue-number>`
+- [ ] PR title follows `<type>(<scope>): <summary> | (Fixes|Relates to) #<issue-number>`
 
 ### AI Participation
 
