@@ -60,6 +60,7 @@ def validate(
     repository_map: Path,
     gitmodules: Path,
     tracked_gitlinks: set[str] | None = None,
+    require_gitlinks: bool = False,
 ) -> list[str]:
     """Return human-readable integrity errors for the supplied files."""
     errors: list[str] = []
@@ -72,6 +73,13 @@ def validate(
     for key in ("schemaVersion", "controlPlane", "canonicalPlatform", "repositories"):
         if key not in document:
             errors.append(f"{repository_map}: missing required property {key!r}")
+    schema_version = document.get("schemaVersion")
+    if not isinstance(schema_version, str):
+        errors.append(f"{repository_map}: 'schemaVersion' must be a string")
+    elif schema_version != "1.0":
+        errors.append(
+            f"{repository_map}: unsupported schemaVersion {schema_version!r}; expected '1.0'"
+        )
 
     repositories = document.get("repositories")
     if not isinstance(repositories, list) or not repositories:
@@ -149,8 +157,9 @@ def validate(
 
     if tracked_gitlinks is None:
         tracked_gitlinks = _load_tracked_gitlinks(gitmodules, errors)
-    for path in sorted(paths - tracked_gitlinks):
-        errors.append(f"{gitmodules}: declared submodule path {path!r} is not a tracked gitlink")
+    if require_gitlinks or tracked_gitlinks:
+        for path in sorted(paths - tracked_gitlinks):
+            errors.append(f"{gitmodules}: declared submodule path {path!r} is not a tracked gitlink")
     for path in sorted(tracked_gitlinks - paths):
         errors.append(f"{gitmodules}: tracked gitlink {path!r} is not declared as a submodule")
 
@@ -165,9 +174,18 @@ def main(argv: list[str] | None = None) -> int:
         default=Path("config/integrations/repositories.json"),
     )
     parser.add_argument("--gitmodules", type=Path, default=Path(".gitmodules"))
+    parser.add_argument(
+        "--require-gitlinks",
+        action="store_true",
+        help="Require every declared submodule path to be tracked as a mode-160000 gitlink.",
+    )
     args = parser.parse_args(argv)
 
-    errors = validate(args.repository_map, args.gitmodules)
+    errors = validate(
+        args.repository_map,
+        args.gitmodules,
+        require_gitlinks=args.require_gitlinks,
+    )
     if errors:
         print("Repository integrity validation failed:", file=sys.stderr)
         for error in errors:

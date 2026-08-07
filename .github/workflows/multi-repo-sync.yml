@@ -23,8 +23,7 @@ on:
       - '.github/workflows/multi-repo-sync.yml'
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   validate-repository-integrity:
@@ -33,6 +32,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Run Repository Integrity Tests
         run: python -m unittest tests/test_repository_integrity.py
@@ -44,6 +48,10 @@ jobs:
     name: Sync Submodules
     runs-on: ubuntu-latest
     needs: validate-repository-integrity
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -112,6 +120,7 @@ jobs:
     name: Validate Sync Integrity
     runs-on: ubuntu-latest
     needs: sync-submodules
+    if: github.event_name != 'pull_request'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

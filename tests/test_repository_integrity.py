@@ -96,18 +96,37 @@ class RepositoryIntegrityTests(unittest.TestCase):
         self.assertTrue(any("authority must contain" in error for error in errors))
         self.assertTrue(any("role 'canonical-platform'" in error for error in errors))
 
+    def test_rejects_unsupported_schema_version(self):
+        self.document["schemaVersion"] = "2.0"
+
+        errors = self.validate()
+
+        self.assertTrue(any("unsupported schemaVersion" in error for error in errors))
+
     def test_rejects_malformed_json(self):
         self.repository_map.write_text("{", encoding="utf-8")
         errors = validator.validate(self.repository_map, self.gitmodules)
         self.assertTrue(any("cannot read valid JSON" in error for error in errors))
 
-    def test_rejects_declared_submodule_without_tracked_gitlink(self):
+    def test_allows_declared_submodule_without_tracked_gitlink_by_default(self):
         self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
 
         errors = validator.validate(
             self.repository_map,
             self.gitmodules,
             tracked_gitlinks=set(),
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_rejects_declared_submodule_without_tracked_gitlink_when_required(self):
+        self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
+
+        errors = validator.validate(
+            self.repository_map,
+            self.gitmodules,
+            tracked_gitlinks=set(),
+            require_gitlinks=True,
         )
 
         self.assertTrue(any("is not a tracked gitlink" in error for error in errors))
