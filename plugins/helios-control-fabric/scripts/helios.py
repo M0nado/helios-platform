@@ -311,9 +311,15 @@ def devops_sync_plan() -> dict[str, Any]:
     }
 
 
-def runner_plan() -> dict[str, Any]:
+def runner_plan(environment: str | None = None) -> dict[str, Any]:
+    plan = read_asset("runner-topology.json")
+    if environment is not None:
+        validate_environment(environment)
+        release = plan.get("release")
+        if isinstance(release, dict):
+            release["environment"] = environment
     return {
-        **read_asset("runner-topology.json"),
+        **plan,
         "executionMode": "plan-only",
     }
 
@@ -327,8 +333,52 @@ def edge_plan(environment: str) -> dict[str, Any]:
     }
 
 
+def setup_all(
+    environment: str,
+    api_reader: GitHubApiReader | None = None,
+) -> dict[str, Any]:
+    validate_environment(environment)
+    doctor_result = doctor()
+    targets = read_targets()
+    plan = release_plan(environment)
+    oidc = oidc_contract(environment, api_reader=api_reader)
+    edge = edge_plan(environment)
+    devops = devops_sync_plan()
+    runners = runner_plan(environment)
+    return {
+        "command": "setup-all",
+        "environment": environment,
+        "executionMode": "plan-only",
+        "requiredToolsReady": doctor_result["requiredToolsReady"],
+        "releasePlanAdministratorGateCount": len(plan["administratorGates"]),
+        "oidcSubject": oidc["selectedSubject"],
+        "steps": {
+            "doctor": doctor_result,
+            "targets": targets,
+            "plan": plan,
+            "oidc": oidc,
+            "edge": edge,
+            "devopsSync": devops,
+            "runners": runners,
+        },
+    }
+
+
 def print_human(payload: dict[str, Any]) -> None:
-    if "tools" in payload:
+    if payload.get("command") == "setup-all":
+        print(f"HELIOS setup-all ({payload['environment']})")
+        print(
+            "  required tools ready: "
+            f"{str(payload['requiredToolsReady']).lower()}"
+        )
+        print(f"  oidc subject: {payload['oidcSubject']}")
+        print(
+            "  release-plan administrator gates: "
+            f"{payload['releasePlanAdministratorGateCount']}"
+        )
+        print("  steps: doctor, targets, plan, oidc, edge, devops-sync, runners")
+        print("  No cloud mutation was performed.")
+    elif "tools" in payload:
         print("HELIOS doctor (read-only)")
         for tool in payload["tools"]:
             mark = "OK" if tool["available"] and tool.get("healthy", False) else (
@@ -386,6 +436,11 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_parser.add_argument("--json", action="store_true")
     targets_parser = subparsers.add_parser("targets", help="Show canonical authorities")
     targets_parser.add_argument("--json", action="store_true")
+    setup_all_parser = subparsers.add_parser(
+        "setup-all",
+        help="Run all read-only setup checks and release-plan contracts",
+    )
+    add_environment_argument(setup_all_parser)
     plan_parser = subparsers.add_parser("plan", help="Create a non-executing release plan")
     add_environment_argument(plan_parser)
     oidc_parser = subparsers.add_parser("oidc", help="Show the exact GitHub-to-Azure OIDC contract")
@@ -406,6 +461,8 @@ def main(argv: list[str] | None = None) -> int:
             payload = doctor()
         elif args.command == "targets":
             payload = read_targets()
+        elif args.command == "setup-all":
+            payload = setup_all(args.environment)
         elif args.command == "plan":
             payload = release_plan(args.environment)
         elif args.command == "oidc":

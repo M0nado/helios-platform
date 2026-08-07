@@ -62,6 +62,44 @@ class HeliosCliTests(unittest.TestCase):
         )
         self.assertNotIn("federationSubject", plan)
 
+    def test_setup_all_aggregates_full_read_only_contract(self) -> None:
+        doctor_result = {
+            "mode": "read-only",
+            "tools": [],
+            "environment": {},
+            "requiredToolsReady": True,
+            "cloudAuthenticated": "not-checked",
+            "azureDeployed": False,
+        }
+        with patch.object(HELIOS, "doctor", return_value=doctor_result):
+            setup = HELIOS.setup_all(
+                "azure-dev",
+                api_reader=github_reader(),
+            )
+        self.assertEqual(setup["command"], "setup-all")
+        self.assertEqual(setup["executionMode"], "plan-only")
+        self.assertEqual(setup["environment"], "azure-dev")
+        self.assertTrue(setup["requiredToolsReady"])
+        self.assertEqual(
+            setup["oidcSubject"],
+            (
+                "repo:M0nado@274244942/"
+                "helios-platform@1207349837:environment:azure-dev"
+            ),
+        )
+        self.assertEqual(setup["releasePlanAdministratorGateCount"], 7)
+        self.assertIn("doctor", setup["steps"])
+        self.assertIn("targets", setup["steps"])
+        self.assertIn("plan", setup["steps"])
+        self.assertIn("oidc", setup["steps"])
+        self.assertIn("edge", setup["steps"])
+        self.assertIn("devopsSync", setup["steps"])
+        self.assertIn("runners", setup["steps"])
+        self.assertEqual(
+            setup["steps"]["runners"]["release"]["environment"],
+            "azure-dev",
+        )
+
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
             contract = HELIOS.oidc_contract(
@@ -142,6 +180,16 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(result, 2)
         self.assertIn("GitHub CLI is required", stderr.getvalue())
 
+    def test_setup_all_cli_fails_cleanly_without_github_cli(self) -> None:
+        stderr = io.StringIO()
+        with patch.object(HELIOS.shutil, "which", return_value=None):
+            with redirect_stderr(stderr):
+                result = HELIOS.main(
+                    ["setup-all", "--environment", "azure-dev", "--json"]
+                )
+        self.assertEqual(result, 2)
+        self.assertIn("GitHub CLI is required", stderr.getvalue())
+
     def test_devops_sync_remains_read_only(self) -> None:
         plan = HELIOS.devops_sync_plan()
         self.assertTrue(plan["azureDevOps"]["readOnly"])
@@ -154,6 +202,10 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(topology["validation"]["provider"], "github-hosted")
         self.assertFalse(topology["selfHosted"]["enabled"])
         self.assertTrue(topology["release"]["immutableImageRequired"])
+
+    def test_runner_topology_can_target_requested_environment(self) -> None:
+        topology = HELIOS.runner_plan("azure-test")
+        self.assertEqual(topology["release"]["environment"], "azure-test")
 
     def test_edge_plan_requires_private_link_and_separate_approval(self) -> None:
         plan = HELIOS.edge_plan("azure-dev")
