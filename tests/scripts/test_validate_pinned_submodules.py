@@ -104,6 +104,7 @@ class PinnedSubmoduleApprovalTests(unittest.TestCase):
         extra_paths: str = "",
         extra_staged: str = "",
         status_output: str = "",
+        recursive_status_output: str = "",
         nested_status_output: str = "",
     ) -> dict[tuple[str, ...], str]:
         configured_url = configured_url or entry["url"]
@@ -118,6 +119,7 @@ class PinnedSubmoduleApprovalTests(unittest.TestCase):
             ("ls-files", "--stage"): f"{staged_mode} {staged_commit} 0\tmodules/example{extra_staged}",
             ("-C", module, "rev-parse", "HEAD"): head_commit,
             ("-C", module, "status", "--porcelain", "--untracked-files=all"): status_output,
+            ("-C", module, "submodule", "status", "--recursive"): recursive_status_output,
             (
                 "-C",
                 module,
@@ -342,6 +344,46 @@ class PinnedSubmoduleApprovalTests(unittest.TestCase):
 
         self.assertEqual(1, result)
         self.assertIn("modules/example: submodule worktree is dirty", output)
+
+    def test_uninitialized_recursive_submodule_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry = self._entry()
+            module = root / entry["path"]
+            module.mkdir(parents=True)
+            (module / ".git").write_text("gitdir: ../../.git/modules/example\n", encoding="utf-8")
+            result, output = self._run_validator(
+                root,
+                {"approved": True, "submodules": [entry]},
+                git_outputs=self._git_outputs(
+                    root,
+                    entry,
+                    recursive_status_output="-1234567890abcdef1234567890abcdef12345678 nested/module",
+                ),
+            )
+
+        self.assertEqual(1, result)
+        self.assertIn("modules/example: recursive submodule is uninitialized", output)
+
+    def test_recursive_submodule_mismatch_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            entry = self._entry()
+            module = root / entry["path"]
+            module.mkdir(parents=True)
+            (module / ".git").write_text("gitdir: ../../.git/modules/example\n", encoding="utf-8")
+            result, output = self._run_validator(
+                root,
+                {"approved": True, "submodules": [entry]},
+                git_outputs=self._git_outputs(
+                    root,
+                    entry,
+                    recursive_status_output="+1234567890abcdef1234567890abcdef12345678 nested/module",
+                ),
+            )
+
+        self.assertEqual(1, result)
+        self.assertIn("modules/example: recursive submodule commit differs from index", output)
 
     def test_nested_dirty_worktree_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

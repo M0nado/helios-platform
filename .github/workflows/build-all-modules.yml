@@ -196,6 +196,13 @@ jobs:
           echo "Module: ${{ matrix.module }}"
           echo "Clean build: ${{ github.event.inputs.clean_build }}"
 
+      - name: Compute artifact key
+        id: artifact-key
+        run: |
+          SAFE_MODULE="${{ matrix.module }}"
+          SAFE_MODULE="${SAFE_MODULE//\//-}"
+          echo "value=$SAFE_MODULE" >> "$GITHUB_OUTPUT"
+
       - name: Install Dependencies
         run: |
           cd ${{ matrix.module }}
@@ -246,7 +253,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-${{ matrix.module }}
+          name: build-artifacts-${{ steps.artifact-key.outputs.value }}
           path: |
             ${{ matrix.module }}/dist/
             ${{ matrix.module }}/build/
@@ -257,7 +264,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ matrix.module }}
+          name: coverage-${{ steps.artifact-key.outputs.value }}
           path: ${{ matrix.module }}/coverage/
           if-no-files-found: warn
           retention-days: 7

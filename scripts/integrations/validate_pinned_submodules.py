@@ -226,6 +226,21 @@ def _validate_integrity(
         if dirty:
             errors.append(f"{path}: submodule worktree is dirty")
         try:
+            recursive_status = git("-C", str(module), "submodule", "status", "--recursive")
+        except GitCommandError as exc:
+            errors.append(f"{path}: cannot determine recursive submodule status ({exc})")
+            continue
+        for status_line in recursive_status.splitlines():
+            if not status_line:
+                continue
+            state = status_line[0]
+            if state == "-":
+                errors.append(f"{path}: recursive submodule is uninitialized ({status_line})")
+            elif state == "+":
+                errors.append(f"{path}: recursive submodule commit differs from index ({status_line})")
+            elif state == "U":
+                errors.append(f"{path}: recursive submodule has merge conflicts ({status_line})")
+        try:
             nested_dirty = git(
                 "-C",
                 str(module),
