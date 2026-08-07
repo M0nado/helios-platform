@@ -38,12 +38,24 @@ def main() -> int:
         if not args.apply:
             continue
 
-        existing = command(
-            ["gh", "issue", "list", *repo_args, "--state", "all", "--search", marker,
-             "--json", "number", "--jq", "length"],
+        existing_titles = command(
+            [
+                "gh",
+                "issue",
+                "list",
+                *repo_args,
+                "--state",
+                "all",
+                "--search",
+                f'in:title "{marker}"',
+                "--json",
+                "title",
+                "--jq",
+                ".[].title",
+            ],
             capture=True,
         )
-        if int(existing):
+        if any(existing_title == title for existing_title in existing_titles.splitlines()):
             print("    already exists")
             continue
         body = (
