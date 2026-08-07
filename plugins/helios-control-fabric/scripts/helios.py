@@ -70,7 +70,6 @@ REQUIRED_SETUP_FILES = (
     "plugins/helios-control-fabric/scripts/helios.py",
 )
 
-
 def read_asset(name: str) -> dict[str, Any]:
     return json.loads((ASSETS / name).read_text(encoding="utf-8"))
 
@@ -251,37 +250,121 @@ def setup_environment_inventory(
 
 def full_setup_bundle(environment: str) -> dict[str, Any]:
     validate_environment(environment)
-    cloud_runtime = read_control_config("cloud-runtime.json")
-    identity_bindings = read_control_config("identity-bindings.json")
-    integrations = read_control_config("integrations.json")
-    edge_automation = read_control_config("edge-automation.json")
+    files = setup_file_inventory()
+    missing_file_set = set(files["missing"])
+    commands = [
+        "python plugins/helios-control-fabric/scripts/helios.py doctor --json",
+        "python plugins/helios-control-fabric/scripts/helios.py plan --environment "
+        + environment
+        + " --json",
+        "python plugins/helios-control-fabric/scripts/helios.py oidc --environment "
+        + environment
+        + " --json",
+        "python plugins/helios-control-fabric/scripts/helios.py edge --environment "
+        + environment
+        + " --json",
+        "python plugins/helios-control-fabric/scripts/helios.py devops-sync --json",
+        "python plugins/helios-control-fabric/scripts/helios.py runners --json",
+    ]
+    warnings: list[str] = []
+
+    cloud_runtime_path = "monado/helios-control/config/cloud-runtime.json"
+    if cloud_runtime_path in missing_file_set:
+        services = {
+            "available": False,
+            "error": (
+                "Missing required control config files: "
+                + cloud_runtime_path
+            ),
+            "items": [],
+            "total": 0,
+            "implementedCount": 0,
+            "plannedCount": 0,
+        }
+        warnings.append(
+            "Missing required control config files: " + cloud_runtime_path
+        )
+    else:
+        services = setup_service_inventory(read_control_config("cloud-runtime.json"))
+        services["available"] = True
+
+    integrations_path = "monado/helios-control/config/integrations.json"
+    if integrations_path in missing_file_set:
+        integrations = {
+            "available": False,
+            "error": (
+                "Missing required control config files: "
+                + integrations_path
+            ),
+            "executionMode": "unknown",
+            "destinations": [],
+            "destinationCount": 0,
+            "enabledCount": 0,
+            "routing": [],
+            "routeCount": 0,
+            "enabledRouteCount": 0,
+        }
+        warnings.append(
+            "Missing required control config files: " + integrations_path
+        )
+    else:
+        integrations = setup_integration_inventory(
+            read_control_config("integrations.json")
+        )
+        integrations["available"] = True
+
+    identity_bindings_path = "monado/helios-control/config/identity-bindings.json"
+    edge_automation_path = "monado/helios-control/config/edge-automation.json"
+    missing_environment_configs = [
+        path
+        for path in (identity_bindings_path, edge_automation_path)
+        if path in missing_file_set
+    ]
+    if missing_environment_configs:
+        missing_environment_text = ", ".join(missing_environment_configs)
+        environments = {
+            "available": False,
+            "error": (
+                "Missing required control config files: "
+                + missing_environment_text
+            ),
+            "releaseEnvironments": list(SUPPORTED_ENVIRONMENTS),
+            "identityEnvironments": [],
+            "automationEnvironments": [],
+            "selectedReleaseEnvironment": environment,
+            "selectedControlEnvironment": (
+                environment[len("azure-"):]
+                if environment.startswith("azure-")
+                else environment
+            ),
+            "selectedEnvironmentCoverage": {
+                "identityBindings": False,
+                "automationAllowed": False,
+            },
+            "identityPolicy": {},
+        }
+        warnings.append(
+            "Missing required control config files: " + missing_environment_text
+        )
+    else:
+        environments = setup_environment_inventory(
+            environment,
+            read_control_config("identity-bindings.json"),
+            read_control_config("edge-automation.json"),
+        )
+        environments["available"] = True
+
     return {
         "setupBundle": "files-modules-services-environments-integrations",
         "environment": environment,
         "executionMode": "plan-only",
-        "files": setup_file_inventory(),
+        "files": files,
         "modules": setup_module_inventory(),
-        "services": setup_service_inventory(cloud_runtime),
-        "environments": setup_environment_inventory(
-            environment,
-            identity_bindings,
-            edge_automation,
-        ),
-        "integrations": setup_integration_inventory(integrations),
-        "commands": [
-            "python plugins/helios-control-fabric/scripts/helios.py doctor --json",
-            "python plugins/helios-control-fabric/scripts/helios.py plan --environment "
-            + environment
-            + " --json",
-            "python plugins/helios-control-fabric/scripts/helios.py oidc --environment "
-            + environment
-            + " --json",
-            "python plugins/helios-control-fabric/scripts/helios.py edge --environment "
-            + environment
-            + " --json",
-            "python plugins/helios-control-fabric/scripts/helios.py devops-sync --json",
-            "python plugins/helios-control-fabric/scripts/helios.py runners --json",
-        ],
+        "services": services,
+        "environments": environments,
+        "integrations": integrations,
+        "warnings": warnings,
+        "commands": commands,
     }
 
 
@@ -611,6 +694,11 @@ def print_human(payload: dict[str, Any]) -> None:
             f"{integrations['enabledCount']} enabled"
         )
         print(
+            "  routes: "
+            f"{integrations['enabledRouteCount']}/"
+            f"{integrations['routeCount']} enabled"
+        )
+        print(
             "  release environments: "
             + ", ".join(environments["releaseEnvironments"])
         )
@@ -618,6 +706,8 @@ def print_human(payload: dict[str, Any]) -> None:
             print("  missing files:")
             for relative_path in files["missing"]:
                 print(f"    - {relative_path}")
+        for warning in payload.get("warnings", []):
+            print(f"  warning: {warning}")
         print("  No cloud mutation was performed.")
     else:
         print(f"HELIOS {payload['environment']} release plan")

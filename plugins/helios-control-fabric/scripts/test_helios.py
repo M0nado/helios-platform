@@ -3,7 +3,7 @@ import io
 import json
 import os
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -91,6 +91,36 @@ class HeliosCliTests(unittest.TestCase):
         self.assertTrue(
             bundle["environments"]["selectedEnvironmentCoverage"]["automationAllowed"]
         )
+
+    def test_setup_bundle_handles_missing_control_configs(self) -> None:
+        missing = ["monado/helios-control/config/cloud-runtime.json"]
+        with patch.object(
+            HELIOS,
+            "setup_file_inventory",
+            return_value={
+                "required": [{"path": missing[0], "present": False}],
+                "total": 1,
+                "presentCount": 0,
+                "missing": missing,
+            },
+        ):
+            bundle = HELIOS.full_setup_bundle("azure-dev")
+        self.assertIn("warnings", bundle)
+        self.assertFalse(bundle["services"]["available"])
+        self.assertTrue(bundle["integrations"]["available"])
+        self.assertGreater(bundle["integrations"]["routeCount"], 0)
+        self.assertTrue(bundle["environments"]["available"])
+        self.assertEqual(
+            bundle["warnings"][0],
+            "Missing required control config files: monado/helios-control/config/cloud-runtime.json",
+        )
+
+    def test_setup_human_output_includes_route_status(self) -> None:
+        bundle = HELIOS.full_setup_bundle("azure-dev")
+        output = io.StringIO()
+        with redirect_stdout(output):
+            HELIOS.print_human(bundle)
+        self.assertIn("routes:", output.getvalue())
 
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
