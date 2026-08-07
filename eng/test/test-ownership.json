@@ -147,16 +147,6 @@
       "layer": "windows"
     },
     {
-      "path": "src/tests/obj/Release/net8.0-windows10.0.19041.0/.NETCoreApp,Version=v8.0.AssemblyAttributes.cs",
-      "project": "src/tests/HELIOS.Platform.Tests.csproj",
-      "layer": "windows"
-    },
-    {
-      "path": "src/tests/obj/Release/net8.0-windows10.0.19041.0/HELIOS.Platform.Tests.AssemblyInfo.cs",
-      "project": "src/tests/HELIOS.Platform.Tests.csproj",
-      "layer": "windows"
-    },
-    {
       "path": "tests/HELIOS.Platform.Tests/AI/Phase8_Stream6_AIHubTests.cs",
       "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "windows"
