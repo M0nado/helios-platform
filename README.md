@@ -8,6 +8,16 @@
 
 Complete enterprise Windows automation and management platform.
 
+## Monado enterprise experience fabric v2 (issue #206)
+
+The canonical v2 contract set for Monado enterprise experience is now defined under:
+
+- `config/monado-enterprise/v2/` (authoritative machine-readable contracts)
+- `schemas/monado-enterprise/v2/` (JSON schema + profile XSD)
+- `docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md` (system spine, profile differences, USB handoff boundaries, and visual map)
+
+v1 Monadoblade profile/storage contracts remain preserved as historical inputs and continue to be validated in CI alongside v2.
+
 ## 🎯 Current Status - Phase 1 Foundation
 
 ### ✅ Completed (Latest Session)

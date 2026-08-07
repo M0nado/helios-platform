@@ -147,20 +147,36 @@ jobs:
           git config --global user.email "actions@github.com"
 
       - name: Checkout Wiki
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git clone https://github.com/M0nado/helios-platform.wiki.git wiki
+          if [ -z "${GITHUB_TOKEN:-}" ]; then
+            echo "No GITHUB_TOKEN available; skipping wiki sync."
+            exit 0
+          fi
+          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/M0nado/helios-platform.wiki.git" wiki || {
+            echo "Wiki repository unavailable; skipping wiki sync."
+          }
 
       - name: Copy Documentation to Wiki
         run: |
+          if [ ! -d "wiki/.git" ]; then
+            echo "Wiki checkout not available; skipping copy."
+            exit 0
+          fi
           cp docs/*.md wiki/ 2>/dev/null || true
           cp phases/*/README.md wiki/ 2>/dev/null || true
           cp components/*/README.md wiki/ 2>/dev/null || true
 
       - name: Commit Wiki Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ ! -d "wiki/.git" ]; then
+            echo "Wiki checkout not available; skipping commit."
+            exit 0
+          fi
           cd wiki
           git add -A
           git commit -m "Auto-sync documentation from main repo" || true
           git push origin master || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

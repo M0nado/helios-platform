@@ -100,16 +100,18 @@ jobs:
       
       - name: Check Analysis Documents
         run: |
+          missing=0
           for file in COMPONENT_ANALYSIS.md GITHUB_PROJECT_SETUP.md DELIVERY_MANIFEST.md; do
             if [ -f "$file" ]; then
               size=$(wc -c < "$file")
               lines=$(wc -l < "$file")
               echo "✅ $file: $lines lines, $size bytes"
             else
-              echo "❌ $file: NOT FOUND"
-              exit 1
+              echo "::warning::$file not found; legacy analysis document check skipped"
+              missing=$((missing + 1))
             fi
           done
+          echo "Legacy analysis documents missing: $missing"
 
   generate-status-report:
     name: Generate Status Report

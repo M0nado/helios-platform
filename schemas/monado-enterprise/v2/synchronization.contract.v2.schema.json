@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monado-enterprise/v2/synchronization.contract.v2.schema.json",
+  "title": "Monado enterprise synchronization contract v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "executionMode",
+    "directExternalDeliveryEnabled",
+    "normalizedEnvelope",
+    "idempotency",
+    "surfaces",
+    "routes",
+    "approvals",
+    "prohibitions"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "minLength": 1
+    },
+    "schemaVersion": {
+      "const": "2.0.0"
+    },
+    "contractId": {
+      "const": "monado-enterprise-synchronization-v2"
+    },
+    "executionMode": {
+      "const": "proposal-only"
+    },
+    "directExternalDeliveryEnabled": {
+      "const": false
+    },
+    "normalizedEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaReference",
+        "requiredFields"
+      ],
+      "properties": {
+        "schemaReference": {
+          "const": "config/integrations/event-contract.schema.json"
+        },
+        "requiredFields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "idempotency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "normalization",
+        "inputFields",
+        "keyTemplate",
+        "retention",
+        "duplicateOutcome"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "sha256"
+        },
+        "normalization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputFields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "keyTemplate": {
+          "type": "string",
+          "pattern": "^sha256\\(normalized-length-prefixed:"
+        },
+        "retention": {
+          "type": "string",
+          "minLength": 1
+        },
+        "duplicateOutcome": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "github",
+        "linear",
+        "slack",
+        "sharepoint",
+        "azure-devops",
+        "adobe-design"
+      ],
+      "properties": {
+        "github": {
+          "$ref": "#/$defs/surface"
+        },
+        "linear": {
+          "$ref": "#/$defs/surface"
+        },
+        "slack": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/surface"
+            },
+            {
+              "type": "object",
+              "required": [
+                "maxMessagesPerMilestone"
+              ],
+              "properties": {
+                "maxMessagesPerMilestone": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          ]
+        },
+        "sharepoint": {
+          "$ref": "#/$defs/surface"
+        },
+        "azure-devops": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/surface"
+            },
+            {
+              "type": "object",
+              "required": [
+                "readOnly"
+              ],
+              "properties": {
+                "readOnly": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "adobe-design": {
+          "$ref": "#/$defs/surface"
+        }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "routeId",
+          "source",
+          "eventType",
+          "targets",
+          "operation",
+          "requiresApproval"
+        ],
+        "properties": {
+          "routeId": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[a-z0-9-]*[a-z0-9])?$"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "eventType": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+          },
+          "targets": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "github",
+                "linear",
+                "slack",
+                "sharepoint",
+                "azure-devops",
+                "adobe-design"
+              ]
+            }
+          },
+          "operation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requiresApproval": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredFor",
+        "immutableEvidenceRequired",
+        "expiryRequired",
+        "rollbackPlanRequired"
+      ],
+      "properties": {
+        "requiredFor": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "immutableEvidenceRequired": {
+          "const": true
+        },
+        "expiryRequired": {
+          "const": true
+        },
+        "rollbackPlanRequired": {
+          "const": true
+        }
+      }
+    },
+    "prohibitions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "$defs": {
+    "surface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "authority",
+        "mode"
+      ],
+      "properties": {
+        "authority": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

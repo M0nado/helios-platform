@@ -77,8 +77,9 @@ jobs:
       - name: Generate Status Report
         id: report
         run: |
-          REPORT=$(cat status-report.json)
-          echo "report=$REPORT" >> $GITHUB_OUTPUT
+          echo "report<<EOF" >> $GITHUB_OUTPUT
+          cat status-report.json >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Upload Report
         uses: actions/upload-artifact@v4

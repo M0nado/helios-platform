@@ -6,6 +6,7 @@ This site is the lightweight web control surface for Branch Intelligence, integr
 
 - [Open HTML Command Center](index.html)
 - [Cross-Access Profiles](reports/cross-access-profiles.md)
+- [Monado enterprise experience fabric v2](monado-enterprise-experience-fabric-v2.md)
 
 ## Fast start
 
