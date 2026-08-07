@@ -132,7 +132,21 @@ namespace HELIOS.Platform.Phase10.Users
                     return false;
                 }
 
-                string probePath = Path.Combine(path, probeDirectoryName);
+                if (probeDirectoryName.IndexOfAny(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }) >= 0)
+                {
+                    LogMessage($"Probe directory name contains path separators for {path}", LogLevel.Warning);
+                    return false;
+                }
+
+                string normalizedBasePath = Path.GetFullPath(path);
+                string probePath = Path.GetFullPath(Path.Combine(normalizedBasePath, probeDirectoryName));
+                string expectedPrefix = normalizedBasePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                if (!probePath.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    LogMessage($"Computed probe path escaped base directory for {path}", LogLevel.Warning);
+                    return false;
+                }
+
                 try
                 {
                     Directory.CreateDirectory(probePath);
@@ -184,6 +198,12 @@ namespace HELIOS.Platform.Phase10.Users
 
             string safePreferredFolderName = Path.GetFileName(preferredFolderName);
             string safeFallbackFolderName = Path.GetFileName(fallbackFolderName);
+            if (Path.IsPathRooted(safePreferredFolderName) || Path.IsPathRooted(safeFallbackFolderName))
+            {
+                LogMessage($"Sanitized folder names resolved to rooted paths: preferred='{safePreferredFolderName}', fallback='{safeFallbackFolderName}'", LogLevel.Error);
+                return null;
+            }
+
             if (string.IsNullOrWhiteSpace(safePreferredFolderName) || string.IsNullOrWhiteSpace(safeFallbackFolderName))
             {
                 LogMessage($"Invalid folder names for writable folder resolution: preferred='{preferredFolderName}', fallback='{fallbackFolderName}'", LogLevel.Error);
