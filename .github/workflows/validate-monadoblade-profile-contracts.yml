@@ -356,7 +356,9 @@ jobs:
               schema = json.loads(Path(schema_path).read_text(encoding='utf-8'))
               document = json.loads(Path(document_path).read_text(encoding='utf-8'))
               Draft202012Validator.check_schema(schema)
-              Draft202012Validator(schema).validate(document)
+              document_payload = document.copy()
+              document_payload.pop('$schema', None)
+              Draft202012Validator(schema).validate(document_payload)
               print(f'schema ok: {document_path}')
           PY
 
