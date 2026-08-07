@@ -199,6 +199,42 @@ jobs:
           else
             resolved_location="${resource_group_location}"
           fi
+          resource_group_environment_tag="$(az group show --name "${INPUT_RESOURCE_GROUP}" --query 'tags."helios-environment"' --output tsv)"
+          if [[ "${resource_group_environment_tag}" == "null" ]]; then
+            resource_group_environment_tag=''
+          fi
+          if [[ "${INPUT_DEPLOY}" == "true" ]]; then
+            if [[ -z "${resource_group_environment_tag}" ]]; then
+              echo "Resource group '${INPUT_RESOURCE_GROUP}' must declare tag 'helios-environment' before deploy=true requests." >&2
+              exit 1
+            fi
+            if [[ "${resource_group_environment_tag,,}" != "${INPUT_ENVIRONMENT_NAME,,}" ]]; then
+              echo "Resource group '${INPUT_RESOURCE_GROUP}' tag helios-environment='${resource_group_environment_tag}' does not match requested environment_name='${INPUT_ENVIRONMENT_NAME}'." >&2
+              exit 1
+            fi
+          fi
+          if [[ "${INPUT_EGRESS_MODE}" == "azureFirewall" ]]; then
+            if [[ ! "${INPUT_HUB_VIRTUAL_NETWORK_ID}" =~ ^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Network/virtualNetworks/[^/]+$ ]]; then
+              echo "hub_virtual_network_id must be a full virtual network resource ID when egress_mode=azureFirewall." >&2
+              exit 1
+            fi
+            if [[ ! "${INPUT_AZURE_FIREWALL_POLICY_ID}" =~ ^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Network/firewallPolicies/[^/]+$ ]]; then
+              echo "azure_firewall_policy_id must be a full Firewall Policy resource ID when egress_mode=azureFirewall." >&2
+              exit 1
+            fi
+            if [[ "${INPUT_HUB_VIRTUAL_NETWORK_ID}" =~ ^/subscriptions/([^/]+)/resourceGroups/([^/]+)/providers/Microsoft\.Network/virtualNetworks/[^/]+$ ]]; then
+              hub_virtual_network_subscription_id="${BASH_REMATCH[1]}"
+              hub_virtual_network_resource_group="${BASH_REMATCH[2]}"
+            fi
+            if [[ "${INPUT_AZURE_FIREWALL_POLICY_ID}" =~ ^/subscriptions/([^/]+)/resourceGroups/([^/]+)/providers/Microsoft\.Network/firewallPolicies/[^/]+$ ]]; then
+              firewall_policy_subscription_id="${BASH_REMATCH[1]}"
+              firewall_policy_resource_group="${BASH_REMATCH[2]}"
+            fi
+            if [[ "${hub_virtual_network_subscription_id,,}" != "${firewall_policy_subscription_id,,}" || "${hub_virtual_network_resource_group,,}" != "${firewall_policy_resource_group,,}" ]]; then
+              echo "azure_firewall_policy_id must target the same subscription/resource-group scope as hub_virtual_network_id for reviewed hub governance updates." >&2
+              exit 1
+            fi
+          fi
 
           case "${INPUT_EDGE_ROUTE_CUTOVER_APPROVED,,}" in
             true|false)

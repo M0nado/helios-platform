@@ -69,6 +69,9 @@ the wizard discovers the Container App FQDN and adds the Teams-required
 Door cutover, pass `-ConnectorPublicBaseUrl https://<front-door-hostname>` so
 Configure registers and persists that exact public audience before Publish.
 Install the Teams package only after that origin-bound URI is verified.
+Rerunning Configure without `-ConnectorPublicBaseUrl` clears the protected
+public-origin binding so rollback to internal-origin configuration remains
+consistent.
 
 ## 3. Prepare and dispatch the protected cloud build
 

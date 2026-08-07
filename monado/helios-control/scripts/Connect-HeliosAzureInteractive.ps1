@@ -1325,10 +1325,29 @@ function Set-GitHubEnvironmentVariables {
     }
 
     foreach ($name in ($Values.Keys | Sort-Object)) {
+        $value = [string] $Values[$name]
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            $escapedVariable = [uri]::EscapeDataString($name)
+            try {
+                Invoke-GhNoOutput `
+                    -Arguments @(
+                        'api', '--method', 'DELETE',
+                        "repos/$repositoryName/environments/$escapedEnvironment/variables/$escapedVariable"
+                    ) `
+                    -Operation "Clearing GitHub environment variable '$name'"
+            }
+            catch {
+                $safeMessage = Protect-DiagnosticText $_.Exception.Message
+                if ($safeMessage -notmatch '404' -and $safeMessage -notmatch 'Not Found') {
+                    throw
+                }
+            }
+            continue
+        }
         Invoke-GhNoOutput `
             -Arguments @(
                 'variable', 'set', $name,
-                '--body', [string] $Values[$name],
+                '--body', $value,
                 '--repo', $repositoryName,
                 '--env', $Environment
             ) `
@@ -2058,12 +2077,10 @@ try {
             HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID = $ContainerAppsInfrastructureSubnetId
             HELIOS_ENTRA_CLIENT_ID = [string] $connectorApplication.appId
             HELIOS_ENTRA_APPLICATION_ID_URI = $connectorApplicationIdUri
+            HELIOS_CONNECTOR_PUBLIC_BASE_URL = $configuredPublicBaseUrl
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID = $principalObjectId
             HELIOS_REQUIRED_REVIEWER_ID = $RequiredReviewerId
             HELIOS_OIDC_SUBJECT = $githubOidcTrust.Subject
-        }
-        if ($configuredPublicBaseUrl) {
-            $pendingGitHubEnvironmentValues.HELIOS_CONNECTOR_PUBLIC_BASE_URL = $configuredPublicBaseUrl
         }
     }
     else {

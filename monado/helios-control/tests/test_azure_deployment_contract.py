@@ -145,6 +145,8 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID", interactive)
         self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL", interactive)
         self.assertIn("HELIOS_ENTRA_APPLICATION_ID_URI", interactive)
+        self.assertIn("'api', '--method', 'DELETE'", interactive)
+        self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL = $configuredPublicBaseUrl", interactive)
         self.assertRegex(
             interactive,
             r"if \(\$EnvironmentName -eq 'prod'\) \{\s+\$protectedSubnetBinding = Get-GitHubEnvironmentVariableValue",
@@ -181,6 +183,11 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("edge_route_was_already_enabled: ${{ steps.params.outputs.edge_route_was_already_enabled }}", workflow)
         self.assertIn("echo \"edge_route_was_already_enabled=${edge_route_was_already_enabled}\" >> \"${GITHUB_OUTPUT}\"", workflow)
         self.assertIn("EDGE_ROUTE_WAS_ALREADY_ENABLED: ${{ needs.validate.outputs.edge_route_was_already_enabled }}", workflow)
+        self.assertIn("tags.\"helios-environment\"", workflow)
+        self.assertIn("must declare tag 'helios-environment' before deploy=true requests.", workflow)
+        self.assertIn("does not match requested environment_name", workflow)
+        self.assertIn("azure_firewall_policy_id must be a full Firewall Policy resource ID when egress_mode=azureFirewall.", workflow)
+        self.assertIn("must target the same subscription/resource-group scope as hub_virtual_network_id", workflow)
         self.assertIn("--resource-type \"Microsoft.Cdn/profiles/afdEndpoints/routes\"", workflow)
         self.assertIn("Input location '", workflow)
         self.assertIn("platformAddressSpace=", workflow)
@@ -267,6 +274,11 @@ class AzureDeploymentContractTests(unittest.TestCase):
         private_edge = PRIVATE_EDGE_MODULE.read_text(encoding="utf-8")
         self.assertIn("param edgeRouteCutoverApproved bool = false", azure_main)
         self.assertIn("edgeRouteEnabled: environmentName != 'prod' || edgeRouteCutoverApproved", azure_main)
+        self.assertIn("validatedAzureFirewallPolicyId", azure_main)
+        self.assertIn(
+            "azureFirewallPolicyId must target the same subscription and resource group as hubVirtualNetworkId for reviewed hub-governance policy updates.",
+            azure_main,
+        )
         self.assertIn("param edgeRouteEnabled bool = true", private_edge)
         self.assertIn("enabledState: edgeRouteEnabled ? 'Enabled' : 'Disabled'", private_edge)
 

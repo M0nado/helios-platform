@@ -55,6 +55,11 @@ param networkWatcherName string = 'NetworkWatcher_${location}'
 var firewallConfigurationComplete = egressMode != 'azureFirewall' || (!empty(azureFirewallPrivateIp) && !empty(hubVirtualNetworkId) && !empty(azureFirewallPolicyId))
 var validatedEgressMode = firewallConfigurationComplete && (environmentName != 'prod' || egressMode == 'azureFirewall') ? egressMode : fail('Production and all azureFirewall deployments require the firewall IP, hub VNet ID, and Firewall Policy ID.')
 var validatedConnectorBackendUrl = environmentName != 'prod' || networkOnly || !empty(connectorBackendUrl) ? connectorBackendUrl : fail('Production requires the internal connector backend URL unless networkOnly is enabled for reviewed subnet bootstrap.')
+var hubVirtualNetworkSubscriptionId = validatedEgressMode == 'azureFirewall' ? split(hubVirtualNetworkId, '/')[2] : ''
+var hubVirtualNetworkResourceGroupName = validatedEgressMode == 'azureFirewall' ? split(hubVirtualNetworkId, '/')[4] : ''
+var azureFirewallPolicySubscriptionId = validatedEgressMode == 'azureFirewall' ? split(azureFirewallPolicyId, '/')[2] : ''
+var azureFirewallPolicyResourceGroupName = validatedEgressMode == 'azureFirewall' ? split(azureFirewallPolicyId, '/')[4] : ''
+var validatedAzureFirewallPolicyId = validatedEgressMode != 'azureFirewall' || (toLower(hubVirtualNetworkSubscriptionId) == toLower(azureFirewallPolicySubscriptionId) && toLower(hubVirtualNetworkResourceGroupName) == toLower(azureFirewallPolicyResourceGroupName)) ? azureFirewallPolicyId : fail('azureFirewallPolicyId must target the same subscription and resource group as hubVirtualNetworkId for reviewed hub-governance policy updates.')
 var keyVaultName = take(toLower(replace('${namePrefix}-${environmentName}-kv', '-', '')), 24)
 var keyVaultId = resourceId('Microsoft.KeyVault/vaults', keyVaultName)
 
@@ -94,14 +99,14 @@ module network 'modules/network.bicep' = {
 
 module hubGovernance 'modules/hub-governance.bicep' = if (validatedEgressMode == 'azureFirewall') {
   name: 'hub-governance-${environmentName}'
-  scope: resourceGroup(split(hubVirtualNetworkId, '/')[2], split(hubVirtualNetworkId, '/')[4])
+  scope: resourceGroup(hubVirtualNetworkSubscriptionId, hubVirtualNetworkResourceGroupName)
   params: {
     namePrefix: namePrefix
     environmentName: environmentName
     hubVirtualNetworkName: last(split(hubVirtualNetworkId, '/'))
     platformVirtualNetworkId: network.outputs.virtualNetworkId
     platformAddressSpace: network.outputs.platformAddressSpace
-    azureFirewallPolicyName: last(split(azureFirewallPolicyId, '/'))
+    azureFirewallPolicyName: last(split(validatedAzureFirewallPolicyId, '/'))
     enabledEgressProfiles: enabledEgressProfiles
     connectorRelayDestinations: connectorRelayDestinations
   }
