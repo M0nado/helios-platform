@@ -13,7 +13,7 @@ OUT = ROOT / 'reports/learning/complex-code-grading.json'
 COMPACT = ROOT / 'reports/learning/complex-code-grading.compact.json'
 MD = ROOT / 'reports/learning/complex-code-grading.md'
 SELF_NOTES = ROOT / 'reports/learning/aihub-self-learning-notes.json'
-SKIP_DIRS = {'.git', '.tools', '.build', 'bin', 'obj', 'node_modules', 'reports', 'status-site', '__pycache__'}
+SKIP_DIRS = {'.git', '.tools', '.build', 'bin', 'obj', 'node_modules', 'reports', 'status-site', '__pycache__', '.venv', 'venv'}
 EXTENSIONS = {'.cs', '.fs', '.fsx', '.cpp', '.cc', '.cxx', '.hpp', '.h', '.py', '.yml', '.yaml', '.json', '.md', '.bicep', '.ps1', '.sh'}
 METRICS = [
     'lineCount', 'codeLineCount', 'commentLineCount', 'blankLineCount', 'fileBytes',

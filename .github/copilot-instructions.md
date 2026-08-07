@@ -57,8 +57,10 @@ dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configura
 Single-test/class example:
 
 ```powershell
-dotnet test tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj --configuration Release --filter "FullyQualifiedName~QuarantineSystemSetupTests"
+dotnet test tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj --configuration Release --filter "FullyQualifiedName~ThreatCaptureTests.CaptureThreatAsync_WithNonexistentFile_ShouldReturnFailure"
 ```
+
+Run `QuarantineSystemSetupTests` only in the privileged lane with explicit approval gates.
 
 ### Helios control-plane lane (`monado/helios-control`)
 
@@ -100,6 +102,7 @@ uv run --project services/helios-deployment-agent python services/helios-deploym
 ### Node MCP lane (`plugins/openai/helios-mcp`)
 
 ```powershell
+node -e "const major = Number(process.versions.node.split('.')[0]); if (major < 22) { throw new Error('Node 22+ is required for plugins/openai/helios-mcp'); }"
 cd plugins/openai/helios-mcp
 npm install
 npm run check
@@ -125,7 +128,7 @@ Use these commands when work touches benchmarking, scoring, branch consolidation
 ### Performance benchmark lanes
 
 ```powershell
-dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Performance|FullyQualifiedName~ScalingTest"
+dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~Performance|FullyQualifiedName~ScalingValidation"
 dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~EndToEnd|FullyQualifiedName~E2E"
 ```
 
@@ -134,7 +137,7 @@ dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configura
 ```powershell
 python scripts/analysis/deep_branch_code_score.py
 python scripts/analysis/complex_code_grading.py
-python scripts/analysis/branch_intelligence.py
+python scripts/analysis/branch_intelligence.py --target-branch main
 python scripts/analysis/merge_prune_recommendations.py
 python scripts/analysis/commit_window_unification.py --since "14 days ago"
 ```

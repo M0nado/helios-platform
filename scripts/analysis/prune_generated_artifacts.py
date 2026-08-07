@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
-TARGETS=[ROOT/'reports/branch-intelligence',ROOT/'reports/build-graph',ROOT/'reports/codex',ROOT/'reports/control-plane',ROOT/'reports/integrations',ROOT/'reports/project-inventory',ROOT/'status-site/wiki-export']
+TARGETS=[ROOT/'reports/branch-intelligence',ROOT/'reports/build-graph',ROOT/'reports/codex',ROOT/'reports/control-plane',ROOT/'reports/integrations',ROOT/'reports/learning',ROOT/'reports/project-inventory',ROOT/'status-site/wiki-export']
 FILES=[ROOT/'status-site/actions.md',ROOT/'status-site/index.html',ROOT/'.github/PULL_REQUEST_BODY.md']
 removed=[]
 for t in TARGETS:
