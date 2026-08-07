@@ -356,7 +356,7 @@ jobs:
               schema = json.loads(Path(schema_path).read_text(encoding='utf-8'))
               document = json.loads(Path(document_path).read_text(encoding='utf-8'))
               if isinstance(document, dict):
-                  document.pop('$schema', None)
+                  document = {k: v for k, v in document.items() if k != '$schema'}
               Draft202012Validator.check_schema(schema)
               Draft202012Validator(schema).validate(document)
               print(f'schema ok: {document_path}')
