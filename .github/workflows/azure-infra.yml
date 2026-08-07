@@ -6,10 +6,56 @@ on:
       resource_group:
         description: 'Target resource group'
         required: true
+      environment_name:
+        description: 'Target environment'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - prod
       location:
         description: 'Azure location'
         required: false
         default: 'eastus'
+      network_only:
+        description: 'Provision reviewed network/private-endpoint prerequisites only'
+        required: false
+        default: false
+        type: boolean
+      connector_backend_url:
+        description: 'Connector backend URL for private-edge cutover (required for prod when network_only=false)'
+        required: false
+        default: ''
+      name_prefix:
+        description: 'Name prefix for globally named resources'
+        required: false
+        default: 'helios'
+      publisher_email:
+        description: 'APIM publisher contact email'
+        required: false
+        default: 'helios-platform@example.invalid'
+      egress_mode:
+        description: 'Outbound egress design'
+        required: false
+        default: 'natGateway'
+        type: choice
+        options:
+          - natGateway
+          - azureFirewall
+      azure_firewall_private_ip:
+        description: 'Hub Azure Firewall private IP (required for azureFirewall)'
+        required: false
+        default: ''
+      hub_virtual_network_id:
+        description: 'Hub VNet resource ID (required for azureFirewall)'
+        required: false
+        default: ''
+      azure_firewall_policy_id:
+        description: 'Firewall Policy resource ID (required for azureFirewall)'
+        required: false
+        default: ''
       deploy:
         description: 'Deploy after validation and what-if'
         required: false
@@ -33,20 +79,86 @@ jobs:
         run: az bicep build --file infra/azure/main.bicep
       - name: Validate deployment
         run: |
+          set -euo pipefail
+          params=(
+            "infra/azure/parameters/dev.json"
+            "location=${{ github.event.inputs.location }}"
+            "environmentName=${{ github.event.inputs.environment_name }}"
+            "namePrefix=${{ github.event.inputs.name_prefix }}"
+            "publisherEmail=${{ github.event.inputs.publisher_email }}"
+            "networkOnly=${{ github.event.inputs.network_only }}"
+            "egressMode=${{ github.event.inputs.egress_mode }}"
+          )
+          if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
+            params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
+          fi
+          if [[ -n "${{ github.event.inputs.azure_firewall_private_ip }}" ]]; then
+            params+=("azureFirewallPrivateIp=${{ github.event.inputs.azure_firewall_private_ip }}")
+          fi
+          if [[ -n "${{ github.event.inputs.hub_virtual_network_id }}" ]]; then
+            params+=("hubVirtualNetworkId=${{ github.event.inputs.hub_virtual_network_id }}")
+          fi
+          if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
+            params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
+          fi
           az deployment group validate \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
-            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+            --parameters "${params[@]}"
       - name: What-if
         run: |
+          set -euo pipefail
+          params=(
+            "infra/azure/parameters/dev.json"
+            "location=${{ github.event.inputs.location }}"
+            "environmentName=${{ github.event.inputs.environment_name }}"
+            "namePrefix=${{ github.event.inputs.name_prefix }}"
+            "publisherEmail=${{ github.event.inputs.publisher_email }}"
+            "networkOnly=${{ github.event.inputs.network_only }}"
+            "egressMode=${{ github.event.inputs.egress_mode }}"
+          )
+          if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
+            params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
+          fi
+          if [[ -n "${{ github.event.inputs.azure_firewall_private_ip }}" ]]; then
+            params+=("azureFirewallPrivateIp=${{ github.event.inputs.azure_firewall_private_ip }}")
+          fi
+          if [[ -n "${{ github.event.inputs.hub_virtual_network_id }}" ]]; then
+            params+=("hubVirtualNetworkId=${{ github.event.inputs.hub_virtual_network_id }}")
+          fi
+          if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
+            params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
+          fi
           az deployment group what-if \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
-            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+            --parameters "${params[@]}"
       - name: Deploy
         if: ${{ github.event.inputs.deploy == 'true' }}
         run: |
+          set -euo pipefail
+          params=(
+            "infra/azure/parameters/dev.json"
+            "location=${{ github.event.inputs.location }}"
+            "environmentName=${{ github.event.inputs.environment_name }}"
+            "namePrefix=${{ github.event.inputs.name_prefix }}"
+            "publisherEmail=${{ github.event.inputs.publisher_email }}"
+            "networkOnly=${{ github.event.inputs.network_only }}"
+            "egressMode=${{ github.event.inputs.egress_mode }}"
+          )
+          if [[ -n "${{ github.event.inputs.connector_backend_url }}" ]]; then
+            params+=("connectorBackendUrl=${{ github.event.inputs.connector_backend_url }}")
+          fi
+          if [[ -n "${{ github.event.inputs.azure_firewall_private_ip }}" ]]; then
+            params+=("azureFirewallPrivateIp=${{ github.event.inputs.azure_firewall_private_ip }}")
+          fi
+          if [[ -n "${{ github.event.inputs.hub_virtual_network_id }}" ]]; then
+            params+=("hubVirtualNetworkId=${{ github.event.inputs.hub_virtual_network_id }}")
+          fi
+          if [[ -n "${{ github.event.inputs.azure_firewall_policy_id }}" ]]; then
+            params+=("azureFirewallPolicyId=${{ github.event.inputs.azure_firewall_policy_id }}")
+          fi
           az deployment group create \
             --resource-group "${{ github.event.inputs.resource_group }}" \
             --template-file infra/azure/main.bicep \
-            --parameters infra/azure/parameters/dev.json location="${{ github.event.inputs.location }}"
+            --parameters "${params[@]}"

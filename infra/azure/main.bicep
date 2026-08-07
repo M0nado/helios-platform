@@ -16,6 +16,8 @@ param namePrefix string = 'helios'
 param publisherEmail string
 @description('Internal Container Apps connector origin, for example https://app.internal.region.azurecontainerapps.io.')
 param connectorBackendUrl string = ''
+@description('Provision network and private endpoints only. Use for reviewed production subnet bootstrap before connector cutover.')
+param networkOnly bool = false
 
 @description('Existing private-link capable resource IDs. Empty values skip that endpoint.')
 param cosmosAccountId string = ''
@@ -48,7 +50,7 @@ param networkWatcherName string = 'NetworkWatcher_${location}'
 
 var firewallConfigurationComplete = egressMode != 'azureFirewall' || (!empty(azureFirewallPrivateIp) && !empty(hubVirtualNetworkId) && !empty(azureFirewallPolicyId))
 var validatedEgressMode = firewallConfigurationComplete && (environmentName != 'prod' || egressMode == 'azureFirewall') ? egressMode : fail('Production and all azureFirewall deployments require the firewall IP, hub VNet ID, and Firewall Policy ID.')
-var validatedConnectorBackendUrl = environmentName != 'prod' || !empty(connectorBackendUrl) ? connectorBackendUrl : fail('Production requires the internal connector backend URL.')
+var validatedConnectorBackendUrl = environmentName != 'prod' || networkOnly || !empty(connectorBackendUrl) ? connectorBackendUrl : fail('Production requires the internal connector backend URL unless networkOnly is enabled for reviewed subnet bootstrap.')
 var keyVaultName = take(toLower(replace('${namePrefix}-${environmentName}-kv', '-', '')), 24)
 var keyVaultId = resourceId('Microsoft.KeyVault/vaults', keyVaultName)
 
@@ -153,7 +155,7 @@ module keyVaultPrivateCutover 'modules/keyvault-private-cutover.bicep' = if (key
   ]
 }
 
-module privateEdge 'modules/private-edge.bicep' = {
+module privateEdge 'modules/private-edge.bicep' = if (!networkOnly) {
   name: 'private-edge-${environmentName}'
   params: {
     location: location
@@ -170,6 +172,7 @@ output logAnalyticsWorkspaceName string = observability.outputs.logAnalyticsWork
 output keyVaultName string = keyVaultName
 output keyVaultUri string = 'https://${keyVaultName}.${environment().suffixes.keyvaultDns}'
 output virtualNetworkName string = network.outputs.virtualNetworkName
-output frontDoorEndpointHostName string = privateEdge.outputs.frontDoorEndpointHostName
-output directPublicIngress string = privateEdge.outputs.directPublicIngress
+output containerAppsInfrastructureSubnetId string = network.outputs.containerAppsSubnetId
+output frontDoorEndpointHostName string = networkOnly ? '' : privateEdge!.outputs.frontDoorEndpointHostName
+output directPublicIngress string = networkOnly ? '' : privateEdge!.outputs.directPublicIngress
 output egressDecision string = network.outputs.egressDecision
