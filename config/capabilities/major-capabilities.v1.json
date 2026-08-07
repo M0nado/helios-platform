@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "purpose": "Consolidated implementation backlog: the requested 30 upgrades plus 20 missing major capabilities.",
   "policy": {
     "defaultStatus": "proposed",
@@ -11,13 +11,15 @@
       "slug": "solution-graph",
       "category": "foundation",
       "owner": "platform",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Unify solution/project dependency discovery and reject cycles.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Unify solution/project dependency discovery and reject cycles.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
       ],
+      "dependencies": [],
       "status": "proposed"
     },
     {
@@ -25,13 +27,15 @@
       "slug": "configuration-registry",
       "category": "foundation",
       "owner": "csharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Expose one typed, versioned configuration registry with provenance.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Expose one typed, versioned configuration registry with provenance.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
       ],
+      "dependencies": [],
       "status": "proposed"
     },
     {
@@ -39,13 +43,15 @@
       "slug": "feature-lifecycle",
       "category": "foundation",
       "owner": "csharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Standardize feature flags, migrations, rollback, and retirement.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Standardize feature flags, migrations, rollback, and retirement.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
       ],
+      "dependencies": [],
       "status": "proposed"
     },
     {
@@ -53,13 +59,15 @@
       "slug": "module-boundaries",
       "category": "foundation",
       "owner": "platform",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Detect duplicate ownership and overlapping platform modules.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Detect duplicate ownership and overlapping platform modules.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
       ],
+      "dependencies": [],
       "status": "proposed"
     },
     {
@@ -67,13 +75,15 @@
       "slug": "developer-doctor",
       "category": "foundation",
       "owner": "python",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Produce one actionable local toolchain and dependency diagnosis.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Produce one actionable local toolchain and dependency diagnosis.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
       ],
+      "dependencies": [],
       "status": "proposed"
     },
     {
@@ -81,12 +91,16 @@
       "slug": "mcr-wireframe",
       "category": "control-plane",
       "owner": "csharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Deliver an accessible MCR operator shell and status wireframe.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Deliver an accessible MCR operator shell and status wireframe.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0101"
       ],
       "status": "proposed"
     },
@@ -95,12 +109,16 @@
       "slug": "command-catalog",
       "category": "control-plane",
       "owner": "csharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Route approved commands through typed, idempotent handlers.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Route approved commands through typed, idempotent handlers.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0101"
       ],
       "status": "proposed"
     },
@@ -109,12 +127,16 @@
       "slug": "correlation-timeline",
       "category": "control-plane",
       "owner": "csharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Join GitHub, Azure, fleet, and desktop evidence by correlation ID.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Join GitHub, Azure, fleet, and desktop evidence by correlation ID.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0101"
       ],
       "status": "proposed"
     },
@@ -123,12 +145,16 @@
       "slug": "approval-inbox",
       "category": "control-plane",
       "owner": "csharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Centralize approval, expiry, rationale, and rollback evidence.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Centralize approval, expiry, rationale, and rollback evidence.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0101"
       ],
       "status": "proposed"
     },
@@ -137,12 +163,16 @@
       "slug": "realtime-health",
       "category": "control-plane",
       "owner": "csharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Stream bounded service health without polling storms.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Stream bounded service health without polling storms.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0101"
       ],
       "status": "proposed"
     },
@@ -151,12 +181,16 @@
       "slug": "native-kernel-abi",
       "category": "polyglot",
       "owner": "cpp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Version a memory-safe native performance ABI with benchmarks.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Version a memory-safe native performance ABI with benchmarks.",
+        "The cpp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0201"
       ],
       "status": "proposed"
     },
@@ -165,12 +199,16 @@
       "slug": "fsharp-scoring-sdk",
       "category": "polyglot",
       "owner": "fsharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Publish explainable ranking and prediction contracts.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Publish explainable ranking and prediction contracts.",
+        "The fsharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0201"
       ],
       "status": "proposed"
     },
@@ -179,12 +217,16 @@
       "slug": "python-adapter-sdk",
       "category": "polyglot",
       "owner": "python",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Standardize isolated AI and automation adapters.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Standardize isolated AI and automation adapters.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0201"
       ],
       "status": "proposed"
     },
@@ -193,12 +235,16 @@
       "slug": "cross-engine-envelope",
       "category": "polyglot",
       "owner": "platform",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Use one serialization, cancellation, error, and telemetry envelope.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Use one serialization, cancellation, error, and telemetry envelope.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0201"
       ],
       "status": "proposed"
     },
@@ -207,12 +253,16 @@
       "slug": "engine-router",
       "category": "polyglot",
       "owner": "csharp",
+      "priority": 1,
       "gate": "standard",
       "outcome": "Select engines by policy, latency budget, and capability.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Select engines by policy, latency budget, and capability.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0201"
       ],
       "status": "proposed"
     },
@@ -221,12 +271,16 @@
       "slug": "provider-neutral-ai",
       "category": "aihub",
       "owner": "python",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Unify OpenAI, Codex, Claude, and local provider request contracts.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Unify OpenAI, Codex, Claude, and local provider request contracts.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0301"
       ],
       "status": "proposed"
     },
@@ -235,12 +289,16 @@
       "slug": "structured-output-guard",
       "category": "aihub",
       "owner": "csharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Validate model output before tools or platform code consume it.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Validate model output before tools or platform code consume it.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0301"
       ],
       "status": "proposed"
     },
@@ -249,12 +307,16 @@
       "slug": "prompt-registry",
       "category": "aihub",
       "owner": "platform",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Version prompts, tools, models, owners, and evaluation evidence.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Version prompts, tools, models, owners, and evaluation evidence.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0301"
       ],
       "status": "proposed"
     },
@@ -263,12 +325,16 @@
       "slug": "agent-sandbox",
       "category": "aihub",
       "owner": "python",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Bound agent filesystem, network, time, cost, and tool permissions.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Bound agent filesystem, network, time, cost, and tool permissions.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0301"
       ],
       "status": "proposed"
     },
@@ -277,12 +343,16 @@
       "slug": "model-fallback",
       "category": "aihub",
       "owner": "fsharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Rank provider fallback using quality, cost, privacy, and latency.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Rank provider fallback using quality, cost, privacy, and latency.",
+        "The fsharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0301"
       ],
       "status": "proposed"
     },
@@ -291,12 +361,16 @@
       "slug": "evaluation-harness",
       "category": "learning",
       "owner": "fsharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Score coding and agent outcomes against stable datasets.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Score coding and agent outcomes against stable datasets.",
+        "The fsharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0401"
       ],
       "status": "proposed"
     },
@@ -305,12 +379,16 @@
       "slug": "regression-pruner",
       "category": "learning",
       "owner": "fsharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Reject learned state that degrades safety or benchmark quality.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Reject learned state that degrades safety or benchmark quality.",
+        "The fsharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0401"
       ],
       "status": "proposed"
     },
@@ -319,12 +397,16 @@
       "slug": "knowledge-provenance",
       "category": "learning",
       "owner": "platform",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Attach source, freshness, classification, and evidence to knowledge.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Attach source, freshness, classification, and evidence to knowledge.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0401"
       ],
       "status": "proposed"
     },
@@ -333,12 +415,16 @@
       "slug": "retrieval-quality",
       "category": "learning",
       "owner": "fsharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Measure retrieval relevance, coverage, grounding, and staleness.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Measure retrieval relevance, coverage, grounding, and staleness.",
+        "The fsharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0401"
       ],
       "status": "proposed"
     },
@@ -347,12 +433,16 @@
       "slug": "experiment-ledger",
       "category": "learning",
       "owner": "python",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Record reproducible bounded experiments and promotion decisions.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Record reproducible bounded experiments and promotion decisions.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0401"
       ],
       "status": "proposed"
     },
@@ -361,12 +451,16 @@
       "slug": "benchmark-baselines",
       "category": "performance",
       "owner": "cpp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Create repeatable CPU, memory, startup, rendering, and throughput baselines.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Create repeatable CPU, memory, startup, rendering, and throughput baselines.",
+        "The cpp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0501"
       ],
       "status": "proposed"
     },
@@ -375,12 +469,16 @@
       "slug": "profile-guided-routing",
       "category": "performance",
       "owner": "fsharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Use measured workload data to select execution engines.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Use measured workload data to select execution engines.",
+        "The fsharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0501"
       ],
       "status": "proposed"
     },
@@ -389,12 +487,16 @@
       "slug": "incremental-build-cache",
       "category": "performance",
       "owner": "platform",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Cache deterministic build graph nodes with provenance.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Cache deterministic build graph nodes with provenance.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0501"
       ],
       "status": "proposed"
     },
@@ -403,12 +505,16 @@
       "slug": "telemetry-budget",
       "category": "performance",
       "owner": "csharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Enforce cardinality, sampling, retention, and performance budgets.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Enforce cardinality, sampling, retention, and performance budgets.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0501"
       ],
       "status": "proposed"
     },
@@ -417,12 +523,16 @@
       "slug": "load-shedder",
       "category": "performance",
       "owner": "csharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Apply backpressure, quotas, cancellation, and graceful degradation.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Apply backpressure, quotas, cancellation, and graceful degradation.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0501"
       ],
       "status": "proposed"
     },
@@ -431,12 +541,16 @@
       "slug": "secret-reference-linter",
       "category": "security",
       "owner": "python",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Reject embedded secrets and require approved secret references.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Reject embedded secrets and require approved secret references.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0601"
       ],
       "status": "proposed"
     },
@@ -445,12 +559,16 @@
       "slug": "supply-chain-attestation",
       "category": "security",
       "owner": "platform",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Generate SBOM, signatures, provenance, and dependency policy evidence.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Generate SBOM, signatures, provenance, and dependency policy evidence.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0601"
       ],
       "status": "proposed"
     },
@@ -459,12 +577,17 @@
       "slug": "windows-change-planner",
       "category": "security",
       "owner": "csharp",
+      "priority": 2,
       "gate": "what-if-and-approval",
       "outcome": "Render dry-run, approval, rollback, and impact for privileged changes.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Render dry-run, approval, rollback, and impact for privileged changes.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff.",
+        "Apply remains disabled until what-if, explicit approval, and rollback evidence are present."
+      ],
+      "dependencies": [
+        "CAP-0601"
       ],
       "status": "proposed"
     },
@@ -473,12 +596,16 @@
       "slug": "plugin-trust-policy",
       "category": "security",
       "owner": "csharp",
+      "priority": 2,
       "gate": "approval",
       "outcome": "Verify plugin identity, permissions, isolation, and revocation.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Verify plugin identity, permissions, isolation, and revocation.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0601"
       ],
       "status": "proposed"
     },
@@ -487,12 +614,16 @@
       "slug": "data-classification-gate",
       "category": "security",
       "owner": "csharp",
+      "priority": 2,
       "gate": "standard",
       "outcome": "Prevent sensitive payloads from entering unsafe providers or logs.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Prevent sensitive payloads from entering unsafe providers or logs.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0601"
       ],
       "status": "proposed"
     },
@@ -501,12 +632,17 @@
       "slug": "federated-bootstrap",
       "category": "azure",
       "owner": "python",
+      "priority": 3,
       "gate": "what-if-and-approval",
       "outcome": "Configure repeatable workload identity without stored cloud credentials.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Configure repeatable workload identity without stored cloud credentials.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff.",
+        "Apply remains disabled until what-if, explicit approval, and rollback evidence are present."
+      ],
+      "dependencies": [
+        "CAP-0701"
       ],
       "status": "proposed"
     },
@@ -515,12 +651,17 @@
       "slug": "bicep-what-if-gate",
       "category": "azure",
       "owner": "platform",
+      "priority": 3,
       "gate": "what-if-and-approval",
       "outcome": "Require validation and reviewed what-if evidence before deployment.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Require validation and reviewed what-if evidence before deployment.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff.",
+        "Apply remains disabled until what-if, explicit approval, and rollback evidence are present."
+      ],
+      "dependencies": [
+        "CAP-0701"
       ],
       "status": "proposed"
     },
@@ -529,12 +670,17 @@
       "slug": "keyvault-contract",
       "category": "azure",
       "owner": "csharp",
+      "priority": 3,
       "gate": "what-if-and-approval",
       "outcome": "Use managed identity and typed Key Vault reference resolution.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Use managed identity and typed Key Vault reference resolution.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff.",
+        "Apply remains disabled until what-if, explicit approval, and rollback evidence are present."
+      ],
+      "dependencies": [
+        "CAP-0701"
       ],
       "status": "proposed"
     },
@@ -543,12 +689,16 @@
       "slug": "broker-resilience",
       "category": "azure",
       "owner": "csharp",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Add deduplication, retries, dead-letter evidence, and replay controls.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Add deduplication, retries, dead-letter evidence, and replay controls.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0701"
       ],
       "status": "proposed"
     },
@@ -557,12 +707,16 @@
       "slug": "cost-guardrails",
       "category": "azure",
       "owner": "fsharp",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Forecast and enforce Azure and model budget thresholds.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Forecast and enforce Azure and model budget thresholds.",
+        "The fsharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0701"
       ],
       "status": "proposed"
     },
@@ -571,12 +725,16 @@
       "slug": "branch-intelligence",
       "category": "delivery",
       "owner": "python",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Inventory branches and recommend reviewable cherry-pick, supersede, or prune actions.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Inventory branches and recommend reviewable cherry-pick, supersede, or prune actions.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0801"
       ],
       "status": "proposed"
     },
@@ -585,12 +743,16 @@
       "slug": "issue-plan-generator",
       "category": "delivery",
       "owner": "python",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Convert capability gaps into scoped dependency-aware issue plans.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Convert capability gaps into scoped dependency-aware issue plans.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0801"
       ],
       "status": "proposed"
     },
@@ -599,12 +761,16 @@
       "slug": "pr-evidence-bundle",
       "category": "delivery",
       "owner": "python",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Attach test, benchmark, security, rollback, and contract evidence to PRs.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Attach test, benchmark, security, rollback, and contract evidence to PRs.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0801"
       ],
       "status": "proposed"
     },
@@ -613,12 +779,16 @@
       "slug": "release-readiness",
       "category": "delivery",
       "owner": "csharp",
+      "priority": 3,
       "gate": "approval",
       "outcome": "Compute release readiness from signed policy and test evidence.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Compute release readiness from signed policy and test evidence.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0801"
       ],
       "status": "proposed"
     },
@@ -627,12 +797,16 @@
       "slug": "artifact-retention",
       "category": "delivery",
       "owner": "platform",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Keep generated artifacts out of Git and apply governed retention.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Keep generated artifacts out of Git and apply governed retention.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0801"
       ],
       "status": "proposed"
     },
@@ -641,12 +815,16 @@
       "slug": "fleet-heartbeats",
       "category": "operations",
       "owner": "csharp",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Normalize Hermes and XCore worker readiness and lease state.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Normalize Hermes and XCore worker readiness and lease state.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0901"
       ],
       "status": "proposed"
     },
@@ -655,12 +833,16 @@
       "slug": "incident-replay",
       "category": "operations",
       "owner": "python",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Reconstruct redacted correlated incidents from immutable evidence.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Reconstruct redacted correlated incidents from immutable evidence.",
+        "The python owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0901"
       ],
       "status": "proposed"
     },
@@ -669,12 +851,17 @@
       "slug": "self-healing-plans",
       "category": "operations",
       "owner": "fsharp",
+      "priority": 3,
       "gate": "what-if-and-approval",
       "outcome": "Rank reversible remediation plans without autonomous privileged apply.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Rank reversible remediation plans without autonomous privileged apply.",
+        "The fsharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff.",
+        "Apply remains disabled until what-if, explicit approval, and rollback evidence are present."
+      ],
+      "dependencies": [
+        "CAP-0901"
       ],
       "status": "proposed"
     },
@@ -683,12 +870,16 @@
       "slug": "offline-mode",
       "category": "operations",
       "owner": "csharp",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Keep essential Windows control safe when cloud services are unavailable.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Keep essential Windows control safe when cloud services are unavailable.",
+        "The csharp owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0901"
       ],
       "status": "proposed"
     },
@@ -697,14 +888,31 @@
       "slug": "contract-compatibility",
       "category": "operations",
       "owner": "platform",
+      "priority": 3,
       "gate": "standard",
       "outcome": "Continuously test event, provider, plugin, and engine compatibility.",
-      "checks": [
-        "contract",
-        "unit",
-        "integration"
+      "acceptanceCriteria": [
+        "Continuously test event, provider, plugin, and engine compatibility.",
+        "The platform owner exposes a versioned contract and automated failure-path coverage.",
+        "Correlation identifiers and evidence links survive every cross-system handoff."
+      ],
+      "dependencies": [
+        "CAP-0901"
       ],
       "status": "proposed"
     }
-  ]
+  ],
+  "defaults": {
+    "checks": [
+      "python3 scripts/knowledge/validate_capabilities.py",
+      "python3 -m unittest tests/test_knowledge_discovery.py",
+      "git diff --check"
+    ],
+    "evidence": [
+      "Automated test output",
+      "Contract compatibility result",
+      "Security and rollback impact note",
+      "Benchmark comparison when a hot path changes"
+    ]
+  }
 }

@@ -60,7 +60,7 @@ def render(profile_path: Path = PROFILE_PATH) -> str:
             "",
             "## Development checks",
             "",
-            "Run `python3 scripts/knowledge/generate_llms_txt.py --check` to detect discovery-document drift and `python3 scripts/knowledge/validate_capabilities.py` to validate the consolidated 50-capability backlog.",
+            "Run `python3 scripts/knowledge/generate_llms_txt.py --check` to detect discovery-document drift, `python3 scripts/knowledge/validate_capabilities.py` to validate the consolidated 50-capability dependency graph, and `python3 scripts/knowledge/plan_capability_issues.py` to preview reviewable issue packets. Packet generation is local-only and never creates issues, branches, cloud resources, or privileged machine changes.",
             "",
         ]
     )

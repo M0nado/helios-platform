@@ -33,5 +33,7 @@ jobs:
         run: python3 scripts/knowledge/generate_llms_txt.py --check
       - name: Validate capability backlog
         run: python3 scripts/knowledge/validate_capabilities.py
+      - name: Preview deterministic issue plan
+        run: python3 scripts/knowledge/plan_capability_issues.py
       - name: Run knowledge contract tests
         run: python3 -m unittest tests/test_knowledge_discovery.py
