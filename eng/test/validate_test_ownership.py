@@ -11,11 +11,12 @@ MANIFEST = ROOT / "eng/test/test-ownership.json"
 LAYERS = {"portable", "windows", "privileged", "integration", "performance", "end-to-end"}
 DOTNET_TEST_ROOTS = (
     ROOT / "tests/HELIOS.Platform.Tests",
-    ROOT / "tests/HELIOS.Platform.Tests/Phase10/Quarantine",
     ROOT / "tests/analytics/HELIOS.Analytics.FSharp.Tests",
     ROOT / "tests/contracts/HELIOS.Platform.Contracts.Tests",
+    ROOT / "tests/Plugins",
+    ROOT / "tests/unit",
     ROOT / "src/tests",
-    ROOT / "src/core/HELIOS.Platform/Phase10/Users/Tests",
+    ROOT / "src/core/HELIOS.Platform",
     ROOT / "monado/helios-control/tests/Helios.Connect.Tests",
 )
 EXCLUDED_DIRS = {"bin", "obj"}
@@ -28,10 +29,18 @@ def sources() -> list[str]:
             for source in root.rglob(ext):
                 if EXCLUDED_DIRS.intersection(source.parts):
                     continue
-                found.add(source.relative_to(ROOT).as_posix())
-    security_validation_test = ROOT / "tests/SecurityValidationTests.cs"
-    if security_validation_test.is_file():
-        found.add(security_validation_test.relative_to(ROOT).as_posix())
+                rel = source.relative_to(ROOT).as_posix()
+                if rel.startswith("src/core/HELIOS.Platform/"):
+                    if "/Tests/" not in rel and not rel.endswith("Tests.cs"):
+                        continue
+                found.add(rel)
+    for standalone in (
+        ROOT / "tests/Phase3Phase5IntegrationTests.cs",
+        ROOT / "tests/SandboxTests.cs",
+        ROOT / "tests/SecurityValidationTests.cs",
+    ):
+        if standalone.is_file():
+            found.add(standalone.relative_to(ROOT).as_posix())
     return sorted(found)
 
 
@@ -46,8 +55,14 @@ def owner(path: str) -> str:
         return "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
     if path.startswith("tests/contracts/HELIOS.Platform.Contracts.Tests/"):
         return "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj"
+    if path in {"tests/Phase3Phase5IntegrationTests.cs", "tests/SandboxTests.cs"}:
+        return "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj"
+    if path.startswith("tests/Plugins/") or path.startswith("tests/unit/"):
+        return "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj"
     if path == "tests/SecurityValidationTests.cs":
         return "tests/SecurityValidationTests.csproj"
+    if path.startswith("src/core/HELIOS.Platform/"):
+        return "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj"
     if path.startswith("tests/HELIOS.Platform.Tests/Phase10/Quarantine/"):
         return "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj"
     if path.startswith("tests/HELIOS.Platform.Tests/"):

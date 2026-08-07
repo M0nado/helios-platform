@@ -10,13 +10,13 @@
 
 | Repository | Declared path | Reviewed commit |
 | --- | --- | --- |
-| `M0nado/helios-monado-blade` | `modules/helios-monado-blade` | `b22f9cbb957bd917324f59a8fb92165308a4d942` |
-| `M0nado/helios-security-setup` | `modules/helios-security-setup` | `7c7c149158481459626acd407721ca93cb8c47b2` |
-| `M0nado/helios-ai-hub` | `modules/helios-ai-hub` | `2ceb7f636f9219b454b705fdef8b4fc3287617b1` |
-| `M0nado/helios-dev-ai-hub` | `modules/helios-dev-ai-hub` | `bdb569357af640c3f121e12cf5e0a50e24f5de5f` |
-| `M0nado/helios-build-agents` | `modules/helios-build-agents` | `f2323c54ff68a8b41fb9d361a4f026a3dcd7a592` |
-| `M0nado/helios-gui-framework` | `modules/helios-gui-framework` | `cf87e2409d984b77db6c83ee2b7439d118a33428` |
-| `M0nado/helios-software-stack` | `modules/helios-software-stack` | `44ad4c1e0d4b9afd75c0b878e607e974c0828c61` |
+| `M0nado/helios-monado-blade` | `modules/helios-monado-blade` | `2bc1164fd22e0878e3166282c0470d25ebff6fc9` |
+| `M0nado/helios-security-setup` | `modules/helios-security-setup` | `1e13db33c972d05170d85b2599d78b59eb7f35ea` |
+| `M0nado/helios-ai-hub` | `modules/helios-ai-hub` | `30b1bc6956ffdc461d795df20f551eff5e3575b7` |
+| `M0nado/helios-dev-ai-hub` | `modules/helios-dev-ai-hub` | `9e64eb55b1f4ada51c6f05b3fbeaa478f7a0841d` |
+| `M0nado/helios-build-agents` | `modules/helios-build-agents` | `56ccd26a654a5dd852a0c26c235f61dfab256e8f` |
+| `M0nado/helios-gui-framework` | `modules/helios-gui-framework` | `823c5fd7a331b436d6b5bbdd407fcabb2adc8a23` |
+| `M0nado/helios-software-stack` | `modules/helios-software-stack` | `0b541a0997acff840d25216c3092cf6f5adc4995` |
 
 This scope is derived only from `.gitmodules`. `Helios-Control-Center`,
 `hermes-fleet-platforms`, the control-plane repository, and the canonical

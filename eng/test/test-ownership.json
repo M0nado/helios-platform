@@ -27,9 +27,64 @@
       "layer": "integration"
     },
     {
+      "path": "src/core/HELIOS.Platform/Core/AdvancedOptimization/AdvancedOptimizationServicesTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/AIOrchestration/Tests/AIOrchestrationTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/BootEnvironment/Tests/BootEnvironmentTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/BuilderUI/BuilderUITests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/Drivers/Tests/DriverTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "privileged"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/Malware/Tests/MalwareTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "privileged"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/Optimizer/Tests/OptimizerTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/Profiles/Tests/ProfileTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
       "path": "src/core/HELIOS.Platform/Phase10/Users/Tests/UserAccountManagementTests.cs",
       "project": "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj",
       "layer": "privileged"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Phase10/Vault/VaultSystemTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "privileged"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Tests/AI/MLIntegrationTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "integration"
+    },
+    {
+      "path": "src/core/HELIOS.Platform/Tests/Phase3MLServicesTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
     },
     {
       "path": "src/tests/HELIOS.Platform.Tests/AI/AIInfrastructureTests.cs",
@@ -417,6 +472,21 @@
       "layer": "privileged"
     },
     {
+      "path": "tests/Phase3Phase5IntegrationTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "integration"
+    },
+    {
+      "path": "tests/Plugins/PluginSystemTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/SandboxTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
       "path": "tests/SecurityValidationTests.cs",
       "project": "tests/SecurityValidationTests.csproj",
       "layer": "privileged"
@@ -444,6 +514,26 @@
     {
       "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoEnterpriseExperienceV2ContractsTests.cs",
       "project": "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/unit/CloudSync/CloudSyncIntegrationTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "integration"
+    },
+    {
+      "path": "tests/unit/ML/MLServiceTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/unit/Plugins/PluginSystemTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/unit/Themes/ThemeManagementTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "windows"
     }
   ]

@@ -31,8 +31,8 @@ jobs:
           if [ -n "$SUBMODULE_APP_ID" ] && [ -n "$SUBMODULE_APP_PRIVATE_KEY" ]; then
             echo "mode=scoped-token" >> "$GITHUB_OUTPUT"
           else
-            echo "mode=metadata-only" >> "$GITHUB_OUTPUT"
-            echo "Scoped submodule credentials are unavailable; running metadata-only validation."
+            echo "mode=anonymous" >> "$GITHUB_OUTPUT"
+            echo "Scoped submodule credentials are unavailable; attempting anonymous recursive checkout."
           fi
 
       - name: Create short-lived read-only installation token
@@ -59,15 +59,15 @@ jobs:
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
             submodule update --init --recursive
 
+      - name: Checkout exact recursive gitlinks (anonymous)
+        if: steps.auth-mode.outputs.mode == 'anonymous'
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
       - name: Validate reviewed pins and repository integrity
         run: |
-          if [ "${{ steps.auth-mode.outputs.mode }}" = "scoped-token" ]; then
-            git submodule status --recursive
-          fi
+          git submodule status --recursive
           git ls-files --stage
           git diff --cached --submodule=log --check
-          if [ "${{ steps.auth-mode.outputs.mode }}" = "metadata-only" ]; then
-            python3 scripts/integrations/validate_pinned_submodules.py --metadata-only
-          else
-            python3 scripts/integrations/validate_pinned_submodules.py
-          fi
+          python3 scripts/integrations/validate_pinned_submodules.py

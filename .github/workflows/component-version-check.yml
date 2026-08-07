@@ -44,6 +44,11 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      - name: Restore approved submodule pins
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
       - name: Discover All Components
         id: discover
         run: |
@@ -72,6 +77,11 @@ jobs:
           fetch-depth: 0
           submodules: false
           persist-credentials: false
+
+      - name: Restore approved submodule pins
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4

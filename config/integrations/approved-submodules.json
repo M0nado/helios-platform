@@ -4,7 +4,7 @@
     {
       "path": "modules/helios-monado-blade",
       "url": "https://github.com/M0nado/helios-monado-blade.git",
-      "commit": "b22f9cbb957bd917324f59a8fb92165308a4d942",
+      "commit": "2bc1164fd22e0878e3166282c0470d25ebff6fc9",
       "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
       "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
       "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
@@ -16,7 +16,7 @@
     {
       "path": "modules/helios-security-setup",
       "url": "https://github.com/M0nado/helios-security-setup.git",
-      "commit": "7c7c149158481459626acd407721ca93cb8c47b2",
+      "commit": "1e13db33c972d05170d85b2599d78b59eb7f35ea",
       "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
       "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
       "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
@@ -28,7 +28,7 @@
     {
       "path": "modules/helios-ai-hub",
       "url": "https://github.com/M0nado/helios-ai-hub.git",
-      "commit": "2ceb7f636f9219b454b705fdef8b4fc3287617b1",
+      "commit": "30b1bc6956ffdc461d795df20f551eff5e3575b7",
       "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
       "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
       "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
@@ -40,7 +40,7 @@
     {
       "path": "modules/helios-dev-ai-hub",
       "url": "https://github.com/M0nado/helios-dev-ai-hub.git",
-      "commit": "bdb569357af640c3f121e12cf5e0a50e24f5de5f",
+      "commit": "9e64eb55b1f4ada51c6f05b3fbeaa478f7a0841d",
       "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
       "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
       "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
@@ -52,7 +52,7 @@
     {
       "path": "modules/helios-build-agents",
       "url": "https://github.com/M0nado/helios-build-agents.git",
-      "commit": "f2323c54ff68a8b41fb9d361a4f026a3dcd7a592",
+      "commit": "56ccd26a654a5dd852a0c26c235f61dfab256e8f",
       "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
       "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
       "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
@@ -64,7 +64,7 @@
     {
       "path": "modules/helios-gui-framework",
       "url": "https://github.com/M0nado/helios-gui-framework.git",
-      "commit": "cf87e2409d984b77db6c83ee2b7439d118a33428",
+      "commit": "823c5fd7a331b436d6b5bbdd407fcabb2adc8a23",
       "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
       "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
       "licenseDecision": "Approved repository licenses for platform integration under governance policy.",
@@ -76,7 +76,7 @@
     {
       "path": "modules/helios-software-stack",
       "url": "https://github.com/M0nado/helios-software-stack.git",
-      "commit": "44ad4c1e0d4b9afd75c0b878e607e974c0828c61",
+      "commit": "0b541a0997acff840d25216c3092cf6f5adc4995",
       "evidenceUrl": "https://github.com/M0nado/helios-platform/pull/215",
       "ownershipDecision": "Platform maintainers approved scoped submodule pins in PR #215.",
       "licenseDecision": "Approved repository licenses for platform integration under governance policy.",

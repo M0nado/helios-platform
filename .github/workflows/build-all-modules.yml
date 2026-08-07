@@ -54,8 +54,8 @@ jobs:
           if [ -n "$SUBMODULE_APP_ID" ] && [ -n "$SUBMODULE_APP_PRIVATE_KEY" ]; then
             echo "mode=scoped-token" >> "$GITHUB_OUTPUT"
           else
-            echo "mode=default-token" >> "$GITHUB_OUTPUT"
-            echo "Scoped submodule credentials are unavailable; using default checkout token."
+            echo "mode=anonymous" >> "$GITHUB_OUTPUT"
+            echo "Scoped submodule credentials are unavailable; attempting anonymous recursive checkout."
           fi
 
       - name: Create short-lived read-only installation token
@@ -82,9 +82,8 @@ jobs:
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
             submodule update --init --recursive
 
-      - name: Checkout submodule pins with default token
-        if: steps.submodule-auth.outputs.mode == 'default-token'
-        continue-on-error: true
+      - name: Checkout submodule pins anonymously
+        if: steps.submodule-auth.outputs.mode == 'anonymous'
         run: |
           git submodule sync --recursive
           git submodule update --init --recursive
@@ -137,8 +136,8 @@ jobs:
           if [ -n "$SUBMODULE_APP_ID" ] && [ -n "$SUBMODULE_APP_PRIVATE_KEY" ]; then
             echo "mode=scoped-token" >> "$GITHUB_OUTPUT"
           else
-            echo "mode=default-token" >> "$GITHUB_OUTPUT"
-            echo "Scoped submodule credentials are unavailable; using default checkout token."
+            echo "mode=anonymous" >> "$GITHUB_OUTPUT"
+            echo "Scoped submodule credentials are unavailable; attempting anonymous recursive checkout."
           fi
 
       - name: Create short-lived read-only installation token
@@ -165,8 +164,8 @@ jobs:
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
             submodule update --init --recursive
 
-      - name: Checkout submodule pins with default token
-        if: steps.submodule-auth.outputs.mode == 'default-token'
+      - name: Checkout submodule pins anonymously
+        if: steps.submodule-auth.outputs.mode == 'anonymous'
         run: |
           git submodule sync --recursive
           git submodule update --init --recursive
