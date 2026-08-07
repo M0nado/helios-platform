@@ -7,6 +7,7 @@ param(
     [Parameter(Mandatory)] [string] $AllowedPrincipalObjectId,
     [string] $ImageReference = 'heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000',
     [ValidateSet('dev', 'test', 'prod')] [string] $EnvironmentName = 'dev',
+    [string] $ContainerAppsInfrastructureSubnetId = $env:HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID,
     [switch] $Apply
 )
 
@@ -26,6 +27,10 @@ if ($ImageReference -notmatch '^(?<registry>[a-zA-Z0-9][a-zA-Z0-9-]{4,49})\.azur
 }
 $containerRegistryName = $Matches.registry
 
+if ($EnvironmentName -eq 'prod' -and [string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) {
+    throw 'Production preview requires -ContainerAppsInfrastructureSubnetId.'
+}
+
 az account show --output none
 az account set --subscription $SubscriptionId
 $exists = az group exists --name $ResourceGroup
@@ -42,7 +47,8 @@ $parameters = @(
     "allowPreviewPlaceholder=$($ImageReference.EndsWith('@sha256:' + ('0' * 64), [StringComparison]::OrdinalIgnoreCase).ToString().ToLowerInvariant())",
     "entraClientId=$EntraClientId",
     "entraTenantId=$EntraTenantId",
-    "allowedPrincipalObjectId=$AllowedPrincipalObjectId"
+    "allowedPrincipalObjectId=$AllowedPrincipalObjectId",
+    "containerAppsInfrastructureSubnetId=$ContainerAppsInfrastructureSubnetId"
 )
 
 Write-Host 'Running Azure Resource Manager what-if. No resources are changed by this step.'

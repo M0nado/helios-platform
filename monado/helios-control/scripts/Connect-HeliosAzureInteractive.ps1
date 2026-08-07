@@ -38,6 +38,8 @@ param(
     [string] $ImageReference,
     [string] $ContainerRegistryName,
     [string] $AllowedPrincipalObjectId,
+    [string] $ContainerAppsInfrastructureSubnetId = $env:HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID,
+    [string] $ConnectorPublicBaseUrl,
 
     [string] $GitHubOwner = 'M0nado',
     [string] $GitHubRepository = 'helios-platform',
@@ -245,6 +247,37 @@ function Test-GuidValue {
 
     $parsed = [guid]::Empty
     return [guid]::TryParse($Value, [ref] $parsed)
+}
+
+function Resolve-PublicApiHostname {
+    param(
+        [AllowEmptyString()] [string] $Origin,
+        [Parameter(Mandatory)] [string] $SourceName
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Origin)) {
+        return ''
+    }
+
+    $trimmedOrigin = $Origin.Trim()
+    $uri = $null
+    if (-not [uri]::TryCreate($trimmedOrigin, [UriKind]::Absolute, [ref] $uri)) {
+        throw "$SourceName must be one HTTPS origin without path, query, or fragment."
+    }
+    if (-not [string]::Equals($uri.Scheme, 'https', [StringComparison]::OrdinalIgnoreCase)) {
+        throw "$SourceName must use the https scheme."
+    }
+    if ([string]::IsNullOrWhiteSpace($uri.Host) -or [Uri]::CheckHostName($uri.Host) -ne [UriHostNameType]::Dns) {
+        throw "$SourceName must include a DNS hostname."
+    }
+    if (-not $uri.IsDefaultPort) {
+        throw "$SourceName must not include an explicit port."
+    }
+    if ($uri.AbsolutePath -ne '/' -or -not [string]::IsNullOrEmpty($uri.Query) -or -not [string]::IsNullOrEmpty($uri.Fragment)) {
+        throw "$SourceName must be one HTTPS origin without path, query, or fragment."
+    }
+
+    return $uri.Host.ToLowerInvariant()
 }
 
 function Read-Selection {
@@ -1292,10 +1325,29 @@ function Set-GitHubEnvironmentVariables {
     }
 
     foreach ($name in ($Values.Keys | Sort-Object)) {
+        $value = [string] $Values[$name]
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            $escapedVariable = [uri]::EscapeDataString($name)
+            try {
+                Invoke-GhNoOutput `
+                    -Arguments @(
+                        'api', '--method', 'DELETE',
+                        "repos/$repositoryName/environments/$escapedEnvironment/variables/$escapedVariable"
+                    ) `
+                    -Operation "Clearing GitHub environment variable '$name'"
+            }
+            catch {
+                $safeMessage = Protect-DiagnosticText $_.Exception.Message
+                if ($safeMessage -notmatch '404' -and $safeMessage -notmatch 'Not Found') {
+                    throw
+                }
+            }
+            continue
+        }
         Invoke-GhNoOutput `
             -Arguments @(
                 'variable', 'set', $name,
-                '--body', [string] $Values[$name],
+                '--body', $value,
                 '--repo', $repositoryName,
                 '--env', $Environment
             ) `
@@ -1308,6 +1360,38 @@ function Set-GitHubEnvironmentVariables {
         -Environment $Environment `
         -ReviewerId $reviewerId `
         -DeploymentBranch $GitHubDeploymentBranch
+}
+
+function Get-GitHubEnvironmentVariableValue {
+    param(
+        [Parameter(Mandatory)] [string] $Owner,
+        [Parameter(Mandatory)] [string] $Repository,
+        [Parameter(Mandatory)] [string] $Environment,
+        [Parameter(Mandatory)] [string] $Name
+    )
+
+    $repositoryName = "$Owner/$Repository"
+    $escapedEnvironment = [uri]::EscapeDataString($Environment)
+    $variablesResponse = Invoke-GhJson `
+        -Arguments @(
+            'api', '--method', 'GET',
+            "repos/$repositoryName/environments/$escapedEnvironment/variables?per_page=100"
+        ) `
+        -Operation "Reading GitHub environment variables for '$Environment'"
+
+    $variables = @()
+    $variablesProperty = $variablesResponse.PSObject.Properties['variables']
+    if ($variablesProperty) {
+        $variables = @($variablesProperty.Value)
+    }
+    $matches = @($variables | Where-Object { $_.name -eq $Name })
+    if ($matches.Count -gt 1) {
+        throw "GitHub environment variable '$Name' is ambiguous in '$Environment'."
+    }
+    if ($matches.Count -eq 0 -or [string]::IsNullOrWhiteSpace([string] $matches[0].value)) {
+        return ''
+    }
+    return ([string] $matches[0].value).Trim()
 }
 
 function Assert-GitHubEnvironmentProtection {
@@ -1660,6 +1744,7 @@ function Invoke-BicepPreview {
         [Parameter(Mandatory)] [string] $PrincipalObjectId,
         [Parameter(Mandatory)] [string] $ImmutableImage,
         [Parameter(Mandatory)] [string] $RegistryName,
+        [AllowEmptyString()] [string] $ContainerAppsInfrastructureSubnetId,
         [Parameter(Mandatory)] [string] $TemplatePath
     )
 
@@ -1671,7 +1756,8 @@ function Invoke-BicepPreview {
         "allowPreviewPlaceholder=$($isPreviewPlaceholder.ToString().ToLowerInvariant())",
         "entraClientId=$ConnectorClientId",
         "entraTenantId=$($Context.TenantId)",
-        "allowedPrincipalObjectId=$PrincipalObjectId"
+        "allowedPrincipalObjectId=$PrincipalObjectId",
+        "containerAppsInfrastructureSubnetId=$ContainerAppsInfrastructureSubnetId"
     )
 
     $validateArguments = @(
@@ -1730,6 +1816,9 @@ try {
     elseif ($GitHubEnvironment -cne $expectedGitHubEnvironment) {
         throw "GitHubEnvironment must be '$expectedGitHubEnvironment' for EnvironmentName '$EnvironmentName'. The workflow has no alternate preview alias."
     }
+    if ($EnvironmentName -eq 'prod' -and [string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) {
+        throw 'Production planning, configuration, and publishing require -ContainerAppsInfrastructureSubnetId.'
+    }
     if ($GitHubOwner -notmatch '^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$') {
         throw 'GitHubOwner is not a valid GitHub account or organization name.'
     }
@@ -1776,6 +1865,22 @@ try {
     $selectedGroup = Select-ResourceGroup -Context $azureContext
     $selectedResourceGroup = [string] $selectedGroup.name
     $selectedLocation = [string] $selectedGroup.location
+    $configuredPublicApiHostname = Resolve-PublicApiHostname -Origin $ConnectorPublicBaseUrl -SourceName '-ConnectorPublicBaseUrl'
+    $configuredPublicBaseUrl = if ($configuredPublicApiHostname) { "https://$configuredPublicApiHostname" } else { '' }
+    if (-not [string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) {
+        if ($ContainerAppsInfrastructureSubnetId -notmatch '^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Network/virtualNetworks/[^/]+/subnets/[^/]+$') {
+            throw 'ContainerAppsInfrastructureSubnetId must be a full subnet resource ID.'
+        }
+        $subnetIdSegments = $ContainerAppsInfrastructureSubnetId -split '/'
+        $subnetSubscriptionId = [string] $subnetIdSegments[2]
+        $subnetResourceGroup = [string] $subnetIdSegments[4]
+        if (
+            -not [string]::Equals($subnetSubscriptionId, $azureContext.SubscriptionId, [StringComparison]::OrdinalIgnoreCase) -or
+            -not [string]::Equals($subnetResourceGroup, $selectedResourceGroup, [StringComparison]::OrdinalIgnoreCase)
+        ) {
+            throw 'ContainerAppsInfrastructureSubnetId must target a subnet in the selected subscription and resource group. Cross-resource-group subnet bindings are not supported by the reviewed OIDC deployment scope.'
+        }
+    }
 
     if ($Mode -eq 'Publish' -and -not [string]::IsNullOrWhiteSpace($ImageReference)) {
         throw 'Publish does not accept ImageReference. The protected GitHub workflow builds the exact checked-out GITHUB_SHA and resolves its digest.'
@@ -1798,11 +1903,17 @@ try {
         Write-Host '  CI RBAC: Contributor at the selected resource-group scope only (no role-assignment authority)'
         Write-Host '  runtime RBAC: pre-created user-assigned identity with Reader; ACR pull is added during Publish'
         Write-Host "  GitHub environment: $GitHubOwner/$GitHubRepository / $GitHubEnvironment; reviewer-gated; branch $GitHubDeploymentBranch"
+        if ($configuredPublicBaseUrl) {
+            Write-Host "  connector public origin override: $configuredPublicBaseUrl"
+        }
         Assert-ExactConfirmation -Expected 'CONFIGURE HELIOS AZURE' -Purpose 'Configuring Helios Entra, OIDC, RBAC, and GitHub bindings'
         Ensure-GovernedResourceGroupEnvironmentTag -Context $azureContext -ResourceGroupName $selectedResourceGroup
         Ensure-RequiredResourceProviders -Context $azureContext
     }
 
+    $protectedPublicBaseUrl = ''
+    $protectedPublicApiHostname = ''
+    $protectedApplicationIdUri = ''
     if ($Mode -eq 'Publish') {
         Assert-GovernedResourceGroupEnvironmentTag -Context $azureContext -ResourceGroupName $selectedResourceGroup
         $runtimeIdentity = Get-RuntimeManagedIdentity -Context $azureContext -ResourceGroupName $selectedResourceGroup
@@ -1821,6 +1932,38 @@ try {
             -Environment $GitHubEnvironment `
             -ReviewerId ([int64] $RequiredReviewerId) `
             -DeploymentBranch $GitHubDeploymentBranch
+        if ($EnvironmentName -eq 'prod') {
+            $protectedSubnetBinding = Get-GitHubEnvironmentVariableValue `
+                -Owner $GitHubOwner `
+                -Repository $GitHubRepository `
+                -Environment $GitHubEnvironment `
+                -Name 'HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID'
+            if ([string]::IsNullOrWhiteSpace($protectedSubnetBinding)) {
+                throw "GitHub environment variable HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID is not configured for '$GitHubEnvironment'. Run -Mode Configure before Publish."
+            }
+            if (-not [string]::Equals($protectedSubnetBinding, $ContainerAppsInfrastructureSubnetId, [StringComparison]::OrdinalIgnoreCase)) {
+                throw 'Publish requires -ContainerAppsInfrastructureSubnetId to match protected environment binding HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID. Run -Mode Configure to persist the reviewed subnet before dispatch.'
+            }
+        }
+        $protectedPublicBaseUrl = Get-GitHubEnvironmentVariableValue `
+            -Owner $GitHubOwner `
+            -Repository $GitHubRepository `
+            -Environment $GitHubEnvironment `
+            -Name 'HELIOS_CONNECTOR_PUBLIC_BASE_URL'
+        $protectedPublicApiHostname = Resolve-PublicApiHostname `
+            -Origin $protectedPublicBaseUrl `
+            -SourceName "GitHub environment variable HELIOS_CONNECTOR_PUBLIC_BASE_URL in '$GitHubEnvironment'"
+        if ($configuredPublicBaseUrl -and -not [string]::Equals($configuredPublicBaseUrl, $protectedPublicBaseUrl, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "-ConnectorPublicBaseUrl '$configuredPublicBaseUrl' does not match protected GitHub environment binding '$protectedPublicBaseUrl'. Run -Mode Configure to persist the reviewed public origin before Publish."
+        }
+        $protectedApplicationIdUri = Get-GitHubEnvironmentVariableValue `
+            -Owner $GitHubOwner `
+            -Repository $GitHubRepository `
+            -Environment $GitHubEnvironment `
+            -Name 'HELIOS_ENTRA_APPLICATION_ID_URI'
+        if ($protectedPublicApiHostname -and [string]::IsNullOrWhiteSpace($protectedApplicationIdUri)) {
+            throw "GitHub environment variable HELIOS_ENTRA_APPLICATION_ID_URI is required when HELIOS_CONNECTOR_PUBLIC_BASE_URL is set in '$GitHubEnvironment'. Run -Mode Configure to persist reviewed Entra audience bindings."
+        }
         Assert-GitHubFederationPresent `
             -Application $publishGitHubApplication `
             -Subject $githubOidcTrust.Subject `
@@ -1899,11 +2042,22 @@ try {
     }
 
     $entraContext = Get-ExistingEntraContext
+    $pendingGitHubEnvironmentValues = $null
     if ($Mode -eq 'Configure') {
         $deployedApiHostname = Resolve-DeployedApiHostname -Context $azureContext -ResourceGroupName $selectedResourceGroup
-        $connectorApplication = Ensure-EntraApplication -DisplayName $ConnectorAppName -ApiHostname $deployedApiHostname -ExposeDelegatedScope
-        if (-not $deployedApiHostname) {
+        $entraAudienceHostname = if ($configuredPublicApiHostname) { $configuredPublicApiHostname } else { $deployedApiHostname }
+        if ($configuredPublicBaseUrl) {
+            Write-Host "Using reviewed connector public origin '$configuredPublicBaseUrl' to register the Entra delegated audience."
+        }
+        $connectorApplication = Ensure-EntraApplication -DisplayName $ConnectorAppName -ApiHostname $entraAudienceHostname -ExposeDelegatedScope
+        if (-not $deployedApiHostname -and -not $configuredPublicApiHostname) {
             Write-Warning 'The Container App is not deployed yet. Re-run Configure after deployment to bind the domain-qualified Teams SSO Application ID URI.'
+        }
+        $connectorApplicationIdUri = if ($entraAudienceHostname) {
+            "api://$($entraAudienceHostname.ToLowerInvariant())/$([string] $connectorApplication.appId)"
+        }
+        else {
+            "api://$([string] $connectorApplication.appId)"
         }
         $githubApplication = Ensure-EntraApplication -DisplayName $GitHubOidcAppName
         $runtimeIdentity = Ensure-RuntimeManagedIdentity `
@@ -1914,26 +2068,20 @@ try {
         $resourceGroupScope = "/subscriptions/$($azureContext.SubscriptionId)/resourceGroups/$selectedResourceGroup"
         Ensure-RoleAssignment -ApplicationId $githubApplication.appId -Scope $resourceGroupScope
 
-        $githubValues = @{
+        $pendingGitHubEnvironmentValues = @{
             AZURE_CLIENT_ID = [string] $githubApplication.appId
             AZURE_TENANT_ID = [string] $azureContext.TenantId
             AZURE_SUBSCRIPTION_ID = [string] $azureContext.SubscriptionId
             AZURE_RESOURCE_GROUP = $selectedResourceGroup
             HELIOS_CONTAINER_REGISTRY_NAME = $resolvedRegistryName
+            HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID = $ContainerAppsInfrastructureSubnetId
             HELIOS_ENTRA_CLIENT_ID = [string] $connectorApplication.appId
+            HELIOS_ENTRA_APPLICATION_ID_URI = $connectorApplicationIdUri
+            HELIOS_CONNECTOR_PUBLIC_BASE_URL = $configuredPublicBaseUrl
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID = $principalObjectId
             HELIOS_REQUIRED_REVIEWER_ID = $RequiredReviewerId
             HELIOS_OIDC_SUBJECT = $githubOidcTrust.Subject
         }
-        Set-GitHubEnvironmentVariables `
-            -Values $githubValues `
-            -Owner $GitHubOwner `
-            -Repository $GitHubRepository `
-            -Environment $GitHubEnvironment
-        Ensure-GitHubFederation `
-            -Application $githubApplication `
-            -Subject $githubOidcTrust.Subject `
-            -Environment $GitHubEnvironment
     }
     else {
         $connectorApplication = $entraContext.Connector
@@ -1952,6 +2100,15 @@ try {
     else {
         $connectorClientId = [string] $connectorApplication.appId
     }
+    if ($Mode -eq 'Publish' -and $protectedPublicApiHostname) {
+        $expectedPublicIdentifierUri = "api://$protectedPublicApiHostname/$connectorClientId"
+        if (-not [string]::Equals($protectedApplicationIdUri, $expectedPublicIdentifierUri, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "GitHub environment variable HELIOS_ENTRA_APPLICATION_ID_URI must equal '$expectedPublicIdentifierUri' when HELIOS_CONNECTOR_PUBLIC_BASE_URL is configured. Run -Mode Configure after reviewing the public-origin binding."
+        }
+        if (@($connectorApplication.identifierUris) -notcontains $expectedPublicIdentifierUri) {
+            throw "Connector Entra app '$ConnectorAppName' does not expose '$expectedPublicIdentifierUri'. Run -Mode Configure after setting HELIOS_CONNECTOR_PUBLIC_BASE_URL to register the reviewed public audience before Publish."
+        }
+    }
 
     Write-Host 'Reviewed Azure target:'
     Write-Host "  tenant: $($azureContext.TenantId)"
@@ -1963,6 +2120,7 @@ try {
     Write-Host '  runtime: Azure Container Apps only; local runtime disabled'
 
     if ($Mode -eq 'Publish') {
+        $privateRunnerRequired = if ([string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) { 'false' } else { 'true' }
         Assert-ExactConfirmation `
             -Expected 'DISPATCH HELIOS WHAT-IF' `
             -Purpose "Dispatching the protected $GitHubEnvironment workflow from '$GitHubDeploymentBranch'"
@@ -1972,7 +2130,8 @@ try {
                 '--repo', "$GitHubOwner/$GitHubRepository",
                 '--ref', $GitHubDeploymentBranch,
                 '--field', "targetEnvironment=$GitHubEnvironment",
-                '--field', 'mode=what-if'
+                '--field', 'mode=what-if',
+                '--field', "privateRunnerRequired=$privateRunnerRequired"
             ) `
             -Operation 'Dispatching the protected Helios what-if workflow'
     }
@@ -1984,7 +2143,21 @@ try {
             -PrincipalObjectId $principalObjectId `
             -ImmutableImage $immutableImage `
             -RegistryName $resolvedRegistryName `
+            -ContainerAppsInfrastructureSubnetId $ContainerAppsInfrastructureSubnetId `
             -TemplatePath $template)
+    }
+
+    if ($Mode -eq 'Configure') {
+        # Persist protected workflow bindings only after preview validation succeeds.
+        Set-GitHubEnvironmentVariables `
+            -Values $pendingGitHubEnvironmentValues `
+            -Owner $GitHubOwner `
+            -Repository $GitHubRepository `
+            -Environment $GitHubEnvironment
+        Ensure-GitHubFederation `
+            -Application $githubApplication `
+            -Subject $githubOidcTrust.Subject `
+            -Environment $GitHubEnvironment
     }
 
     if ($Mode -eq 'Configure') {

@@ -27,7 +27,19 @@ public sealed class SetupWizardTests
         Assert.Contains($"$sourceSha = '{SourceSha}'", first.Script);
         Assert.Contains("git -C ./helios-platform checkout --detach $sourceSha", first.Script);
         Assert.Contains("-SourceCommitSha $sourceSha", first.Script);
+        Assert.Contains("-ContainerAppsInfrastructureSubnetId $containerAppsInfrastructureSubnetId", first.Script);
+        Assert.Contains("$containerAppsInfrastructureSubnetId = if ($env:HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID)", first.Script);
         Assert.DoesNotContain("git clone https://github.com", first.Script);
+    }
+
+    [Fact]
+    public void Bootstrap_prompts_for_production_subnet_when_not_preconfigured()
+    {
+        var request = new SetupBootstrapRequest("11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", "helios-prod-rg", "prod");
+        var result = _wizard.CreateBootstrap(request);
+
+        Assert.Contains("Read-Host 'Enter the delegated Container Apps infrastructure subnet resource ID'", result.Script);
+        Assert.Contains("-ContainerAppsInfrastructureSubnetId $containerAppsInfrastructureSubnetId", result.Script);
     }
 
     [Theory]

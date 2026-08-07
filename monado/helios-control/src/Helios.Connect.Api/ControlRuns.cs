@@ -134,6 +134,7 @@ public sealed class CosmosControlRunStore : IControlRunStore, IDisposable
         _client = new CosmosClient(endpointUri.ToString(), credential, new CosmosClientOptions
         {
             ApplicationName = "helios-connect/control-runs",
+            ConnectionMode = ConnectionMode.Gateway,
             SerializerOptions = new CosmosSerializationOptions { PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase }
         });
         _container = _client.GetContainer(

@@ -40,7 +40,8 @@ The interactive administrator applies `helios-environment=<environment>` to
 the selected resource group without replacing other tags and refuses to
 reclassify a group already bound to another environment. It grants CI only
 Contributor at the selected resource-group scope. It separately grants the runtime identity Reader and
-registers only the seven resource providers listed by the wizard; provider
+requires any reviewed `ContainerAppsInfrastructureSubnetId` to point to that
+same subscription/resource-group scope, and registers only the seven resource providers listed by the wizard; provider
 registration has its own `REGISTER HELIOS PROVIDERS` confirmation. CI never
 receives Owner or role-assignment authority. Configuration requires the exact
 phrase `CONFIGURE HELIOS AZURE`; resource-group creation has a separate exact
@@ -51,6 +52,7 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -Mode Configure `
   -EnvironmentName dev `
   -ResourceGroup rg-helios-dev `
+  -ConnectorPublicBaseUrl 'https://<reviewed-public-origin>' `
   -ContainerRegistryName '<globally-unique-acr-name>' `
   -RequiredReviewerId '<github-user-id>' `
   -GitHubDeploymentBranch main
@@ -63,8 +65,13 @@ the Microsoft Azure CLI public client for that scope so the verifier can obtain
 a token without storing a secret. Before the first deployment its identifier is
 the provisional `api://<client-id>`. After deployment, re-run Configure once:
 the wizard discovers the Container App FQDN and adds the Teams-required
-`api://<public-hostname>/<client-id>` Application ID URI. Install the Teams
-package only after that origin-bound URI is verified.
+`api://<public-hostname>/<client-id>` Application ID URI. For reviewed Front
+Door cutover, pass `-ConnectorPublicBaseUrl https://<front-door-hostname>` so
+Configure registers and persists that exact public audience before Publish.
+Install the Teams package only after that origin-bound URI is verified.
+Rerunning Configure without `-ConnectorPublicBaseUrl` clears the protected
+public-origin binding so rollback to internal-origin configuration remains
+consistent.
 
 ## 3. Prepare and dispatch the protected cloud build
 
@@ -116,10 +123,56 @@ its registry digest, produces and hashes canonical ARM what-if evidence, then
 waits at the separate deploy approval before rechecking drift and applying that
 same revision.
 
+When `HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID` is supplied, the workflow
+enforces immutable Container Apps networking behavior: if a deterministically
+named managed environment already exists without subnet integration (or with a
+different subnet), the run fails before deployment and requires a reviewed
+replacement-environment migration with rollback evidence rather than an
+in-place subnet retrofit.
+For `azure-prod`, the reviewed subnet binding must target the canonical
+`container-apps` subnet and keep the reviewed
+`approved-egress-via-firewall` 0.0.0.0/0 VirtualAppliance route-table path,
+retain `Microsoft.App/environments` delegation, and point to protected
+environment variable `HELIOS_AZURE_FIREWALL_PRIVATE_IP` (which must resolve to
+exactly one policy-attached Azure Firewall private IP in the subscription).
+
+When `HELIOS_CONNECTOR_PUBLIC_BASE_URL` is set, the reviewed workflow carries it
+into what-if evidence and deployment as `publicBaseUrl`, which rebases
+`HELIOS_PUBLIC_BASE_URL` and the Entra Application ID URI to that reviewed
+origin. Configure persists `HELIOS_ENTRA_APPLICATION_ID_URI`, and deploy mode
+rejects public-origin runs until that variable matches
+`api://<public-hostname>/<HELIOS_ENTRA_CLIENT_ID>`. For production edge cutover, run `azure-infra` once with
+`edge_route_cutover_approved=false` to mint the Front Door hostname, then set
+`HELIOS_CONNECTOR_PUBLIC_BASE_URL=https://<front-door-hostname>`, redeploy the
+connector through `helios-cloud-deploy`, and only then rerun `azure-infra` with
+`edge_route_cutover_approved=true` to enable the public route.
+For production `network_only=false`, `azure-infra` now also verifies that
+`connector_backend_url` exactly matches the deployed connector ingress origin
+and that any `container_registry_id` matches the connector's active ACR
+resource ID and uses the Premium SKU required for ACR private endpoints before
+allowing private-endpoint-only image-pull egress.
+For production `network_only=true`, `containerRegistryDataPlane` remains
+required even when `container_registry_id` is supplied, because connector
+registry binding is only verifiable after the first connector deployment.
+Production `azureFirewall` profile rules now also include the reviewed
+Container Apps control-plane network ports (AzureCloud regional UDP 1194 and
+TCP 9000), `packages.aks.azure.com`, and GitHub Actions artifact storage
+endpoints under `*.blob.core.windows.net`.
+
+For private-network production verification, the workflow requires a
+self-hosted runner with VNet/private-DNS reachability before deploy mode can
+proceed. This preserves full live boundary checks (anonymous 401, forged
+principal rejection, OAuth metadata, and MCP challenge) instead of replacing
+them with control-plane-only assertions.
+For subnet-backed non-production runs, set workflow input
+`privateRunnerRequired=true` so runner selection happens on the self-hosted
+pool before environment-scoped variables are available.
+
 After the deployment returns the connector hostname, re-run `-Mode Configure`
-with the same reviewed inputs and confirmation. This idempotent pass discovers
-the deployed FQDN and finalizes the domain-qualified Teams SSO Application ID
-URI; it does not deploy the application.
+with the same reviewed inputs and confirmation. For Front Door cutover, include
+`-ConnectorPublicBaseUrl https://<front-door-hostname>`. This idempotent pass
+finalizes the domain-qualified Teams SSO Application ID URI; it does not deploy
+the application.
 
 Use GitHub Actions → `helios-cloud-deploy` → **Run workflow**. Direct local
 `az deployment group create`, `azd provision`, and `azd deploy` are not Helios

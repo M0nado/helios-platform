@@ -35,6 +35,22 @@ param containerAppsInfrastructureSubnetId string = ''
 param commonTags object = {}
 
 var suffix = uniqueString(resourceGroup().id, environmentName, serviceName)
+var validatedContainerAppsInfrastructureSubnetId = environmentName != 'prod' || !empty(containerAppsInfrastructureSubnetId)
+  ? containerAppsInfrastructureSubnetId
+  : fail('Production requires a delegated Container Apps infrastructure subnet.')
+var subnetResourceIdSegments = split(validatedContainerAppsInfrastructureSubnetId, '/')
+var subnetResourceIdIsCanonical = empty(validatedContainerAppsInfrastructureSubnetId)
+  ? true
+  : (length(subnetResourceIdSegments) == 11 && toLower(subnetResourceIdSegments[1]) == 'subscriptions' && toLower(subnetResourceIdSegments[3]) == 'resourcegroups' && toLower(subnetResourceIdSegments[5]) == 'providers' && toLower(subnetResourceIdSegments[6]) == 'microsoft.network' && toLower(subnetResourceIdSegments[7]) == 'virtualnetworks' && toLower(subnetResourceIdSegments[9]) == 'subnets')
+var subnetScopeMatchesDeployment = empty(validatedContainerAppsInfrastructureSubnetId)
+  ? true
+  : (subnetResourceIdIsCanonical && toLower(subnetResourceIdSegments[2]) == toLower(subscription().subscriptionId) && toLower(subnetResourceIdSegments[4]) == toLower(resourceGroup().name))
+var scopedContainerAppsInfrastructureSubnetId = subnetScopeMatchesDeployment
+  ? validatedContainerAppsInfrastructureSubnetId
+  : fail('containerAppsInfrastructureSubnetId must target a subnet in the deployment subscription and resource group. Cross-resource-group subnet bindings are not supported by the reviewed OIDC deployment scope.')
+var containerAppsVnetSubscriptionId = !empty(scopedContainerAppsInfrastructureSubnetId) ? split(scopedContainerAppsInfrastructureSubnetId, '/')[2] : ''
+var containerAppsVnetResourceGroupName = !empty(scopedContainerAppsInfrastructureSubnetId) ? split(scopedContainerAppsInfrastructureSubnetId, '/')[4] : ''
+var containerAppsVnetName = !empty(scopedContainerAppsInfrastructureSubnetId) ? split(scopedContainerAppsInfrastructureSubnetId, '/')[8] : ''
 var governedTags = union(commonTags, {
   'helios-managed': 'true'
   'helios-service': serviceName
@@ -166,10 +182,18 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   location: location
   tags: governedTags
   properties: {
-    vnetConfiguration: !empty(containerAppsInfrastructureSubnetId) ? {
-      infrastructureSubnetId: containerAppsInfrastructureSubnetId
-      internal: true
-    } : null
+    vnetConfiguration: !empty(scopedContainerAppsInfrastructureSubnetId)
+      ? union({
+          infrastructureSubnetId: scopedContainerAppsInfrastructureSubnetId
+          internal: true
+        }, environmentName == 'prod'
+          ? {
+              outboundType: 'UserDefinedRouting'
+            }
+          : {
+              outboundType: 'LoadBalancer'
+            })
+      : null
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -177,6 +201,21 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
         sharedKey: logs.listKeys().primarySharedKey
       }
     }
+  }
+}
+
+resource containerAppsVirtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' existing = if (!empty(scopedContainerAppsInfrastructureSubnetId)) {
+  name: containerAppsVnetName
+  scope: resourceGroup(containerAppsVnetSubscriptionId, containerAppsVnetResourceGroupName)
+}
+
+module containerAppsInternalDns 'containerapp-internal-dns.bicep' = if (!empty(scopedContainerAppsInfrastructureSubnetId)) {
+  name: '${serviceName}-${environmentName}-ca-dns'
+  params: {
+    zoneName: environment.properties.defaultDomain
+    virtualNetworkId: containerAppsVirtualNetwork.id
+    staticIp: environment.properties.staticIp
+    tags: governedTags
   }
 }
 
@@ -193,7 +232,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: empty(containerAppsInfrastructureSubnetId)
+        external: true
         targetPort: 8080
         transport: 'auto'
         allowInsecure: false

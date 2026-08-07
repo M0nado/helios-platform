@@ -60,6 +60,7 @@ public sealed partial class SetupWizardService : ISetupWizardService
             "$registryName = if ($env:HELIOS_CONTAINER_REGISTRY_NAME) { $env:HELIOS_CONTAINER_REGISTRY_NAME } else { Read-Host 'Enter the Azure Container Registry resource name' }",
             "$entraClientId = if ($env:HELIOS_ENTRA_CLIENT_ID) { $env:HELIOS_ENTRA_CLIENT_ID } else { Read-Host 'Enter the HELIOS Entra application client ID' }",
             "$allowedPrincipalObjectId = if ($env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID) { $env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID } else { Read-Host 'Enter the allowed principal object ID' }",
+            "$containerAppsInfrastructureSubnetId = if ($env:HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID) { $env:HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID } elseif ($environmentName -eq 'prod') { Read-Host 'Enter the delegated Container Apps infrastructure subnet resource ID' } else { '' }",
             "git clone --filter=blob:none --no-checkout https://github.com/M0nado/helios-platform.git",
             "git -C ./helios-platform fetch --depth 1 origin $sourceSha",
             "git -C ./helios-platform checkout --detach $sourceSha",
@@ -67,7 +68,7 @@ public sealed partial class SetupWizardService : ISetupWizardService
             "Set-Location ./helios-platform/monado/helios-control",
             "$evidence = Join-Path $HOME 'clouddrive/helios-evidence'",
             "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Diagnose -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -EvidenceDirectory $evidence",
-            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -ContainerImage $containerImage -ContainerRegistryName $registryName -EntraClientId $entraClientId -AllowedPrincipalObjectId $allowedPrincipalObjectId -SourceCommitSha $sourceSha -EvidenceDirectory $evidence",
+            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -ContainerImage $containerImage -ContainerRegistryName $registryName -EntraClientId $entraClientId -AllowedPrincipalObjectId $allowedPrincipalObjectId -ContainerAppsInfrastructureSubnetId $containerAppsInfrastructureSubnetId -SourceCommitSha $sourceSha -EvidenceDirectory $evidence",
             "Write-Host 'STOP: review the what-if file and SHA-256. This bootstrap never applies.'"
         });
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(script))).ToLowerInvariant();

@@ -27,6 +27,7 @@ param(
     [string] $EntraClientId = $env:HELIOS_ENTRA_CLIENT_ID,
     [string] $AllowedPrincipalObjectId = $env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID,
     [string] $SourceCommitSha = $env:HELIOS_SOURCE_SHA,
+    [string] $ContainerAppsInfrastructureSubnetId = $env:HELIOS_CONTAINER_APPS_INFRASTRUCTURE_SUBNET_ID,
     [string] $EvidenceDirectory = (Join-Path (Get-Location) 'evidence/helios-edge')
 )
 
@@ -130,6 +131,7 @@ function Assert-DeploymentInputs {
         $parsed = [guid]::Empty
         if (-not [guid]::TryParse([string] $binding.Value, [ref] $parsed)) { throw "$($binding.Name) must be a GUID." }
     }
+    if ($EnvironmentName -eq 'prod' -and [string]::IsNullOrWhiteSpace($ContainerAppsInfrastructureSubnetId)) { throw 'Production plan requires -ContainerAppsInfrastructureSubnetId.' }
     if ($SourceCommitSha -notmatch '^[0-9a-fA-F]{40}$') { throw 'SourceCommitSha must be the exact 40-character Git commit built into the image.' }
     $script:ResolvedDeploymentParameters = @(
         '--parameters',
@@ -141,7 +143,8 @@ function Assert-DeploymentInputs {
         "entraClientId=$EntraClientId",
         "entraTenantId=$TenantId",
         "allowedPrincipalObjectId=$AllowedPrincipalObjectId",
-        "sourceCommitSha=$($SourceCommitSha.ToLowerInvariant())"
+        "sourceCommitSha=$($SourceCommitSha.ToLowerInvariant())",
+        "containerAppsInfrastructureSubnetId=$ContainerAppsInfrastructureSubnetId"
     )
 }
 
@@ -207,6 +210,7 @@ $request = [ordered]@{
         entraTenantId = $TenantId
         allowedPrincipalObjectId = $AllowedPrincipalObjectId
         sourceCommitSha = $SourceCommitSha.ToLowerInvariant()
+        containerAppsInfrastructureSubnetId = $ContainerAppsInfrastructureSubnetId
     }
     whatIfSha256 = $sha256
     applyRequires = @('protected-github-environment', 'immutable-image-digest', 'full-resource-what-if', 'fresh-drift-match', 'second-environment-approval', 'explicit-deploy-confirmation')
