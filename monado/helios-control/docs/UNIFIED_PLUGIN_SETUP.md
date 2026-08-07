@@ -31,6 +31,7 @@ install 'helios-control-fabric'.
 
 Run:
 
+    python plugins/helios-control-fabric/scripts/helios.py setup-all --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py doctor
     python plugins/helios-control-fabric/scripts/helios.py targets
     python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev

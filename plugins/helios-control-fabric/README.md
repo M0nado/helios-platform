@@ -23,6 +23,7 @@ DevOps mirror, or activate external connector delivery.
 
 ## Start
 
+    python plugins/helios-control-fabric/scripts/helios.py setup-all --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py doctor
     python plugins/helios-control-fabric/scripts/helios.py targets
     python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
@@ -33,6 +34,7 @@ DevOps mirror, or activate external connector delivery.
 
 PowerShell:
 
+    ./plugins/helios-control-fabric/scripts/helios.ps1 setup-all --environment azure-dev
     ./plugins/helios-control-fabric/scripts/helios.ps1 doctor
     ./plugins/helios-control-fabric/scripts/helios.ps1 oidc --environment azure-dev
 
