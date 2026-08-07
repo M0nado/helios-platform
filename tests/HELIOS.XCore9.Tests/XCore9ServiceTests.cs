@@ -71,6 +71,17 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public async Task Selection_is_idempotent_for_retried_correlation_ids()
+    {
+        var (service, audit) = Create();
+        var first = await service.SelectWorkerAsync("reviewer", "safe", "corr-idempotent", "operator", default);
+        var second = await service.SelectWorkerAsync("reviewer", "safe", "corr-idempotent", "operator", default);
+
+        Assert.Equal(first.LeaseId, second.LeaseId);
+        Assert.Single(audit.Events, evt => evt.EventType == "xcore9.worker.selected");
+    }
+
+    [Fact]
     public async Task Selection_enforces_minimum_correlation_id_length()
     {
         var (service, _) = Create();
@@ -452,6 +463,32 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public async Task Negotiation_is_idempotent_for_identical_ids_and_rejects_conflicts()
+    {
+        var (service, audit) = Create();
+        var negotiationId = Guid.NewGuid();
+        var record = new NegotiationRecord(
+            negotiationId,
+            "corr-neg-idempotent",
+            "builder",
+            "reviewer",
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "counter-offer",
+            DateTimeOffset.UtcNow);
+
+        await service.RecordNegotiationAsync(record, "operator", default);
+        await service.RecordNegotiationAsync(record, "operator", default);
+
+        var negotiations = NegotiationSnapshot(service);
+        Assert.Single(negotiations);
+        Assert.Single(audit.Events, evt => evt.EventType == "xcore9.negotiation.recorded");
+
+        var conflicting = record with { Outcome = "accepted" };
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.RecordNegotiationAsync(conflicting, "operator", default).AsTask());
+    }
+
+    [Fact]
     public async Task Promotion_requires_external_authority_and_preserves_rollback()
     {
         var (service, _) = Create();
@@ -490,6 +527,23 @@ public sealed class XCore9ServiceTests
 
         Assert.False(decision.Approved);
         Assert.Equal("holdout-values-not-finite", decision.ReasonCode);
+        Assert.Equal("initial", decision.ActivePolicy.PolicyId);
+    }
+
+    [Fact]
+    public async Task Promotion_rejects_overflowing_holdout_improvements()
+    {
+        var (service, _) = Create();
+        var candidate = new RoutingPolicy("candidate", 2, new Dictionary<string, string>(), null);
+        var holdout = new HoldoutEvaluation(100, double.MaxValue, -double.MaxValue, .9, true);
+
+        var decision = await service.EvaluatePromotionAsync(
+            new PromotionRequest("corr-p3-overflow", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]),
+            "guardian",
+            default);
+
+        Assert.False(decision.Approved);
+        Assert.Equal("holdout-requirement-not-met", decision.ReasonCode);
         Assert.Equal("initial", decision.ActivePolicy.PolicyId);
     }
 
@@ -594,6 +648,30 @@ public sealed class XCore9ServiceTests
         Assert.Equal("candidate", reusedIdentity.ActivePolicy.PolicyId);
         Assert.Equal(2, reusedIdentity.ActivePolicy.Version);
         Assert.Equal("initial", reusedIdentity.RollbackPolicy!.PolicyId);
+    }
+
+    [Fact]
+    public async Task Promotion_rejects_candidates_with_policy_rules_above_configured_bounds()
+    {
+        var (service, _) = Create(options: new XCore9Options(MaxPolicyRules: 1));
+        var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
+        var candidate = new RoutingPolicy(
+            "candidate",
+            2,
+            new Dictionary<string, string>
+            {
+                ["route-a"] = "safe",
+                ["route-b"] = "safe"
+            },
+            null);
+
+        var decision = await service.EvaluatePromotionAsync(
+            new PromotionRequest("corr-p5-bounds", candidate, holdout, "guardian", [new Uri("https://evidence.test/1")]),
+            "guardian",
+            default);
+
+        Assert.False(decision.Approved);
+        Assert.Equal("policy-rules-exceed-bound", decision.ReasonCode);
     }
 
     [Fact]
@@ -746,6 +824,15 @@ public sealed class XCore9ServiceTests
 
         Assert.Throws<ArgumentException>(() =>
             Create(options: new XCore9Options(MaxEvidenceLinkLength: 0)));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(MaxPolicyRules: 0)));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(MaxPolicyRuleKeyLength: 0)));
+
+        Assert.Throws<ArgumentException>(() =>
+            Create(options: new XCore9Options(MaxPolicyRuleValueLength: 0)));
     }
 
     private static (XCore9Service Service, RecordingAuditSink Audit) Create(

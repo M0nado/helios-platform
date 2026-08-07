@@ -97,7 +97,13 @@ public sealed class XCore9Service : IXCore9Service
             IdentifierComparer);
 
         ValidateCatalogSnapshots();
-        _activePolicy = SnapshotPolicy(initialPolicy);
+        var initialSnapshot = SnapshotPolicy(initialPolicy);
+        if (!CandidatePolicyRulesAreBounded(initialSnapshot, out var reasonCode))
+        {
+            throw new ArgumentException($"Initial policy violates bounded rule constraints ({reasonCode}).", nameof(initialPolicy));
+        }
+
+        _activePolicy = initialSnapshot;
     }
 
     public async ValueTask IngestRunHistoryAsync(RunHistoryEntry entry, string actor, CancellationToken cancellationToken)
@@ -229,7 +235,7 @@ public sealed class XCore9Service : IXCore9Service
         {
             var left = existing.Features[index];
             var right = candidate.Features[index];
-            if (!string.Equals(left.Name, right.Name, StringComparison.Ordinal) || left.Value != right.Value)
+            if (!string.Equals(left.Name, right.Name, StringComparison.Ordinal) || !DoubleEquals(left.Value, right.Value))
             {
                 return false;
             }
@@ -243,6 +249,51 @@ public sealed class XCore9Service : IXCore9Service
             }
         }
 
+        return true;
+    }
+
+    private static bool NegotiationEquivalent(NegotiationRecord existing, NegotiationRecord candidate) =>
+        existing.NegotiationId == candidate.NegotiationId &&
+        string.Equals(existing.CorrelationId, candidate.CorrelationId, StringComparison.Ordinal) &&
+        string.Equals(existing.Proposer, candidate.Proposer, StringComparison.Ordinal) &&
+        string.Equals(existing.Counterparty, candidate.Counterparty, StringComparison.Ordinal) &&
+        string.Equals(existing.ProposalDigest, candidate.ProposalDigest, StringComparison.Ordinal) &&
+        string.Equals(existing.Outcome, candidate.Outcome, StringComparison.Ordinal) &&
+        existing.RecordedAt == candidate.RecordedAt;
+
+    private static bool DoubleEquals(double left, double right, double epsilon = 1e-9) =>
+        Math.Abs(left - right) <= epsilon;
+
+    private bool CandidatePolicyRulesAreBounded(RoutingPolicy policy, out string reasonCode)
+    {
+        if (policy.Rules is null)
+        {
+            reasonCode = "policy-rules-required";
+            return false;
+        }
+
+        if (policy.Rules.Count > _options.MaxPolicyRules)
+        {
+            reasonCode = "policy-rules-exceed-bound";
+            return false;
+        }
+
+        foreach (var rule in policy.Rules)
+        {
+            if (string.IsNullOrWhiteSpace(rule.Key) || rule.Key.Length > _options.MaxPolicyRuleKeyLength)
+            {
+                reasonCode = "policy-rule-key-invalid";
+                return false;
+            }
+
+            if (rule.Value is null || rule.Value.Length > _options.MaxPolicyRuleValueLength)
+            {
+                reasonCode = "policy-rule-value-invalid";
+                return false;
+            }
+        }
+
+        reasonCode = string.Empty;
         return true;
     }
 
@@ -339,32 +390,53 @@ public sealed class XCore9Service : IXCore9Service
             }
 
             WorkerLease lease;
+            var reusedExistingLease = false;
             lock (_gate)
             {
-                var activeLeases = _leases.Values.ToArray();
-                var cpuInUse = activeLeases.Sum(lease => (long)_templates[lease.TemplateId].CpuUnits);
-                var memoryInUse = activeLeases.Sum(lease => (long)_templates[lease.TemplateId].MemoryMiB);
-                if (activeLeases.Length >= _options.MaxTotalInstances ||
-                    activeLeases.Count(lease => lease.TemplateId == templateId) >= template.MaxInstances ||
-                    cpuInUse + template.CpuUnits > _options.MaxCpuUnits ||
-                    memoryInUse + template.MemoryMiB > _options.MaxMemoryMiB)
+                var existingLease = _leases.Values.FirstOrDefault(existing =>
+                    string.Equals(existing.CorrelationId, correlationId, StringComparison.Ordinal));
+                if (existingLease is not null)
                 {
-                    throw new InvalidOperationException("Worker instance or resource limit reached.");
-                }
+                    if (!string.Equals(existingLease.TemplateId, templateId, StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException("Correlation ID is already bound to a different template selection.");
+                    }
 
-                var now = DateTimeOffset.UtcNow;
-                if (_options.EffectiveLeaseDuration > DateTimeOffset.MaxValue - now)
+                    lease = existingLease;
+                    reusedExistingLease = true;
+                }
+                else
                 {
-                    throw new InvalidOperationException("Lease duration exceeds representable expiration range.");
+                    var activeLeases = _leases.Values.ToArray();
+                    var cpuInUse = activeLeases.Sum(lease => (long)_templates[lease.TemplateId].CpuUnits);
+                    var memoryInUse = activeLeases.Sum(lease => (long)_templates[lease.TemplateId].MemoryMiB);
+                    if (activeLeases.Length >= _options.MaxTotalInstances ||
+                        activeLeases.Count(lease => lease.TemplateId == templateId) >= template.MaxInstances ||
+                        cpuInUse + template.CpuUnits > _options.MaxCpuUnits ||
+                        memoryInUse + template.MemoryMiB > _options.MaxMemoryMiB)
+                    {
+                        throw new InvalidOperationException("Worker instance or resource limit reached.");
+                    }
+
+                    var now = DateTimeOffset.UtcNow;
+                    if (_options.EffectiveLeaseDuration > DateTimeOffset.MaxValue - now)
+                    {
+                        throw new InvalidOperationException("Lease duration exceeds representable expiration range.");
+                    }
+
+                    lease = new WorkerLease(
+                        LeaseId: Guid.NewGuid(),
+                        TemplateId: templateId,
+                        CorrelationId: correlationId,
+                        ExpiresAt: now + _options.EffectiveLeaseDuration);
+
+                    _leases[lease.LeaseId] = lease;
                 }
+            }
 
-                lease = new WorkerLease(
-                    LeaseId: Guid.NewGuid(),
-                    TemplateId: templateId,
-                    CorrelationId: correlationId,
-                    ExpiresAt: now + _options.EffectiveLeaseDuration);
-
-                _leases[lease.LeaseId] = lease;
+            if (reusedExistingLease)
+            {
+                return lease;
             }
 
             try
@@ -477,17 +549,36 @@ public sealed class XCore9Service : IXCore9Service
         try
         {
             NegotiationRecord? evicted = null;
-            int insertedIndex;
+            var skipAuditForDuplicate = false;
+            var insertedIndex = -1;
             lock (_gate)
             {
-                if (_negotiations.Count >= _options.MaxNegotiationEntries)
+                var existing = _negotiations.FirstOrDefault(negotiation => negotiation.NegotiationId == record.NegotiationId);
+                if (existing is not null)
                 {
-                    evicted = _negotiations[0];
-                    _negotiations.RemoveAt(0);
-                }
+                    if (!NegotiationEquivalent(existing, record))
+                    {
+                        throw new InvalidOperationException("Negotiation record with the same ID contains conflicting data.");
+                    }
 
-                _negotiations.Add(record);
-                insertedIndex = _negotiations.Count - 1;
+                    skipAuditForDuplicate = true;
+                }
+                else
+                {
+                    if (_negotiations.Count >= _options.MaxNegotiationEntries)
+                    {
+                        evicted = _negotiations[0];
+                        _negotiations.RemoveAt(0);
+                    }
+
+                    _negotiations.Add(record);
+                    insertedIndex = _negotiations.Count - 1;
+                }
+            }
+
+            if (skipAuditForDuplicate)
+            {
+                return;
             }
 
             try
@@ -552,14 +643,21 @@ public sealed class XCore9Service : IXCore9Service
             return CurrentDecision(false, "self-promotion-prohibited");
         }
 
+        if (!CandidatePolicyRulesAreBounded(request.Candidate, out var policyRuleReason))
+        {
+            return CurrentDecision(false, policyRuleReason);
+        }
+
         if (!HoldoutIsValid(request.Holdout))
         {
             return CurrentDecision(false, "holdout-values-not-finite");
         }
 
+        var improvement = request.Holdout.BaselineLoss - request.Holdout.CandidateLoss;
         if (request.Holdout.SampleCount < _options.MinimumHoldoutSamples ||
             !request.Holdout.Passed ||
-            request.Holdout.BaselineLoss - request.Holdout.CandidateLoss < _options.MinimumImprovement)
+            !double.IsFinite(improvement) ||
+            improvement < _options.MinimumImprovement)
         {
             return CurrentDecision(false, "holdout-requirement-not-met");
         }
@@ -694,6 +792,9 @@ public sealed class XCore9Service : IXCore9Service
             options.MaxNegotiationEntries < 1 ||
             options.MaxEvidenceLinks < 1 ||
             options.MaxEvidenceLinkLength < 1 ||
+            options.MaxPolicyRules < 1 ||
+            options.MaxPolicyRuleKeyLength < 1 ||
+            options.MaxPolicyRuleValueLength < 1 ||
             options.MinimumHoldoutSamples < 1)
         {
             throw new ArgumentException("All XCore-9 bounded limits must be positive.");
