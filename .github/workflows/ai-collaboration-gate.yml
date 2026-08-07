@@ -46,20 +46,108 @@ jobs:
             fi
           done
 
-          files_json="$(curl --fail --silent --show-error --location \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100")"
-
-          PR_BODY_TEXT="${body}" FILES_JSON="${files_json}" python3 - <<'PY'
+          PR_BODY_TEXT="${body}" python3 - <<'PY'
           import json
           import os
           import re
           import sys
+          import urllib.request
 
           body = os.environ.get("PR_BODY_TEXT", "")
+          token = os.environ["GH_TOKEN"]
+          api_url = os.environ["GITHUB_API_URL"].rstrip("/")
+          repository = os.environ["GITHUB_REPOSITORY"]
+          pr_number = os.environ["PR_NUMBER"]
           body_lower = body.lower()
-          files = json.loads(os.environ.get("FILES_JSON", "[]"))
+          placeholder_values = {"", "n/a", "na", "todo", "tbd", "none"}
+
+          def api_get(url):
+              request = urllib.request.Request(
+                  url,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  payload = json.load(response)
+                  link_header = response.headers.get("Link", "")
+              return payload, link_header
+
+          def next_page(link_header):
+              for section in link_header.split(","):
+                  segment = section.strip()
+                  if 'rel="next"' in segment and segment.startswith("<"):
+                      end_index = segment.find(">")
+                      if end_index != -1:
+                          return segment[1:end_index]
+              return None
+
+          def fetch_changed_files():
+              files = []
+              url = f"{api_url}/repos/{repository}/pulls/{pr_number}/files?per_page=100&page=1"
+              while url:
+                  page_files, link_header = api_get(url)
+                  files.extend(page_files)
+                  url = next_page(link_header)
+              return files
+
+          def extract_inline_field(label):
+              match = re.search(rf"(?im)^\s*-\s*{re.escape(label)}\s*(.*)$", body)
+              return "" if match is None else match.group(1).strip()
+
+          def extract_evidence_links():
+              links = []
+              in_block = False
+              for line in body.splitlines():
+                  if re.match(r"^\s*-\s*Evidence links:\s*$", line, flags=re.IGNORECASE):
+                      in_block = True
+                      continue
+                  if in_block and re.match(r"^\s*-\s*[A-Za-z].*:\s*$", line):
+                      break
+                  if not in_block:
+                      continue
+                  link_match = re.match(r"^\s*-\s*(.+?)\s*$", line)
+                  if link_match:
+                      value = link_match.group(1).strip()
+                      if value:
+                          links.append(value)
+              return links
+
+          def is_placeholder(value):
+              return value.strip().lower() in placeholder_values
+
+          required_inline_fields = (
+              "Correlation ID:",
+              "Codex scope:",
+              "Claude scope:",
+              "Rollback plan:",
+          )
+          missing_inline_fields = [
+              field_name
+              for field_name in required_inline_fields
+              if is_placeholder(extract_inline_field(field_name))
+          ]
+          if missing_inline_fields:
+              print(
+                  "Missing required AI collaboration evidence values: "
+                  + ", ".join(missing_inline_fields),
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          evidence_links = [
+              link for link in extract_evidence_links() if not is_placeholder(link)
+          ]
+          if not evidence_links:
+              print("Evidence links must include at least one populated value.", file=sys.stderr)
+              raise SystemExit(1)
+          if not any("http://" in link.lower() or "https://" in link.lower() for link in evidence_links):
+              print("Evidence links must include at least one URL.", file=sys.stderr)
+              raise SystemExit(1)
+
+          files = fetch_changed_files()
           touched_files = [entry.get("filename", "") for entry in files]
 
           privileged_patterns = [
@@ -67,7 +155,7 @@ jobs:
               r"^monado/helios-control/infra/",
               r"^scripts/",
               r"^monado/helios-control/scripts/",
-              r"^\.github/workflows/(azure-infra|deploy|helios-cloud-deploy|helios-edge-automation-validate)\.yml$",
+              r"^\.github/workflows/.*\.ya?ml$",
           ]
 
           privileged_files = [
@@ -95,6 +183,14 @@ jobs:
                   )
                   print(
                       "Privileged files:\n- " + "\n- ".join(privileged_files),
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+
+              protected_approval = extract_inline_field("Protected approval workflow link:")
+              if is_placeholder(protected_approval):
+                  print(
+                      "Privileged changes require a protected approval workflow link.",
                       file=sys.stderr,
                   )
                   raise SystemExit(1)

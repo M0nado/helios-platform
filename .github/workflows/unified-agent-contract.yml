@@ -2,34 +2,8 @@ name: HELIOS Unified Agent Contract
 
 on:
   pull_request:
-    paths:
-      - "AGENTS.md"
-      - ".codex/**"
-      - ".github/copilot-instructions.md"
-      - ".github/pull_request_template.md"
-      - ".github/workflows/ai-collaboration-gate.yml"
-      - "config/integrations/**"
-      - ".gitmodules"
-      - "modules/**"
-      - "submodules/**"
-      - "vendor/**"
-      - "scripts/integrations/validate_repository_integrity.py"
-      - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
-      - "docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md"
-      - ".github/workflows/unified-agent-contract.yml"
   push:
     branches: [main]
-    paths:
-      - ".github/pull_request_template.md"
-      - ".github/workflows/ai-collaboration-gate.yml"
-      - "config/integrations/**"
-      - ".gitmodules"
-      - "modules/**"
-      - "submodules/**"
-      - "vendor/**"
-      - "scripts/integrations/validate_repository_integrity.py"
-      - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
-      - "docs/governance/GITHUB_CODEX_CLAUDE_COLLABORATION_CONTRACT.md"
   workflow_dispatch:
 
 permissions:

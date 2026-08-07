@@ -36,7 +36,7 @@
           "dotnet restore monado/helios-control/Helios.Connect.sln",
           "dotnet test monado/helios-control/Helios.Connect.sln --configuration Release"
         ],
-        "healthProbe": "GET /healthz returns 200",
+        "healthProbe": "GET /health/ready returns 200",
         "startupTimeoutSeconds": 180
       },
       "artifactPinning": {
@@ -110,7 +110,8 @@
       "denyList": [
         "unsigned-image-execution",
         "production-mutation-without-protected-approval",
-        "cross-tenant-secret-token-reuse"
+        "cross-tenant-secret-token-reuse",
+        "background-self-expanding-agent-runs"
       ]
     },
     {
@@ -165,7 +166,8 @@
       "denyList": [
         "unreviewed-cross-node-write-fanout",
         "production-mutation-without-protected-approval",
-        "cross-tenant-secret-token-reuse"
+        "cross-tenant-secret-token-reuse",
+        "background-self-expanding-agent-runs"
       ]
     }
   ]

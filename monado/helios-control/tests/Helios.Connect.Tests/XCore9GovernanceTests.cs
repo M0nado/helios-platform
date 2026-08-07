@@ -38,7 +38,13 @@ public sealed class XCore9GovernanceTests
             Assert.NotEmpty(denyList);
             Assert.Contains("production-mutation-without-protected-approval", denyList);
             Assert.Contains("cross-tenant-secret-token-reuse", denyList);
+            Assert.Contains("background-self-expanding-agent-runs", denyList);
         }
+
+        var localWindows = modes.Single(mode => string.Equals(mode.GetProperty("id").GetString(), "local-windows", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(
+            "GET /health/ready returns 200",
+            localWindows.GetProperty("startupContract").GetProperty("healthProbe").GetString());
     }
 
     [Fact]
@@ -65,6 +71,8 @@ public sealed class XCore9GovernanceTests
         Assert.Contains("modelVersion", requiredFields);
         Assert.Contains("thresholds", requiredFields);
         Assert.Contains("evidenceLinks", requiredFields);
+        Assert.Contains("recommendation", requiredFields);
+        Assert.Contains("confidence", requiredFields);
         Assert.Contains("policyMode", requiredFields);
     }
 
@@ -116,6 +124,35 @@ public sealed class XCore9GovernanceTests
     }
 
     [Fact]
+    public void Knaa_evaluator_uses_weighted_scoring_model()
+    {
+        var policy = new XCore9KnaaPolicy("knaa-2026-08-06", new XCore9KnaaThresholds(0.35, 0.55, 0.75));
+        var evaluation = XCore9KnaaEvaluator.Evaluate(
+            new XCore9KnaaVector(1.0, 0.0, 1.0, 0.0),
+            policy,
+            new[] { "https://example.test/evidence/weighted" });
+
+        Assert.Equal(XCore9Recommendation.ReviewRequired, evaluation.Recommendation);
+        Assert.Equal(0.6, evaluation.CompositeScore);
+        Assert.Equal(XCore9Recommendation.ReviewRequired, evaluation.Audit.Recommendation);
+        Assert.Equal(evaluation.Confidence, evaluation.Audit.Confidence);
+    }
+
+    [Fact]
+    public void Knaa_evaluator_treats_non_finite_dimensions_as_unknown()
+    {
+        var policy = new XCore9KnaaPolicy("knaa-2026-08-06", new XCore9KnaaThresholds(0.35, 0.55, 0.75));
+        var evaluation = XCore9KnaaEvaluator.Evaluate(
+            new XCore9KnaaVector(double.NaN, 0.8, double.PositiveInfinity, null),
+            policy,
+            new[] { "https://example.test/evidence/non-finite" });
+
+        Assert.Equal(XCore9Recommendation.Unknown, evaluation.Recommendation);
+        Assert.Null(evaluation.CompositeScore);
+        Assert.Equal("insufficient-evidence", evaluation.Reason);
+    }
+
+    [Fact]
     public void Specialization_manifest_requires_lane_provenance_and_parallel_limits()
     {
         using var registry = ReadConfig("xcore9-specialization-packs.v1.json");
@@ -126,12 +163,12 @@ public sealed class XCore9GovernanceTests
 
         var lanes = root.GetProperty("multimodalRouting").GetProperty("lanes").EnumerateArray().ToList();
         Assert.NotEmpty(lanes);
-        foreach (var lane in lanes)
+        foreach (var provenance in lanes.Select(
+                     lane => lane.GetProperty("requiredProvenance").EnumerateArray()
+                         .Select(item => item.GetString())
+                         .Where(item => !string.IsNullOrWhiteSpace(item))
+                         .ToHashSet(StringComparer.OrdinalIgnoreCase)))
         {
-            var provenance = lane.GetProperty("requiredProvenance").EnumerateArray()
-                .Select(item => item.GetString())
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             Assert.Contains("correlationId", provenance);
             Assert.Contains("evidenceLinks", provenance);
         }
@@ -178,6 +215,21 @@ public sealed class XCore9GovernanceTests
     }
 
     [Fact]
+    public void Specialization_registry_requires_lane_provenance()
+    {
+        var registry = CreateRegistry();
+        var decision = registry.Evaluate(
+            CreateInvocation(
+                provenance: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["sourceCommit"] = "abc123",
+                }));
+
+        Assert.False(decision.Allowed);
+        Assert.Equal("missing-lane-provenance", decision.Code);
+    }
+
+    [Fact]
     public void Specialization_registry_emits_normalized_evidence_metadata()
     {
         var registry = CreateRegistry();
@@ -189,6 +241,10 @@ public sealed class XCore9GovernanceTests
         Assert.Equal("code", decision.Evidence.InputModality);
         Assert.Equal("telemetry", decision.Evidence.OutputModality);
         Assert.Equal(2, decision.Evidence.EvidenceLinks.Count);
+        Assert.Equal(900, decision.Evidence.TimeoutSeconds);
+        Assert.Equal("corr-123", decision.Evidence.Provenance["correlationId"]);
+        Assert.Equal("abc123", decision.Evidence.Provenance["sourceCommit"]);
+        Assert.Equal("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", decision.Evidence.Provenance["traceParent"]);
     }
 
     private static XCore9SpecializationRegistry CreateRegistry() =>
@@ -209,7 +265,8 @@ public sealed class XCore9GovernanceTests
     private static XCore9SpecializationInvocation CreateInvocation(
         string tool = "repo.read",
         int requestedParallelism = 2,
-        IReadOnlyList<string>? capabilityContracts = null) =>
+        IReadOnlyList<string>? capabilityContracts = null,
+        IReadOnlyDictionary<string, string>? provenance = null) =>
         new(
             PackId: "xcore9-code-analysis",
             Tool: tool,
@@ -219,11 +276,21 @@ public sealed class XCore9GovernanceTests
             CorrelationId: "corr-123",
             IdempotencyKey: "idem-123",
             EvidenceLinks: new[] { "https://example.test/evidence/10", "https://example.test/evidence/10", "https://example.test/evidence/11" },
-            CapabilityContracts: capabilityContracts ?? new[] { "capability.repo.read-only", "capability.tests.non-destructive" });
+            CapabilityContracts: capabilityContracts ?? new[] { "capability.repo.read-only", "capability.tests.non-destructive" },
+            Provenance: provenance ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["sourceCommit"] = "abc123",
+                ["traceParent"] = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            });
 
     private static JsonDocument ReadConfig(string fileName)
     {
-        var path = Path.Combine(ResolveRepositoryRoot(), "monado", "helios-control", "config", fileName);
+        if (string.IsNullOrWhiteSpace(fileName) || Path.IsPathRooted(fileName))
+        {
+            throw new ArgumentException("Configuration fileName must be relative.", nameof(fileName));
+        }
+
+        var path = CombineRelative(ResolveRepositoryRoot(), "monado", "helios-control", "config", fileName);
         return JsonDocument.Parse(File.ReadAllText(path));
     }
 
@@ -232,7 +299,7 @@ public sealed class XCore9GovernanceTests
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            var candidate = Path.Combine(directory.FullName, "monado", "helios-control", "config");
+            var candidate = CombineRelative(directory.FullName, "monado", "helios-control", "config");
             if (Directory.Exists(candidate))
             {
                 return directory.FullName;
@@ -242,5 +309,20 @@ public sealed class XCore9GovernanceTests
         }
 
         throw new InvalidOperationException("Repository root could not be resolved from test context.");
+    }
+
+    private static string CombineRelative(string basePath, params string[] segments)
+    {
+        if (string.IsNullOrWhiteSpace(basePath))
+        {
+            throw new ArgumentException("Base path is required.", nameof(basePath));
+        }
+
+        if (segments.Any(segment => string.IsNullOrWhiteSpace(segment) || Path.IsPathRooted(segment)))
+        {
+            throw new ArgumentException("All path segments must be non-empty relative paths.", nameof(segments));
+        }
+
+        return Path.Combine(basePath, Path.Combine(segments));
     }
 }

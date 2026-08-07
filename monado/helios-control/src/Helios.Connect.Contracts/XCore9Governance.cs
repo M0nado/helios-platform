@@ -36,16 +36,40 @@ public sealed record XCore9KnaaThresholds(
     }
 }
 
+public sealed record XCore9KnaaWeights(
+    double Knowledge = 0.3,
+    double Novelty = 0.2,
+    double Actionability = 0.3,
+    double Alignment = 0.2)
+{
+    public void Validate()
+    {
+        var values = new[] { Knowledge, Novelty, Actionability, Alignment };
+        if (values.Any(weight => weight is < 0 or > 1))
+        {
+            throw new ArgumentOutOfRangeException(nameof(Knowledge), "KNAA weights must be between 0 and 1.");
+        }
+
+        if (values.Sum() <= 0)
+        {
+            throw new ArgumentException("At least one KNAA weight must be greater than zero.");
+        }
+    }
+}
+
 public sealed record XCore9KnaaPolicy(
     string ModelVersion,
     XCore9KnaaThresholds Thresholds,
-    bool ConservativeAutoBlock = false);
+    bool ConservativeAutoBlock = false,
+    XCore9KnaaWeights? Weights = null);
 
 public sealed record XCore9KnaaAuditPayload(
     string ModelVersion,
     XCore9KnaaThresholds Thresholds,
     IReadOnlyList<string> EvidenceLinks,
-    string PolicyMode);
+    string PolicyMode,
+    XCore9Recommendation Recommendation,
+    double Confidence);
 
 public sealed record XCore9KnaaEvaluation(
     XCore9Recommendation Recommendation,
@@ -69,53 +93,80 @@ public static class XCore9KnaaEvaluator
         }
 
         policy.Thresholds.Validate();
+        var weights = policy.Weights ?? new XCore9KnaaWeights();
+        weights.Validate();
+
         var cleanedEvidence = CleanValues(evidenceLinks);
-        var values = BuildKnownValues(vector);
+        var values = BuildKnownValues(vector, weights);
         var confidence = values.Count / 4d;
-        var audit = new XCore9KnaaAuditPayload(
-            policy.ModelVersion,
-            policy.Thresholds,
-            cleanedEvidence,
-            policy.ConservativeAutoBlock ? "conservative-auto-block" : "advisory");
+        var policyMode = policy.ConservativeAutoBlock ? "conservative-auto-block" : "advisory";
 
         if (values.Count < 2)
         {
+            var unknownRecommendation = XCore9Recommendation.Unknown;
+            var audit = new XCore9KnaaAuditPayload(
+                policy.ModelVersion,
+                policy.Thresholds,
+                cleanedEvidence,
+                policyMode,
+                unknownRecommendation,
+                confidence);
             return new XCore9KnaaEvaluation(
-                XCore9Recommendation.Unknown,
+                unknownRecommendation,
                 null,
                 confidence,
                 "insufficient-evidence",
                 audit);
         }
 
-        var score = values.Average();
+        var weightTotal = values.Sum(value => value.Weight);
+        if (weightTotal <= 0)
+        {
+            throw new InvalidOperationException("Known KNAA dimensions must include at least one positive weight.");
+        }
+
+        var score = values.Sum(value => value.Value * value.Weight) / weightTotal;
         var recommendation = ResolveRecommendation(score, policy, out var reason);
+        var scoredAudit = new XCore9KnaaAuditPayload(
+            policy.ModelVersion,
+            policy.Thresholds,
+            cleanedEvidence,
+            policyMode,
+            recommendation,
+            confidence);
         return new XCore9KnaaEvaluation(
             recommendation,
             score,
             confidence,
             reason,
-            audit);
+            scoredAudit);
     }
 
-    private static List<double> BuildKnownValues(XCore9KnaaVector vector)
+    private sealed record XCore9KnaaDimensionValue(double Value, double Weight);
+
+    private static List<XCore9KnaaDimensionValue> BuildKnownValues(XCore9KnaaVector vector, XCore9KnaaWeights weights)
     {
-        var values = new List<double>(4);
-        AddKnownValue(values, vector.Knowledge);
-        AddKnownValue(values, vector.Novelty);
-        AddKnownValue(values, vector.Actionability);
-        AddKnownValue(values, vector.Alignment);
+        var values = new List<XCore9KnaaDimensionValue>(4);
+        AddKnownValue(values, vector.Knowledge, weights.Knowledge);
+        AddKnownValue(values, vector.Novelty, weights.Novelty);
+        AddKnownValue(values, vector.Actionability, weights.Actionability);
+        AddKnownValue(values, vector.Alignment, weights.Alignment);
         return values;
     }
 
-    private static void AddKnownValue(ICollection<double> values, double? candidate)
+    private static void AddKnownValue(ICollection<XCore9KnaaDimensionValue> values, double? candidate, double weight)
     {
         if (!candidate.HasValue)
         {
             return;
         }
 
-        values.Add(Math.Clamp(candidate.Value, 0d, 1d));
+        if (!double.IsFinite(candidate.Value) || weight <= 0)
+        {
+            return;
+        }
+
+        values.Add(new XCore9KnaaDimensionValue(Math.Clamp(candidate.Value, 0d, 1d), weight));
     }
 
     private static List<string> CleanValues(IReadOnlyList<string>? values) =>
@@ -179,13 +230,16 @@ public sealed record XCore9SpecializationInvocation(
     string CorrelationId,
     string? IdempotencyKey,
     IReadOnlyList<string> EvidenceLinks,
-    IReadOnlyList<string> CapabilityContracts);
+    IReadOnlyList<string> CapabilityContracts,
+    IReadOnlyDictionary<string, string>? Provenance = null);
 
 public sealed record XCore9RoutingEvidence(
     string CorrelationId,
     string InputModality,
     string OutputModality,
-    IReadOnlyList<string> EvidenceLinks);
+    IReadOnlyList<string> EvidenceLinks,
+    IReadOnlyDictionary<string, string> Provenance,
+    int TimeoutSeconds);
 
 public sealed record XCore9SpecializationDecision(
     bool Allowed,
@@ -196,8 +250,46 @@ public sealed record XCore9SpecializationDecision(
 public sealed class XCore9SpecializationRegistry
 {
     private readonly IReadOnlyDictionary<string, XCore9SpecializationPack> _packs;
+    private readonly IReadOnlyDictionary<string, IReadOnlySet<string>> _laneProvenanceRequirements;
 
-    public XCore9SpecializationRegistry(IEnumerable<XCore9SpecializationPack> packs)
+    private static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> DefaultLaneProvenanceRequirements =
+        new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["text"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "correlationId",
+                "evidenceLinks",
+                "sourceEventId",
+            },
+            ["code"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "correlationId",
+                "evidenceLinks",
+                "sourceCommit",
+            },
+            ["docs"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "correlationId",
+                "evidenceLinks",
+                "documentId",
+            },
+            ["telemetry"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "correlationId",
+                "evidenceLinks",
+                "traceParent",
+            },
+            ["media"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "correlationId",
+                "evidenceLinks",
+                "mediaDigest",
+            },
+        };
+
+    public XCore9SpecializationRegistry(
+        IEnumerable<XCore9SpecializationPack> packs,
+        IReadOnlyDictionary<string, IReadOnlyCollection<string>>? laneProvenanceRequirements = null)
     {
         ArgumentNullException.ThrowIfNull(packs);
         _packs = packs.ToDictionary(
@@ -205,6 +297,9 @@ public sealed class XCore9SpecializationRegistry
                 ? pack.Id
                 : throw new ArgumentException("Pack ID is required.", nameof(packs)),
             StringComparer.OrdinalIgnoreCase);
+        _laneProvenanceRequirements = laneProvenanceRequirements is null
+            ? DefaultLaneProvenanceRequirements
+            : NormalizeLaneProvenanceRequirements(laneProvenanceRequirements);
     }
 
     public XCore9SpecializationDecision Evaluate(XCore9SpecializationInvocation invocation)
@@ -272,11 +367,30 @@ public sealed class XCore9SpecializationRegistry
             return Deny("missing-idempotency-key", "Idempotency key is required by this pack.");
         }
 
+        if (pack.TimeoutSeconds <= 0)
+        {
+            return Deny("invalid-pack-timeout", "Pack timeoutSeconds must be greater than zero.");
+        }
+
+        var provenance = NormalizeProvenance(invocation.Provenance, invocation.CorrelationId, evidence);
+        var requiredProvenance = RequiredProvenanceForModalities(invocation.InputModality, invocation.OutputModality);
+        var missingProvenance = requiredProvenance
+            .Where(required => !provenance.ContainsKey(required))
+            .ToArray();
+        if (missingProvenance.Length > 0)
+        {
+            return Deny(
+                "missing-lane-provenance",
+                $"Missing lane provenance fields: {string.Join(", ", missingProvenance)}");
+        }
+
         var routingEvidence = new XCore9RoutingEvidence(
             invocation.CorrelationId,
             invocation.InputModality,
             invocation.OutputModality,
-            evidence);
+            evidence,
+            provenance,
+            pack.TimeoutSeconds);
         return new XCore9SpecializationDecision(true, "allowed", "Invocation is allowed.", routingEvidence);
     }
 
@@ -294,4 +408,67 @@ public sealed class XCore9SpecializationRegistry
             .Select(value => value.Trim())
             .Distinct(StringComparer.Ordinal)
             .ToList();
+
+    private IReadOnlySet<string> RequiredProvenanceForModalities(params string[] modalities)
+    {
+        var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var modality in modalities)
+        {
+            if (_laneProvenanceRequirements.TryGetValue(modality, out var modalityRequirements))
+            {
+                required.UnionWith(modalityRequirements);
+            }
+        }
+
+        return required;
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlySet<string>> NormalizeLaneProvenanceRequirements(
+        IReadOnlyDictionary<string, IReadOnlyCollection<string>> requirements)
+    {
+        var normalized = new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in requirements)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Key))
+            {
+                continue;
+            }
+
+            var keys = new HashSet<string>(
+                (entry.Value ?? Array.Empty<string>())
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Select(value => value.Trim()),
+                StringComparer.OrdinalIgnoreCase);
+            if (keys.Count > 0)
+            {
+                normalized[entry.Key.Trim()] = keys;
+            }
+        }
+
+        return normalized;
+    }
+
+    private static IReadOnlyDictionary<string, string> NormalizeProvenance(
+        IReadOnlyDictionary<string, string>? values,
+        string correlationId,
+        IReadOnlyList<string> evidenceLinks)
+    {
+        var normalized = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (values is not null)
+        {
+            foreach (var entry in values)
+            {
+                if (string.IsNullOrWhiteSpace(entry.Key) || string.IsNullOrWhiteSpace(entry.Value))
+                {
+                    continue;
+                }
+
+                normalized[entry.Key.Trim()] = entry.Value.Trim();
+            }
+        }
+
+        normalized["correlationId"] = correlationId.Trim();
+        normalized["evidenceLinks"] = string.Join(",", evidenceLinks);
+        return normalized;
+    }
 }
