@@ -27,6 +27,29 @@ EXPECTED_PROFILES = {
 }
 EXPECTED_STATE_IDS = {"recovery", "quarantine"}
 EXPECTED_OVERLAY_IDS = {"airgap"}
+EXPECTED_EVENT_ENVELOPE_FIELDS = [
+    "schemaVersion",
+    "eventId",
+    "source",
+    "eventType",
+    "repository",
+    "correlationId",
+    "environment",
+    "occurredAt",
+    "dataClassification",
+    "links",
+    "payload",
+]
+EXPECTED_IDEMPOTENCY_INPUT_FIELDS = [
+    "routeId",
+    "source.eventId",
+    "target.system",
+    "operation",
+]
+EXPECTED_IDEMPOTENCY_TEMPLATE = (
+    "sha256(normalized-length-prefixed:{routeId}:{source.eventId}:{target.system}:{operation})"
+)
+READ_ONLY_ROUTE_OPERATIONS = {"read-only-mirror-record"}
 
 
 def _read_json(path: Path) -> dict:
@@ -104,11 +127,30 @@ def validate_profiles_contract(profiles_contract: dict) -> list[str]:
     )
 
     profiles = profiles_contract.get("profiles", [])
-    profile_ids = {p.get("id") for p in profiles if isinstance(p, dict)}
+    if not isinstance(profiles, list):
+        return errors + ["profiles.profiles must be an array"]
+
+    profile_ids = [p.get("id") for p in profiles if isinstance(p, dict)]
+    duplicate_profile_ids = sorted(
+        {
+            profile_id
+            for profile_id in profile_ids
+            if isinstance(profile_id, str) and profile_ids.count(profile_id) > 1
+        }
+    )
     _append(
         errors,
-        profile_ids == EXPECTED_PROFILES,
-        f"profiles set mismatch: expected {sorted(EXPECTED_PROFILES)} got {sorted(profile_ids)}",
+        len(profile_ids) == len(EXPECTED_PROFILES),
+        "profiles must declare exactly eight permanent profiles",
+    )
+    if duplicate_profile_ids:
+        errors.append(f"profiles must not contain duplicate profile ids: {duplicate_profile_ids}")
+
+    profile_id_set = set(profile_ids)
+    _append(
+        errors,
+        profile_id_set == EXPECTED_PROFILES,
+        f"profiles set mismatch: expected {sorted(EXPECTED_PROFILES)} got {sorted(profile_id_set)}",
     )
 
     admins = [p for p in profiles if isinstance(p, dict) and p.get("administrator") is True]
@@ -197,7 +239,24 @@ def validate_storage_contract(storage_contract: dict) -> list[str]:
     )
     _append(errors, isinstance(d_drive, dict), "storage disk1 must include dynamic D: VHDX dev drive")
     _append(errors, isinstance(v_drive, dict), "storage disk1 must include V: vault VHDX")
+    if isinstance(d_drive, dict):
+        _append(errors, d_drive.get("type") == "VHDX", "storage D: dev drive must be VHDX")
+        _append(errors, d_drive.get("allocation") == "dynamic", "storage D: dev drive must use dynamic allocation")
+        _append(errors, d_drive.get("fileSystem") == "ReFS", "storage D: dev drive must use ReFS")
+        _append(
+            errors,
+            d_drive.get("hostedOnVolume") == "MONADO_DOMAINS",
+            "storage D: dev drive must be hosted on MONADO_DOMAINS",
+        )
     if isinstance(v_drive, dict):
+        _append(errors, v_drive.get("type") == "VHDX", "storage V: vault drive must be VHDX")
+        _append(errors, v_drive.get("allocation") == "dynamic", "storage V: vault drive must use dynamic allocation")
+        _append(errors, v_drive.get("fileSystem") == "NTFS", "storage V: vault drive must use NTFS")
+        _append(
+            errors,
+            v_drive.get("hostedOnVolume") == "MONADO_DOMAINS",
+            "storage V: vault drive must be hosted on MONADO_DOMAINS",
+        )
         _append(errors, v_drive.get("autoMount") is False, "storage V: vault VHDX must never auto-mount")
         _append(errors, v_drive.get("bitLocker") == "required", "storage V: vault VHDX must require BitLocker")
     return errors
@@ -230,7 +289,7 @@ def validate_experience_contract(experience_contract: dict) -> list[str]:
     return errors
 
 
-def validate_sync_contract(sync_contract: dict) -> list[str]:
+def validate_sync_contract(sync_contract: dict, root: Path = REPOSITORY_ROOT) -> list[str]:
     errors: list[str] = []
     _append(errors, sync_contract.get("executionMode") == "proposal-only", "sync.executionMode must be proposal-only")
     _append(
@@ -238,13 +297,59 @@ def validate_sync_contract(sync_contract: dict) -> list[str]:
         sync_contract.get("directExternalDeliveryEnabled") is False,
         "sync.directExternalDeliveryEnabled must be false",
     )
+    normalized_envelope = sync_contract.get("normalizedEnvelope", {})
+    if isinstance(normalized_envelope, dict):
+        required_fields = normalized_envelope.get("requiredFields")
+        if isinstance(required_fields, list):
+            _append(
+                errors,
+                required_fields == EXPECTED_EVENT_ENVELOPE_FIELDS,
+                "sync.normalizedEnvelope.requiredFields must match the canonical integration envelope",
+            )
+        else:
+            errors.append("sync.normalizedEnvelope.requiredFields must be an array")
+
+        schema_reference = normalized_envelope.get("schemaReference")
+        if isinstance(schema_reference, str):
+            schema_path = _resolve_contract_path(root, schema_reference)
+            if schema_path.is_file():
+                schema_contract = _read_json(schema_path)
+                schema_required_fields = schema_contract.get("required")
+                if isinstance(schema_required_fields, list):
+                    _append(
+                        errors,
+                        required_fields == schema_required_fields,
+                        "sync.normalizedEnvelope.requiredFields must match schemaReference.required",
+                    )
+                else:
+                    errors.append("sync.normalizedEnvelope.schemaReference must declare required fields")
+            else:
+                errors.append(f"sync.normalizedEnvelope.schemaReference points to missing file: {schema_reference}")
+        else:
+            errors.append("sync.normalizedEnvelope.schemaReference must be a string path")
+    else:
+        errors.append("sync.normalizedEnvelope must be an object")
+
     idempotency = sync_contract.get("idempotency", {})
     _append(
         errors,
-        isinstance(idempotency, dict) and str(idempotency.get("keyTemplate", "")).startswith(
-            "sha256(normalized-length-prefixed:"
-        ),
-        "sync.idempotency.keyTemplate must be normalized length-prefixed sha256",
+        isinstance(idempotency, dict) and idempotency.get("algorithm") == "sha256",
+        "sync.idempotency.algorithm must be sha256",
+    )
+    _append(
+        errors,
+        isinstance(idempotency, dict) and idempotency.get("normalization") == "nfc+trim+length-prefixed-utf8",
+        "sync.idempotency.normalization must be nfc+trim+length-prefixed-utf8",
+    )
+    _append(
+        errors,
+        isinstance(idempotency, dict) and idempotency.get("inputFields") == EXPECTED_IDEMPOTENCY_INPUT_FIELDS,
+        "sync.idempotency.inputFields must match canonical normalized key inputs",
+    )
+    _append(
+        errors,
+        isinstance(idempotency, dict) and idempotency.get("keyTemplate") == EXPECTED_IDEMPOTENCY_TEMPLATE,
+        "sync.idempotency.keyTemplate must match canonical normalized template",
     )
     surfaces = sync_contract.get("surfaces", {})
     if isinstance(surfaces, dict):
@@ -258,6 +363,38 @@ def validate_sync_contract(sync_contract: dict) -> list[str]:
         )
     else:
         errors.append("sync.surfaces must be an object")
+
+    routes = sync_contract.get("routes", [])
+    approvals = sync_contract.get("approvals", {})
+    required_for = approvals.get("requiredFor", []) if isinstance(approvals, dict) else []
+    privileged_operations = {
+        operation for operation in required_for if isinstance(operation, str)
+    }
+    if not isinstance(routes, list):
+        errors.append("sync.routes must be an array")
+    else:
+        for route in routes:
+            if not isinstance(route, dict):
+                errors.append("sync.routes entries must be objects")
+                continue
+            route_id = route.get("routeId", "<unknown>")
+            operation = route.get("operation")
+            requires_approval = route.get("requiresApproval")
+            if not isinstance(operation, str):
+                errors.append(f"sync.routes[{route_id}].operation must be a string")
+                continue
+            if operation in privileged_operations:
+                _append(
+                    errors,
+                    requires_approval is True,
+                    f"sync.routes[{route_id}] operation {operation} must require approval",
+                )
+            if requires_approval is False:
+                _append(
+                    errors,
+                    operation in READ_ONLY_ROUTE_OPERATIONS,
+                    f"sync.routes[{route_id}] may disable approval only for read-only operations",
+                )
     return errors
 
 
@@ -357,7 +494,7 @@ def validate_contract_bundle(root: Path) -> list[str]:
     errors.extend(validate_storage_contract(bundle["storage"]))
     errors.extend(validate_profiles_contract(bundle["profiles"]))
     errors.extend(validate_experience_contract(bundle["experience"]))
-    errors.extend(validate_sync_contract(bundle["synchronization"]))
+    errors.extend(validate_sync_contract(bundle["synchronization"], root))
     errors.extend(validate_repository_map_contract(bundle["repositoryMap"]))
     errors.extend(validate_profile_manifests(_resolve_contract_path(root, index["profileManifestDirectory"]), EXPECTED_PROFILES))
     return errors

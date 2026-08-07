@@ -42,6 +42,13 @@ class MonadoEnterpriseV2ValidationTests(unittest.TestCase):
         errors = validate_profiles_contract(candidate)
         self.assertTrue(any("exactly one administrator profile" in error for error in errors))
 
+    def test_profiles_fail_when_duplicate_profile_id_exists(self) -> None:
+        candidate = copy.deepcopy(self.bundle["profiles"])
+        duplicate = copy.deepcopy(next(profile for profile in candidate["profiles"] if profile["id"] == "core"))
+        candidate["profiles"][-1] = duplicate
+        errors = validate_profiles_contract(candidate)
+        self.assertTrue(any("duplicate profile ids" in error for error in errors))
+
     def test_profiles_fail_when_recovery_is_misclassified(self) -> None:
         candidate = copy.deepcopy(self.bundle["profiles"])
         candidate["states"] = [state for state in candidate["states"] if state["id"] != "recovery"]
@@ -62,6 +69,14 @@ class MonadoEnterpriseV2ValidationTests(unittest.TestCase):
         vault["autoMount"] = True
         errors = validate_storage_contract(candidate)
         self.assertTrue(any("must never auto-mount" in error for error in errors))
+
+    def test_storage_fails_when_dev_drive_contract_is_weakened(self) -> None:
+        candidate = copy.deepcopy(self.bundle["storage"])
+        disk1 = next(disk for disk in candidate["disks"] if disk["id"] == "disk1")
+        dev_drive = next(virtual_disk for virtual_disk in disk1["virtualDisks"] if virtual_disk["preferredLetter"] == "D")
+        dev_drive["type"] = "fixed"
+        errors = validate_storage_contract(candidate)
+        self.assertTrue(any("D: dev drive must be VHDX" in error for error in errors))
 
     def test_experience_fails_when_alvis_is_admin(self) -> None:
         candidate = copy.deepcopy(self.bundle["experience"])
@@ -86,6 +101,26 @@ class MonadoEnterpriseV2ValidationTests(unittest.TestCase):
         candidate["surfaces"]["azure-devops"]["readOnly"] = False
         errors = validate_sync_contract(candidate)
         self.assertTrue(any("azure-devops must be read-only" in error for error in errors))
+
+    def test_sync_fails_when_required_fields_do_not_match_envelope_schema(self) -> None:
+        candidate = copy.deepcopy(self.bundle["synchronization"])
+        candidate["normalizedEnvelope"]["requiredFields"] = ["payload"]
+        errors = validate_sync_contract(candidate)
+        self.assertTrue(any("requiredFields must match" in error for error in errors))
+
+    def test_sync_fails_when_privileged_route_skips_approval(self) -> None:
+        candidate = copy.deepcopy(self.bundle["synchronization"])
+        route = candidate["routes"][0]
+        route["operation"] = "production-deployment"
+        route["requiresApproval"] = False
+        errors = validate_sync_contract(candidate)
+        self.assertTrue(any("must require approval" in error for error in errors))
+
+    def test_sync_fails_when_idempotency_inputs_are_not_canonical(self) -> None:
+        candidate = copy.deepcopy(self.bundle["synchronization"])
+        candidate["idempotency"]["inputFields"] = ["routeId"]
+        errors = validate_sync_contract(candidate)
+        self.assertTrue(any("inputFields must match canonical normalized key inputs" in error for error in errors))
 
     def test_repository_map_fails_when_canonical_repo_changes(self) -> None:
         candidate = copy.deepcopy(self.bundle["repositoryMap"])

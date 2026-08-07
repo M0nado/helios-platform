@@ -46,7 +46,9 @@
                 "const": "core"
               }
             }
-          }
+          },
+          "minContains": 1,
+          "maxContains": 1
         },
         {
           "contains": {
@@ -59,7 +61,9 @@
                 "const": "developer"
               }
             }
-          }
+          },
+          "minContains": 1,
+          "maxContains": 1
         },
         {
           "contains": {
@@ -72,7 +76,9 @@
                 "const": "gamer"
               }
             }
-          }
+          },
+          "minContains": 1,
+          "maxContains": 1
         },
         {
           "contains": {
@@ -85,7 +91,9 @@
                 "const": "studio"
               }
             }
-          }
+          },
+          "minContains": 1,
+          "maxContains": 1
         },
         {
           "contains": {
@@ -98,7 +106,9 @@
                 "const": "personal"
               }
             }
-          }
+          },
+          "minContains": 1,
+          "maxContains": 1
         },
         {
           "contains": {
@@ -111,7 +121,9 @@
                 "const": "sysops"
               }
             }
-          }
+          },
+          "minContains": 1,
+          "maxContains": 1
         },
         {
           "contains": {
@@ -124,7 +136,9 @@
                 "const": "ai-server"
               }
             }
-          }
+          },
+          "minContains": 1,
+          "maxContains": 1
         },
         {
           "contains": {
@@ -149,7 +163,9 @@
                 "const": false
               }
             }
-          }
+          },
+          "minContains": 1,
+          "maxContains": 1
         }
       ]
     },

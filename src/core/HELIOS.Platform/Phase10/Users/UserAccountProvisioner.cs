@@ -317,23 +317,10 @@ namespace HELIOS.Platform.Phase10.Users
 
                 if (accounts.Count == 0)
                 {
-                    accounts.Add(new UserAccountInfo
+                    lock (_lockObject)
                     {
-                        Username = Environment.UserName,
-                        FullName = Environment.UserName,
-                        Disabled = false,
-                        Sid = $"local:{Environment.UserName}"
-                    });
-                }
-                else if (!accounts.Any(a => string.Equals(a.Username, Environment.UserName, StringComparison.OrdinalIgnoreCase)))
-                {
-                    accounts.Add(new UserAccountInfo
-                    {
-                        Username = Environment.UserName,
-                        FullName = Environment.UserName,
-                        Disabled = false,
-                        Sid = $"local:{Environment.UserName}"
-                    });
+                        LogMessage("No accounts were returned by Win32_UserAccount.", LogLevel.Warning);
+                    }
                 }
 
                 return accounts;

@@ -144,11 +144,27 @@
                     "contains": {
                       "type": "object",
                       "required": [
-                        "preferredLetter"
+                        "preferredLetter",
+                        "type",
+                        "allocation",
+                        "fileSystem",
+                        "hostedOnVolume"
                       ],
                       "properties": {
                         "preferredLetter": {
                           "const": "D"
+                        },
+                        "type": {
+                          "const": "VHDX"
+                        },
+                        "allocation": {
+                          "const": "dynamic"
+                        },
+                        "fileSystem": {
+                          "const": "ReFS"
+                        },
+                        "hostedOnVolume": {
+                          "const": "MONADO_DOMAINS"
                         }
                       }
                     }
@@ -158,7 +174,12 @@
                       "type": "object",
                       "required": [
                         "preferredLetter",
-                        "autoMount"
+                        "autoMount",
+                        "type",
+                        "allocation",
+                        "fileSystem",
+                        "hostedOnVolume",
+                        "bitLocker"
                       ],
                       "properties": {
                         "preferredLetter": {
@@ -166,6 +187,21 @@
                         },
                         "autoMount": {
                           "const": false
+                        },
+                        "type": {
+                          "const": "VHDX"
+                        },
+                        "allocation": {
+                          "const": "dynamic"
+                        },
+                        "fileSystem": {
+                          "const": "NTFS"
+                        },
+                        "hostedOnVolume": {
+                          "const": "MONADO_DOMAINS"
+                        },
+                        "bitLocker": {
+                          "const": "required"
                         }
                       }
                     }
