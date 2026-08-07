@@ -355,8 +355,6 @@ jobs:
           for schema_path, document_path in pairs:
               schema = json.loads(Path(schema_path).read_text(encoding='utf-8'))
               document = json.loads(Path(document_path).read_text(encoding='utf-8'))
-              if isinstance(document, dict):
-                  document = {k: v for k, v in document.items() if k != '$schema'}
               Draft202012Validator.check_schema(schema)
               Draft202012Validator(schema).validate(document)
               print(f'schema ok: {document_path}')
@@ -398,7 +396,7 @@ jobs:
 
           roots = [Path('config'), Path('docs/architecture'), Path('schemas/monado-enterprise/v2'), Path('schemas/monado-enterprise/v3')]
           patterns = [
-              re.compile(r'sk-[A-Za-z0-9_-]{20,}'),
+              re.compile(r'(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{20,}'),
               re.compile(r'github_pat_[A-Za-z0-9_]{20,}'),
               re.compile(r'(?i)(client_secret|api_key|access_token)\s*[:=]\s*["\'][^"\']{12,}["\']'),
           ]

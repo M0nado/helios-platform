@@ -12,28 +12,51 @@ $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
 
 $results = $config.tools | ForEach-Object -Parallel {
     $tool = $_
+    $expectedVersion = $null
+    $pinnedVersionProperty = $tool.PSObject.Properties['pinnedVersion']
+    if ($null -ne $pinnedVersionProperty) {
+        $candidatePinnedVersion = [string]$pinnedVersionProperty.Value
+        if (-not [string]::IsNullOrWhiteSpace($candidatePinnedVersion)) {
+            $expectedVersion = $candidatePinnedVersion.Trim()
+        }
+    }
+
     if ($tool.networkRequired -and -not $using:IncludeNetworkTools) {
-        return [pscustomobject]@{ id = $tool.id; found = $false; status = 'network-check-skipped'; version = $null; required = $tool.required }
+        return [pscustomobject]@{ id = $tool.id; found = $false; status = 'network-check-skipped'; version = $null; expectedVersion = $expectedVersion; required = $tool.required }
     }
     $resolved = Get-Command $tool.command -ErrorAction SilentlyContinue
     if (-not $resolved) {
-        return [pscustomobject]@{ id = $tool.id; found = $false; status = 'missing'; version = $null; required = $tool.required }
+        return [pscustomobject]@{ id = $tool.id; found = $false; status = 'missing'; version = $null; expectedVersion = $expectedVersion; required = $tool.required }
     }
     try {
         $output = & $tool.command @($tool.arguments) 2>&1
         $exitCode = $LASTEXITCODE
         $firstLine = $output | ForEach-Object { "$_".Trim() } | Where-Object { $_ } | Select-Object -First 1
         if ($firstLine -and $firstLine.Length -gt 180) { $firstLine = $firstLine.Substring(0, 180) }
+        $status = if ($exitCode -eq 0) { 'ready' } else { 'error' }
+        if ($status -eq 'ready' -and $expectedVersion) {
+            $detectedVersion = $null
+            if ($firstLine) {
+                $match = [regex]::Match($firstLine, '\d+\.\d+\.\d+(?:[-+][0-9A-Za-z\.-]+)?')
+                if ($match.Success) {
+                    $detectedVersion = $match.Value
+                }
+            }
+            if ($detectedVersion -ne $expectedVersion) {
+                $status = 'version-mismatch'
+            }
+        }
         [pscustomobject]@{
             id = $tool.id
             found = $true
-            status = if ($exitCode -eq 0) { 'ready' } else { 'error' }
+            status = $status
             version = $firstLine
+            expectedVersion = $expectedVersion
             required = $tool.required
         }
     }
     catch {
-        [pscustomobject]@{ id = $tool.id; found = $true; status = 'error'; version = $null; required = $tool.required }
+        [pscustomobject]@{ id = $tool.id; found = $true; status = 'error'; version = $null; expectedVersion = $expectedVersion; required = $tool.required }
     }
 } -ThrottleLimit $ThrottleLimit
 

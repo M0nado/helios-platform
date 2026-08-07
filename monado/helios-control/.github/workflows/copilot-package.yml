@@ -1,13 +1,24 @@
 name: helios-copilot-package
 
 on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
   pull_request:
     paths:
       - .github/workflows/copilot-package.yml
       - monado/helios-control/appPackage/**
       - monado/helios-control/config/microsoft-agents.json
+      - monado/helios-control/config/microsoft-toolchain.json
+      - monado/helios-control/config/cli-matrix.json
+      - monado/helios-control/security/m365agentstoolkit-cli-audit/**
+      - monado/helios-control/scripts/Invoke-M365AgentsToolkitAuditGate.ps1
       - appPackage/**
       - config/microsoft-agents.json
+      - config/microsoft-toolchain.json
+      - config/cli-matrix.json
+      - security/m365agentstoolkit-cli-audit/**
+      - scripts/Invoke-M365AgentsToolkitAuditGate.ps1
 
 permissions:
   contents: read
@@ -37,13 +48,15 @@ jobs:
           fi
           echo "directory=${directory}" >> "${GITHUB_OUTPUT}"
 
-      - name: Set up pinned Node.js
+      - name: Set up pinned Node.js for Toolkit audit gate
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
-          node-version: 22
+          node-version: 24
 
-      - name: Verify pinned Microsoft 365 Agents Toolkit CLI
-        run: npx --yes @microsoft/m365agentstoolkit-cli@1.1.12 --version
+      - name: Enforce Microsoft 365 Agents Toolkit audit gate
+        shell: pwsh
+        run: ./scripts/Invoke-M365AgentsToolkitAuditGate.ps1
+        working-directory: ${{ steps.project.outputs.directory }}
 
       - name: Materialize Teams package icons
         shell: pwsh

@@ -11,19 +11,20 @@ RESULT_DIR="$(mktemp -d)"
 trap 'rm -rf "$RESULT_DIR"' EXIT
 
 run_check() {
-  local item="$1" id command_name network_required required output status
+  local item="$1" id command_name network_required required pinned_version output status status_label detected_version
   id="$(jq -r '.id' <<<"$item")"
   command_name="$(jq -r '.command' <<<"$item")"
   network_required="$(jq -r '.networkRequired' <<<"$item")"
   required="$(jq -r '.required' <<<"$item")"
+  pinned_version="$(jq -r '.pinnedVersion // ""' <<<"$item")"
   if [[ "$network_required" == true && "$INCLUDE_NETWORK" != true ]]; then
-    jq -nc --arg id "$id" --argjson required "$required" \
-      '{id:$id,found:false,status:"network-check-skipped",version:null,required:$required}' > "${RESULT_DIR}/${id}.json"
+    jq -nc --arg id "$id" --arg expectedVersion "$pinned_version" --argjson required "$required" \
+      '{id:$id,found:false,status:"network-check-skipped",version:null,expectedVersion:(if $expectedVersion=="" then null else $expectedVersion end),required:$required}' > "${RESULT_DIR}/${id}.json"
     return
   fi
   if ! command -v "$command_name" >/dev/null; then
-    jq -nc --arg id "$id" --argjson required "$required" \
-      '{id:$id,found:false,status:"missing",version:null,required:$required}' > "${RESULT_DIR}/${id}.json"
+    jq -nc --arg id "$id" --arg expectedVersion "$pinned_version" --argjson required "$required" \
+      '{id:$id,found:false,status:"missing",version:null,expectedVersion:(if $expectedVersion=="" then null else $expectedVersion end),required:$required}' > "${RESULT_DIR}/${id}.json"
     return
   fi
   mapfile -t arguments < <(jq -r '.arguments[]' <<<"$item")
@@ -32,9 +33,18 @@ run_check() {
   status=$?
   set -e
   output="$(sed -n '/./{s/[[:space:]]\+/ /g;p;q;}' <<<"$output" | cut -c1-180)"
-  jq -nc --arg id "$id" --arg version "$output" --argjson required "$required" \
-    --argjson ok "$([[ $status -eq 0 ]] && echo true || echo false)" \
-    '{id:$id,found:true,status:(if $ok then "ready" else "error" end),version:$version,required:$required}' > "${RESULT_DIR}/${id}.json"
+  status_label="error"
+  if [[ $status -eq 0 ]]; then
+    status_label="ready"
+  fi
+  if [[ "$status_label" == "ready" && -n "$pinned_version" ]]; then
+    detected_version="$(grep -Eo '[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?' <<<"$output" | head -n1 || true)"
+    if [[ -z "$detected_version" || "$detected_version" != "$pinned_version" ]]; then
+      status_label="version-mismatch"
+    fi
+  fi
+  jq -nc --arg id "$id" --arg version "$output" --arg status "$status_label" --arg expectedVersion "$pinned_version" --argjson required "$required" \
+    '{id:$id,found:true,status:$status,version:$version,expectedVersion:(if $expectedVersion=="" then null else $expectedVersion end),required:$required}' > "${RESULT_DIR}/${id}.json"
 }
 
 while IFS= read -r item; do run_check "$item" & done < <(jq -c '.tools[]' "$CONFIG")

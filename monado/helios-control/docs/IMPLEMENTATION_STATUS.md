@@ -63,6 +63,10 @@
 - Tenant-wide Graph consent, Copilot publication, Conditional Access changes, production RBAC, and Azure deployment require explicit administrator approval.
 - No CLI, VS Code extension, Claude package, or tenant application is installed
   automatically by repository scripts.
+- Microsoft 365 Agents Toolkit CLI automatic installation is now controlled by
+  a dual-graph Node 24 audit gate (`automaticInstall: true` only when both the
+  lockfile fixture audit and direct-install audit report zero high/critical
+  advisories).
 - No Claude, Copilot, OpenAI, or Foundry provider session starts automatically.
 - Online OpenAI remains disabled until an administrator approves a Key Vault
   secret/reference, managed-identity RBAC, model selection, and the protected
