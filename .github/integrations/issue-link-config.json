@@ -6,6 +6,6 @@
     "linkPattern":  "all",
     "projectNumber":  3,
     "fieldDefaults":  {
-                          "Status":  "New"
+                          "Status":  "Backlog"
                       }
 }

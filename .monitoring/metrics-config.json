@@ -9,6 +9,11 @@
                         "threshold":  300
                     },
                     {
+                        "name":  "Build Duration",
+                        "unit":  "seconds",
+                        "threshold":  300
+                    },
+                    {
                         "name":  "Deployment Success Rate",
                         "unit":  "percent",
                         "threshold":  95

@@ -352,7 +352,19 @@ function Write-LocalFieldRecord {
     $fieldRecord | ConvertTo-Json -Depth 10 | Set-Content -Path ".fields/$fieldFileName.json"
 }
 
-function Get-ExistingProjectFieldId {
+function Get-DesiredGraphQlDataType {
+    param([string]$FieldType)
+
+    $dataTypeMap = @{
+        'SingleSelect' = 'SINGLE_SELECT'
+        'Text' = 'TEXT'
+        'Date' = 'DATE'
+    }
+
+    return $dataTypeMap[$FieldType]
+}
+
+function Get-ExistingProjectField {
     param([string]$FieldName)
 
     $fieldQuery = @'
@@ -365,10 +377,14 @@ query ($org: String!, $projectNum: Int!) {
           ... on ProjectV2Field {
             id
             name
+            dataType
           }
           ... on ProjectV2SingleSelectField {
             id
             name
+            options {
+              name
+            }
           }
           ... on ProjectV2IterationField {
             id
@@ -387,11 +403,59 @@ query ($org: String!, $projectNum: Int!) {
     }
 
     $matchingField = $result.organization.projectV2.fields.nodes | Where-Object { $_.name -eq $FieldName } | Select-Object -First 1
-    if ($matchingField) {
-        return $matchingField.id
+    return $matchingField
+}
+
+function Test-ExistingFieldCompatibility {
+    param(
+        [hashtable]$FieldDef,
+        [object]$ExistingField
+    )
+
+    $desiredDataType = Get-DesiredGraphQlDataType -FieldType $FieldDef.type
+    if (-not $desiredDataType) {
+        return @{ isCompatible = $false; reason = "Unsupported desired field type '$($FieldDef.type)'" }
     }
 
-    return $null
+    if ($desiredDataType -eq 'SINGLE_SELECT') {
+        if ($ExistingField.__typename -ne 'ProjectV2SingleSelectField') {
+            return @{
+                isCompatible = $false
+                reason = "existing field type '$($ExistingField.__typename)' does not match required single-select type"
+            }
+        }
+
+        $existingOptions = @()
+        if ($ExistingField.options) {
+            $existingOptions = @($ExistingField.options | ForEach-Object { $_.name })
+        }
+
+        $missingOptions = @($FieldDef.options | Where-Object { $_ -notin $existingOptions })
+        if ($missingOptions.Count -gt 0) {
+            return @{
+                isCompatible = $false
+                reason = "existing single-select field is missing options: $(($missingOptions) -join ', ')"
+            }
+        }
+
+        return @{ isCompatible = $true; reason = '' }
+    }
+
+    if ($ExistingField.__typename -ne 'ProjectV2Field') {
+        return @{
+            isCompatible = $false
+            reason = "existing field type '$($ExistingField.__typename)' does not match required scalar type '$desiredDataType'"
+        }
+    }
+
+    if (($ExistingField.PSObject.Properties.Name -contains 'dataType') -and $ExistingField.dataType -and $ExistingField.dataType -ne $desiredDataType) {
+        return @{
+            isCompatible = $false
+            reason = "existing scalar dataType '$($ExistingField.dataType)' does not match required '$desiredDataType'"
+        }
+    }
+
+    return @{ isCompatible = $true; reason = '' }
 }
 
 function Create-CustomField {
@@ -437,13 +501,7 @@ mutation CreateProjectField($input: CreateProjectV2FieldInput!) {
 }
 '@
  
-        $dataTypeMap = @{
-            'SingleSelect' = 'SINGLE_SELECT'
-            'Text' = 'TEXT'
-            'Date' = 'DATE'
-        }
- 
-        $graphQlDataType = $dataTypeMap[$FieldDef.type]
+        $graphQlDataType = Get-DesiredGraphQlDataType -FieldType $FieldDef.type
         if (-not $graphQlDataType) {
             throw "Unsupported field type: $($FieldDef.type)"
         }
@@ -493,13 +551,18 @@ mutation CreateProjectField($input: CreateProjectV2FieldInput!) {
         $errorText = $_.ToString()
         if ($errorText -like '*Name has already been taken*') {
             try {
-                $existingFieldId = Get-ExistingProjectFieldId -FieldName $FieldDef.name
-                if ($existingFieldId) {
-                    Write-LocalFieldRecord -FieldDef $FieldDef -FieldId $existingFieldId
-                    Write-Log "  Field already exists, linked to existing ID: $existingFieldId" 'INFO'
+                $existingField = Get-ExistingProjectField -FieldName $FieldDef.name
+                if ($existingField) {
+                    $compatibility = Test-ExistingFieldCompatibility -FieldDef $FieldDef -ExistingField $existingField
+                    if (-not $compatibility.isCompatible) {
+                        throw "existing field '$($FieldDef.name)' is incompatible: $($compatibility.reason)"
+                    }
+
+                    Write-LocalFieldRecord -FieldDef $FieldDef -FieldId $existingField.id
+                    Write-Log "  Field already exists, linked to existing ID: $($existingField.id)" 'INFO'
                     $CreatedFields.Value += @{
                         name = $FieldDef.name
-                        fieldId = $existingFieldId
+                        fieldId = $existingField.id
                         type = $FieldDef.type
                         tier = $FieldDef.tier
                         status = 'existing'

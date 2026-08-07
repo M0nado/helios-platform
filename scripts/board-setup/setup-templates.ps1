@@ -174,7 +174,7 @@ $templates = @(
             DeploymentEnvironment = 'Staging'
             DeploymentStatus = 'Deployed to Staging'
             DataMigration = 'In Progress'
-            DocumentationStatus = 'Complete'
+            Documentation = 'Complete'
         }
         acceptanceCriteria = @(
             'Deployed to staging successfully',

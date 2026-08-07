@@ -90,7 +90,7 @@ $views = @(
         id = 'view-deployment'
         description = 'Items in deployment workflow'
         filters = @(
-            @{ field = 'DeploymentEnvironment'; operator = 'notEquals'; value = 'null' }
+            @{ field = 'DeploymentEnvironment'; operator = 'notEquals'; value = $null }
             @{ field = 'Status'; operator = 'notIn'; value = @('Backlog', 'Done') }
         )
         groupBy = 'DeploymentStatus'

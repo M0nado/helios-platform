@@ -4,7 +4,7 @@
                     {
                         "field":  "DeploymentEnvironment",
                         "operator":  "notEquals",
-                        "value":  "null"
+                        "value":  null
                     },
                     {
                         "field":  "Status",

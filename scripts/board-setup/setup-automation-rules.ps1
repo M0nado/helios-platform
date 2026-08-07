@@ -109,7 +109,7 @@ $automationRules = @(
         actionDetails = @{
             actions = @(
                 @{ type = 'SetField'; field = 'DeploymentEnvironment'; value = 'Staging' }
-                @{ type = 'SetField'; field = 'DeploymentStatus'; value = 'Ready for Deployment' }
+                @{ type = 'SetField'; field = 'DeploymentStatus'; value = 'Deployed to Staging' }
                 @{ type = 'SendNotification'; channel = 'slack'; message = 'Ready for deployment: {{issue_title}}' }
             )
         }

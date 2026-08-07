@@ -56,6 +56,7 @@ $monitoringConfig = @{
         name = 'Performance Metrics'
         items = @(
             @{ name = 'Workflow Duration'; threshold = 300; unit = 'seconds' }
+            @{ name = 'Build Duration'; threshold = 300; unit = 'seconds' }
             @{ name = 'Deployment Success Rate'; threshold = 95; unit = 'percent' }
             @{ name = 'Build Cache Hit Rate'; threshold = 70; unit = 'percent' }
             @{ name = 'Average Response Time'; threshold = 200; unit = 'ms' }
@@ -112,6 +113,11 @@ $monitoringConfig = @{
 
 function Setup-PerformanceMetrics {
     Write-Log 'Setting up performance metrics...'
+
+    if ($DryRun) {
+        Write-Log "  [DRY RUN] Would configure $($monitoringConfig.metrics.items.Count) performance metrics" 'INFO'
+        return @{ name = 'Metrics'; status = 'dry-run'; count = $monitoringConfig.metrics.items.Count }
+    }
     
     $metricsConfig = @{
         metrics = $monitoringConfig.metrics.items
@@ -138,6 +144,11 @@ function Setup-PerformanceMetrics {
 
 function Setup-HealthChecks {
     Write-Log 'Setting up health checks...'
+
+    if ($DryRun) {
+        Write-Log "  [DRY RUN] Would configure $($monitoringConfig.healthChecks.items.Count) health checks" 'INFO'
+        return @{ name = 'HealthChecks'; status = 'dry-run'; count = $monitoringConfig.healthChecks.items.Count }
+    }
     
     $healthConfig = @{
         checks = $monitoringConfig.healthChecks.items
@@ -160,6 +171,11 @@ function Setup-HealthChecks {
 
 function Setup-Alerts {
     Write-Log 'Setting up alert routing...'
+
+    if ($DryRun) {
+        Write-Log "  [DRY RUN] Would configure $($monitoringConfig.alerts.rules.Count) alert rules" 'INFO'
+        return @{ name = 'Alerts'; status = 'dry-run'; count = $monitoringConfig.alerts.rules.Count }
+    }
     
     $alertConfig = @{
         rules = $monitoringConfig.alerts.rules
@@ -188,6 +204,11 @@ function Setup-Alerts {
 
 function Setup-Dashboard {
     Write-Log 'Setting up monitoring dashboard...'
+
+    if ($DryRun) {
+        Write-Log '  [DRY RUN] Would configure monitoring dashboard' 'INFO'
+        return @{ name = 'Dashboard'; status = 'dry-run'; widgets = 6 }
+    }
     
     $dashboardConfig = @{
         title = 'HELIOS Platform - Monitoring Dashboard'
@@ -245,6 +266,11 @@ function Setup-Dashboard {
 
 function Setup-Reporting {
     Write-Log 'Setting up reporting...'
+
+    if ($DryRun) {
+        Write-Log '  [DRY RUN] Would configure reporting schedules' 'INFO'
+        return @{ name = 'Reporting'; status = 'dry-run'; schedules = 3 }
+    }
     
     $reportConfig = @{
         schedules = @(

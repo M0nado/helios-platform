@@ -13,7 +13,7 @@
                                           },
                                           {
                                               "field":  "DeploymentStatus",
-                                              "value":  "Ready for Deployment",
+                                              "value":  "Deployed to Staging",
                                               "type":  "SetField"
                                           },
                                           {

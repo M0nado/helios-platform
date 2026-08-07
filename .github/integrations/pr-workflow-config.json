@@ -5,9 +5,9 @@
                        "author: !=bot"
                    ],
     "workflows":  [
-                      "build.yml",
-                      "test.yml",
-                      "lint.yml"
+                      "build-all-modules.yml",
+                      "test-lanes.yml",
+                      "code-checks.yml"
                   ],
     "createdAt":  "2026-08-06T18:06:39.8640954-05:00"
 }
