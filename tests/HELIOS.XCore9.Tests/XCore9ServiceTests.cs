@@ -200,6 +200,19 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public void Scoring_rejects_duplicate_route_ids()
+    {
+        var (service, _) = Create();
+        var candidates = new[]
+        {
+            new CandidateRoute("dup", "reviewer", "safe", [new SanitizedRunFeature("success_rate", .8)]),
+            new CandidateRoute("dup", "reviewer", "safe", [new SanitizedRunFeature("route_accuracy", .7)])
+        };
+
+        Assert.Throws<InvalidOperationException>(() => service.ScoreRoutes(candidates));
+    }
+
+    [Fact]
     public void Feature_extraction_removes_unknown_non_finite_and_bounds_values()
     {
         var (service, _) = Create();
@@ -350,11 +363,45 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public async Task Run_history_is_idempotent_for_identical_run_ids_and_rejects_conflicts()
+    {
+        var (service, audit) = Create();
+        var runId = Guid.NewGuid();
+        var entry = new RunHistoryEntry(
+            runId,
+            "corr-history-idempotent",
+            "reviewer",
+            true,
+            TimeSpan.FromMilliseconds(40),
+            2.5m,
+            [new SanitizedRunFeature("success_rate", 0.9)],
+            [new Uri("https://evidence.test/idempotent")]);
+
+        await service.IngestRunHistoryAsync(entry, "operator", default);
+        await service.IngestRunHistoryAsync(entry, "operator", default);
+
+        var history = HistorySnapshot(service);
+        Assert.Single(history);
+        Assert.Single(audit.Events, evt => evt.EventType == "xcore9.run.ingested");
+
+        var conflicting = entry with { Succeeded = false };
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.IngestRunHistoryAsync(conflicting, "operator", default).AsTask());
+    }
+
+    [Fact]
     public void Toolchains_are_dependency_ordered_and_closed_over_approved_tools()
     {
         var (service, _) = Create();
         var ordered = service.ConstructToolchain("safe").OrderedToolIds;
         Assert.Equal(new[] { "read", "test" }, ordered);
+    }
+
+    [Fact]
+    public void Retry_classification_rejects_negative_attempts()
+    {
+        var (service, _) = Create();
+        Assert.Throws<ArgumentOutOfRangeException>(() => service.ClassifyRetry("timeout", -1));
     }
 
     [Fact]
@@ -367,7 +414,7 @@ public sealed class XCore9ServiceTests
             "corr-neg-1",
             "builder",
             "reviewer",
-            "sha256:proposal-a",
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "counter-offer",
             DateTimeOffset.UtcNow);
 
@@ -385,6 +432,23 @@ public sealed class XCore9ServiceTests
         var negotiations = NegotiationSnapshot(service);
         Assert.Single(negotiations);
         Assert.Equal(succeededRecord.NegotiationId, negotiations[0].NegotiationId);
+    }
+
+    [Fact]
+    public async Task Negotiation_rejects_non_digest_payloads()
+    {
+        var (service, _) = Create();
+        var record = new NegotiationRecord(
+            Guid.NewGuid(),
+            "corr-neg-digest",
+            "builder",
+            "reviewer",
+            "raw negotiation text",
+            "counter-offer",
+            DateTimeOffset.UtcNow);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.RecordNegotiationAsync(record, "operator", default).AsTask());
     }
 
     [Fact]
@@ -533,6 +597,39 @@ public sealed class XCore9ServiceTests
     }
 
     [Fact]
+    public async Task Promotion_rejects_version_regression_for_same_policy_id()
+    {
+        var (service, _) = Create();
+        var holdout = new HoldoutEvaluation(100, .4, .2, .9, true);
+
+        var promoted = await service.EvaluatePromotionAsync(
+            new PromotionRequest(
+                "corr-p5c",
+                new RoutingPolicy("candidate", 5, new Dictionary<string, string> { ["route"] = "safe" }, null),
+                holdout,
+                "guardian",
+                [new Uri("https://evidence.test/1")]),
+            "guardian",
+            default);
+        Assert.True(promoted.Approved);
+
+        var regressed = await service.EvaluatePromotionAsync(
+            new PromotionRequest(
+                "corr-p5d",
+                new RoutingPolicy("candidate", 4, new Dictionary<string, string> { ["route"] = "safe" }, null),
+                holdout,
+                "guardian",
+                [new Uri("https://evidence.test/2")]),
+            "guardian",
+            default);
+
+        Assert.False(regressed.Approved);
+        Assert.Equal("candidate-version-regression", regressed.ReasonCode);
+        Assert.Equal("candidate", regressed.ActivePolicy.PolicyId);
+        Assert.Equal(5, regressed.ActivePolicy.Version);
+    }
+
+    [Fact]
     public async Task Promotion_does_not_commit_state_when_audit_fails()
     {
         var audit = new RecordingAuditSink(failEventType: "xcore9.policy.promoted");
@@ -594,6 +691,9 @@ public sealed class XCore9ServiceTests
 
         var extreme = analytics.DetectAnomalies([0.0, double.MaxValue], 1.0);
         Assert.Equal(new[] { 0, 1 }, extreme);
+
+        var finiteLarge = analytics.EvaluatePredictions([1e200], [0.0], [.9]);
+        Assert.True(double.IsFinite(finiteLarge.RootMeanSquaredError));
     }
 
     [Fact]

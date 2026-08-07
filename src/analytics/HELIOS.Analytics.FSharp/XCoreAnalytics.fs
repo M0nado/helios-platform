@@ -73,7 +73,15 @@ type XCoreAnalytics() =
                     predicted
                     actual
                 |> Seq.toArray
-            let mae = errors |> Array.averageBy abs
-            let rmse = errors |> Array.averageBy (fun error -> error * error) |> sqrt
+            let maxAbsError = errors |> Array.maxBy abs |> abs
+            let mae =
+                if maxAbsError = 0.0 then 0.0
+                else
+                    maxAbsError * (errors |> Array.averageBy (fun error -> abs(error / maxAbsError)))
+            let rmse =
+                if maxAbsError = 0.0 then 0.0
+                else
+                    let normalizedSquares = errors |> Array.averageBy (fun error -> let normalized = error / maxAbsError in normalized * normalized)
+                    maxAbsError * sqrt normalizedSquares
             let calibration = Seq.map2 (fun error c -> abs(Math.Clamp(c, 0.0, 1.0) - (if abs error <= 0.1 then 1.0 else 0.0))) errors confidence |> Seq.average
             PredictionEvaluation(mae, rmse, calibration)

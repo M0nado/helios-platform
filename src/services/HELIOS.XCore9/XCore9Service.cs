@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using HELIOS.Platform.Contracts.XCore9;
 
 namespace HELIOS.XCore9;
@@ -31,6 +32,7 @@ public sealed class XCore9Service : IXCore9Service
         "dependency_health",
         "holdout_score"
     };
+    private static readonly Regex DigestPattern = new("^sha256:[0-9a-f]{64}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly IXCoreAnalytics _analytics;
     private readonly IXCoreAuthorization _authorization;
@@ -120,17 +122,36 @@ public sealed class XCore9Service : IXCore9Service
         try
         {
             RunHistoryEntry? evicted = null;
-            int insertedIndex;
+            var skipAuditForDuplicate = false;
+            var insertedIndex = -1;
             lock (_gate)
             {
-                if (_history.Count >= _options.MaxRunHistoryEntries)
+                var existing = _history.FirstOrDefault(historyEntry => historyEntry.RunId == sanitized.RunId);
+                if (existing is not null)
                 {
-                    evicted = _history[0];
-                    _history.RemoveAt(0);
-                }
+                    if (!RunHistoryEquivalent(existing, sanitized))
+                    {
+                        throw new InvalidOperationException("Run history with the same run ID contains conflicting data.");
+                    }
 
-                _history.Add(sanitized);
-                insertedIndex = _history.Count - 1;
+                    skipAuditForDuplicate = true;
+                }
+                else
+                {
+                    if (_history.Count >= _options.MaxRunHistoryEntries)
+                    {
+                        evicted = _history[0];
+                        _history.RemoveAt(0);
+                    }
+
+                    _history.Add(sanitized);
+                    insertedIndex = _history.Count - 1;
+                }
+            }
+
+            if (skipAuditForDuplicate)
+            {
+                return;
             }
 
             try
@@ -191,6 +212,40 @@ public sealed class XCore9Service : IXCore9Service
             .ToArray();
     }
 
+    private static bool RunHistoryEquivalent(RunHistoryEntry existing, RunHistoryEntry candidate)
+    {
+        if (!string.Equals(existing.CorrelationId, candidate.CorrelationId, StringComparison.Ordinal) ||
+            !string.Equals(existing.TemplateId, candidate.TemplateId, StringComparison.Ordinal) ||
+            existing.Succeeded != candidate.Succeeded ||
+            existing.Duration != candidate.Duration ||
+            existing.Cost != candidate.Cost ||
+            existing.Features.Count != candidate.Features.Count ||
+            existing.EvidenceLinks.Count != candidate.EvidenceLinks.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < existing.Features.Count; index++)
+        {
+            var left = existing.Features[index];
+            var right = candidate.Features[index];
+            if (!string.Equals(left.Name, right.Name, StringComparison.Ordinal) || left.Value != right.Value)
+            {
+                return false;
+            }
+        }
+
+        for (var index = 0; index < existing.EvidenceLinks.Count; index++)
+        {
+            if (Uri.Compare(existing.EvidenceLinks[index], candidate.EvidenceLinks[index], UriComponents.AbsoluteUri, UriFormat.UriEscaped, StringComparison.Ordinal) != 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public IReadOnlyList<RouteScore> ScoreRoutes(IReadOnlyList<CandidateRoute> candidates)
     {
         ArgumentNullException.ThrowIfNull(candidates);
@@ -198,6 +253,16 @@ public sealed class XCore9Service : IXCore9Service
         if (candidates.Count > _options.MaxRoutesPerScoringRequest)
         {
             throw new InvalidOperationException("Candidate set exceeds the configured scoring request bound.");
+        }
+
+        if (candidates.Any(candidate => string.IsNullOrWhiteSpace(candidate.RouteId)))
+        {
+            throw new InvalidOperationException("Every candidate route must declare a non-empty route ID.");
+        }
+
+        if (candidates.Select(candidate => candidate.RouteId).Distinct(IdentifierComparer).Count() != candidates.Count)
+        {
+            throw new InvalidOperationException("Candidate set contains duplicate route IDs.");
         }
 
         foreach (var candidate in candidates)
@@ -380,8 +445,14 @@ public sealed class XCore9Service : IXCore9Service
         return new ConstructedToolchain(toolchainId, ordered);
     }
 
-    public RetryClassification ClassifyRetry(string failureCode, int attempt) =>
-        (failureCode, attempt) switch
+    public RetryClassification ClassifyRetry(string failureCode, int attempt)
+    {
+        if (attempt < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(attempt), "Retry attempt must be non-negative.");
+        }
+
+        return (failureCode, attempt) switch
         {
             (_, _) when attempt >= 3 => new RetryClassification(RetryDisposition.RequiresReview, null, "attempt-limit"),
             ("timeout" or "rate_limited", _) => new RetryClassification(RetryDisposition.RetryWithBackoff, TimeSpan.FromSeconds(Math.Pow(2, attempt)), failureCode),
@@ -389,6 +460,7 @@ public sealed class XCore9Service : IXCore9Service
             ("authorization" or "policy_denied", _) => new RetryClassification(RetryDisposition.DoNotRetry, null, failureCode),
             _ => new RetryClassification(RetryDisposition.RequiresReview, null, "unclassified")
         };
+    }
 
     public async ValueTask RecordNegotiationAsync(NegotiationRecord record, string actor, CancellationToken cancellationToken)
     {
@@ -396,9 +468,9 @@ public sealed class XCore9Service : IXCore9Service
         await DemandAsync(actor, "negotiation.record", cancellationToken);
         ValidateEnvelope(record.CorrelationId, Array.Empty<Uri>());
 
-        if (string.IsNullOrWhiteSpace(record.ProposalDigest))
+        if (string.IsNullOrWhiteSpace(record.ProposalDigest) || !DigestPattern.IsMatch(record.ProposalDigest))
         {
-            throw new ArgumentException("Only a sanitized proposal digest may be recorded.", nameof(record));
+            throw new ArgumentException("Proposal digest must be canonical sha256:<64 lowercase hex characters>.", nameof(record));
         }
 
         await _negotiationGate.WaitAsync(cancellationToken);
@@ -501,6 +573,12 @@ public sealed class XCore9Service : IXCore9Service
             {
                 activeSnapshot = _activePolicy;
                 rollbackSnapshot = _rollbackPolicy;
+            }
+
+            if (string.Equals(activeSnapshot.PolicyId, request.Candidate.PolicyId, StringComparison.Ordinal) &&
+                request.Candidate.Version < activeSnapshot.Version)
+            {
+                return new PolicyDecision(false, "candidate-version-regression", activeSnapshot, rollbackSnapshot);
             }
 
             if (string.Equals(activeSnapshot.PolicyId, request.Candidate.PolicyId, StringComparison.Ordinal) &&
