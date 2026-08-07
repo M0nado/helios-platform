@@ -66,6 +66,8 @@
       "registry": "entra-agent-registry",
       "manifest": "config/microsoft-agents.json",
       "toolchain": "config/microsoft-toolchain.json",
+      "enterpriseSubAgentFleet": "config/enterprise-sub-agent-fleet.json",
+      "customMcpConnectorPlane": "config/custom-mcp-connector-plane.json",
       "runtime": "microsoft-foundry-agent-service",
       "channels": [
         "microsoft-365-copilot",

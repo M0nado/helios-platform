@@ -21,12 +21,17 @@ silently deploy Azure, assign RBAC, grant tenant consent, merge pull requests,
 publish Microsoft 365 apps, enable self-hosted runners, create a bidirectional
 DevOps mirror, or activate external connector delivery.
 
+`monado/helios-control/config/custom-mcp-connector-plane.json` is the explicit
+tool contract for custom MCP connectors. Access is deny-by-default and
+write/mutation tools remain disabled until reviewed expansion.
+
 ## Start
 
     python plugins/helios-control-fabric/scripts/helios.py doctor
     python plugins/helios-control-fabric/scripts/helios.py targets
     python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
+    python plugins/helios-control-fabric/scripts/helios.py fleet
     python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
     python plugins/helios-control-fabric/scripts/helios.py devops-sync
     python plugins/helios-control-fabric/scripts/helios.py runners
@@ -35,6 +40,7 @@ PowerShell:
 
     ./plugins/helios-control-fabric/scripts/helios.ps1 doctor
     ./plugins/helios-control-fabric/scripts/helios.ps1 oidc --environment azure-dev
+    ./plugins/helios-control-fabric/scripts/helios.ps1 fleet
 
 Every command above is read-only. Add '--json' for machine-readable output.
 The `oidc` command requires an authenticated GitHub CLI session because it

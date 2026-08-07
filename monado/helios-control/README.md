@@ -125,3 +125,9 @@ governed local agents. Azure MCP is pinned and read-only. Provider credentials
 remain isolated, and the fleet cannot deploy or merge automatically. VS Code's
 cloud connector prompt has no local default; its separately named
 `helios-local-dev` server is an explicit development-only choice.
+
+The full enterprise sub-agent roster for issue #165 is source-controlled in
+`config/enterprise-sub-agent-fleet.json`, with explicit MCP connector/tool
+contracts in `config/custom-mcp-connector-plane.json`. The registry is
+`what-if-only` by default and keeps production provisioning blocked until
+issue #162 integrity and Bicep-alignment gates are resolved.

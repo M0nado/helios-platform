@@ -52,6 +52,13 @@
       "command": "pwsh",
       "args": ["-NoLogo", "-File", "${workspaceFolder}/scripts/Start-HeliosLocalFleet.ps1", "-Mode", "Plan"],
       "problemMatcher": []
+    },
+    {
+      "label": "Helios: Open Enterprise Sub-Agent Fleet Plan",
+      "type": "shell",
+      "command": "pwsh",
+      "args": ["-NoLogo", "-File", "${workspaceFolder}/scripts/Start-HeliosLocalFleet.ps1", "-Mode", "EnterprisePlan"],
+      "problemMatcher": []
     }
   ]
 }

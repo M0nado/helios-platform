@@ -4,6 +4,12 @@
   "runtimeState": "planned-admin-gate",
   "distribution": ["microsoft-365-copilot", "microsoft-teams", "agent-365-registry"],
   "distributionState": "not-published",
+  "enterpriseSubAgentFleet": {
+    "registry": "config/enterprise-sub-agent-fleet.json",
+    "customMcpConnectorPlane": "config/custom-mcp-connector-plane.json",
+    "deploymentState": "configured-not-published",
+    "productionProvisioningBlockedByIssue": 162
+  },
   "sharedToolbox": {
     "protocol": "mcp",
     "endpoint": "https://<container-app-host>/mcp",

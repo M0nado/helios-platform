@@ -20,6 +20,13 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 TARGETS_FILE = ASSETS / "connections.json"
+ENTERPRISE_FLEET_REGISTRY_FILE = (
+    ROOT.parent.parent
+    / "monado"
+    / "helios-control"
+    / "config"
+    / "enterprise-sub-agent-fleet.json"
+)
 
 TOOLS: tuple[tuple[str, tuple[str, ...], bool], ...] = (
     ("az", ("version",), True),
@@ -327,6 +334,39 @@ def edge_plan(environment: str) -> dict[str, Any]:
     }
 
 
+def enterprise_fleet_plan() -> dict[str, Any]:
+    if not ENTERPRISE_FLEET_REGISTRY_FILE.exists():
+        raise RuntimeError(
+            "Enterprise sub-agent fleet registry is missing at "
+            f"{ENTERPRISE_FLEET_REGISTRY_FILE}."
+        )
+    payload = json.loads(
+        ENTERPRISE_FLEET_REGISTRY_FILE.read_text(encoding="utf-8")
+    )
+    agents = payload.get("agents", [])
+    connectors = payload.get("connectors", [])
+    return {
+        "registryId": payload.get("registryId", ""),
+        "sourceIssue": payload.get("sourceIssue", ""),
+        "defaultExecutionMode": payload.get("defaultExecutionMode", ""),
+        "blockingIssue": payload.get("integrityGate", {}).get("blockingIssue"),
+        "productionProvisioningAllowed": payload.get("integrityGate", {}).get(
+            "productionProvisioningAllowed"
+        ),
+        "agentCount": len(agents),
+        "connectorCount": len(connectors),
+        "agents": [
+            {
+                "id": agent.get("id", ""),
+                "permissionTier": agent.get("permissionTier"),
+                "writeBoundary": agent.get("writeBoundary", ""),
+            }
+            for agent in agents
+        ],
+        "executionMode": "plan-only",
+    }
+
+
 def print_human(payload: dict[str, Any]) -> None:
     if "tools" in payload:
         print("HELIOS doctor (read-only)")
@@ -348,6 +388,18 @@ def print_human(payload: dict[str, Any]) -> None:
         print(f"  subject: {payload['selectedSubject']}")
         print(f"  immutable subject: {str(payload['useImmutableSubject']).lower()}")
         print("  No identity or RBAC mutation was performed.")
+    elif "registryId" in payload and "agentCount" in payload:
+        print("HELIOS enterprise sub-agent fleet")
+        print(f"  registry: {payload['registryId']}")
+        print(f"  source issue: {payload['sourceIssue']}")
+        print(f"  execution mode: {payload['defaultExecutionMode']}")
+        print(f"  agents: {payload['agentCount']}")
+        print(f"  connectors: {payload['connectorCount']}")
+        print(
+            "  production provisioning allowed: "
+            f"{str(payload['productionProvisioningAllowed']).lower()}"
+        )
+        print(f"  blocking issue: {payload['blockingIssue']}")
     elif "sourceOfTruth" in payload:
         print("HELIOS Azure DevOps sync plan")
         print(f"  source: {payload['sourceOfTruth']}")
@@ -394,6 +446,8 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser.add_argument("--json", action="store_true")
     runner_parser = subparsers.add_parser("runners", help="Show the governed GitHub runner topology")
     runner_parser.add_argument("--json", action="store_true")
+    fleet_parser = subparsers.add_parser("fleet", help="Show the enterprise sub-agent registry plan")
+    fleet_parser.add_argument("--json", action="store_true")
     edge_parser = subparsers.add_parser("edge", help="Show the Azure Front Door private-edge activation plan")
     add_environment_argument(edge_parser)
     return parser
@@ -414,6 +468,8 @@ def main(argv: list[str] | None = None) -> int:
             payload = devops_sync_plan()
         elif args.command == "runners":
             payload = runner_plan()
+        elif args.command == "fleet":
+            payload = enterprise_fleet_plan()
         else:
             payload = edge_plan(args.environment)
     except (RuntimeError, ValueError) as error:

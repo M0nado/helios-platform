@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Plan', 'Status', 'OpenWorkbench')]
+    [ValidateSet('Plan', 'EnterprisePlan', 'Status', 'OpenWorkbench')]
     [string] $Mode = 'Plan',
     [switch] $InstallRecommendedExtensions
 )
@@ -21,6 +21,31 @@ if ($Mode -eq 'Plan') {
         agents = @($config.agents | ForEach-Object { [ordered]@{ id = $_.id; permission = $_.permission } })
         workflow = @($config.workflow)
     } | ConvertTo-Json -Depth 5
+    exit 0
+}
+
+if ($Mode -eq 'EnterprisePlan') {
+    $enterpriseConfigPath = Join-Path $root 'config/enterprise-sub-agent-fleet.json'
+    if (-not (Test-Path -LiteralPath $enterpriseConfigPath)) {
+        throw "Enterprise fleet registry was not found: $enterpriseConfigPath"
+    }
+
+    $enterprise = Get-Content -LiteralPath $enterpriseConfigPath -Raw | ConvertFrom-Json
+    [ordered]@{
+        registryId = $enterprise.registryId
+        sourceIssue = $enterprise.sourceIssue
+        defaultExecutionMode = $enterprise.defaultExecutionMode
+        productionGate = $enterprise.productionGate
+        integrityGate = $enterprise.integrityGate
+        connectors = @($enterprise.connectors | ForEach-Object { $_.id })
+        agents = @($enterprise.agents | ForEach-Object {
+                [ordered]@{
+                    id = $_.id
+                    permissionTier = $_.permissionTier
+                    writeBoundary = $_.writeBoundary
+                }
+            })
+    } | ConvertTo-Json -Depth 8
     exit 0
 }
 

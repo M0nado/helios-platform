@@ -60,6 +60,7 @@ Run the plugin doctor, then generate a plan:
 python plugins/helios-control-fabric/scripts/helios.py doctor
 python plugins/helios-control-fabric/scripts/helios.py plan --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py oidc --environment azure-dev
+python plugins/helios-control-fabric/scripts/helios.py fleet
 python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev
 python plugins/helios-control-fabric/scripts/helios.py devops-sync
 python plugins/helios-control-fabric/scripts/helios.py runners
@@ -70,6 +71,9 @@ authenticated GitHub CLI. It must use GitHub's effective default/immutable
 subject policy and fail closed for custom templates, missing policy signals, or
 missing canonical repository IDs. Never copy a static name-based subject from a
 guide into Entra.
+
+The `fleet` command reads the enterprise sub-agent registry and keeps production
+provisioning blocked while issue #162 remains unresolved.
 
 Continue with the repository wizard:
 

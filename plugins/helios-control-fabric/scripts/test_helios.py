@@ -162,6 +162,14 @@ class HeliosCliTests(unittest.TestCase):
         self.assertFalse(plan["automaticApply"])
         self.assertEqual(plan["workflow"]["apply"], "separate protected-environment approval")
 
+    def test_enterprise_fleet_contract_is_complete_and_blocked(self) -> None:
+        plan = HELIOS.enterprise_fleet_plan()
+        self.assertEqual(plan["defaultExecutionMode"], "what-if-only")
+        self.assertEqual(plan["agentCount"], 20)
+        self.assertEqual(plan["connectorCount"], 12)
+        self.assertFalse(plan["productionProvisioningAllowed"])
+        self.assertEqual(plan["blockingIssue"], 162)
+
     def test_all_assets_are_json(self) -> None:
         for name in (
             "connections.json",
