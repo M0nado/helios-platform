@@ -44,6 +44,34 @@ def github_reader(*, immutable: bool = True, use_default: bool = True) -> Mock:
 
 
 class HeliosCliTests(unittest.TestCase):
+    def test_check_tool_reports_resolved_path(self) -> None:
+        with patch.object(
+            HELIOS,
+            "resolve_command_path",
+            return_value=r"C:\Program Files\dotnet\dotnet.exe",
+        ):
+            with patch.object(HELIOS.subprocess, "run") as run:
+                run.return_value = Mock(returncode=0, stdout="9.0.314\n", stderr="")
+                result = HELIOS.check_tool("dotnet", ("--version",), required=True)
+
+        self.assertTrue(result["available"])
+        self.assertTrue(result["healthy"])
+        self.assertEqual(result["path"], r"C:\Program Files\dotnet\dotnet.exe")
+        self.assertEqual(result["version"], "9.0.314")
+
+    def test_preferred_python_invocation_uses_windows_launcher_when_needed(self) -> None:
+        with patch.object(HELIOS.os, "name", "nt"):
+            with patch.object(
+                HELIOS,
+                "resolve_command_path",
+                side_effect=lambda command: {
+                    "python": None,
+                    "py": r"C:\Windows\py.exe",
+                    "python3": None,
+                }.get(command),
+            ):
+                self.assertEqual(HELIOS.preferred_python_invocation(), "py -3")
+
     def test_targets_are_canonical(self) -> None:
         targets = HELIOS.read_targets()
         self.assertEqual(
@@ -53,7 +81,8 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(targets["state"]["azure"], "not-live")
 
     def test_plan_is_non_executing(self) -> None:
-        plan = HELIOS.release_plan("azure-dev")
+        with patch.object(HELIOS, "preferred_python_invocation", return_value="py -3"):
+            plan = HELIOS.release_plan("azure-dev")
         self.assertEqual(plan["executionMode"], "plan-only")
         self.assertIn("Azure deployment approval", plan["administratorGates"])
         self.assertIn(
@@ -61,6 +90,10 @@ class HeliosCliTests(unittest.TestCase):
             plan["federationSubjectResolution"],
         )
         self.assertNotIn("federationSubject", plan)
+        self.assertIn(
+            "py -3 plugins/helios-control-fabric/scripts/helios.py doctor --json",
+            plan["commands"],
+        )
 
     def test_oidc_contract_is_secretless_and_exact(self) -> None:
         with patch.dict(os.environ, {}, clear=True):

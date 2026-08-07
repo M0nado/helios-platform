@@ -35,6 +35,40 @@ TOOLS: tuple[tuple[str, tuple[str, ...], bool], ...] = (
     ("atk", ("--version",), False),
 )
 
+WINDOWS_TOOL_FALLBACKS: dict[str, tuple[str, ...]] = {
+    "az": (
+        r"C:\Program Files\Microsoft SDKs\Azure\CLI2\wbin\az.cmd",
+        r"C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\wbin\az.cmd",
+    ),
+    "dotnet": (
+        r"C:\Program Files\dotnet\dotnet.exe",
+        r"C:\Program Files (x86)\dotnet\dotnet.exe",
+    ),
+    "pwsh": (
+        r"C:\Program Files\PowerShell\7\pwsh.exe",
+        r"C:\Program Files\PowerShell\7-preview\pwsh.exe",
+    ),
+    "node": (
+        r"C:\Program Files\nodejs\node.exe",
+    ),
+    "npm": (
+        r"C:\Program Files\nodejs\npm.cmd",
+        r"C:\Program Files\nodejs\npm.exe",
+    ),
+    "azd": (
+        r"%LOCALAPPDATA%\Programs\Azure Dev CLI\azd.exe",
+        r"C:\Program Files\Azure Dev CLI\azd.exe",
+    ),
+    "docker": (
+        r"C:\Program Files\Docker\Docker\resources\bin\docker.exe",
+    ),
+    "jq": (
+        r"C:\Program Files\Git\usr\bin\jq.exe",
+    ),
+}
+
+HELIOS_CLI_RELATIVE_PATH = "plugins/helios-control-fabric/scripts/helios.py"
+
 ENVIRONMENT_KEYS = (
     "HELIOS_AZURE_CONNECTOR_URL",
     "AZURE_DEVOPS_ORGANIZATION",
@@ -61,8 +95,21 @@ def first_line(value: str) -> str:
     return value.strip().splitlines()[0] if value.strip() else "available"
 
 
-def check_tool(command: str, arguments: tuple[str, ...], required: bool) -> dict[str, Any]:
+def resolve_command_path(command: str) -> str | None:
     path = shutil.which(command)
+    if path:
+        return path
+    if os.name != "nt":
+        return None
+    for candidate in WINDOWS_TOOL_FALLBACKS.get(command, ()):
+        expanded = os.path.expandvars(candidate)
+        if Path(expanded).is_file():
+            return expanded
+    return None
+
+
+def check_tool(command: str, arguments: tuple[str, ...], required: bool) -> dict[str, Any]:
+    path = resolve_command_path(command)
     result: dict[str, Any] = {
         "command": command,
         "required": required,
@@ -70,6 +117,7 @@ def check_tool(command: str, arguments: tuple[str, ...], required: bool) -> dict
     }
     if path is None:
         return result
+    result["path"] = path
     try:
         process = subprocess.run(
             [path, *arguments],
@@ -84,6 +132,22 @@ def check_tool(command: str, arguments: tuple[str, ...], required: bool) -> dict
         result["healthy"] = False
         result["version"] = "version check failed"
     return result
+
+
+def preferred_python_invocation() -> str:
+    if os.name == "nt":
+        if resolve_command_path("python"):
+            return "python"
+        if resolve_command_path("py"):
+            return "py -3"
+        if resolve_command_path("python3"):
+            return "python3"
+        return "python"
+    if resolve_command_path("python3"):
+        return "python3"
+    if resolve_command_path("python"):
+        return "python"
+    return "python3"
 
 
 def doctor() -> dict[str, Any]:
@@ -231,6 +295,7 @@ def resolve_github_oidc_trust(
 
 def release_plan(environment: str) -> dict[str, Any]:
     validate_environment(environment)
+    python_invocation = preferred_python_invocation()
     return {
         "environment": environment,
         "executionMode": "plan-only",
@@ -254,13 +319,9 @@ def release_plan(environment: str) -> dict[str, Any]:
         ],
         "commands": [
             "pwsh ./monado/helios-control/scripts/Connect-HeliosAzureInteractive.ps1",
-            "python plugins/helios-control-fabric/scripts/helios.py doctor --json",
-            "python plugins/helios-control-fabric/scripts/helios.py oidc --environment "
-            + environment
-            + " --json",
-            "python plugins/helios-control-fabric/scripts/helios.py edge --environment "
-            + environment
-            + " --json",
+            f"{python_invocation} {HELIOS_CLI_RELATIVE_PATH} doctor --json",
+            f"{python_invocation} {HELIOS_CLI_RELATIVE_PATH} oidc --environment {environment} --json",
+            f"{python_invocation} {HELIOS_CLI_RELATIVE_PATH} edge --environment {environment} --json",
             "GitHub Actions: HELIOS Azure → what-if",
             "GitHub protected environment: " + environment + " → deployment approval",
         ],
