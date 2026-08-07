@@ -625,7 +625,7 @@ namespace HELIOS.Platform.Phase11.UpdateSystem
 
     public class UpdateServiceExample
     {
-        public static async Task Main()
+        public static async Task RunAsync()
         {
             var logger = new ConsoleLogger();
             var updateService = new MonadoEngineUpdateService(logger);
