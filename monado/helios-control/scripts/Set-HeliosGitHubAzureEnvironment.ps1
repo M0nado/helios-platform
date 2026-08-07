@@ -25,7 +25,7 @@ pwsh -NoProfile -File ./scripts/Set-HeliosGitHubAzureEnvironment.ps1 `
 .EXAMPLE
 pwsh -NoProfile -File ./scripts/Set-HeliosGitHubAzureEnvironment.ps1 `
   -Mode apply `
-  -TargetEnvironment all `
+  -TargetEnvironment azure-dev `
   -RequiredReviewerId 12345678 `
   -AzureClientId 00000000-0000-0000-0000-000000000000 `
   -AzureTenantId 11111111-1111-1111-1111-111111111111 `
@@ -34,6 +34,7 @@ pwsh -NoProfile -File ./scripts/Set-HeliosGitHubAzureEnvironment.ps1 `
   -HeliosEntraClientId 33333333-3333-3333-3333-333333333333 `
   -HeliosAllowedPrincipalObjectId 44444444-4444-4444-4444-444444444444 `
   -HeliosContainerRegistryName heliosdev12345 `
+  -GitHubDeploymentBranch main `
   -HeliosAzureConnectorUrl https://helios-dev.example.com `
   -AzureDevOpsOrganization helios-org
 #>
@@ -43,10 +44,12 @@ param(
     [ValidateSet('validate', 'apply')]
     [string]$Mode = 'validate',
 
-    [ValidateSet('azure-dev', 'azure-test', 'azure-prod', 'all')]
+    [ValidateSet('azure-dev', 'azure-test', 'azure-prod')]
     [string]$TargetEnvironment = 'azure-dev',
 
     [string]$Repository = 'M0nado/helios-platform',
+
+    [string]$GitHubDeploymentBranch = 'main',
 
     [Parameter(Mandatory)]
     [string]$RequiredReviewerId,
@@ -96,6 +99,17 @@ function Assert-RepositoryValue {
     param([Parameter(Mandatory)][string]$Value)
     if ($Value -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
         throw 'Repository must use owner/name format.'
+    }
+}
+
+function Assert-GitHubBranchValue {
+    param([Parameter(Mandatory)][string]$Value)
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw 'GitHubDeploymentBranch is required.'
+    }
+    if ($Value -notmatch '^[A-Za-z0-9._/-]+$') {
+        throw 'GitHubDeploymentBranch contains unsupported characters.'
     }
 }
 
@@ -153,13 +167,29 @@ function Invoke-Gh {
     return $output
 }
 
+function Invoke-GhJson {
+    param(
+        [Parameter(Mandatory)][string[]]$Arguments,
+        [Parameter(Mandatory)][string]$Operation
+    )
+
+    $output = Invoke-Gh -Arguments $Arguments -Operation $Operation
+    $joined = ($output | ForEach-Object { $_.ToString() }) -join [Environment]::NewLine
+    if ([string]::IsNullOrWhiteSpace($joined)) {
+        return [pscustomobject]@{}
+    }
+    return $joined | ConvertFrom-Json -Depth 20
+}
+
 function Set-GitHubEnvironmentProtection {
     param(
         [Parameter(Mandatory)][string]$RepositoryName,
         [Parameter(Mandatory)][string]$EnvironmentName,
-        [Parameter(Mandatory)][int64]$ReviewerId
+        [Parameter(Mandatory)][int64]$ReviewerId,
+        [Parameter(Mandatory)][string]$DeploymentBranch
     )
 
+    $escapedEnvironmentName = [uri]::EscapeDataString($EnvironmentName)
     $payload = [ordered]@{
         wait_timer = 0
         prevent_self_review = $true
@@ -170,8 +200,8 @@ function Set-GitHubEnvironmentProtection {
             }
         )
         deployment_branch_policy = [ordered]@{
-            protected_branches = $true
-            custom_branch_policies = $false
+            protected_branches = $false
+            custom_branch_policies = $true
         }
     }
 
@@ -190,7 +220,7 @@ function Set-GitHubEnvironmentProtection {
                 'PUT',
                 '--header',
                 'X-GitHub-Api-Version: 2022-11-28',
-                "repos/$RepositoryName/environments/$EnvironmentName",
+                "repos/$RepositoryName/environments/$escapedEnvironmentName",
                 '--input',
                 $tempFile
             ) `
@@ -198,6 +228,93 @@ function Set-GitHubEnvironmentProtection {
     }
     finally {
         Remove-Item -LiteralPath $tempFile -Force -ErrorAction SilentlyContinue
+    }
+
+    $branchPolicies = Invoke-GhJson `
+        -Arguments @(
+            'api',
+            '--method',
+            'GET',
+            '--header',
+            'X-GitHub-Api-Version: 2022-11-28',
+            "repos/$RepositoryName/environments/$escapedEnvironmentName/deployment-branch-policies"
+        ) `
+        -Operation "Reading deployment branch policy for '$EnvironmentName'"
+
+    $existingPolicies = @($branchPolicies.branch_policies)
+    $matchingPolicies = @($existingPolicies | Where-Object {
+            $_.name -eq $DeploymentBranch -and $_.type -eq 'branch'
+        })
+    if ($existingPolicies.Count -eq 0) {
+        $branchPayload = [ordered]@{
+            name = $DeploymentBranch
+            type = 'branch'
+        }
+        $branchPayloadFile = Join-Path $env:TEMP "helios-github-branch-policy-$([guid]::NewGuid().ToString('N')).json"
+        try {
+            [System.IO.File]::WriteAllText(
+                $branchPayloadFile,
+                ($branchPayload | ConvertTo-Json -Depth 8 -Compress),
+                [System.Text.UTF8Encoding]::new($false)
+            )
+
+            [void] (Invoke-Gh `
+                -Arguments @(
+                    'api',
+                    '--method',
+                    'POST',
+                    '--header',
+                    'X-GitHub-Api-Version: 2022-11-28',
+                    "repos/$RepositoryName/environments/$escapedEnvironmentName/deployment-branch-policies",
+                    '--input',
+                    $branchPayloadFile
+                ) `
+                -Operation "Applying deployment branch policy '$DeploymentBranch' to '$EnvironmentName'")
+        }
+        finally {
+            Remove-Item -LiteralPath $branchPayloadFile -Force -ErrorAction SilentlyContinue
+        }
+    }
+    elseif ($existingPolicies.Count -ne 1 -or $matchingPolicies.Count -ne 1) {
+        throw "Environment '$EnvironmentName' already has deployment branch policies that do not match the required '$DeploymentBranch' branch. Refusing to broaden policy automatically."
+    }
+
+    $environment = Invoke-GhJson `
+        -Arguments @(
+            'api',
+            '--method',
+            'GET',
+            '--header',
+            'X-GitHub-Api-Version: 2022-11-28',
+            "repos/$RepositoryName/environments/$escapedEnvironmentName"
+        ) `
+        -Operation "Verifying protected GitHub environment '$EnvironmentName'"
+    $reviewerRules = @($environment.protection_rules | Where-Object type -eq 'required_reviewers')
+    $matchingReviewers = @($reviewerRules.reviewers | Where-Object { [int64] $_.reviewer.id -eq $ReviewerId })
+    if ($reviewerRules.Count -ne 1 -or
+        @($reviewerRules[0].reviewers).Count -ne 1 -or
+        $matchingReviewers.Count -ne 1 -or
+        -not [bool] $reviewerRules[0].prevent_self_review -or
+        -not [bool] $environment.deployment_branch_policy.custom_branch_policies -or
+        [bool] $environment.deployment_branch_policy.protected_branches) {
+        throw "Environment '$EnvironmentName' is not fail-closed with the expected reviewer and custom branch policy."
+    }
+
+    $verifiedPolicies = Invoke-GhJson `
+        -Arguments @(
+            'api',
+            '--method',
+            'GET',
+            '--header',
+            'X-GitHub-Api-Version: 2022-11-28',
+            "repos/$RepositoryName/environments/$escapedEnvironmentName/deployment-branch-policies"
+        ) `
+        -Operation "Verifying deployment branch policy for '$EnvironmentName'"
+    $verifiedMatches = @($verifiedPolicies.branch_policies | Where-Object {
+            $_.name -eq $DeploymentBranch -and $_.type -eq 'branch'
+        })
+    if (@($verifiedPolicies.branch_policies).Count -ne 1 -or $verifiedMatches.Count -ne 1) {
+        throw "Environment '$EnvironmentName' is not restricted to the required '$DeploymentBranch' branch."
     }
 }
 
@@ -225,6 +342,7 @@ function Set-GitHubEnvironmentVariable {
 }
 
 Assert-RepositoryValue -Value $Repository
+Assert-GitHubBranchValue -Value $GitHubDeploymentBranch
 
 [int64]$reviewerId = 0
 if (-not [int64]::TryParse($RequiredReviewerId, [ref]$reviewerId) -or $reviewerId -le 0) {
@@ -269,12 +387,7 @@ $script:GhPath = $gh.Source
     ) `
     -Operation "Reading repository '$Repository'")
 
-$targetEnvironments = if ($TargetEnvironment -eq 'all') {
-    @('azure-dev', 'azure-test', 'azure-prod')
-}
-else {
-    @($TargetEnvironment)
-}
+$targetEnvironments = @($TargetEnvironment)
 
 $requiredVariables = [ordered]@{
     AZURE_CLIENT_ID = $AzureClientId
@@ -301,7 +414,8 @@ foreach ($environmentName in $targetEnvironments) {
         Set-GitHubEnvironmentProtection `
             -RepositoryName $Repository `
             -EnvironmentName $environmentName `
-            -ReviewerId $reviewerId
+            -ReviewerId $reviewerId `
+            -DeploymentBranch $GitHubDeploymentBranch
 
         foreach ($entry in $requiredVariables.GetEnumerator()) {
             Set-GitHubEnvironmentVariable `
@@ -329,7 +443,11 @@ foreach ($environmentName in $targetEnvironments) {
                 requiredReviewerId = $reviewerId
                 preventSelfReview = $true
             }
-            protectedBranchesOnly = $true
+            deploymentBranchPolicy = [pscustomobject][ordered]@{
+                customBranchPolicies = $true
+                protectedBranches = $false
+                branch = $GitHubDeploymentBranch
+            }
         })
 }
 

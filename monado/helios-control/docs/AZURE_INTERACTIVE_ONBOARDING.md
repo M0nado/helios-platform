@@ -87,9 +87,13 @@ pwsh -NoProfile -File ./scripts/Set-HeliosGitHubAzureEnvironment.ps1 `
   -HeliosAzureConnectorUrl 'https://<container-app-host>'
 ```
 
+Run the same command again for `azure-test` and `azure-prod` with their own
+approved values instead of reusing one binding set across environments.
+
 For a browser-only handoff, run GitHub Actions →
 `helios-azure-env-bootstrap` with the same values and `mode=apply`. The
-workflow uses `HELIOS_REPO_ADMIN_TOKEN` when present, otherwise `github.token`.
+workflow requires `HELIOS_REPO_ADMIN_TOKEN` for `apply` (environment writes)
+and allows `github.token` only for `validate`.
 
 ## 3. Prepare and dispatch the protected cloud build
 
