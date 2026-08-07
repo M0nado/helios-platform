@@ -449,12 +449,12 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
 
         foreach (var name in new[] { "search", "fetch", "helios_get_control_plane_status", "helios_render_control_center" })
         {
-            var tool = Assert.Single(tools.Where(candidate => candidate.GetProperty("name").GetString() == name));
+            var tool = Assert.Single(tools, candidate => candidate.GetProperty("name").GetString() == name);
             Assert.True(tool.TryGetProperty("outputSchema", out _));
         }
 
-        var renderTool = Assert.Single(tools.Where(tool =>
-            tool.GetProperty("name").GetString() == "helios_render_control_center"));
+        var renderTool = Assert.Single(tools, tool =>
+            tool.GetProperty("name").GetString() == "helios_render_control_center");
         Assert.Equal("ui://helios/control-center-v2.html",
             renderTool.GetProperty("_meta").GetProperty("openai/outputTemplate").GetString());
         Assert.True(renderTool.GetProperty("_meta").GetProperty("openai/widgetAccessible").GetBoolean());
@@ -554,9 +554,9 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         {
             Assert.Equal(HttpStatusCode.OK, discoveryResponse.StatusCode);
             using var discoveryDocument = JsonDocument.Parse(await discoveryResponse.Content.ReadAsStringAsync());
-            var statusTool = Assert.Single(discoveryDocument.RootElement.GetProperty("result")
-                .GetProperty("tools").EnumerateArray()
-                .Where(tool => tool.GetProperty("name").GetString() == "helios_get_control_plane_status"));
+            var statusTool = Assert.Single(
+                discoveryDocument.RootElement.GetProperty("result").GetProperty("tools").EnumerateArray(),
+                tool => tool.GetProperty("name").GetString() == "helios_get_control_plane_status");
             Assert.Equal("oauth2", Assert.Single(statusTool.GetProperty("securitySchemes")
                 .EnumerateArray()).GetProperty("type").GetString());
         }

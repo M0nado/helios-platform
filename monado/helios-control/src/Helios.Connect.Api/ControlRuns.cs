@@ -55,6 +55,16 @@ public sealed record ControlRunSnapshot(
     int ResourceCount = 0,
     KnaaAssessment? Knaa = null,
     string? Error = null,
+    string LifecycleState = "INIT",
+    int AttemptCount = 0,
+    int HopCount = 0,
+    string ApprovalState = "pending",
+    string PolicyVersion = "1.0.0-default",
+    string TenantId = "unknown-tenant",
+    string Repository = "M0nado/helios-platform",
+    string ArtifactDigest = "unavailable",
+    string? IncidentSeverity = null,
+    string? IncidentFingerprint = null,
     [property: System.Text.Json.Serialization.JsonIgnore, Newtonsoft.Json.JsonProperty(PropertyName = "_etag")] string? ETag = null,
     [property: System.Text.Json.Serialization.JsonIgnore] string? LeaseOwner = null,
     [property: System.Text.Json.Serialization.JsonIgnore] DateTimeOffset? LeaseExpiresAt = null);
@@ -277,12 +287,23 @@ public sealed class ConnectorDispatcher(IHttpClientFactory httpClientFactory, IC
                 Payload: new Dictionary<string, object?>
                 {
                     ["schema"] = "helios.connectorDelivery.v1",
+                    ["schemaVersion"] = "1.0",
                     ["connector"] = connector,
                     ["runId"] = run.Id,
                     ["status"] = run.Status,
+                    ["lifecycleState"] = run.LifecycleState,
+                    ["approvalState"] = run.ApprovalState,
                     ["intent"] = run.Intent,
                     ["environment"] = run.Environment,
                     ["target"] = run.Target,
+                    ["tenant"] = run.TenantId,
+                    ["repository"] = run.Repository,
+                    ["artifactDigest"] = run.ArtifactDigest,
+                    ["policyVersion"] = run.PolicyVersion,
+                    ["attemptCount"] = run.AttemptCount,
+                    ["hopCount"] = run.HopCount,
+                    ["incidentSeverity"] = run.IncidentSeverity,
+                    ["incidentFingerprint"] = run.IncidentFingerprint,
                     ["evidenceSha256"] = run.EvidenceSha256,
                     ["resourceCount"] = run.ResourceCount,
                     ["planId"] = run.Plan?.PlanId,
@@ -400,13 +421,16 @@ public sealed partial class ControlRunCoordinator(
     IConnectorDispatcher dispatcher,
     ILogger<ControlRunCoordinator> logger,
     ControlRunCoordinatorTiming? timing = null,
-    IKnaaEvaluator? knaaEvaluator = null) : BackgroundService
+    IKnaaEvaluator? knaaEvaluator = null,
+    AgentCorePolicy? policy = null) : BackgroundService
 {
+    private const string DefaultRepository = "M0nado/helios-platform";
     private static readonly HashSet<string> Environments = new(StringComparer.OrdinalIgnoreCase) { "dev", "test", "preview", "prod" };
     private static readonly HashSet<string> Intents = new(StringComparer.OrdinalIgnoreCase) { "provision-resources", "cleanup-owned-resources" };
     private static readonly HashSet<string> Connectors = new(StringComparer.OrdinalIgnoreCase) { "github", "linear", "slack", "sharepoint", "teams", "copilot" };
     private readonly ControlRunCoordinatorTiming _timing = ControlRunCoordinatorTiming.Validate(timing);
     private readonly IKnaaEvaluator _knaaEvaluator = knaaEvaluator ?? new KnaaEvaluator(KnaaEvaluatorOptions.Default);
+    private readonly AgentCorePolicy _policy = policy ?? AgentCorePolicy.Default;
     private readonly Channel<string> _queue = Channel.CreateBounded<string>(new BoundedChannelOptions(256)
     {
         FullMode = BoundedChannelFullMode.Wait,
@@ -419,6 +443,7 @@ public sealed partial class ControlRunCoordinator(
     public async Task<ControlRunSnapshot> StartAsync(ControlRunRequest request, string idempotencyKey, string requestedBy, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        _policy.Validate();
         if (!IdempotencyPattern().IsMatch(idempotencyKey)) throw new ArgumentException("Idempotency-Key must be 8-128 safe characters.", nameof(idempotencyKey));
         var intent = Normalize(request.Intent, "intent", 64).ToLowerInvariant();
         if (!Intents.Contains(intent)) throw new ArgumentException("One-button runs support provision-resources or cleanup-owned-resources.", nameof(request.Intent));
@@ -451,6 +476,8 @@ public sealed partial class ControlRunCoordinator(
         });
         var requestSha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalRequest))).ToLowerInvariant();
         var now = DateTimeOffset.UtcNow;
+        var tenantId = NormalizeTenant(context.TenantId);
+        var repository = ResolveRepository();
         var steps = new[]
         {
             Step("context", "queued", "Verify the configured Azure boundary."),
@@ -462,7 +489,13 @@ public sealed partial class ControlRunCoordinator(
             Step("approval", "queued", "Stop at the protected approval boundary.")
         };
         var candidate = new ControlRunSnapshot(id, "control-runs", requestSha256, Guid.NewGuid().ToString("n"), requestedBy,
-            intent, environment, target, normalizedConnectors, "queued", "diagnose-plan-sync", now, now, steps, []);
+            intent, environment, target, normalizedConnectors, "queued", "diagnose-plan-sync", now, now, steps, [],
+            LifecycleState: _policy.Lifecycle.InitialState,
+            ApprovalState: "pending",
+            PolicyVersion: _policy.PolicyVersion,
+            TenantId: tenantId,
+            Repository: repository,
+            ArtifactDigest: requestSha256);
         var (snapshot, created) = await store.CreateOrGetAsync(candidate, cancellationToken);
         if (!created &&
             (!string.Equals(snapshot.RequestSha256, requestSha256, StringComparison.Ordinal) ||
@@ -489,7 +522,17 @@ public sealed partial class ControlRunCoordinator(
         var snapshot = await GetAsync(id, cancellationToken);
         if (snapshot is null) return null;
         if (snapshot.Status != "failed") return snapshot;
-        var reset = snapshot with { Status = "queued", Error = null, LeaseOwner = null, LeaseExpiresAt = null, UpdatedAt = DateTimeOffset.UtcNow };
+        var reset = snapshot with
+        {
+            Status = "queued",
+            Error = null,
+            LifecycleState = _policy.Lifecycle.InitialState,
+            HopCount = 0,
+            ApprovalState = "pending",
+            LeaseOwner = null,
+            LeaseExpiresAt = null,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
         try { snapshot = await ReplaceAsync(snapshot, reset, cancellationToken); }
         catch (ControlRunConcurrencyException) { return await GetAsync(id, cancellationToken); }
         _queue.Writer.TryWrite(id);
@@ -560,13 +603,20 @@ public sealed partial class ControlRunCoordinator(
         if (run.Status is not ("queued" or "running")) return;
         try
         {
+            var nextAttempt = run.AttemptCount + 1;
             run = await ReplaceAsync(run, run with
             {
                 Status = "running",
+                AttemptCount = nextAttempt,
+                LifecycleState = NormalizeLifecycleState(run.LifecycleState),
+                PolicyVersion = _policy.PolicyVersion,
                 LeaseOwner = _workerId,
                 LeaseExpiresAt = now.Add(_timing.LeaseDuration),
                 UpdatedAt = now
             }, cancellationToken);
+            if (nextAttempt > _policy.EventBus.Retry.MaxAttempts)
+                throw new InvalidOperationException("The run exceeded the configured maximum retry attempts.");
+            run = await TransitionLifecycleAsync(run, "PRECHECK", cancellationToken);
         }
         catch (ControlRunConcurrencyException) { return; }
 
@@ -588,6 +638,7 @@ public sealed partial class ControlRunCoordinator(
             run = await ReplaceAsync(run, run with { ResourceCount = resources.Count, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
             run = await SetStepAsync(run, "inventory", "completed", $"Read metadata for {resources.Count} resources.", workToken);
 
+            run = await TransitionLifecycleAsync(run, "PLAN", workToken);
             run = await SetStepAsync(run, "plan", "running", "Creating deterministic plan-only automation.", workToken);
             var plan = planner.CreatePlan(new EdgeAutomationRequest(run.Intent, run.Environment, run.Target, "all"));
             run = await ReplaceAsync(run, run with { Plan = plan, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
@@ -627,15 +678,27 @@ public sealed partial class ControlRunCoordinator(
 
             run = await SetStepAsync(run, "connectors", "running", "Reconciling external status receipts.", workToken);
             var awaitsApproval = plan.Steps.Any(step => step.Mutating);
+            if (awaitsApproval)
+            {
+                run = await TransitionLifecycleAsync(run, "AWAIT_APPROVAL", workToken);
+            }
+            else
+            {
+                run = await TransitionLifecycleAsync(run, "EXECUTE", workToken);
+                run = await TransitionLifecycleAsync(run, "VERIFY", workToken);
+                run = await TransitionLifecycleAsync(run, "NOTIFY", workToken);
+            }
             var receipts = await dispatcher.DispatchAsync(run with { Status = awaitsApproval ? "awaiting-approval" : "completed" }, workToken);
             run = await ReplaceAsync(run, run with { Receipts = receipts, UpdatedAt = DateTimeOffset.UtcNow }, workToken);
             run = await SetStepAsync(run, "connectors", "completed", $"Recorded {receipts.Count} connector receipts.", workToken);
 
             run = await SetStepAsync(run, "approval", "running", "Evaluating protected mutation gates.", workToken);
             run = await SetStepAsync(run, "approval", "completed", BuildApprovalDetail(awaitsApproval, run.Knaa), workToken);
+            if (!awaitsApproval) run = await TransitionLifecycleAsync(run, "COMPLETE", workToken);
             await ReplaceAsync(run, run with
             {
                 Status = awaitsApproval ? "awaiting-approval" : "completed",
+                ApprovalState = awaitsApproval ? "awaiting-approval" : "approved",
                 LeaseOwner = null,
                 LeaseExpiresAt = null,
                 UpdatedAt = DateTimeOffset.UtcNow
@@ -703,11 +766,21 @@ public sealed partial class ControlRunCoordinator(
             var run = await store.GetAsync(id, cancellationToken);
             if (run is null || run.Status is "completed" or "awaiting-approval" ||
                 !string.Equals(run.LeaseOwner, _workerId, StringComparison.Ordinal)) return;
+            if (!_policy.AllowsTransition(NormalizeLifecycleState(run.LifecycleState), "FAILED")) return;
             try
             {
+                var severity = ClassifyIncidentSeverity(run.Environment);
+                var fingerprint = BuildIncidentFingerprint(run, severity, DateTimeOffset.UtcNow);
+                var failureHopCount = run.HopCount >= _policy.EventBus.MaxHopCount
+                    ? run.HopCount
+                    : run.HopCount + 1;
                 await ReplaceAsync(run, run with
                 {
                     Status = "failed",
+                    LifecycleState = "FAILED",
+                    HopCount = failureHopCount,
+                    IncidentSeverity = severity,
+                    IncidentFingerprint = fingerprint,
                     Error = "The run failed. Review server telemetry using the correlation ID; secret-bearing exception text is never returned.",
                     LeaseOwner = null,
                     LeaseExpiresAt = null,
@@ -738,6 +811,25 @@ public sealed partial class ControlRunCoordinator(
             JsonException or
             AuthenticationFailedException or
             OperationCanceledException;
+
+    private async Task<ControlRunSnapshot> TransitionLifecycleAsync(ControlRunSnapshot run, string nextState, CancellationToken cancellationToken)
+    {
+        var currentState = NormalizeLifecycleState(run.LifecycleState);
+        if (string.Equals(currentState, nextState, StringComparison.Ordinal)) return run;
+        if (!_policy.AllowsTransition(currentState, nextState))
+            throw new InvalidOperationException($"Illegal lifecycle transition '{currentState}' -> '{nextState}'.");
+
+        var nextHopCount = run.HopCount + 1;
+        if (nextHopCount > _policy.EventBus.MaxHopCount)
+            throw new InvalidOperationException($"The run exceeded the max hop count ({_policy.EventBus.MaxHopCount}).");
+
+        return await ReplaceAsync(run, run with
+        {
+            LifecycleState = nextState,
+            HopCount = nextHopCount,
+            UpdatedAt = DateTimeOffset.UtcNow
+        }, cancellationToken);
+    }
 
     private async Task<ControlRunSnapshot> SetStepAsync(ControlRunSnapshot run, string name, string status, string detail, CancellationToken cancellationToken)
     {
@@ -800,6 +892,48 @@ public sealed partial class ControlRunCoordinator(
     {
         _leaseWriteGate.Dispose();
         base.Dispose();
+    }
+
+    private static string NormalizeTenant(string? tenantId) =>
+        string.IsNullOrWhiteSpace(tenantId) ? "unknown-tenant" : tenantId.Trim().ToLowerInvariant();
+
+    private static string ResolveRepository()
+    {
+        var repository = Environment.GetEnvironmentVariable("HELIOS_CANONICAL_REPOSITORY");
+        return string.IsNullOrWhiteSpace(repository) ? DefaultRepository : repository.Trim();
+    }
+
+    private string NormalizeLifecycleState(string? lifecycleState)
+    {
+        if (string.IsNullOrWhiteSpace(lifecycleState)) return _policy.Lifecycle.InitialState;
+        var normalized = lifecycleState.Trim().ToUpperInvariant();
+        return _policy.Lifecycle.States.Contains(normalized, StringComparer.Ordinal)
+            ? normalized
+            : _policy.Lifecycle.InitialState;
+    }
+
+    private static string ClassifyIncidentSeverity(string environment) =>
+        environment.ToLowerInvariant() switch
+        {
+            "prod" => "S0",
+            "test" or "preview" => "S1",
+            _ => "S2"
+        };
+
+    private static string BuildIncidentFingerprint(ControlRunSnapshot run, string severity, DateTimeOffset occurredAt)
+    {
+        var bucket = occurredAt.ToUnixTimeSeconds() / 900;
+        var canonical = string.Join('\n', new[]
+        {
+            run.TenantId,
+            run.Repository,
+            run.Environment,
+            run.Id,
+            run.ArtifactDigest,
+            severity,
+            bucket.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        });
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
     }
 
     private static ControlRunStep Step(string name, string status, string detail) => new(name, status, detail);

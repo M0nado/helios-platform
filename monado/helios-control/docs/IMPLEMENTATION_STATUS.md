@@ -41,6 +41,11 @@
   leases and recovery scans, deterministic Azure orchestration-plan digests,
   managed-identity persistence, resumable failed-run status, and an explicit
   `awaiting-approval` terminal gate.
+- Machine-readable `agent-core-policy` contract and schema that define lifecycle
+  transitions, immutable context, concurrency fencing, retries, approval
+  authority, incident suppression limits, rollback governance, sandboxing, and
+  append-only audit fields. Runtime policy loading is fail-closed for strict
+  cloud modes, and validation tests plus failure-injection tests are required.
 - KNAA v1 evaluator integration for control runs, including versioned model
   metadata, normalized source-signal vectors, confidence/uncertainty semantics,
   threshold-scored policy outcomes (`block`/`warn`/`review-required`/`pass`),
@@ -76,6 +81,10 @@
 - APIM/private-backend networking, Container Apps Jobs, Service Bus, Data Lake,
   Azure AI Search, and Foundry resources are not present in the current Bicep.
   Broader Cosmos candidate/evaluation stores also remain later gates.
+- Control runs still stop at the governed approval boundary for mutating plans.
+  `EXECUTE`, `VERIFY`, and `ROLLED_BACK` lifecycle states are policy-defined
+  controls that require protected approval workflows; they are not exposed as a
+  direct MCP, chat, or Edge mutation path.
 
 ## Attached Python source reality
 

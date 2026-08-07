@@ -27,9 +27,14 @@ public sealed class ControlRunTests
 
             var completed = await WaitForTerminalAsync(coordinator, first.Id);
             Assert.Equal("awaiting-approval", completed.Status);
+            Assert.Equal("AWAIT_APPROVAL", completed.LifecycleState);
+            Assert.Equal("awaiting-approval", completed.ApprovalState);
             Assert.NotNull(completed.Plan);
             Assert.False(completed.Plan!.CanApplyFromMcp);
             Assert.Matches("^[0-9a-f]{64}$", completed.EvidenceSha256);
+            Assert.Matches("^[0-9]+\\.[0-9]+\\.[0-9]+", completed.PolicyVersion);
+            Assert.True(completed.AttemptCount >= 1);
+            Assert.True(completed.HopCount >= 1);
             Assert.Equal(2, completed.ResourceCount);
             Assert.Equal(4, completed.Receipts.Count);
             Assert.NotNull(completed.Knaa);
@@ -255,6 +260,134 @@ public sealed class ControlRunTests
     }
 
     [Fact]
+    public async Task Failed_run_records_incident_metadata_without_automatic_rollback()
+    {
+        using var coordinator = new ControlRunCoordinator(
+            new InMemoryControlRunStore(),
+            new FailingInventory("tenant-a"),
+            new EdgeAutomationPlanner(),
+            new FakeDispatcher(),
+            NullLogger<ControlRunCoordinator>.Instance);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var started = await coordinator.StartAsync(
+                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                "edge-failure-0001",
+                "principal-1",
+                CancellationToken.None);
+            var failed = await WaitForTerminalAsync(coordinator, started.Id);
+
+            Assert.Equal("failed", failed.Status);
+            Assert.Equal("FAILED", failed.LifecycleState);
+            Assert.Equal("S2", failed.IncidentSeverity);
+            Assert.Matches("^[0-9a-f]{64}$", failed.IncidentFingerprint);
+            Assert.NotEqual("rolled_back", failed.Status);
+        }
+        finally
+        {
+            await coordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task Exceeding_max_attempts_fails_run_instead_of_leaving_it_queued()
+    {
+        var basePolicy = AgentCorePolicy.Default;
+        var boundedPolicy = basePolicy with
+        {
+            EventBus = basePolicy.EventBus with
+            {
+                Retry = basePolicy.EventBus.Retry with { MaxAttempts = 2 }
+            }
+        };
+        using var coordinator = new ControlRunCoordinator(
+            new InMemoryControlRunStore(),
+            new FailingInventory("tenant-a"),
+            new EdgeAutomationPlanner(),
+            new FakeDispatcher(),
+            NullLogger<ControlRunCoordinator>.Instance,
+            policy: boundedPolicy);
+        await coordinator.StartAsync(CancellationToken.None);
+        try
+        {
+            var started = await coordinator.StartAsync(
+                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                "edge-max-attempts-0001",
+                "principal-1",
+                CancellationToken.None);
+            var firstFailure = await WaitForTerminalAsync(coordinator, started.Id);
+            Assert.Equal("failed", firstFailure.Status);
+            Assert.Equal(1, firstFailure.AttemptCount);
+
+            _ = await coordinator.ResumeAsync(started.Id, CancellationToken.None);
+            var secondFailure = await WaitForTerminalAsync(coordinator, started.Id);
+            Assert.Equal("failed", secondFailure.Status);
+            Assert.Equal(2, secondFailure.AttemptCount);
+
+            _ = await coordinator.ResumeAsync(started.Id, CancellationToken.None);
+            var exceededFailure = await WaitForTerminalAsync(coordinator, started.Id);
+
+            Assert.Equal("failed", exceededFailure.Status);
+            Assert.Equal("FAILED", exceededFailure.LifecycleState);
+            Assert.True(exceededFailure.AttemptCount > boundedPolicy.EventBus.Retry.MaxAttempts);
+        }
+        finally
+        {
+            await coordinator.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task Incident_fingerprint_isolated_by_tenant_for_same_run_identity()
+    {
+        var idempotencyKey = "edge-tenant-isolation-0001";
+        var requestedBy = "principal-tenant";
+
+        using var coordinatorA = new ControlRunCoordinator(
+            new InMemoryControlRunStore(),
+            new FailingInventory("tenant-a"),
+            new EdgeAutomationPlanner(),
+            new FakeDispatcher(),
+            NullLogger<ControlRunCoordinator>.Instance);
+        using var coordinatorB = new ControlRunCoordinator(
+            new InMemoryControlRunStore(),
+            new FailingInventory("tenant-b"),
+            new EdgeAutomationPlanner(),
+            new FakeDispatcher(),
+            NullLogger<ControlRunCoordinator>.Instance);
+        await coordinatorA.StartAsync(CancellationToken.None);
+        await coordinatorB.StartAsync(CancellationToken.None);
+        try
+        {
+            var runA = await coordinatorA.StartAsync(
+                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                idempotencyKey,
+                requestedBy,
+                CancellationToken.None);
+            var runB = await coordinatorB.StartAsync(
+                new ControlRunRequest("provision-resources", "dev", null, ["github"]),
+                idempotencyKey,
+                requestedBy,
+                CancellationToken.None);
+
+            var failedA = await WaitForTerminalAsync(coordinatorA, runA.Id);
+            var failedB = await WaitForTerminalAsync(coordinatorB, runB.Id);
+
+            Assert.Equal(runA.Id, runB.Id);
+            Assert.Equal("failed", failedA.Status);
+            Assert.Equal("failed", failedB.Status);
+            Assert.NotEqual(failedA.TenantId, failedB.TenantId);
+            Assert.NotEqual(failedA.IncidentFingerprint, failedB.IncidentFingerprint);
+        }
+        finally
+        {
+            await coordinatorA.StopAsync(CancellationToken.None);
+            await coordinatorB.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task Live_connector_relay_is_signed_and_idempotent_without_exposing_secret()
     {
         var handler = new CaptureHandler();
@@ -271,7 +404,9 @@ public sealed class ControlRunTests
         var now = DateTimeOffset.UtcNow;
         var run = new ControlRunSnapshot("0123456789abcdef0123456789abcdef", "control-runs", "edge-relay-0001", "correlation-1", "principal-1",
             "provision-resources", "dev", "helios-dev-rg", ["github"], "awaiting-approval", "diagnose-plan-sync", now, now, [], [],
-            EvidenceSha256: new string('a', 64), ResourceCount: 2, Knaa: BuildSampleKnaaAssessment(now));
+            EvidenceSha256: new string('a', 64), ResourceCount: 2, LifecycleState: "AWAIT_APPROVAL", PolicyVersion: "1.0.0",
+            TenantId: "tenant-a", Repository: "M0nado/helios-platform", ArtifactDigest: new string('b', 64), AttemptCount: 1, HopCount: 4, Knaa: BuildSampleKnaaAssessment(now),
+            ApprovalState: "awaiting-approval");
 
         var receipts = await dispatcher.DispatchAsync(run, CancellationToken.None);
         var firstBody = handler.Body;
@@ -311,6 +446,10 @@ public sealed class ControlRunTests
         Assert.Equal(0.75, thresholds.GetProperty("reviewRequired").GetDouble());
         var evidenceLinks = ((JsonElement)envelope.Payload["knaaEvidenceLinks"]!).EnumerateArray().Select(value => value.GetString()).ToArray();
         Assert.Contains("run://control-runs/0123456789abcdef0123456789abcdef", evidenceLinks);
+        Assert.Equal("AWAIT_APPROVAL", ((JsonElement)envelope.Payload["lifecycleState"]!).GetString());
+        Assert.Equal("tenant-a", ((JsonElement)envelope.Payload["tenant"]!).GetString());
+        Assert.Equal("M0nado/helios-platform", ((JsonElement)envelope.Payload["repository"]!).GetString());
+        Assert.Equal("awaiting-approval", ((JsonElement)envelope.Payload["approvalState"]!).GetString());
     }
 
     private static KnaaAssessment BuildSampleKnaaAssessment(DateTimeOffset now) => new(
@@ -372,6 +511,18 @@ public sealed class ControlRunTests
                 new("/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.App/containerApps/api", "api", "Microsoft.App/containerApps", "eastus2"),
                 new("/subscriptions/test/resourceGroups/helios-dev-rg/providers/Microsoft.KeyVault/vaults/vault", "vault", "Microsoft.KeyVault/vaults", "eastus2")
             ]);
+
+        public Task<IReadOnlyList<AzureInventoryResource>> ListFoundryResourcesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<AzureInventoryResource>>([]);
+    }
+
+    private sealed class FailingInventory(string tenantId) : IAzureInventoryService
+    {
+        public AzureConnectorContext GetContext() =>
+            new(tenantId, "22222222-2222-2222-2222-222222222222", "helios-dev-rg", "read-only-resource-group", true);
+
+        public Task<IReadOnlyList<AzureInventoryResource>> ListResourcesAsync(string? typePrefix, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Injected inventory failure.");
 
         public Task<IReadOnlyList<AzureInventoryResource>> ListFoundryResourcesAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<AzureInventoryResource>>([]);
