@@ -1,0 +1,11 @@
+{
+    "options":  null,
+    "description":  "Metrics defining success for this item",
+    "type":  "Text",
+    "default":  null,
+    "createdAt":  "2026-08-06T18:06:08.4017647-05:00",
+    "fieldId":  "PVTF_lADOEFilTs4BfnykzhZ5ZXo",
+    "name":  "SuccessMetrics",
+    "tier":  5,
+    "status":  "created"
+}

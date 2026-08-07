@@ -11,7 +11,7 @@
     Organization name
 .PARAMETER DryRun
     Preview mode
-.PARAMETER Verbose
+.PARAMETER DetailedOutput
     Detailed output
 #>
 
@@ -26,11 +26,11 @@ param(
     [string]$OrganizationName,
     
     [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DetailedOutput
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$VerbosePreference = if ($DetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/templates-setup_$timestamp.log"
@@ -43,7 +43,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($DetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # 8 Phase Templates Definition
@@ -313,7 +313,7 @@ function Create-Template {
     }
     catch {
         Write-Log "  Failed to create template: $_" 'ERROR'
-        return @{ name = $Template.name; status = 'failed'; error = $_ }
+        return @{ name = $Template.name; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -347,6 +347,10 @@ try {
     
     Write-Log '=== Phase Templates Setup Complete ===' 'SUCCESS'
     Write-Log "Created: $($report.created), Failed: $($report.failed)" 'INFO'
+
+    if ($report.failed -gt 0) {
+        throw "Phase template setup incomplete: $($report.failed) templates failed."
+    }
     
     $report | ConvertTo-Json -Depth 10
 }

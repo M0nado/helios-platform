@@ -1,0 +1,57 @@
+{
+    "conditions":  [
+                       "Priority = Critical",
+                       "RiskLevel = High or Critical"
+                   ],
+    "actionDetails":  {
+                          "channels":  [
+                                           "slack",
+                                           "email"
+                                       ],
+                          "recipients":  [
+                                             "@team-leads",
+                                             "project-manager@company.com"
+                                         ],
+                          "template":  "critical-priority-alert"
+                      },
+    "id":  "rule-critical-escalate",
+    "enabled":  true,
+    "trigger":  "FieldChanged",
+    "createdAt":  "2026-08-06T18:06:09.6070415-05:00",
+    "triggerCondition":  "When Priority field changes to Critical",
+    "description":  "Alert team when critical items are created or escalated",
+    "name":  "Escalate Critical Priority Items",
+    "errorHandling":  "Retry",
+    "action":  "SendNotification",
+    "testResults":  {
+                        "action":  "SendNotification",
+                        "ruleName":  "Escalate Critical Priority Items",
+                        "ruleId":  "rule-critical-escalate",
+                        "trigger":  "FieldChanged",
+                        "enabled":  true,
+                        "tests":  [
+                                      {
+                                          "details":  "Valid trigger type",
+                                          "name":  "Trigger Configuration",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "Valid action type",
+                                          "name":  "Action Configuration",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "2 conditions configured (max 5)",
+                                          "name":  "Condition Count",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "Valid error handling strategy",
+                                          "name":  "Error Handling",
+                                          "passed":  true
+                                      }
+                                  ],
+                        "allPassed":  true,
+                        "conditions":  2
+                    }
+}

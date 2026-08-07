@@ -1,0 +1,11 @@
+{
+    "options":  null,
+    "description":  "Systems or services this integrates with",
+    "type":  "Text",
+    "default":  null,
+    "createdAt":  "2026-08-06T18:06:07.5656084-05:00",
+    "fieldId":  "PVTF_lADOEFilTs4BfnykzhZ5ZXc",
+    "name":  "IntegrationPoints",
+    "tier":  4,
+    "status":  "created"
+}

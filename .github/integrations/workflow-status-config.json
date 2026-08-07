@@ -1,0 +1,19 @@
+{
+    "projectNumber":  7,
+    "updateFrequency":  "5 minutes",
+    "createdAt":  "2026-08-06T18:06:09.7676575-05:00",
+    "mappings":  {
+                     "workflow_run.failed":  {
+                                                 "value":  "QA Failed",
+                                                 "field":  "QAStatus"
+                                             },
+                     "workflow_run.concluded":  {
+                                                    "value":  "100% Complete",
+                                                    "field":  "ProgressStatus"
+                                                },
+                     "workflow_run.success":  {
+                                                  "value":  "QA Approved",
+                                                  "field":  "QAStatus"
+                                              }
+                 }
+}

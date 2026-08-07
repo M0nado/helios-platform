@@ -1,0 +1,25 @@
+{
+    "successMetrics":  [
+                           "Test pass rate \u003e 95%",
+                           "Zero critical/high bugs",
+                           "Security score \u003e 90",
+                           "Response time \u003c threshold"
+                       ],
+    "name":  "Testing \u0026 QA",
+    "description":  "Quality assurance and testing",
+    "duration":  "5-10 days",
+    "acceptanceCriteria":  [
+                               "All test cases executed",
+                               "Bug tracking completed",
+                               "Security scan passed",
+                               "Performance tested in staging"
+                           ],
+    "phase":  "Phase 4",
+    "fields":  {
+                   "ComplianceCheck":  "Pending",
+                   "QAStatus":  "Pending QA",
+                   "RiskLevel":  "Medium",
+                   "ApprovalRequired":  "Yes"
+               },
+    "createdAt":  "2026-08-06T18:06:09.5388446-05:00"
+}

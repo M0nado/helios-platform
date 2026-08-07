@@ -1,0 +1,11 @@
+{
+    "options":  null,
+    "description":  "Issue or task blocking this work",
+    "type":  "Text",
+    "default":  null,
+    "createdAt":  "2026-08-06T18:06:04.7672697-05:00",
+    "fieldId":  "PVTF_lADOEFilTs4BfnykzhZ5ZW4",
+    "name":  "BlockedBy",
+    "tier":  2,
+    "status":  "created"
+}

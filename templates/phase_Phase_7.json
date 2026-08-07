@@ -1,0 +1,25 @@
+{
+    "successMetrics":  [
+                           "Deployment success 100%",
+                           "Zero production incidents P1",
+                           "User adoption rate \u003e 90%",
+                           "System performance maintained"
+                       ],
+    "name":  "Production Deployment",
+    "description":  "Production release and rollout",
+    "duration":  "1-2 days",
+    "acceptanceCriteria":  [
+                               "Production deployment successful",
+                               "Monitoring and alerting active",
+                               "Post-deployment smoke tests pass",
+                               "Team communication completed"
+                           ],
+    "phase":  "Phase 7",
+    "fields":  {
+                   "RiskLevel":  "Critical",
+                   "DeploymentEnvironment":  "Production",
+                   "DeploymentStatus":  "Deployed to Prod",
+                   "ApprovalRequired":  "Yes"
+               },
+    "createdAt":  "2026-08-06T18:06:09.5474109-05:00"
+}

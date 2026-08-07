@@ -11,7 +11,7 @@
     Organization name
 .PARAMETER DryRun
     Preview mode
-.PARAMETER Verbose
+.PARAMETER DetailedOutput
     Detailed output
 #>
 
@@ -26,11 +26,11 @@ param(
     [string]$OrganizationName,
     
     [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DetailedOutput
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$VerbosePreference = if ($DetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/automation-rules_$timestamp.log"
@@ -43,7 +43,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($DetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # 4 Automation Rules Definition
@@ -182,7 +182,7 @@ function Test-Rule {
         }
     }
     
-    $testResult.allPassed = $testResult.tests | Where-Object { -not $_.passed } | Measure-Object | Select-Object -ExpandProperty Count -eq 0
+    $testResult.allPassed = (($testResult.tests | Where-Object { -not $_.passed } | Measure-Object).Count -eq 0)
     
     return $testResult
 }
@@ -248,7 +248,7 @@ function Create-Rule {
             name = $Rule.name
             id = $Rule.id
             status = 'failed'
-            error = $_
+            error = $_.ToString()
         }
     }
 }
@@ -267,7 +267,7 @@ $(foreach ($rule in $Rules) {
 @"
 ### $($rule.name) (ID: $($rule.id))
 
-**Status**: $($rule.enabled ? 'Enabled' : 'Disabled')
+**Status**: $(if ($rule.enabled) { 'Enabled' } else { 'Disabled' })
 
 **Trigger**: $($rule.trigger)
 - Condition: $($rule.triggerCondition)
@@ -351,6 +351,10 @@ try {
     
     Write-Log '=== Automation Rules Setup Complete ===' 'SUCCESS'
     Write-Log "Created: $($report.created), Failed: $($report.failed), Tests Passed: $($report.testsPassed)" 'INFO'
+
+    if ($report.failed -gt 0) {
+        throw "Automation rules setup incomplete: $($report.failed) rules failed."
+    }
     
     $report | ConvertTo-Json -Depth 10
 }

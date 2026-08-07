@@ -1,0 +1,18 @@
+{
+    "options":  [
+                    "XS",
+                    "S",
+                    "M",
+                    "L",
+                    "XL",
+                    "XXL"
+                ],
+    "description":  "Effort estimation in story points",
+    "type":  "SingleSelect",
+    "default":  "M",
+    "createdAt":  "2026-08-06T18:06:03.0439400-05:00",
+    "fieldId":  "PVTSSF_lADOEFilTs4BfnykzhZ5ZWg",
+    "name":  "Effort",
+    "tier":  1,
+    "status":  "created"
+}

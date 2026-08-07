@@ -11,7 +11,7 @@
     Organization name
 .PARAMETER GenerateReport
     Generate comprehensive validation report
-.PARAMETER Verbose
+.PARAMETER DetailedOutput
     Detailed output
 #>
 
@@ -26,11 +26,11 @@ param(
     [string]$OrganizationName,
     
     [switch]$GenerateReport,
-    [switch]$Verbose
+    [switch]$DetailedOutput
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$VerbosePreference = if ($DetailedOutput) { 'Continue' } else { 'SilentlyContinue' }
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/validation_$timestamp.log"
@@ -43,7 +43,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($DetailedOutput -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 function Validate-CustomFields {
@@ -305,42 +305,42 @@ function Display-ValidationSummary {
     param([hashtable]$Report)
     
     Write-Host "`n" -ForegroundColor Cyan
-    Write-Host "╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║          BOARD VALIDATION SUMMARY                     ║" -ForegroundColor Cyan
-    Write-Host "╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "=======================================================" -ForegroundColor Cyan
+    Write-Host " BOARD VALIDATION SUMMARY " -ForegroundColor Cyan
+    Write-Host "=======================================================" -ForegroundColor Cyan
     
     Write-Host "`nValidation Results:" -ForegroundColor Green
+    $fieldsSummary = '{0}/{1} ({2}%)' -f $Report.validations.fields.foundFields, $Report.validations.fields.expectedFields, $Report.completionPercentage.fields
     Write-Host "  Custom Fields: " -NoNewline
-    Write-Host "$($Report.validations.fields.foundFields)/$($Report.validations.fields.expectedFields) ($($Report.completionPercentage.fields)%)" `
-        -ForegroundColor $(if ($Report.validations.fields.isValid) { 'Green' } else { 'Red' })
+    Write-Host $fieldsSummary -ForegroundColor $(if ($Report.validations.fields.isValid) { 'Green' } else { 'Red' })
     
+    $templatesSummary = '{0}/{1} ({2}%)' -f $Report.validations.templates.foundTemplates, $Report.validations.templates.expectedTemplates, $Report.completionPercentage.templates
     Write-Host "  Phase Templates: " -NoNewline
-    Write-Host "$($Report.validations.templates.foundTemplates)/$($Report.validations.templates.expectedTemplates) ($($Report.completionPercentage.templates)%)" `
-        -ForegroundColor $(if ($Report.validations.templates.isValid) { 'Green' } else { 'Red' })
+    Write-Host $templatesSummary -ForegroundColor $(if ($Report.validations.templates.isValid) { 'Green' } else { 'Red' })
     
+    $rulesSummary = '{0}/{1} ({2}%)' -f $Report.validations.rules.foundRules, $Report.validations.rules.expectedRules, $Report.completionPercentage.rules
     Write-Host "  Automation Rules: " -NoNewline
-    Write-Host "$($Report.validations.rules.foundRules)/$($Report.validations.rules.expectedRules) ($($Report.completionPercentage.rules)%)" `
-        -ForegroundColor $(if ($Report.validations.rules.isValid) { 'Green' } else { 'Red' })
+    Write-Host $rulesSummary -ForegroundColor $(if ($Report.validations.rules.isValid) { 'Green' } else { 'Red' })
     
+    $viewsSummary = '{0}/{1} ({2}%)' -f $Report.validations.views.foundViews, $Report.validations.views.expectedViews, $Report.completionPercentage.views
     Write-Host "  Board Views: " -NoNewline
-    Write-Host "$($Report.validations.views.foundViews)/$($Report.validations.views.expectedViews) ($($Report.completionPercentage.views)%)" `
-        -ForegroundColor $(if ($Report.validations.views.isValid) { 'Green' } else { 'Red' })
+    Write-Host $viewsSummary -ForegroundColor $(if ($Report.validations.views.isValid) { 'Green' } else { 'Red' })
     
     Write-Host "`nOverall Status: " -NoNewline
     if ($Report.summary.allValid) {
-        Write-Host "✓ VALID" -ForegroundColor Green
+        Write-Host "VALID" -ForegroundColor Green
     }
     else {
-        Write-Host "✗ INVALID" -ForegroundColor Red
+        Write-Host "INVALID" -ForegroundColor Red
     }
     
     Write-Host "`n"
 }
 
 try {
-    Write-Log '╔═══════════════════════════════════════════════════════╗'
-    Write-Log '║         BOARD VALIDATION SCRIPT                      ║'
-    Write-Log '╚═══════════════════════════════════════════════════════╝'
+    Write-Log '======================================================='
+    Write-Log 'BOARD VALIDATION SCRIPT'
+    Write-Log '======================================================='
     
     Write-Log "Validating board configuration..."
     
@@ -353,6 +353,10 @@ try {
         -RulesValidation $rulesVal -ViewsValidation $viewsVal
     
     Display-ValidationSummary -Report $report
+
+    if (-not $report.summary.allValid) {
+        throw 'Board validation failed: one or more validation categories are incomplete.'
+    }
     
     Write-Log 'Validation complete' 'SUCCESS'
     

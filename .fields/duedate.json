@@ -1,0 +1,11 @@
+{
+    "options":  null,
+    "description":  "Target completion date",
+    "type":  "Date",
+    "default":  null,
+    "createdAt":  "2026-08-06T18:06:03.6258127-05:00",
+    "fieldId":  "PVTF_lADOEFilTs4BfnykzhZ5ZWo",
+    "name":  "DueDate",
+    "tier":  1,
+    "status":  "created"
+}

@@ -1,0 +1,47 @@
+{
+    "schedules":  [
+                      {
+                          "frequency":  "Daily",
+                          "time":  "09:00 UTC",
+                          "metrics":  [
+                                          "workflow_duration",
+                                          "deployment_success_rate",
+                                          "error_rate"
+                                      ],
+                          "name":  "Daily Standup",
+                          "recipients":  [
+                                             "team@company.com"
+                                         ]
+                      },
+                      {
+                          "name":  "Weekly Performance Review",
+                          "metrics":  [
+                                          "all"
+                                      ],
+                          "recipients":  [
+                                             "management@company.com"
+                                         ],
+                          "frequency":  "Weekly",
+                          "time":  "17:00 UTC",
+                          "day":  "Friday"
+                      },
+                      {
+                          "name":  "Monthly Summary",
+                          "metrics":  [
+                                          "all"
+                                      ],
+                          "recipients":  [
+                                             "executive@company.com"
+                                         ],
+                          "frequency":  "Monthly",
+                          "time":  "17:00 UTC",
+                          "day":  "Last Friday"
+                      }
+                  ],
+    "templates":  {
+                      "dailyTemplate":  "summary",
+                      "monthlyTemplate":  "comprehensive",
+                      "weeklyTemplate":  "detailed"
+                  },
+    "createdAt":  "2026-08-06T18:06:09.8436939-05:00"
+}

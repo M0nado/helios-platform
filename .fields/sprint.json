@@ -1,0 +1,17 @@
+{
+    "options":  [
+                    "Sprint 1",
+                    "Sprint 2",
+                    "Sprint 3",
+                    "Sprint 4",
+                    "Backlog"
+                ],
+    "description":  "Sprint assignment",
+    "type":  "SingleSelect",
+    "default":  "Backlog",
+    "createdAt":  "2026-08-06T18:06:02.7674920-05:00",
+    "fieldId":  "PVTSSF_lADOEFilTs4BfnykzhZ5ZWY",
+    "name":  "Sprint",
+    "tier":  1,
+    "status":  "created"
+}

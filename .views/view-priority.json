@@ -1,0 +1,25 @@
+{
+    "id":  "view-priority",
+    "filters":  [
+
+                ],
+    "purpose":  "Executive overview of work by priority",
+    "description":  "All tasks organized by priority level",
+    "fieldVisibility":  [
+                            "Status",
+                            "Priority",
+                            "AssignedTo",
+                            "DueDate",
+                            "Effort",
+                            "ProgressStatus"
+                        ],
+    "layout":  "table",
+    "name":  "All Tasks - By Priority",
+    "groupBy":  "Priority",
+    "sortBy":  {
+                   "field":  "DueDate",
+                   "order":  "ascending"
+               },
+    "createdAt":  "2026-08-06T18:06:09.6555626-05:00",
+    "isActive":  true
+}

@@ -1,0 +1,17 @@
+{
+    "options":  [
+                    "Not Reviewed",
+                    "In Review",
+                    "Changes Requested",
+                    "Approved",
+                    "Rejected"
+                ],
+    "description":  "Code or design review status",
+    "type":  "SingleSelect",
+    "default":  "Not Reviewed",
+    "createdAt":  "2026-08-06T18:06:05.3292188-05:00",
+    "fieldId":  "PVTSSF_lADOEFilTs4BfnykzhZ5ZXA",
+    "name":  "ReviewStatus",
+    "tier":  3,
+    "status":  "created"
+}
