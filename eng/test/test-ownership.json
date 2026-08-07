@@ -497,6 +497,16 @@
       "layer": "portable"
     },
     {
+      "path": "tests/analytics/HELIOS.Analytics.FSharp.Tests/MonadoEnterpriseProfileScoringV2Tests.fs",
+      "project": "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj",
+      "layer": "portable"
+    },
+    {
+      "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoEnterpriseExperienceV2ContractsTests.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
       "path": "tests/unit/CloudSync/CloudSyncIntegrationTests.cs",
       "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "integration"
