@@ -51,6 +51,27 @@ public sealed class XCore9GovernanceTests
                 command,
                 "dotnet run --project monado/helios-control/src/Helios.Connect.Api/Helios.Connect.Api.csproj --configuration Release --no-build -- --urls http://127.0.0.1:8080",
                 StringComparison.Ordinal));
+
+        var localDocker = modes.Single(mode => string.Equals(mode.GetProperty("id").GetString(), "local-docker", StringComparison.OrdinalIgnoreCase));
+        var localDockerCommands = localDocker.GetProperty("startupContract").GetProperty("deterministicCommands").EnumerateArray()
+            .Select(cmd => cmd.GetString())
+            .ToList();
+        Assert.Contains(
+            localDockerCommands,
+            command => string.Equals(
+                command,
+                "docker run --rm --read-only --detach --name helios-connect-local --publish 127.0.0.1:8080:8080 <immutableDigest>",
+                StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            localDockerCommands,
+            command => !string.IsNullOrWhiteSpace(command) && command.Contains("--health-check", StringComparison.Ordinal));
+
+        var hybridFleet = modes.Single(mode => string.Equals(mode.GetProperty("id").GetString(), "hybrid-fleet", StringComparison.OrdinalIgnoreCase));
+        var hybridCommands = hybridFleet.GetProperty("startupContract").GetProperty("deterministicCommands").EnumerateArray()
+            .Select(cmd => cmd.GetString())
+            .ToList();
+        Assert.Contains("pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Plan", hybridCommands);
+        Assert.Contains("pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Status", hybridCommands);
     }
 
     [Fact]
@@ -142,6 +163,23 @@ public sealed class XCore9GovernanceTests
         Assert.Equal(0.6, evaluation.CompositeScore);
         Assert.Equal(XCore9Recommendation.ReviewRequired, evaluation.Audit.Recommendation);
         Assert.Equal(evaluation.Confidence, evaluation.Audit.Confidence);
+    }
+
+    [Fact]
+    public void Knaa_evaluator_counts_zero_weight_dimensions_as_known_evidence()
+    {
+        var policy = new XCore9KnaaPolicy(
+            "knaa-2026-08-06",
+            new XCore9KnaaThresholds(0.35, 0.55, 0.75),
+            Weights: new XCore9KnaaWeights(1.0, 0.0, 0.0, 0.0));
+        var evaluation = XCore9KnaaEvaluator.Evaluate(
+            new XCore9KnaaVector(0.8, 0.2, null, null),
+            policy,
+            new[] { "https://example.test/evidence/weighted-zero" });
+
+        Assert.Equal(XCore9Recommendation.Pass, evaluation.Recommendation);
+        Assert.Equal(0.8, evaluation.CompositeScore);
+        Assert.Equal(0.5, evaluation.Confidence);
     }
 
     [Fact]
@@ -288,6 +326,44 @@ public sealed class XCore9GovernanceTests
         Assert.Equal("corr-123", decision.Evidence.Provenance["correlationId"]);
         Assert.Equal("abc123", decision.Evidence.Provenance["sourceCommit"]);
         Assert.Equal("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", decision.Evidence.Provenance["traceParent"]);
+    }
+
+    [Fact]
+    public void Specialization_registry_snapshots_pack_collections()
+    {
+        var inputs = new List<string> { "code" };
+        var outputs = new List<string> { "telemetry" };
+        var allowedTools = new List<string> { "repo.read" };
+        var deniedTools = new List<string> { "git.push" };
+        var requiredContracts = new List<string> { "capability.repo.read-only", "capability.tests.non-destructive" };
+
+        var registry = new XCore9SpecializationRegistry(new[]
+        {
+            new XCore9SpecializationPack(
+                Id: "xcore9-code-analysis",
+                Inputs: inputs,
+                Outputs: outputs,
+                AllowedTools: allowedTools,
+                DeniedTools: deniedTools,
+                RequiredCapabilityContracts: requiredContracts,
+                MaxParallelism: 2,
+                TimeoutSeconds: 900,
+                RequireIdempotencyKey: true)
+        });
+
+        allowedTools.Add("plugin.secret-read");
+        deniedTools.Clear();
+        inputs.Add("docs");
+        outputs.Add("docs");
+        requiredContracts.Clear();
+
+        var undeclaredDecision = registry.Evaluate(CreateInvocation(tool: "plugin.secret-read"));
+        Assert.False(undeclaredDecision.Allowed);
+        Assert.Equal("tool-not-declared", undeclaredDecision.Code);
+
+        var deniedDecision = registry.Evaluate(CreateInvocation(tool: "git.push"));
+        Assert.False(deniedDecision.Allowed);
+        Assert.Equal("tool-denied", deniedDecision.Code);
     }
 
     private static XCore9SpecializationRegistry CreateRegistry() =>

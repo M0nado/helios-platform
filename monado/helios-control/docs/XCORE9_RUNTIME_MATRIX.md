@@ -32,7 +32,7 @@ Every mode has an explicit deny-list and includes these mandatory prohibitions:
 Use the following contract smoke commands and attach output in PR evidence:
 
 1. Local Windows: `dotnet test monado/helios-control/Helios.Connect.sln --configuration Release`
-2. Local Docker: verify immutable digest + run read-only health checks from the runtime matrix contract
-3. Hybrid fleet: run profile signature/hash verification + read-only node health inventory
+2. Local Docker: `docker image inspect <immutableDigest>`, then `docker run --rm --read-only --detach --name helios-connect-local --publish 127.0.0.1:8080:8080 <immutableDigest>`, then `docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' helios-connect-local`
+3. Hybrid fleet: `pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Plan`, `pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Status`, and `dotnet test monado/helios-control/Helios.Connect.sln --configuration Release --filter "FullyQualifiedName~XCore9GovernanceTests"`
 
 These are validation-only checks and do not grant deploy/apply authority.

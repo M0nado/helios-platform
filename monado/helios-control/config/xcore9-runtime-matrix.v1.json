@@ -89,9 +89,10 @@
       "startupContract": {
         "deterministicCommands": [
           "docker image inspect <immutableDigest>",
-          "docker run --rm --read-only <immutableDigest> --health-check"
+          "docker run --rm --read-only --detach --name helios-connect-local --publish 127.0.0.1:8080:8080 <immutableDigest>",
+          "docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' helios-connect-local"
         ],
-        "healthProbe": "container health status is healthy",
+        "healthProbe": "container is running; if HEALTHCHECK is defined, status is healthy",
         "startupTimeoutSeconds": 240
       },
       "artifactPinning": {
@@ -143,9 +144,9 @@
       },
       "startupContract": {
         "deterministicCommands": [
-          "validate-runtime-profile-signature",
-          "verify-image-digest-and-binary-hash",
-          "perform-read-only-health-inventory"
+          "pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Plan",
+          "pwsh -File monado/helios-control/scripts/Start-HeliosLocalFleet.ps1 -Mode Status",
+          "dotnet test monado/helios-control/Helios.Connect.sln --configuration Release --filter \"FullyQualifiedName~XCore9GovernanceTests\""
         ],
         "healthProbe": "all participating nodes report healthy with shared correlation id",
         "startupTimeoutSeconds": 300

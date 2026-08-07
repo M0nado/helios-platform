@@ -97,11 +97,11 @@ public static class XCore9KnaaEvaluator
         weights.Validate();
 
         var cleanedEvidence = CleanValues(evidenceLinks);
-        var values = BuildKnownValues(vector, weights);
-        var confidence = values.Count / 4d;
+        var knownValues = BuildKnownValues(vector, weights);
+        var confidence = knownValues.Count / 4d;
         var policyMode = policy.ConservativeAutoBlock ? "conservative-auto-block" : "advisory";
 
-        if (values.Count < 2)
+        if (knownValues.Count < 2)
         {
             var unknownRecommendation = XCore9Recommendation.Unknown;
             var audit = new XCore9KnaaAuditPayload(
@@ -119,13 +119,14 @@ public static class XCore9KnaaEvaluator
                 audit);
         }
 
-        var weightTotal = values.Sum(value => value.Weight);
+        var weightedValues = knownValues.Where(value => value.Weight > 0).ToArray();
+        var weightTotal = weightedValues.Sum(value => value.Weight);
         if (weightTotal <= 0)
         {
             throw new InvalidOperationException("Known KNAA dimensions must include at least one positive weight.");
         }
 
-        var score = values.Sum(value => value.Value * value.Weight) / weightTotal;
+        var score = weightedValues.Sum(value => value.Value * value.Weight) / weightTotal;
         var recommendation = ResolveRecommendation(score, policy, out var reason);
         var scoredAudit = new XCore9KnaaAuditPayload(
             policy.ModelVersion,
@@ -161,7 +162,7 @@ public static class XCore9KnaaEvaluator
             return;
         }
 
-        if (!double.IsFinite(candidate.Value) || weight <= 0)
+        if (!double.IsFinite(candidate.Value))
         {
             return;
         }
@@ -314,7 +315,9 @@ public sealed class XCore9SpecializationRegistry
         XCore9SpecializationGlobalPolicy? globalPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(packs);
-        _packs = packs.ToDictionary(
+        _packs = packs
+            .Select(NormalizePack)
+            .ToDictionary(
             pack => !string.IsNullOrWhiteSpace(pack.Id)
                 ? pack.Id
                 : throw new ArgumentException("Pack ID is required.", nameof(packs)),
@@ -452,6 +455,28 @@ public sealed class XCore9SpecializationRegistry
             .Select(value => value.Trim())
             .Distinct(StringComparer.Ordinal)
             .ToList();
+
+    private static XCore9SpecializationPack NormalizePack(XCore9SpecializationPack pack)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        return new XCore9SpecializationPack(
+            Id: pack.Id?.Trim() ?? string.Empty,
+            Inputs: SnapshotValues(pack.Inputs),
+            Outputs: SnapshotValues(pack.Outputs),
+            AllowedTools: SnapshotValues(pack.AllowedTools),
+            DeniedTools: SnapshotValues(pack.DeniedTools),
+            RequiredCapabilityContracts: SnapshotValues(pack.RequiredCapabilityContracts),
+            MaxParallelism: pack.MaxParallelism,
+            TimeoutSeconds: pack.TimeoutSeconds,
+            RequireIdempotencyKey: pack.RequireIdempotencyKey);
+    }
+
+    private static string[] SnapshotValues(IEnumerable<string>? values) =>
+        (values ?? Array.Empty<string>())
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Select(value => value.Trim())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
 
     private IReadOnlySet<string> RequiredProvenanceForModalities(params string[] modalities)
     {
