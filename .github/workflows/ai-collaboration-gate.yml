@@ -186,7 +186,14 @@ jobs:
               raise SystemExit(1)
 
           files = fetch_changed_files()
-          touched_files = [entry.get("filename", "") for entry in files]
+          touched_files = sorted(
+              {
+                  path
+                  for entry in files
+                  for path in (entry.get("filename"), entry.get("previous_filename"))
+                  if path
+              }
+          )
 
           privileged_patterns = [
               r"^infra/",
@@ -226,6 +233,12 @@ jobs:
               if is_placeholder(protected_approval):
                   print(
                       "Privileged changes require a protected approval workflow link.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              if not re.match(r"^https?://", protected_approval.strip(), flags=re.IGNORECASE):
+                  print(
+                      "Privileged changes require a URL-valued protected approval workflow link.",
                       file=sys.stderr,
                   )
                   raise SystemExit(1)

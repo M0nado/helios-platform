@@ -45,6 +45,12 @@ public sealed class XCore9GovernanceTests
         Assert.Equal(
             "GET /health/ready returns 200",
             localWindows.GetProperty("startupContract").GetProperty("healthProbe").GetString());
+        Assert.Contains(
+            localWindows.GetProperty("startupContract").GetProperty("deterministicCommands").EnumerateArray().Select(cmd => cmd.GetString()),
+            command => string.Equals(
+                command,
+                "dotnet run --project monado/helios-control/src/Helios.Connect.Api/Helios.Connect.Api.csproj --configuration Release --no-build -- --urls http://127.0.0.1:8080",
+                StringComparison.Ordinal));
     }
 
     [Fact]

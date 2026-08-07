@@ -34,7 +34,8 @@
       "startupContract": {
         "deterministicCommands": [
           "dotnet restore monado/helios-control/Helios.Connect.sln",
-          "dotnet test monado/helios-control/Helios.Connect.sln --configuration Release"
+          "dotnet test monado/helios-control/Helios.Connect.sln --configuration Release",
+          "dotnet run --project monado/helios-control/src/Helios.Connect.Api/Helios.Connect.Api.csproj --configuration Release --no-build -- --urls http://127.0.0.1:8080"
         ],
         "healthProbe": "GET /health/ready returns 200",
         "startupTimeoutSeconds": 180
