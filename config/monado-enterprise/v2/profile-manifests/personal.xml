@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonadoProfileManifest version="2.0.0" profileId="personal">
+  <DisplayName>Personal</DisplayName>
+  <SemanticUi>quiet-personal-shell</SemanticUi>
+  <Theme>personal-calm</Theme>
+  <ChromaProfile>personal-soft</ChromaProfile>
+  <WyvernAudioProfile>personal-soft</WyvernAudioProfile>
+  <ServiceBudget alwaysOnMax="5" backgroundPriority="low" />
+  <ProcessBudget maxHighPriorityProcesses="2" />
+  <NetworkPolicy>normal-protected</NetworkPolicy>
+  <TelemetryPolicy>privacy-focused</TelemetryPolicy>
+  <AlvisToolBudget maxConcurrentTools="2" denyAutonomousApply="true" />
+  <StateModel recoveryState="false" quarantineState="false" overlayAirgapAllowed="true" />
+</MonadoProfileManifest>

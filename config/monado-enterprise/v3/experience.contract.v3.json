@@ -1,0 +1,265 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v3/experience.contract.v3.schema.json",
+  "schemaVersion": "3.0.0",
+  "contractId": "monadoblade-experience-contract-v3",
+  "commonCoreInstall": {
+    "mode": "single-shared-baseline",
+    "noApplicationDuplication": true,
+    "packages": [
+      "HELIOS.ControlCenter",
+      "HELIOS.ProfileBroker",
+      "HELIOS.CrossPartitionClient",
+      "HELIOS.TelemetryAgent",
+      "Microsoft.WindowsTerminal",
+      "Microsoft.PowerShell",
+      "Git.Git",
+      "GitHub.cli",
+      "Microsoft.Edge"
+    ]
+  },
+  "postAuthShell": {
+    "runsAfterWindowsAuthentication": true,
+    "replacesWindowsCredentialProvider": false,
+    "safeFallbackShell": "safe-neutral",
+    "stateMachine": {
+      "states": [
+        "safe-boot",
+        "identity-verified",
+        "wheel-select",
+        "shell-active",
+        "safe-neutral-blocked"
+      ],
+      "transitions": [
+        {
+          "from": "safe-boot",
+          "to": "identity-verified",
+          "condition": "windows-authentication-complete"
+        },
+        {
+          "from": "identity-verified",
+          "to": "wheel-select",
+          "condition": "identity-gate-passed"
+        },
+        {
+          "from": "wheel-select",
+          "to": "shell-active",
+          "condition": "profile-readiness-check-passed"
+        },
+        {
+          "from": "wheel-select",
+          "to": "safe-neutral-blocked",
+          "condition": "profile-readiness-check-failed"
+        },
+        {
+          "from": "identity-verified",
+          "to": "safe-neutral-blocked",
+          "condition": "identity-gate-failed"
+        }
+      ]
+    }
+  },
+  "profileWheel": {
+    "selection": [
+      "mouse",
+      "keyboard",
+      "controller",
+      "touch"
+    ],
+    "sectors": [
+      {
+        "profile": "core",
+        "glyph": "核",
+        "angle": 0
+      },
+      {
+        "profile": "developer",
+        "glyph": "創",
+        "angle": 60
+      },
+      {
+        "profile": "studio",
+        "glyph": "響",
+        "angle": 120
+      },
+      {
+        "profile": "gamer",
+        "glyph": "迅",
+        "angle": 180
+      },
+      {
+        "profile": "ai-server",
+        "glyph": "智",
+        "angle": 240
+      },
+      {
+        "profile": "sysadmin",
+        "glyph": "統",
+        "angle": 300,
+        "hiddenUntilAuthorized": true
+      }
+    ]
+  },
+  "alvis": {
+    "assistantId": "ALVIS",
+    "mode": "reactive-assistant",
+    "administrator": false,
+    "executorToolsAllowed": false,
+    "toolClasses": {
+      "readOnlyPrefixes": [
+        "search_",
+        "fetch_"
+      ],
+      "planOnlyPrefixes": [
+        "plan_"
+      ],
+      "approvalPendingPrefixes": [
+        "request_"
+      ]
+    }
+  },
+  "profiles": {
+    "core": {
+      "semanticUi": "neutral-command-center",
+      "theme": "core-silver-blue",
+      "shellKitLayout": "core-baseline",
+      "rendererPreset": "balanced",
+      "chromaProfile": "core-calm",
+      "wyvernAudioProfile": "core-neutral",
+      "serviceBudget": {
+        "alwaysOnMax": 8,
+        "backgroundPriority": "normal"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 4
+      },
+      "storageRoots": [
+        "common",
+        "evidence",
+        "software-vault/read-only"
+      ],
+      "networkPolicy": "protected-default",
+      "telemetryPolicy": "balanced"
+    },
+    "developer": {
+      "semanticUi": "code-and-model-operations",
+      "theme": "developer-cyan-grid",
+      "shellKitLayout": "developer-workbench",
+      "rendererPreset": "high-throughput",
+      "chromaProfile": "developer-reactive",
+      "wyvernAudioProfile": "developer-focus",
+      "serviceBudget": {
+        "alwaysOnMax": 10,
+        "backgroundPriority": "normal"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 6
+      },
+      "storageRoots": [
+        "common",
+        "evidence",
+        "ai-server/read"
+      ],
+      "networkPolicy": "developer-approved-egress",
+      "telemetryPolicy": "detailed-build-test"
+    },
+    "studio": {
+      "semanticUi": "audio-render-cockpit",
+      "theme": "studio-violet-wave",
+      "shellKitLayout": "studio-workbench",
+      "rendererPreset": "render-accurate",
+      "chromaProfile": "studio-spatial",
+      "wyvernAudioProfile": "studio-harmonic",
+      "serviceBudget": {
+        "alwaysOnMax": 7,
+        "backgroundPriority": "audio-critical"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 5
+      },
+      "storageRoots": [
+        "music-studio",
+        "common",
+        "evidence/read"
+      ],
+      "networkPolicy": "plugin-and-cloud-approved",
+      "telemetryPolicy": "audio-and-render-focused"
+    },
+    "gamer": {
+      "semanticUi": "latency-first-overlay",
+      "theme": "gamer-green-energy",
+      "shellKitLayout": "gamer-overlay",
+      "rendererPreset": "latency-minimal",
+      "chromaProfile": "gamer-performance",
+      "wyvernAudioProfile": "gamer-impact",
+      "serviceBudget": {
+        "alwaysOnMax": 6,
+        "backgroundPriority": "throttled"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 3
+      },
+      "storageRoots": [
+        "games",
+        "common",
+        "evidence/read"
+      ],
+      "networkPolicy": "gaming-low-latency-firewalled",
+      "telemetryPolicy": "frame-time-focused"
+    },
+    "ai-server": {
+      "semanticUi": "daemon-runtime-view",
+      "theme": "ai-server-graphite",
+      "shellKitLayout": "service-runtime",
+      "rendererPreset": "service-low-overhead",
+      "chromaProfile": "ai-server-muted",
+      "wyvernAudioProfile": "ai-server-muted",
+      "serviceBudget": {
+        "alwaysOnMax": 16,
+        "backgroundPriority": "service-controlled"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 8
+      },
+      "storageRoots": [
+        "ai-server",
+        "vm",
+        "common",
+        "evidence"
+      ],
+      "networkPolicy": "deny-by-default-service-allowlist",
+      "telemetryPolicy": "service-uptime-and-safety"
+    },
+    "sysadmin": {
+      "semanticUi": "sealed-vault-admin",
+      "theme": "sysadmin-amber-graphite",
+      "shellKitLayout": "sysadmin-sealed",
+      "rendererPreset": "security-focused",
+      "chromaProfile": "sysadmin-restricted",
+      "wyvernAudioProfile": "sysadmin-restricted",
+      "serviceBudget": {
+        "alwaysOnMax": 6,
+        "backgroundPriority": "security-critical"
+      },
+      "processBudget": {
+        "maxHighPriorityProcesses": 3
+      },
+      "storageRoots": [
+        "software-vault",
+        "evidence",
+        "airgap"
+      ],
+      "networkPolicy": "local-first-restricted",
+      "telemetryPolicy": "security-and-evidence-only"
+    }
+  },
+  "dedicatedTargets": {
+    "guiGateIssue": 149,
+    "usbWizardGateIssue": 149,
+    "linkagePolicy": "link-not-duplicate",
+    "legacyTrackingIssues": [
+      171,
+      172,
+      195
+    ]
+  }
+}

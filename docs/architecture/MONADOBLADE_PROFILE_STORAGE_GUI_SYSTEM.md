@@ -1,5 +1,7 @@
 # Monadoblade Profile, Storage, GUI, and AIHub System
 
+> v1 baseline reference. The authoritative issue-207 six-profile execution contract lives in `docs/architecture/MONADOBLADE_SIX_PROFILE_DELIVERY_FABRIC_V3.md` and `config/monado-enterprise/v3/`. Issue-206 v2 references remain in `docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md` and `config/monado-enterprise/v2/`.
+
 ## Purpose
 
 Monadoblade is a local-first, Azure-extended Windows platform built around a governed six-profile delivery fabric (with legacy seven-profile input compatibility), strict SSD partitioning, deterministic folder hierarchies, governed cross-partition transfers, and an AIHub control brain. The system must remain useful when cloud services are unavailable and must never make administrator, security, disk, identity, or production changes without an explicit policy gate.
