@@ -9,20 +9,29 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT_ROOT="${1:-.run/helios-exe-$STAMP}"
 SKIP_FINISH="${SKIP_FINISH:-0}"
 mkdir -p "$OUT_ROOT"
+OUT_ROOT="$(cd "$OUT_ROOT" && pwd)"
 if [[ "$SKIP_FINISH" != "1" ]]; then
   scripts/setup/simple-build.sh finish
   scripts/setup/simple-build.sh save-run
 fi
+# Materialize the committed source before publishing. This ensures local staged
+# or unstaged edits can never leak into an executable attributed to HEAD.
+SOURCE_COMMIT="$(git rev-parse --verify HEAD)"
+PROJECT_REL="$(git ls-files --full-name --error-unmatch -- "$PROJECT")" || {
+  printf 'Launcher project must be a tracked path in the source commit: %s\n' "$PROJECT" >&2
+  exit 1
+}
+mkdir -p "$OUT_ROOT/repository"
+git archive --format=tar "$SOURCE_COMMIT" | tar -xf - -C "$OUT_ROOT/repository"
+git ls-tree -r --name-only "$SOURCE_COMMIT" > "$OUT_ROOT/repository/.helios-tracked-files"
+printf '%s\n' "$SOURCE_COMMIT" > "$OUT_ROOT/repository/HELIOS_PACKAGE_COMMIT"
 for rid in win-x64 linux-x64; do
-  dotnet publish "$PROJECT" -c "$CONFIGURATION" -r "$rid" --self-contained true \
+  dotnet publish "$OUT_ROOT/repository/$PROJECT_REL" -c "$CONFIGURATION" -r "$rid" --self-contained true \
     -p:PublishSingleFile=true -p:DebugType=embedded -o "$OUT_ROOT/$rid" --nologo
 done
 # Include an immutable source snapshot so the package is immediately usable
 # without a second clone. git archive excludes .git, ignored local state,
 # credentials, caches, databases, build output, and other generated files.
-mkdir -p "$OUT_ROOT/repository"
-git archive --format=tar HEAD | tar -xf - -C "$OUT_ROOT/repository"
-git rev-parse HEAD > "$OUT_ROOT/repository/HELIOS_PACKAGE_COMMIT"
 cat > "$OUT_ROOT/run-helios.cmd" <<'EOF'
 @echo off
 setlocal

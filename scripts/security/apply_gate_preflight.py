@@ -24,7 +24,13 @@ def allowed(path, prefixes):
 
 def tracked_files():
     p=subprocess.run(['git','ls-files',*SCAN_DIRS],cwd=ROOT,text=True,capture_output=True)
-    return [ROOT/line for line in p.stdout.splitlines() if line.strip()] if p.returncode==0 else []
+    if p.returncode==0:
+        return [ROOT/line for line in p.stdout.splitlines() if line.strip()]
+    manifest=ROOT/'.helios-tracked-files'
+    if manifest.is_file():
+        files=[ROOT/line for line in manifest.read_text().splitlines() if line.strip() and (ROOT/line).resolve().is_relative_to(ROOT.resolve())]
+        return [path for path in files if any(path.is_relative_to(ROOT/directory) for directory in SCAN_DIRS)]
+    return [path for directory in SCAN_DIRS for path in (ROOT/directory).rglob('*') if path.is_file()]
 
 def main():
     parser=argparse.ArgumentParser()
