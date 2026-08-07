@@ -103,6 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       resolved_location: ${{ steps.params.outputs.resolved_location }}
+      resolved_platform_address_space: ${{ steps.params.outputs.resolved_platform_address_space }}
       edge_route_cutover_approved: ${{ steps.params.outputs.edge_route_cutover_approved }}
       edge_route_was_already_enabled: ${{ steps.params.outputs.edge_route_was_already_enabled }}
       key_vault_private_cutover_approved: ${{ steps.params.outputs.key_vault_private_cutover_approved }}
@@ -212,6 +213,29 @@ jobs:
               echo "Resource group '${INPUT_RESOURCE_GROUP}' tag helios-environment='${resource_group_environment_tag}' does not match requested environment_name='${INPUT_ENVIRONMENT_NAME}'." >&2
               exit 1
             fi
+          fi
+          raw_platform_vnet_name="${INPUT_NAME_PREFIX}-${INPUT_ENVIRONMENT_NAME}-platform-vnet"
+          platform_vnet_name="$(printf '%s' "${raw_platform_vnet_name}" | tr '[:upper:]' '[:lower:]' | cut -c1-64)"
+          resolved_platform_address_space="${INPUT_PLATFORM_ADDRESS_SPACE}"
+          if [[ -z "${resolved_platform_address_space}" ]]; then
+            set +e
+            existing_platform_address_space="$(az network vnet show \
+              --resource-group "${INPUT_RESOURCE_GROUP}" \
+              --name "${platform_vnet_name}" \
+              --query "addressSpace.addressPrefixes[0]" \
+              --output tsv 2>&1)"
+            existing_platform_address_space_exit=$?
+            set -e
+            if [[ ${existing_platform_address_space_exit} -eq 0 && -n "${existing_platform_address_space}" && "${existing_platform_address_space}" != "null" ]]; then
+              resolved_platform_address_space="${existing_platform_address_space}"
+            elif [[ ${existing_platform_address_space_exit} -ne 0 ]] && ! grep -qiE '(ResourceNotFound|could not be found|was not found)' <<<"${existing_platform_address_space}"; then
+              echo "${existing_platform_address_space}" >&2
+              exit "${existing_platform_address_space_exit}"
+            fi
+          fi
+          if [[ -n "${resolved_platform_address_space}" && ! "${resolved_platform_address_space}" =~ ^10\.4[234]\.0\.0/16$ ]]; then
+            echo "Resolved platform address space '${resolved_platform_address_space}' must be one of 10.42.0.0/16, 10.43.0.0/16, or 10.44.0.0/16." >&2
+            exit 1
           fi
           if [[ "${INPUT_EGRESS_MODE}" == "azureFirewall" ]]; then
             if [[ ! "${INPUT_HUB_VIRTUAL_NETWORK_ID}" =~ ^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Network/virtualNetworks/[^/]+$ ]]; then
@@ -363,7 +387,12 @@ jobs:
                 echo "container_registry_id must be a full Azure Container Registry resource ID when supplied." >&2
                 exit 1
               fi
-              if [[ "${INPUT_NETWORK_ONLY}" != "true" ]]; then
+              if [[ "${INPUT_NETWORK_ONLY}" == "true" ]]; then
+                if ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+                  echo "Production network_only bootstrap requires enabled_egress_profiles including containerRegistryDataPlane even when container_registry_id is supplied, because connector registry binding cannot be verified before first connector deployment." >&2
+                  exit 1
+                fi
+              else
                 container_app_name="helios-connector-${INPUT_ENVIRONMENT_NAME}-api"
                 set +e
                 connector_image="$(az resource show \
@@ -399,7 +428,12 @@ jobs:
                   exit 1
                 fi
               fi
-            elif [[ "${INPUT_NETWORK_ONLY}" != "true" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+            elif [[ "${INPUT_NETWORK_ONLY}" == "true" ]]; then
+              if ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+                echo "Production network_only bootstrap requires enabled_egress_profiles including containerRegistryDataPlane before connector registry private-endpoint cutover." >&2
+                exit 1
+              fi
+            elif ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
               echo "Production azureFirewall deployments require container_registry_id (private endpoint) or enabled_egress_profiles including containerRegistryDataPlane for ACR image-pull egress." >&2
               exit 1
             fi
@@ -456,8 +490,8 @@ jobs:
           if [[ -n "${INPUT_AZURE_FIREWALL_POLICY_ID}" ]]; then
             params+=("azureFirewallPolicyId=${INPUT_AZURE_FIREWALL_POLICY_ID}")
           fi
-          if [[ -n "${INPUT_PLATFORM_ADDRESS_SPACE}" ]]; then
-            params+=("platformAddressSpace=${INPUT_PLATFORM_ADDRESS_SPACE}")
+          if [[ -n "${resolved_platform_address_space}" ]]; then
+            params+=("platformAddressSpace=${resolved_platform_address_space}")
           fi
           if [[ -n "${INPUT_COSMOS_ACCOUNT_ID}" ]]; then
             params+=("cosmosAccountId=${INPUT_COSMOS_ACCOUNT_ID}")
@@ -469,6 +503,7 @@ jobs:
           printf '%s\n' "${params[@]}" > "${params_file}"
           echo "file=${params_file}" >> "${GITHUB_OUTPUT}"
           echo "resolved_location=${resolved_location}" >> "${GITHUB_OUTPUT}"
+          echo "resolved_platform_address_space=${resolved_platform_address_space}" >> "${GITHUB_OUTPUT}"
           echo "edge_route_cutover_approved=${edge_route_cutover_approved}" >> "${GITHUB_OUTPUT}"
           echo "edge_route_was_already_enabled=${edge_route_was_already_enabled}" >> "${GITHUB_OUTPUT}"
           echo "enabled_egress_profiles=${enabled_egress_profiles_json}" >> "${GITHUB_OUTPUT}"
@@ -568,6 +603,58 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Revalidate reviewed Azure Firewall binding before production apply
+        env:
+          INPUT_EGRESS_MODE: ${{ github.event.inputs.egress_mode }}
+          INPUT_AZURE_FIREWALL_PRIVATE_IP: ${{ github.event.inputs.azure_firewall_private_ip }}
+          INPUT_HUB_VIRTUAL_NETWORK_ID: ${{ github.event.inputs.hub_virtual_network_id }}
+          INPUT_AZURE_FIREWALL_POLICY_ID: ${{ github.event.inputs.azure_firewall_policy_id }}
+        run: |
+          set -euo pipefail
+          if [[ "${INPUT_EGRESS_MODE}" != "azureFirewall" ]]; then
+            exit 0
+          fi
+          if [[ ! "${INPUT_HUB_VIRTUAL_NETWORK_ID}" =~ ^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Network/virtualNetworks/[^/]+$ ]]; then
+            echo "hub_virtual_network_id must be a full virtual network resource ID when egress_mode=azureFirewall." >&2
+            exit 1
+          fi
+          if [[ ! "${INPUT_AZURE_FIREWALL_POLICY_ID}" =~ ^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Network/firewallPolicies/[^/]+$ ]]; then
+            echo "azure_firewall_policy_id must be a full Firewall Policy resource ID when egress_mode=azureFirewall." >&2
+            exit 1
+          fi
+          if [[ "${INPUT_HUB_VIRTUAL_NETWORK_ID}" =~ ^/subscriptions/([^/]+)/resourceGroups/([^/]+)/providers/Microsoft\.Network/virtualNetworks/[^/]+$ ]]; then
+            hub_virtual_network_subscription_id="${BASH_REMATCH[1]}"
+            hub_virtual_network_resource_group="${BASH_REMATCH[2]}"
+          fi
+          if [[ "${INPUT_AZURE_FIREWALL_POLICY_ID}" =~ ^/subscriptions/([^/]+)/resourceGroups/([^/]+)/providers/Microsoft\.Network/firewallPolicies/[^/]+$ ]]; then
+            firewall_policy_subscription_id="${BASH_REMATCH[1]}"
+            firewall_policy_resource_group="${BASH_REMATCH[2]}"
+          fi
+          if [[ "${hub_virtual_network_subscription_id,,}" != "${firewall_policy_subscription_id,,}" || "${hub_virtual_network_resource_group,,}" != "${firewall_policy_resource_group,,}" ]]; then
+            echo "azure_firewall_policy_id must target the same subscription/resource-group scope as hub_virtual_network_id for reviewed hub governance updates." >&2
+            exit 1
+          fi
+          firewall_matches_json="$(az network firewall list \
+            --subscription "${hub_virtual_network_subscription_id}" \
+            --resource-group "${hub_virtual_network_resource_group}" \
+            --query "[?contains(join(',', ipConfigurations[].privateIPAddress), '${INPUT_AZURE_FIREWALL_PRIVATE_IP}')]" \
+            --output json)"
+          firewall_match_count="$(jq 'length' <<<"${firewall_matches_json}")"
+          if [[ "${firewall_match_count}" != "1" ]]; then
+            echo "Exactly one Azure Firewall in '${hub_virtual_network_resource_group}' must expose private IP '${INPUT_AZURE_FIREWALL_PRIVATE_IP}' for egress_mode=azureFirewall." >&2
+            exit 1
+          fi
+          firewall_policy_binding="$(jq -r '.[0].firewallPolicy.id // empty' <<<"${firewall_matches_json}")"
+          if [[ -z "${firewall_policy_binding}" || "${firewall_policy_binding,,}" != "${INPUT_AZURE_FIREWALL_POLICY_ID,,}" ]]; then
+            echo "azure_firewall_policy_id must match the policy attached to the Azure Firewall using '${INPUT_AZURE_FIREWALL_PRIVATE_IP}'." >&2
+            exit 1
+          fi
+          firewall_ip_subnet_id="$(jq -r --arg ip "${INPUT_AZURE_FIREWALL_PRIVATE_IP}" '.[0].ipConfigurations[] | select((.privateIPAddress // "") == $ip) | .subnet.id // empty' <<<"${firewall_matches_json}" | head -n1)"
+          if [[ -z "${firewall_ip_subnet_id}" || "${firewall_ip_subnet_id,,}" != "${INPUT_HUB_VIRTUAL_NETWORK_ID,,}/subnets/"* ]]; then
+            echo "azure_firewall_private_ip must belong to an Azure Firewall IP configuration in hub_virtual_network_id." >&2
+            exit 1
+          fi
 
       - name: Require reviewed connector public-origin rebinding before edge cutover
         env:
@@ -675,7 +762,7 @@ jobs:
           INPUT_AZURE_FIREWALL_PRIVATE_IP: ${{ github.event.inputs.azure_firewall_private_ip }}
           INPUT_HUB_VIRTUAL_NETWORK_ID: ${{ github.event.inputs.hub_virtual_network_id }}
           INPUT_AZURE_FIREWALL_POLICY_ID: ${{ github.event.inputs.azure_firewall_policy_id }}
-          INPUT_PLATFORM_ADDRESS_SPACE: ${{ github.event.inputs.platform_address_space }}
+          RESOLVED_PLATFORM_ADDRESS_SPACE: ${{ needs.validate.outputs.resolved_platform_address_space }}
           INPUT_COSMOS_ACCOUNT_ID: ${{ github.event.inputs.cosmos_account_id }}
           INPUT_CONTAINER_REGISTRY_ID: ${{ github.event.inputs.container_registry_id }}
         run: |
@@ -692,7 +779,7 @@ jobs:
           reject_newlines "connector_backend_url" "${INPUT_CONNECTOR_BACKEND_URL}"
           reject_newlines "name_prefix" "${INPUT_NAME_PREFIX}"
           reject_newlines "publisher_email" "${INPUT_PUBLISHER_EMAIL}"
-          reject_newlines "platform_address_space" "${INPUT_PLATFORM_ADDRESS_SPACE}"
+          reject_newlines "resolved_platform_address_space" "${RESOLVED_PLATFORM_ADDRESS_SPACE}"
           reject_newlines "azure_firewall_private_ip" "${INPUT_AZURE_FIREWALL_PRIVATE_IP}"
           reject_newlines "hub_virtual_network_id" "${INPUT_HUB_VIRTUAL_NETWORK_ID}"
           reject_newlines "azure_firewall_policy_id" "${INPUT_AZURE_FIREWALL_POLICY_ID}"
@@ -711,6 +798,10 @@ jobs:
             echo "Validated edge route cutover approval output is invalid." >&2
             exit 1
           fi
+          if [[ -n "${RESOLVED_PLATFORM_ADDRESS_SPACE}" && ! "${RESOLVED_PLATFORM_ADDRESS_SPACE}" =~ ^10\.4[234]\.0\.0/16$ ]]; then
+            echo "Validated platform address-space output is invalid." >&2
+            exit 1
+          fi
 
           enabled_egress_profiles_json="$(jq -c -e 'if type=="array" then . else error("validated enabled egress profiles must be a JSON array.") end' <<<"${ENABLED_EGRESS_PROFILES}")"
           connector_relay_destinations_json="$(jq -c -e 'if type=="array" then . else error("validated connector relay destinations must be a JSON array.") end' <<<"${CONNECTOR_RELAY_DESTINATIONS}")"
@@ -724,7 +815,11 @@ jobs:
               echo "Validated production profiles must include containerAppsPlatform for Container Apps platform egress." >&2
               exit 1
             fi
-            if [[ -z "${INPUT_CONTAINER_REGISTRY_ID}" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+            if [[ "${INPUT_NETWORK_ONLY}" == "true" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Validated production network_only bootstrap requires containerRegistryDataPlane for ACR image-pull egress." >&2
+              exit 1
+            fi
+            if [[ "${INPUT_NETWORK_ONLY}" != "true" && -z "${INPUT_CONTAINER_REGISTRY_ID}" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
               echo "Validated production profiles require container_registry_id (private endpoint) or containerRegistryDataPlane for ACR image-pull egress." >&2
               exit 1
             fi
@@ -756,8 +851,8 @@ jobs:
           if [[ -n "${INPUT_AZURE_FIREWALL_POLICY_ID}" ]]; then
             params+=("azureFirewallPolicyId=${INPUT_AZURE_FIREWALL_POLICY_ID}")
           fi
-          if [[ -n "${INPUT_PLATFORM_ADDRESS_SPACE}" ]]; then
-            params+=("platformAddressSpace=${INPUT_PLATFORM_ADDRESS_SPACE}")
+          if [[ -n "${RESOLVED_PLATFORM_ADDRESS_SPACE}" ]]; then
+            params+=("platformAddressSpace=${RESOLVED_PLATFORM_ADDRESS_SPACE}")
           fi
           if [[ -n "${INPUT_COSMOS_ACCOUNT_ID}" ]]; then
             params+=("cosmosAccountId=${INPUT_COSMOS_ACCOUNT_ID}")
