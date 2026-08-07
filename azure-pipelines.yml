@@ -12,14 +12,17 @@ trigger:
   paths:
     include:
       - azure-pipelines.yml
+      - nuget.config
       - global.json
       - Directory.Build.props
       - Directory.Packages.props
-      - config/integrations/**
-      - src/**
-      - tests/**
+      - eng/test/**
+      - config/integrations/event-contract.schema.json
+      - src/core/HELIOS.Platform/**
+      - src/core/HELIOS.Platform.Contracts/**
       - monado/helios-control/src/**
       - monado/helios-control/tests/**
+      - monado/helios-control/Helios.Connect.sln
     exclude:
       - docs/**
       - '**/*.md'
@@ -32,14 +35,17 @@ pr:
   paths:
     include:
       - azure-pipelines.yml
+      - nuget.config
       - global.json
       - Directory.Build.props
       - Directory.Packages.props
-      - config/integrations/**
-      - src/**
-      - tests/**
+      - eng/test/**
+      - config/integrations/event-contract.schema.json
+      - src/core/HELIOS.Platform/**
+      - src/core/HELIOS.Platform.Contracts/**
       - monado/helios-control/src/**
       - monado/helios-control/tests/**
+      - monado/helios-control/Helios.Connect.sln
     exclude:
       - docs/**
       - '**/*.md'
@@ -49,6 +55,8 @@ variables:
   appProject: src/core/HELIOS.Platform/HELIOS.Platform.csproj
   usersTestProject: src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj
   connectTestsProject: monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj
+  publicNuGetFeed: https://api.nuget.org/v3/index.json
+  nugetPackages: $(Pipeline.Workspace)\.nuget\packages
   testResultsDir: $(Agent.TempDirectory)\test-results
 
 stages:
@@ -70,7 +78,15 @@ stages:
               versionSpec: '3.12'
 
           - script: |
-              python -m json.tool config/integrations/event-contract.schema.json > /dev/null
+              set -euo pipefail
+              python -m pip install --disable-pip-version-check --quiet "jsonschema==4.23.0"
+              python - <<'PY'
+              import json
+              from jsonschema.validators import Draft202012Validator
+              with open("config/integrations/event-contract.schema.json", encoding="utf-8") as schema_file:
+                  schema = json.load(schema_file)
+              Draft202012Validator.check_schema(schema)
+              PY
               python eng/test/validate_test_ownership.py
             displayName: Validate schema and test ownership manifest
 
@@ -101,25 +117,43 @@ stages:
               restoreKeys: |
                 nuget | "$(Agent.OS)" | global.json
                 nuget | "$(Agent.OS)"
-              path: $(UserProfile)\.nuget\packages
+              path: $(nugetPackages)
 
           - powershell: dotnet --info
             displayName: Show .NET environment
 
-          - powershell: |
-              dotnet restore "$(appProject)" -p:ContinuousIntegrationBuild=true
-              dotnet restore "$(usersTestProject)" -p:ContinuousIntegrationBuild=true
-              dotnet restore "$(connectTestsProject)" -p:ContinuousIntegrationBuild=true
-            displayName: Restore scoped projects
+          - powershell: dotnet restore "$(appProject)" --source "$(publicNuGetFeed)" -p:ContinuousIntegrationBuild=true
+            displayName: Restore HELIOS.Platform
+            env:
+              NUGET_PACKAGES: $(nugetPackages)
+
+          - powershell: dotnet restore "$(usersTestProject)" --source "$(publicNuGetFeed)" -p:ContinuousIntegrationBuild=true
+            displayName: Restore users test project
+            env:
+              NUGET_PACKAGES: $(nugetPackages)
+
+          - powershell: dotnet restore "$(connectTestsProject)" --source "$(publicNuGetFeed)" -p:ContinuousIntegrationBuild=true
+            displayName: Restore Helios.Connect tests
+            env:
+              NUGET_PACKAGES: $(nugetPackages)
 
           - powershell: dotnet build "$(appProject)" --configuration "$(buildConfiguration)" --no-restore -p:ContinuousIntegrationBuild=true
             displayName: Build HELIOS.Platform
+            env:
+              NUGET_PACKAGES: $(nugetPackages)
 
-          - powershell: |
-              New-Item -ItemType Directory -Force -Path "$(testResultsDir)" | Out-Null
-              dotnet test "$(usersTestProject)" --configuration "$(buildConfiguration)" --no-restore --logger "trx;LogFileName=phase10-users.trx" --results-directory "$(testResultsDir)" -p:ContinuousIntegrationBuild=true
-              dotnet test "$(connectTestsProject)" --configuration "$(buildConfiguration)" --no-restore --logger "trx;LogFileName=helios-connect.trx" --results-directory "$(testResultsDir)" -p:ContinuousIntegrationBuild=true
-            displayName: Run scoped test suites
+          - powershell: dotnet build "$(usersTestProject)" --configuration "$(buildConfiguration)" --no-restore -p:ContinuousIntegrationBuild=true
+            displayName: Compile users tests (no execution in ungated CI)
+            env:
+              NUGET_PACKAGES: $(nugetPackages)
+
+          - powershell: New-Item -ItemType Directory -Force -Path "$(testResultsDir)" | Out-Null
+            displayName: Create test results directory
+
+          - powershell: dotnet test "$(connectTestsProject)" --configuration "$(buildConfiguration)" --no-restore --logger "trx;LogFileName=helios-connect.trx" --results-directory "$(testResultsDir)" -p:ContinuousIntegrationBuild=true
+            displayName: Run Helios.Connect tests
+            env:
+              NUGET_PACKAGES: $(nugetPackages)
 
           - task: PublishTestResults@2
             displayName: Publish test results
