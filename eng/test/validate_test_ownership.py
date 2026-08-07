@@ -9,39 +9,50 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "eng/test/test-ownership.json"
 LAYERS = {"portable", "windows", "privileged", "integration", "performance", "end-to-end"}
+DOTNET_TEST_ROOTS = (
+    ROOT / "tests/HELIOS.Platform.Tests",
+    ROOT / "tests/HELIOS.Platform.Tests/Phase10/Quarantine",
+    ROOT / "tests/analytics/HELIOS.Analytics.FSharp.Tests",
+    ROOT / "tests/contracts/HELIOS.Platform.Contracts.Tests",
+    ROOT / "src/tests",
+    ROOT / "src/core/HELIOS.Platform/Phase10/Users/Tests",
+    ROOT / "monado/helios-control/tests/Helios.Connect.Tests",
+)
+EXCLUDED_DIRS = {"bin", "obj"}
 
 
 def sources() -> list[str]:
-    roots = [ROOT / "tests", ROOT / "src/tests", ROOT / "monado/helios-control/tests"]
-    found = {
-        p.relative_to(ROOT).as_posix()
-        for root in roots
-        for ext in ("*.cs", "*.fs")
-        for p in root.rglob(ext)
-    }
-    core = ROOT / "src/core/HELIOS.Platform"
-    found |= {
-        p.relative_to(ROOT).as_posix()
-        for p in core.rglob("*.cs")
-        if "Tests" in p.parts or p.name.endswith("Tests.cs")
-    }
+    found: set[str] = set()
+    for root in DOTNET_TEST_ROOTS:
+        for ext in ("*.cs", "*.fs"):
+            for source in root.rglob(ext):
+                if EXCLUDED_DIRS.intersection(source.parts):
+                    continue
+                found.add(source.relative_to(ROOT).as_posix())
+    security_validation_test = ROOT / "tests/SecurityValidationTests.cs"
+    if security_validation_test.is_file():
+        found.add(security_validation_test.relative_to(ROOT).as_posix())
     return sorted(found)
 
 
 def owner(path: str) -> str:
-    if path.startswith("monado/helios-control/tests/"):
+    if path.startswith("monado/helios-control/tests/Helios.Connect.Tests/"):
         return "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj"
     if path.startswith("src/core/HELIOS.Platform/Phase10/Users/Tests/"):
         return "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj"
     if path.startswith("src/tests/"):
         return "src/tests/HELIOS.Platform.Tests.csproj"
-    if path.startswith("tests/analytics/"):
+    if path.startswith("tests/analytics/HELIOS.Analytics.FSharp.Tests/"):
         return "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
+    if path.startswith("tests/contracts/HELIOS.Platform.Contracts.Tests/"):
+        return "tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj"
     if path == "tests/SecurityValidationTests.cs":
         return "tests/SecurityValidationTests.csproj"
     if path.startswith("tests/HELIOS.Platform.Tests/Phase10/Quarantine/"):
         return "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj"
-    return "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj"
+    if path.startswith("tests/HELIOS.Platform.Tests/"):
+        return "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj"
+    raise ValueError(f"unmapped .NET test source: {path}")
 
 
 def layer(path: str) -> str:

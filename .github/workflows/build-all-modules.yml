@@ -32,6 +32,7 @@ jobs:
   setup:
     name: Setup Build Matrix
     runs-on: ubuntu-latest
+    environment: development
     outputs:
       modules: ${{ steps.setup.outputs.modules }}
       node-version: ${{ steps.setup.outputs.node-version }}
@@ -41,7 +42,40 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
           submodules: false
+
+      - name: Require scoped GitHub App credentials
+        env:
+          SUBMODULE_APP_ID: ${{ vars.SUBMODULE_APP_ID }}
+          SUBMODULE_APP_PRIVATE_KEY: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SUBMODULE_APP_ID" ] || [ -z "$SUBMODULE_APP_PRIVATE_KEY" ]; then
+            echo "BLOCKED: SUBMODULE_APP_ID and SUBMODULE_APP_PRIVATE_KEY are required."
+            exit 1
+          fi
+
+      - name: Create short-lived read-only installation token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.SUBMODULE_APP_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: M0nado
+          repositories: >-
+            helios-monado-blade,helios-security-setup,helios-ai-hub,
+            helios-dev-ai-hub,helios-build-agents,helios-gui-framework,
+            helios-software-stack
+
+      - name: Checkout approved submodule pins
+        env:
+          SUBMODULE_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          basic_auth="$(printf 'x-access-token:%s' "$SUBMODULE_TOKEN" | base64 -w 0)"
+          echo "::add-mask::$basic_auth"
+          git submodule sync --recursive
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
+            submodule update --init --recursive
 
       - name: Setup Build Configuration
         id: setup
@@ -67,6 +101,7 @@ jobs:
   build:
     name: Build ${{ matrix.module }}
     runs-on: ubuntu-latest
+    environment: development
     needs: setup
     if: needs.setup.outputs.has-modules == 'true'
     strategy:
@@ -78,7 +113,40 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
           submodules: false
+
+      - name: Require scoped GitHub App credentials
+        env:
+          SUBMODULE_APP_ID: ${{ vars.SUBMODULE_APP_ID }}
+          SUBMODULE_APP_PRIVATE_KEY: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SUBMODULE_APP_ID" ] || [ -z "$SUBMODULE_APP_PRIVATE_KEY" ]; then
+            echo "BLOCKED: SUBMODULE_APP_ID and SUBMODULE_APP_PRIVATE_KEY are required."
+            exit 1
+          fi
+
+      - name: Create short-lived read-only installation token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.SUBMODULE_APP_ID }}
+          private-key: ${{ secrets.SUBMODULE_APP_PRIVATE_KEY }}
+          owner: M0nado
+          repositories: >-
+            helios-monado-blade,helios-security-setup,helios-ai-hub,
+            helios-dev-ai-hub,helios-build-agents,helios-gui-framework,
+            helios-software-stack
+
+      - name: Checkout approved submodule pins
+        env:
+          SUBMODULE_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          basic_auth="$(printf 'x-access-token:%s' "$SUBMODULE_TOKEN" | base64 -w 0)"
+          echo "::add-mask::$basic_auth"
+          git submodule sync --recursive
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $basic_auth" \
+            submodule update --init --recursive
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
