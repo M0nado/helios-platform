@@ -30,9 +30,7 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
-      - shell: pwsh
-        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+        run: dotnet test tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release
 
   privileged:
     name: Tests / Privileged
@@ -45,8 +43,6 @@ jobs:
           global-json-file: global.json
       - shell: pwsh
         run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
-      - shell: pwsh
-        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
 
   integration:
     name: Tests / Integration
@@ -58,6 +54,8 @@ jobs:
           global-json-file: global.json
       - shell: pwsh
         run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+      - shell: pwsh
+        run: dotnet test tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release
 
   performance:
     name: Tests / Performance
@@ -68,7 +66,7 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
+        run: dotnet test tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release
 
   end-to-end:
     name: Tests / End-to-End
@@ -79,4 +77,4 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+        run: dotnet test tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj --configuration Release
