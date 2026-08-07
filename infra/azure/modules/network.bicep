@@ -22,12 +22,7 @@ var tags = {
   managedBy: 'Bicep'
   'helios-managed': 'true'
 }
-var defaultPlatformAddressSpace = environmentName == 'dev'
-  ? '10.42.0.0/16'
-  : environmentName == 'test'
-    ? '10.43.0.0/16'
-    : '10.44.0.0/16'
-var resolvedPlatformAddressSpace = empty(platformAddressSpace) ? defaultPlatformAddressSpace : platformAddressSpace
+var resolvedPlatformAddressSpace = empty(platformAddressSpace) ? '10.42.0.0/16' : platformAddressSpace
 var addressPlans = {
   '10.42.0.0/16': {
     ingress: '10.42.0.0/24'

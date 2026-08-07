@@ -155,15 +155,19 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("environment: azure-prod", workflow)
         self.assertIn("platform_address_space:", workflow)
         self.assertIn("cosmos_account_id:", workflow)
+        self.assertIn("container_registry_id:", workflow)
         self.assertIn("key_vault_private_cutover_approved:", workflow)
         self.assertIn("enabled_egress_profiles:", workflow)
         self.assertIn("connector_relay_destinations:", workflow)
         self.assertIn("platformAddressSpace=", workflow)
         self.assertIn("cosmosAccountId=", workflow)
+        self.assertIn("containerRegistryId=", workflow)
         self.assertIn("keyVaultPrivateCutoverApproved=", workflow)
         self.assertIn("enabledEgressProfiles=", workflow)
         self.assertIn("connectorRelayDestinations=", workflow)
         self.assertIn("microsoftIdentityAzure for Cosmos readiness egress", workflow)
+        self.assertIn("containerAppsPlatform for Container Apps platform egress", workflow)
+        self.assertIn("containerRegistryDataPlane for ACR image-pull egress", workflow)
         self.assertIn(
             "if: ${{ github.event.inputs.deploy == 'true' && github.event.inputs.environment_name == 'prod' && github.ref == 'refs/heads/main' }}",
             workflow,
@@ -177,6 +181,7 @@ class AzureDeploymentContractTests(unittest.TestCase):
         workflow = AZURE_INFRA_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("INPUT_ENABLED_EGRESS_PROFILES: ${{ github.event.inputs.enabled_egress_profiles }}", workflow)
         self.assertIn("INPUT_CONNECTOR_RELAY_DESTINATIONS: ${{ github.event.inputs.connector_relay_destinations }}", workflow)
+        self.assertIn("INPUT_CONTAINER_REGISTRY_ID: ${{ github.event.inputs.container_registry_id }}", workflow)
         self.assertIn('enabled_egress_profiles_input="${INPUT_ENABLED_EGRESS_PROFILES}"', workflow)
         self.assertIn('connector_relay_destinations_input="${INPUT_CONNECTOR_RELAY_DESTINATIONS}"', workflow)
         self.assertNotIn("enabled_egress_profiles_input='${{ github.event.inputs.enabled_egress_profiles }}'", workflow)
@@ -186,6 +191,7 @@ class AzureDeploymentContractTests(unittest.TestCase):
         network_module = NETWORK_MODULE.read_text(encoding="utf-8")
         hub_governance_module = HUB_GOVERNANCE_MODULE.read_text(encoding="utf-8")
         self.assertIn("param platformAddressSpace string = ''", network_module)
+        self.assertIn("empty(platformAddressSpace) ? '10.42.0.0/16' : platformAddressSpace", network_module)
         self.assertIn("'10.42.0.0/16'", network_module)
         self.assertIn("'10.43.0.0/16'", network_module)
         self.assertIn("'10.44.0.0/16'", network_module)
@@ -198,6 +204,9 @@ class AzureDeploymentContractTests(unittest.TestCase):
         network_paths = NETWORK_PATHS.read_text(encoding="utf-8")
         self.assertIn("documents.azure.com", network_paths)
         self.assertIn("*.documents.azure.com", network_paths)
+        self.assertIn("containerAppsPlatform", network_paths)
+        self.assertIn("containerRegistryDataPlane", network_paths)
+        self.assertIn("*.azurecr.io", network_paths)
 
 
 if __name__ == "__main__":

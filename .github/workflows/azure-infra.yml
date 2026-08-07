@@ -64,6 +64,10 @@ on:
         description: 'Optional existing Cosmos DB account resource ID for private endpoint staging.'
         required: false
         default: ''
+      container_registry_id:
+        description: 'Optional existing ACR resource ID for private endpoint staging.'
+        required: false
+        default: ''
       key_vault_private_cutover_approved:
         description: 'Optional Key Vault private-cutover approval override (true/false). Empty retains the current vault posture.'
         required: false
@@ -146,6 +150,7 @@ jobs:
           INPUT_HUB_VIRTUAL_NETWORK_ID: ${{ github.event.inputs.hub_virtual_network_id }}
           INPUT_AZURE_FIREWALL_POLICY_ID: ${{ github.event.inputs.azure_firewall_policy_id }}
           INPUT_COSMOS_ACCOUNT_ID: ${{ github.event.inputs.cosmos_account_id }}
+          INPUT_CONTAINER_REGISTRY_ID: ${{ github.event.inputs.container_registry_id }}
           INPUT_KEY_VAULT_PRIVATE_CUTOVER_APPROVED: ${{ github.event.inputs.key_vault_private_cutover_approved }}
           INPUT_ENABLED_EGRESS_PROFILES: ${{ github.event.inputs.enabled_egress_profiles }}
           INPUT_CONNECTOR_RELAY_DESTINATIONS: ${{ github.event.inputs.connector_relay_destinations }}
@@ -172,9 +177,17 @@ jobs:
           enabled_egress_profiles_json="$(jq -c -e 'if type=="array" then . else error("enabled_egress_profiles must be a JSON array.") end' <<<"${enabled_egress_profiles_input}")"
           connector_relay_destinations_json="$(jq -c -e 'if type=="array" then . else error("connector_relay_destinations must be a JSON array.") end' <<<"${connector_relay_destinations_input}")"
 
-          if [[ "${INPUT_ENVIRONMENT_NAME}" == "prod" && "${INPUT_EGRESS_MODE}" == "azureFirewall" && "${INPUT_NETWORK_ONLY}" != "true" ]]; then
+          if [[ "${INPUT_ENVIRONMENT_NAME}" == "prod" && "${INPUT_EGRESS_MODE}" == "azureFirewall" ]]; then
             if ! jq -e 'index("microsoftIdentityAzure") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
               echo "Production connector cutover with azureFirewall requires enabled_egress_profiles to include microsoftIdentityAzure for Cosmos readiness egress." >&2
+              exit 1
+            fi
+            if ! jq -e 'index("containerAppsPlatform") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Production azureFirewall deployments require enabled_egress_profiles to include containerAppsPlatform for Container Apps platform egress." >&2
+              exit 1
+            fi
+            if [[ -z "${INPUT_CONTAINER_REGISTRY_ID}" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Production azureFirewall deployments require container_registry_id (private endpoint) or enabled_egress_profiles including containerRegistryDataPlane for ACR image-pull egress." >&2
               exit 1
             fi
           fi
@@ -234,6 +247,9 @@ jobs:
           fi
           if [[ -n "${INPUT_COSMOS_ACCOUNT_ID}" ]]; then
             params+=("cosmosAccountId=${INPUT_COSMOS_ACCOUNT_ID}")
+          fi
+          if [[ -n "${INPUT_CONTAINER_REGISTRY_ID}" ]]; then
+            params+=("containerRegistryId=${INPUT_CONTAINER_REGISTRY_ID}")
           fi
 
           printf '%s\n' "${params[@]}" > "${params_file}"
@@ -354,6 +370,7 @@ jobs:
           INPUT_AZURE_FIREWALL_POLICY_ID: ${{ github.event.inputs.azure_firewall_policy_id }}
           INPUT_PLATFORM_ADDRESS_SPACE: ${{ github.event.inputs.platform_address_space }}
           INPUT_COSMOS_ACCOUNT_ID: ${{ github.event.inputs.cosmos_account_id }}
+          INPUT_CONTAINER_REGISTRY_ID: ${{ github.event.inputs.container_registry_id }}
         run: |
           set -euo pipefail
           if [[ -z "${KEY_VAULT_PRIVATE_CUTOVER_APPROVED}" ]]; then
@@ -364,9 +381,17 @@ jobs:
           enabled_egress_profiles_json="$(jq -c -e 'if type=="array" then . else error("validated enabled egress profiles must be a JSON array.") end' <<<"${ENABLED_EGRESS_PROFILES}")"
           connector_relay_destinations_json="$(jq -c -e 'if type=="array" then . else error("validated connector relay destinations must be a JSON array.") end' <<<"${CONNECTOR_RELAY_DESTINATIONS}")"
 
-          if [[ "${INPUT_EGRESS_MODE}" == "azureFirewall" && "${INPUT_NETWORK_ONLY}" != "true" ]]; then
+          if [[ "${INPUT_EGRESS_MODE}" == "azureFirewall" ]]; then
             if ! jq -e 'index("microsoftIdentityAzure") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
               echo "Validated production profiles must include microsoftIdentityAzure for connector Cosmos readiness egress." >&2
+              exit 1
+            fi
+            if ! jq -e 'index("containerAppsPlatform") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Validated production profiles must include containerAppsPlatform for Container Apps platform egress." >&2
+              exit 1
+            fi
+            if [[ -z "${INPUT_CONTAINER_REGISTRY_ID}" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+              echo "Validated production profiles require container_registry_id (private endpoint) or containerRegistryDataPlane for ACR image-pull egress." >&2
               exit 1
             fi
           fi
@@ -401,6 +426,9 @@ jobs:
           fi
           if [[ -n "${INPUT_COSMOS_ACCOUNT_ID}" ]]; then
             params+=("cosmosAccountId=${INPUT_COSMOS_ACCOUNT_ID}")
+          fi
+          if [[ -n "${INPUT_CONTAINER_REGISTRY_ID}" ]]; then
+            params+=("containerRegistryId=${INPUT_CONTAINER_REGISTRY_ID}")
           fi
 
           printf '%s\n' "${params[@]}" > "${params_file}"
