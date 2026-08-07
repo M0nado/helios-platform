@@ -690,6 +690,7 @@ def print_human(payload: dict[str, Any]) -> None:
             f"{integrations['enabledRouteCount']}/"
             f"{integrations['routeCount']} enabled"
         )
+        print(
             "  release environments: "
             + ", ".join(environments["releaseEnvironments"])
         )
