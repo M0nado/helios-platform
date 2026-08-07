@@ -27,17 +27,19 @@ This document defines the governed six-profile Monadoblade delivery fabric contr
 - Legacy v1 profile IDs remain read-only compatibility inputs.
 - The migration contract carries explicit software-scope, AIHub-policy,
   shell-theme, and storage-workspace mappings for every v2 profile.
+- AI/Server bundle composition preserves the full SysOps + ServerBackground
+  software scope under deterministic active-v2 provisioning.
 - Runtime `surfaceContracts` pin the active shell, USB wizard, ALVIS capability,
   and integration projection manifests to prevent ambiguous profile wiring.
 
 ## Safety boundaries
 
-- Shell flow is post-auth presentation only: `safe-boot -> identity-verified -> wheel-ready -> profile-selected -> shell-ready`.
+- Shell flow is post-auth presentation only: `safe-boot -> identity-verified -> wheel-ready -> profile-selected -> readiness-check -> shell-ready`.
 - Sysadmin remains local/offline with physical presence and two-factor local authorization.
-- USB Wizard defaults to dry-run and read-only inventory.
+- USB Wizard defaults to dry-run and bind-gates apply to storage what-if, physical authorization, backup evidence, BitLocker recovery evidence, and rollback notes.
 - Recovery and Quarantine remain Sysadmin workflows, not user profiles.
 - ALVIS is read-only or planning-boundary only (`search_*`, `fetch_*`, `plan_*`, `request_*`) and cannot execute tools directly.
-- Only approved PR/evidence links are projected to Linear/Slack/Teams/SharePoint/Azure DevOps; projection targets never execute commands.
+- Only approved PR/evidence links are projected to Linear/Slack/Teams/SharePoint/Azure DevOps, and projection payloads must carry the normalized integration event envelope; projection targets never execute commands.
 
 ## Pages/wiki path
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "fromVersion": "config/profiles/monadoblade-profiles.v1.json",
   "toVersion": "config/profiles/monadoblade-profiles.v2.json",
   "preserveLegacyInput": true,
@@ -54,11 +54,44 @@
       "sysadmin-offline": ["SysAdmin"]
     }
   },
+  "deterministicResolution": {
+    "guiThemes": {
+      "core": { "strategy": "single-source", "source": "personal" },
+      "developer": { "strategy": "single-source", "source": "developer" },
+      "studio": { "strategy": "single-source", "source": "studio" },
+      "gamer": { "strategy": "single-source", "source": "gamer" },
+      "ai-server": {
+        "strategy": "precedence-merge",
+        "primarySource": "sysops",
+        "secondarySource": "server-background",
+        "scalarFieldsFromPrimary": ["backgroundVariant", "panelStyle", "density"],
+        "appendMetricsFromSecondary": true
+      },
+      "sysadmin-offline": { "strategy": "single-source", "source": "sysadmin" }
+    },
+    "storageWorkspaces": {
+      "core": { "strategy": "single-source", "source": "Personal" },
+      "developer": { "strategy": "single-source", "source": "Developer" },
+      "studio": { "strategy": "single-source", "source": "Studio" },
+      "gamer": { "strategy": "single-source", "source": "Gamer" },
+      "ai-server": {
+        "strategy": "single-source",
+        "source": "SysOps",
+        "alternateLegacySource": "ServerBackground"
+      },
+      "sysadmin-offline": {
+        "strategy": "single-source",
+        "source": "SysAdmin",
+        "requiresManagedRootPath": "04_ProfileWorkspaces/SysAdmin"
+      }
+    }
+  },
   "notes": [
     "v1 remains the seven-profile legacy contract and is not rewritten.",
     "SysOps and ServerBackground responsibilities are folded into AI/Server in v2.",
     "Personal is consolidated into Core in v2.",
     "Recovery and Quarantine remain Sysadmin workflows and are not independent profiles.",
-    "Legacy software, AIHub, shell-theme, and storage workspace scopes stay v1-labeled until their dedicated v2 manifests ship."
+    "Legacy software, AIHub, shell-theme, and storage workspace scopes stay v1-labeled until their dedicated v2 manifests ship.",
+    "AI/Server theme resolution is deterministic: SysOps provides scalar appearance, and ServerBackground metrics are appended."
   ]
 }

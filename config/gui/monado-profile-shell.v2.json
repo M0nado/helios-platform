@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "shellId": "monadoblade-profile-shell",
   "securityBoundary": {
     "runsAfterWindowsAuthentication": true,
@@ -8,7 +8,7 @@
     "networkRequiredForLogin": false,
     "fallbackShell": "safe-neutral"
   },
-  "postAuthStateMachine": ["safe-boot", "identity-verified", "wheel-ready", "profile-selected", "shell-ready"],
+  "postAuthStateMachine": ["safe-boot", "identity-verified", "wheel-ready", "profile-selected", "readiness-check", "shell-ready"],
   "profileWheel": {
     "orientation": "radial",
     "selection": ["mouse", "keyboard", "controller", "touch"],
@@ -24,6 +24,17 @@
   "stateGuards": {
     "identityVerifiedRequiredBeforeWheel": true,
     "sysadminRequiresLocalOfflineAuthorization": true,
+    "profilePolicyValidatedBeforeShellReady": true,
+    "managedVolumesOnlineBeforeShellReady": true,
+    "requiredServicesHealthyBeforeShellReady": true,
+    "firewallPolicyLoadedBeforeShellReady": true,
+    "readinessFailureState": "safe-neutral",
     "safeNeutralOnGuardFailure": true
-  }
+  },
+  "readinessChecks": [
+    "profile-policy-valid",
+    "required-volumes-online",
+    "required-services-healthy",
+    "firewall-policy-loaded"
+  ]
 }
