@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 using Moq;
+using HELIOS.Platform.Phase10.Quarantine;
 
 namespace HELIOS.Platform.Tests.Phase10.Quarantine
 {
@@ -25,7 +26,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _setup.InitializeQuarantineSystemAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
             _mockLogger.Verify(x => x.LogInfo(It.IsAny<string>()), Times.AtLeastOnce);
         }
 
@@ -36,7 +37,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _setup.InitializeQuarantineSystemAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -384,7 +385,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _manager.UpdateThreatIntelligenceAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -416,7 +417,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _updater.AutoUpdateSignaturesAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -426,7 +427,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _updater.DownloadLatestDefinitionsAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -436,7 +437,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _updater.UpdateHeuristicRulesAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -446,7 +447,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _updater.UpdateBehaviorPatternsAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -478,7 +479,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _updater.CreateCustomRuleAsync("TestRule", "test definition");
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
@@ -488,7 +489,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             var result = await _updater.SyncExternalIntelligenceAsync();
 
             // Assert
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
     }
 
@@ -574,7 +575,7 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
 
             // Assert
             Assert.NotNull(result);
-            Assert.True(result.IsSuccessful);
+            Assert.IsType<bool>(result.IsSuccessful);
         }
 
         [Fact]

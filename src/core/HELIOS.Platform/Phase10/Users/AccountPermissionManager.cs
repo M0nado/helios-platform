@@ -404,11 +404,6 @@ namespace HELIOS.Platform.Phase10.Users
                         catch { }
                     }
 
-                    if (groups.Count == 0 && string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        groups.Add("Users");
-                        LogMessage($"No local group memberships resolved for {username}; defaulting to Users.", LogLevel.Warning);
-                    }
                 }
                 catch (Exception ex)
                 {

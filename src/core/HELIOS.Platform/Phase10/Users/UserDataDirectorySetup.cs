@@ -238,6 +238,7 @@ namespace HELIOS.Platform.Phase10.Users
                 {
                     string documentsPath = ResolveKnownFolderPath(username, Environment.SpecialFolder.MyDocuments, "Documents");
                     string fallbackRoot = Path.Combine(GetWritableFallbackRoot(username), "Documents");
+                    bool allowFallback = string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase);
 
                     var subfolders = new[]
                     {
@@ -254,6 +255,12 @@ namespace HELIOS.Platform.Phase10.Users
                         var primaryPath = Path.Combine(documentsPath, folder);
                         if (await CreateDirectoryAsync(primaryPath))
                         {
+                            continue;
+                        }
+
+                        if (!allowFallback)
+                        {
+                            allSuccess = false;
                             continue;
                         }
 
@@ -288,6 +295,7 @@ namespace HELIOS.Platform.Phase10.Users
                     string videosPath = ResolveKnownFolderPath(username, Environment.SpecialFolder.MyVideos, "Videos");
                     string musicPath = ResolveKnownFolderPath(username, Environment.SpecialFolder.MyMusic, "Music");
                     string fallbackRoot = GetWritableFallbackRoot(username);
+                    bool allowFallback = string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase);
 
                     var mediaFolders = new[]
                     {
@@ -304,6 +312,12 @@ namespace HELIOS.Platform.Phase10.Users
                             var primaryPath = Path.Combine(mediaFolder.BasePath, subfolder);
                             if (await CreateDirectoryAsync(primaryPath))
                             {
+                                continue;
+                            }
+
+                            if (!allowFallback)
+                            {
+                                allSuccess = false;
                                 continue;
                             }
 
