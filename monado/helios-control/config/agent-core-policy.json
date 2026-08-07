@@ -1,0 +1,170 @@
+{
+  "schemaVersion": "1.0",
+  "policyVersion": "1.0.0",
+  "lifecycle": {
+    "initialState": "INIT",
+    "states": [
+      "INIT",
+      "PRECHECK",
+      "PLAN",
+      "AWAIT_APPROVAL",
+      "EXECUTE",
+      "VERIFY",
+      "NOTIFY",
+      "COMPLETE",
+      "FAILED",
+      "ROLLED_BACK"
+    ],
+    "terminalStates": [
+      "COMPLETE",
+      "FAILED",
+      "ROLLED_BACK",
+      "AWAIT_APPROVAL"
+    ],
+    "transitions": [
+      { "from": "INIT", "to": "PRECHECK", "guard": "required-context-present" },
+      { "from": "PRECHECK", "to": "PLAN", "guard": "policy-and-schema-valid" },
+      { "from": "PLAN", "to": "AWAIT_APPROVAL", "guard": "mutation-present-or-approval-required" },
+      { "from": "PLAN", "to": "EXECUTE", "guard": "non-mutating-run-or-preapproved" },
+      { "from": "AWAIT_APPROVAL", "to": "EXECUTE", "guard": "protected-approval-evidence-matches-immutable-context" },
+      { "from": "EXECUTE", "to": "VERIFY", "guard": "execution-completed-without-policy-violation" },
+      { "from": "VERIFY", "to": "NOTIFY", "guard": "verification-evidence-recorded" },
+      { "from": "NOTIFY", "to": "COMPLETE", "guard": "notification-receipts-recorded-or-not-applicable" },
+      { "from": "INIT", "to": "FAILED", "guard": "fatal-initialization-error" },
+      { "from": "PRECHECK", "to": "FAILED", "guard": "policy-precheck-failed" },
+      { "from": "PLAN", "to": "FAILED", "guard": "plan-generation-or-validation-failed" },
+      { "from": "AWAIT_APPROVAL", "to": "FAILED", "guard": "approval-expired-or-rejected" },
+      { "from": "EXECUTE", "to": "FAILED", "guard": "execution-failed" },
+      { "from": "VERIFY", "to": "FAILED", "guard": "verification-failed" },
+      { "from": "NOTIFY", "to": "FAILED", "guard": "critical-notification-path-failed" },
+      { "from": "FAILED", "to": "ROLLED_BACK", "guard": "governed-rollback-request-approved-with-last-known-good-artifact" }
+    ]
+  },
+  "immutableContext": {
+    "requiredFields": [
+      "identity",
+      "tenant",
+      "environment",
+      "repository",
+      "artifactDigest",
+      "approvalState"
+    ],
+    "rejectMissingRequiredFields": true,
+    "forbiddenRewrites": [
+      "identity",
+      "tenant",
+      "environment",
+      "repository",
+      "artifactDigest",
+      "approvalState"
+    ]
+  },
+  "eventBus": {
+    "delivery": "at-least-once-idempotent-consumers",
+    "maxHopCount": 16,
+    "cycleDetection": "enabled",
+    "retry": {
+      "maxAttempts": 3,
+      "transientClassifications": [
+        "timeout",
+        "throttled",
+        "temporary-network-failure",
+        "upstream-5xx"
+      ],
+      "neverRetryClassifications": [
+        "authorization-denied",
+        "schema-invalid",
+        "policy-denied",
+        "immutable-context-mismatch"
+      ],
+      "jitter": "required"
+    }
+  },
+  "concurrency": {
+    "repositoryEnvironmentLeases": "expiring",
+    "maxDeploymentsPerEnvironment": 1,
+    "fencingTokens": "required",
+    "compareAndSwapOwnership": "required"
+  },
+  "approvals": {
+    "authoritativeSources": [
+      "github-protected-environment",
+      "governed-approval-service"
+    ],
+    "nonAuthoritativeNotificationSources": [
+      "slack",
+      "outlook",
+      "edge-dashboard",
+      "agent-runtime"
+    ],
+    "timeouts": "cancel-or-pending-never-approve",
+    "breakGlass": {
+      "enabled": true,
+      "requiresSecondPersonApproval": true,
+      "requiresAuditEvidence": true,
+      "expires": "required"
+    }
+  },
+  "incident": {
+    "severity": {
+      "S0": "production-outage-or-failed-production-change",
+      "S1": "xcore-or-high-impact-degradation",
+      "S2": "dev-or-build-degradation",
+      "S3": "non-blocking-warning"
+    },
+    "deduplication": [
+      "tenant",
+      "repository",
+      "environment",
+      "workflowOrDeploymentId",
+      "artifactDigest",
+      "errorFingerprint",
+      "boundedTimeWindow"
+    ],
+    "suppression": {
+      "neverSuppress": [
+        "S0",
+        "S1"
+      ],
+      "preserveEvidence": true
+    }
+  },
+  "rollback": {
+    "automaticRollbackOnAgentError": false,
+    "requiresGovernedRequest": true,
+    "requiresProtectedApproval": true,
+    "requiresLastKnownGoodArtifact": true
+  },
+  "capabilities": {
+    "denyByDefault": true,
+    "runtimeSelfEscalationAllowed": false,
+    "reloadMode": "atomic"
+  },
+  "sandboxing": {
+    "reusableCredentialsExposedToAgents": false,
+    "isolatedWorktreeGeneration": true,
+    "protectedBranchDirectPushAllowed": false
+  },
+  "audit": {
+    "appendOnly": true,
+    "requiredFields": [
+      "schemaVersion",
+      "eventId",
+      "correlationId",
+      "causationId",
+      "tenant",
+      "actor",
+      "authorizationContext",
+      "beforeHash",
+      "afterHash",
+      "policyVersion",
+      "connectorMetadata",
+      "approvalEvidence",
+      "artifactDigest",
+      "timestamps",
+      "outcome",
+      "redactionMarkers"
+    ],
+    "tamperEvidence": true
+  }
+}

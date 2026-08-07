@@ -8,6 +8,27 @@
 
 Complete enterprise Windows automation and management platform.
 
+## Monadoblade six-profile delivery fabric v3 (issue #207)
+
+The canonical v3 contract set for the issue-207 six-profile delivery fabric is defined under:
+
+- `config/monado-enterprise/v3/` (authoritative machine-readable contracts)
+- `schemas/monado-enterprise/v3/` (JSON schema + profile XSD)
+- `docs/architecture/MONADOBLADE_SIX_PROFILE_DELIVERY_FABRIC_V3.md` (issue-207 architecture, ALVIS classes, shell/USB boundaries, and projection constraints)
+- `status-site/monadoblade-six-profile-delivery-fabric-v3.md` (Pages/wiki-friendly status source)
+
+Legacy v1/v2 artifacts are preserved and validated alongside v3.
+
+## Monado enterprise experience fabric v2 (issue #206)
+
+The canonical v2 contract set for Monado enterprise experience is now defined under:
+
+- `config/monado-enterprise/v2/` (authoritative machine-readable contracts)
+- `schemas/monado-enterprise/v2/` (JSON schema + profile XSD)
+- `docs/architecture/MONADO_ENTERPRISE_EXPERIENCE_FABRIC_V2.md` (system spine, profile differences, USB handoff boundaries, and visual map)
+
+v1 Monadoblade profile/storage contracts remain preserved as historical inputs and continue to be validated in CI alongside v2.
+
 ## 🎯 Current Status - Phase 1 Foundation
 
 ### ✅ Completed (Latest Session)

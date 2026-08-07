@@ -1,0 +1,451 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/agent-core-policy-v1.json",
+  "title": "HELIOS Agent Core Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "policyVersion",
+    "lifecycle",
+    "immutableContext",
+    "eventBus",
+    "concurrency",
+    "approvals",
+    "incident",
+    "rollback",
+    "capabilities",
+    "sandboxing",
+    "audit"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "policyVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "states",
+        "transitions",
+        "terminalStates",
+        "initialState"
+      ],
+      "properties": {
+        "initialState": {
+          "type": "string",
+          "enum": [
+            "INIT"
+          ]
+        },
+        "states": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "INIT",
+              "PRECHECK",
+              "PLAN",
+              "AWAIT_APPROVAL",
+              "EXECUTE",
+              "VERIFY",
+              "NOTIFY",
+              "COMPLETE",
+              "FAILED",
+              "ROLLED_BACK"
+            ]
+          }
+        },
+        "terminalStates": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "COMPLETE",
+              "FAILED",
+              "ROLLED_BACK",
+              "AWAIT_APPROVAL"
+            ]
+          }
+        },
+        "transitions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "guard": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "immutableContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredFields",
+        "rejectMissingRequiredFields",
+        "forbiddenRewrites"
+      ],
+      "properties": {
+        "requiredFields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "rejectMissingRequiredFields": {
+          "type": "boolean"
+        },
+        "forbiddenRewrites": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "eventBus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "delivery",
+        "maxHopCount",
+        "cycleDetection",
+        "retry"
+      ],
+      "properties": {
+        "delivery": {
+          "type": "string",
+          "enum": [
+            "at-least-once-idempotent-consumers"
+          ]
+        },
+        "maxHopCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cycleDetection": {
+          "type": "string",
+          "enum": [
+            "enabled"
+          ]
+        },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxAttempts",
+            "transientClassifications",
+            "neverRetryClassifications",
+            "jitter"
+          ],
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "transientClassifications": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "neverRetryClassifications": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "jitter": {
+              "type": "string",
+              "enum": [
+                "required"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "concurrency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repositoryEnvironmentLeases",
+        "maxDeploymentsPerEnvironment",
+        "fencingTokens",
+        "compareAndSwapOwnership"
+      ],
+      "properties": {
+        "repositoryEnvironmentLeases": {
+          "type": "string",
+          "enum": [
+            "expiring"
+          ]
+        },
+        "maxDeploymentsPerEnvironment": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fencingTokens": {
+          "type": "string",
+          "enum": [
+            "required"
+          ]
+        },
+        "compareAndSwapOwnership": {
+          "type": "string",
+          "enum": [
+            "required"
+          ]
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authoritativeSources",
+        "nonAuthoritativeNotificationSources",
+        "breakGlass",
+        "timeouts"
+      ],
+      "properties": {
+        "authoritativeSources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "nonAuthoritativeNotificationSources": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "timeouts": {
+          "type": "string",
+          "enum": [
+            "cancel-or-pending-never-approve"
+          ]
+        },
+        "breakGlass": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "requiresSecondPersonApproval",
+            "requiresAuditEvidence",
+            "expires"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "requiresSecondPersonApproval": {
+              "type": "boolean"
+            },
+            "requiresAuditEvidence": {
+              "type": "boolean"
+            },
+            "expires": {
+              "type": "string",
+              "enum": [
+                "required"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "incident": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "deduplication",
+        "suppression"
+      ],
+      "properties": {
+        "severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "S0",
+            "S1",
+            "S2",
+            "S3"
+          ],
+          "properties": {
+            "S0": {
+              "type": "string"
+            },
+            "S1": {
+              "type": "string"
+            },
+            "S2": {
+              "type": "string"
+            },
+            "S3": {
+              "type": "string"
+            }
+          }
+        },
+        "deduplication": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "suppression": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "neverSuppress",
+            "preserveEvidence"
+          ],
+          "properties": {
+            "neverSuppress": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "S0",
+                  "S1"
+                ]
+              }
+            },
+            "preserveEvidence": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "automaticRollbackOnAgentError",
+        "requiresGovernedRequest",
+        "requiresProtectedApproval",
+        "requiresLastKnownGoodArtifact"
+      ],
+      "properties": {
+        "automaticRollbackOnAgentError": {
+          "type": "boolean"
+        },
+        "requiresGovernedRequest": {
+          "type": "boolean"
+        },
+        "requiresProtectedApproval": {
+          "type": "boolean"
+        },
+        "requiresLastKnownGoodArtifact": {
+          "type": "boolean"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "denyByDefault",
+        "runtimeSelfEscalationAllowed",
+        "reloadMode"
+      ],
+      "properties": {
+        "denyByDefault": {
+          "type": "boolean"
+        },
+        "runtimeSelfEscalationAllowed": {
+          "type": "boolean"
+        },
+        "reloadMode": {
+          "type": "string",
+          "enum": [
+            "atomic"
+          ]
+        }
+      }
+    },
+    "sandboxing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reusableCredentialsExposedToAgents",
+        "isolatedWorktreeGeneration",
+        "protectedBranchDirectPushAllowed"
+      ],
+      "properties": {
+        "reusableCredentialsExposedToAgents": {
+          "type": "boolean"
+        },
+        "isolatedWorktreeGeneration": {
+          "type": "boolean"
+        },
+        "protectedBranchDirectPushAllowed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "appendOnly",
+        "requiredFields",
+        "tamperEvidence"
+      ],
+      "properties": {
+        "appendOnly": {
+          "type": "boolean"
+        },
+        "requiredFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "tamperEvidence": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
