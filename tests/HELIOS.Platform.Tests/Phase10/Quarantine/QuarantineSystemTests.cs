@@ -8,18 +8,9 @@ using HELIOS.Platform.Phase10.Quarantine;
 
 namespace HELIOS.Platform.Tests.Phase10.Quarantine
 {
-    public class QuarantineSystemSetupTests
+    internal static class QuarantineTestPrerequisites
     {
-        private readonly Mock<ILogger> _mockLogger;
-        private readonly QuarantineSystemSetup _setup;
-
-        public QuarantineSystemSetupTests()
-        {
-            _mockLogger = new Mock<ILogger>();
-            _setup = new QuarantineSystemSetup(_mockLogger.Object);
-        }
-
-        private static bool CanInitializeQuarantineSystem()
+        public static bool CanInitializeQuarantineSystem()
         {
             if (Directory.Exists(@"I:\"))
             {
@@ -44,16 +35,34 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
 
             return false;
         }
+    }
 
-        [Fact]
+    [AttributeUsage(AttributeTargets.Method)]
+    internal sealed class RequiresQuarantinePrerequisitesFactAttribute : FactAttribute
+    {
+        public RequiresQuarantinePrerequisitesFactAttribute()
+        {
+            if (!QuarantineTestPrerequisites.CanInitializeQuarantineSystem())
+            {
+                Skip = "VeraCrypt or I: drive is unavailable on this host.";
+            }
+        }
+    }
+
+    public class QuarantineSystemSetupTests
+    {
+        private readonly Mock<ILogger> _mockLogger;
+        private readonly QuarantineSystemSetup _setup;
+
+        public QuarantineSystemSetupTests()
+        {
+            _mockLogger = new Mock<ILogger>();
+            _setup = new QuarantineSystemSetup(_mockLogger.Object);
+        }
+
+        [RequiresQuarantinePrerequisitesFact]
         public async Task InitializeQuarantineSystemAsync_ShouldCreateFolderStructure()
         {
-            bool canInitialize = CanInitializeQuarantineSystem();
-            if (!canInitialize)
-            {
-                return;
-            }
-
             // Act
             var result = await _setup.InitializeQuarantineSystemAsync();
 
@@ -62,15 +71,9 @@ namespace HELIOS.Platform.Tests.Phase10.Quarantine
             _mockLogger.Verify(x => x.LogInfo(It.IsAny<string>()), Times.AtLeastOnce);
         }
 
-        [Fact]
+        [RequiresQuarantinePrerequisitesFact]
         public async Task InitializeQuarantineSystemAsync_ShouldGenerateMasterKey()
         {
-            bool canInitialize = CanInitializeQuarantineSystem();
-            if (!canInitialize)
-            {
-                return;
-            }
-
             // Act
             var result = await _setup.InitializeQuarantineSystemAsync();
 
