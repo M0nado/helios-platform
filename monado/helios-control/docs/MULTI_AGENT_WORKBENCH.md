@@ -10,7 +10,7 @@ They exchange only reviewed files, MCP results, and evidence artifacts.
 - `HeliosControl.code-workspace` is the VS Code Insiders workbench.
 - `.vscode/mcp.json` configures VS Code/Copilot.
 - `.mcp.json` configures Claude Code at project scope.
-- `.github/agents` defines four scoped agents that VS Code discovers.
+- `.github/agents` defines four scoped agents plus `_shared-boundary.md` for merged guardrails.
 - `config/agent-fleet.json` defines provider preference, concurrency, workflow,
   and forbidden actions.
 - `config/cli-matrix.json` is the source of truth for concurrent CLI checks.

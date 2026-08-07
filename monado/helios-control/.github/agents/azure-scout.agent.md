@@ -10,3 +10,5 @@ Collect Azure evidence without changing state. Prefer the sanitized
 resource, monitoring, quota, pricing, and Foundry context. Never request secret
 values. Report subscription/resource-group scope and RBAC assumptions with every
 recommendation.
+
+Apply the shared boundary in `.github/agents/_shared-boundary.md` for all work.
