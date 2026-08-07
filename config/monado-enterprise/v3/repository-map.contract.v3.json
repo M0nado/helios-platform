@@ -1,0 +1,127 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v3/repository-map.contract.v3.schema.json",
+  "schemaVersion": "3.0.0",
+  "contractId": "monadoblade-repository-map-v3",
+  "canonicalRepository": "M0nado/helios-platform",
+  "crossRepositorySource": "config/integrations/repositories.json",
+  "ownershipBoundaries": [
+    {
+      "repository": "M0nado/helios-platform",
+      "role": "canonical-product-and-execution",
+      "authority": [
+        "contracts",
+        "event-routing",
+        "policy",
+        "docs",
+        "ci",
+        "release"
+      ]
+    },
+    {
+      "repository": "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
+      "role": "cross-repository-control-plane",
+      "authority": [
+        "bootstrap-policy",
+        "integration-contract-governance",
+        "fleet-evaluation"
+      ]
+    },
+    {
+      "repository": "Yolkster64/hermes-fleet-platforms",
+      "role": "companion-fleet",
+      "authority": [
+        "hermes-workers",
+        "xcore-workers",
+        "fleet-experiments"
+      ]
+    }
+  ],
+  "dedicatedTargets": {
+    "gui": {
+      "workItems": [
+        149,
+        172,
+        195
+      ],
+      "ownership": "dedicated-gui-module",
+      "integrationMode": "linked-not-duplicated"
+    },
+    "usbWizard": {
+      "workItems": [
+        149,
+        171
+      ],
+      "ownership": "dedicated-usb-module",
+      "integrationMode": "linked-not-duplicated"
+    }
+  },
+  "governanceEvidenceGates": {
+    "runnerTopology": {
+      "issues": [
+        194
+      ],
+      "pullRequests": [
+        196
+      ]
+    },
+    "deployment": {
+      "issues": [
+        162
+      ]
+    }
+  },
+  "codeownersReadyPaths": [
+    {
+      "path": "config/monado-enterprise/v3/**",
+      "ownerRole": "contracts-and-platform-architecture",
+      "reason": "Canonical six-profile v3 machine-readable contracts."
+    },
+    {
+      "path": "schemas/monado-enterprise/v3/**",
+      "ownerRole": "contracts-and-platform-architecture",
+      "reason": "v3 schema and XML boundary enforcement."
+    },
+    {
+      "path": "src/core/HELIOS.Platform.Contracts/MonadoBladeSixProfileDeliveryFabricV3Contracts.cs",
+      "ownerRole": "platform-contracts",
+      "reason": "Typed reusable v3 contract surfaces."
+    },
+    {
+      "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoBladeSixProfileDeliveryFabricV3ContractsTests.cs",
+      "ownerRole": "platform-contracts",
+      "reason": "v3 typed contract invariant tests."
+    },
+    {
+      "path": "docs/architecture/MONADOBLADE_SIX_PROFILE_DELIVERY_FABRIC_V3.md",
+      "ownerRole": "architecture-and-governance",
+      "reason": "Issue-207 authoritative architecture map."
+    },
+    {
+      "path": "status-site/monadoblade-six-profile-delivery-fabric-v3.md",
+      "ownerRole": "architecture-and-governance",
+      "reason": "Pages/wiki-friendly status source for issue #207."
+    },
+    {
+      "path": ".github/workflows/validate-monadoblade-profile-contracts.yml",
+      "ownerRole": "ci-governance",
+      "reason": "Required v1+v2+v3 contract validation pipeline."
+    }
+  ],
+  "projectStatusSources": {
+    "githubIssue": "https://github.com/M0nado/helios-platform/issues/207",
+    "linearIssue": "https://linear.app/641974/issue/JOH-44/canonicalize-monadoblade-six-profile-delivery-fabric",
+    "sharepointRecord": "https://heli0s-my.sharepoint.com/personal/jmore_heli0s_onmicrosoft_com/Documents/Helios/Governance/MonadoBlade/MONADOBLADE_DELIVERY_FABRIC_V1.md?web=1",
+    "slackRecord": "https://helios-xk97943.slack.com/docs/T0B8Z1H0MV1/F0BL7F6BS75"
+  },
+  "nonAuthorities": {
+    "slack": "coordination-surface",
+    "teams": "operations-surface",
+    "azure-devops": "projection-surface"
+  },
+  "constraints": {
+    "noCompetingPlatformRoots": true,
+    "noDirectToMainWrites": true,
+    "noSecretMaterialInContracts": true,
+    "noExecutionTriggerFromProjectionSurfaces": true
+  }
+}

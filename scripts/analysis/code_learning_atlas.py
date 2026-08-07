@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json, subprocess
+import json, shutil, subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -91,8 +91,12 @@ DOMAINS = [
 ]
 
 def files() -> list[str]:
-    proc = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
-    return [line for line in proc.stdout.splitlines() if line]
+    if shutil.which('rg'):
+        proc = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
+        if proc.returncode in (0, 1):
+            return [line for line in proc.stdout.splitlines() if line]
+    proc = subprocess.run(['git', 'ls-files'], cwd=ROOT, text=True, capture_output=True)
+    return [line for line in proc.stdout.splitlines() if line] if proc.returncode == 0 else []
 
 def score(path: str, patterns: list[str]) -> int:
     low = path.lower()
