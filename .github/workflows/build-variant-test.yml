@@ -33,9 +33,21 @@ jobs:
     outputs:
       variants: ${{ steps.variants.outputs.variants }}
       matrix: ${{ steps.matrix.outputs.matrix }}
+      node_project_exists: ${{ steps.detect.outputs.exists }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Detect Node project
+        id: detect
+        shell: bash
+        run: |
+          if [ -f package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No package.json found at repository root; Build Variant Tests matrix will be skipped."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Define Build Variants
         id: variants
@@ -89,6 +101,7 @@ jobs:
 
   test-variants:
     name: Test ${{ matrix.variant.name }} on Node ${{ matrix.platform.node }} (${{ matrix.platform.os }})
+    if: ${{ needs.setup-variants.outputs.node_project_exists == 'true' }}
     runs-on: ${{ matrix.platform.os }}
     needs: setup-variants
     strategy:
@@ -103,13 +116,13 @@ jobs:
       BUILD_OPTIMIZATION: ${{ matrix.variant.optimization }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           submodules: true
 
       - name: Setup Node.js ${{ matrix.platform.node }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.platform.node }}
 
@@ -197,8 +210,8 @@ jobs:
   compare-variants:
     name: Compare Build Variants
     runs-on: ubuntu-latest
-    needs: test-variants
-    if: always()
+    needs: [setup-variants, test-variants]
+    if: ${{ always() && needs.setup-variants.outputs.node_project_exists == 'true' }}
     steps:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4

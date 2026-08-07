@@ -49,6 +49,26 @@ EXPECTED_CONTRACT_KEYS = {
     "openAiProposalSchema",
     "profileXmlSchema",
 }
+EXPECTED_CONTRACT_FILE_NAMES = {
+    "storage": "storage.contract.v2.json",
+    "profileCatalog": "profile-catalog.v2.json",
+    "profileExperience": "profile-experience.contract.v2.json",
+    "chromaWyvern": "chroma-wyvern.contract.v2.json",
+    "alvisBudget": "alvis-tool-budgets.v2.json",
+    "repositoryOwnership": "repository-ownership.contract.v2.json",
+    "synchronization": "synchronization.contract.v2.json",
+    "openAiProposalSchema": "openai-proposal.schema.v2.json",
+    "profileXmlSchema": "profile-manifest.v2.xsd",
+}
+EXPECTED_REFERENCED_CONTRACT_IDS = {
+    "storage": "monado-storage-v2",
+    "profileCatalog": "monado-profile-catalog-v2",
+    "profileExperience": "monado-profile-experience-v2",
+    "chromaWyvern": "monado-chroma-wyvern-v2",
+    "alvisBudget": "alvis-tool-budgets-v2",
+    "repositoryOwnership": "monado-repository-ownership-v2",
+    "synchronization": "monado-sync-v2",
+}
 EXPECTED_AZURE_DEVOPS_MODE = "read-only-mirror-until-separate-approved-identity"
 EXPECTED_ENVELOPE_FIELDS = {
     "eventId",
@@ -65,6 +85,16 @@ EXPECTED_ENVELOPE_FIELDS = {
 EXPECTED_IDEMPOTENCY_COMPONENTS = {"routeId", "sourceDeliveryId", "targetLogicalId", "operation"}
 EXPECTED_OVERLAY_CONTRACT_ID = "monadoblade-experience-fabric-v2-overlay"
 EXPECTED_CANONICAL_CONTRACT_ID = "monado-enterprise-experience-fabric-v2"
+EXPECTED_OPENAI_SCHEMA_ID = "https://helios-platform.dev/schemas/monado-openai-proposal-v2.json"
+EXPECTED_PRIVILEGED_ACTION_TYPES = {"privileged-proposal", "deployment-proposal", "rollback-proposal"}
+EXPECTED_DENIED_OPERATIONS = {
+    "direct-disk-mutation",
+    "direct-tenant-consent",
+    "direct-rbac-write",
+    "direct-production-deployment",
+    "physical-usb-write",
+    "raw-secret-readback",
+}
 
 
 def _load_json(path: Path) -> dict:
@@ -85,6 +115,14 @@ def _resolve_contract_path(base: Path, relative_path: str) -> Path:
     if normalized.parts[:3] == ("config", "monadoblade", "experience-fabric"):
         return base / Path(*normalized.parts[3:])
     return base / normalized
+
+
+def _is_under_base(path: Path, base: Path) -> bool:
+    try:
+        path.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def validate_contracts(base: Path = BASE) -> list[str]:
@@ -117,7 +155,40 @@ def validate_contracts(base: Path = BASE) -> list[str]:
             path = contracts.get(key)
             _require(isinstance(path, str) and path.strip() != "", f"root contracts.{key} must be a non-empty path", errors)
             if isinstance(path, str) and path.strip() != "":
-                _require(_resolve_contract_path(base, path).is_file(), f"root contracts.{key} points to a missing file", errors)
+                resolved = _resolve_contract_path(base, path)
+                _require(_is_under_base(resolved, base), f"root contracts.{key} must stay under config/monadoblade/experience-fabric", errors)
+                _require(resolved.is_file(), f"root contracts.{key} points to a missing file", errors)
+                expected_file_name = EXPECTED_CONTRACT_FILE_NAMES[key]
+                _require(
+                    resolved.name == expected_file_name,
+                    f"root contracts.{key} must target {expected_file_name}",
+                    errors,
+                )
+                if not resolved.is_file():
+                    continue
+                if key in EXPECTED_REFERENCED_CONTRACT_IDS:
+                    try:
+                        referenced = _load_json(resolved)
+                    except (OSError, json.JSONDecodeError, ValueError) as exc:
+                        errors.append(f"root contracts.{key} must resolve to a JSON object contract: {exc}")
+                        continue
+                    expected_contract_id = EXPECTED_REFERENCED_CONTRACT_IDS[key]
+                    _require(
+                        referenced.get("contractId") == expected_contract_id,
+                        f"root contracts.{key} must reference contractId {expected_contract_id}",
+                        errors,
+                    )
+                elif key == "openAiProposalSchema":
+                    try:
+                        referenced = _load_json(resolved)
+                    except (OSError, json.JSONDecodeError, ValueError) as exc:
+                        errors.append(f"root contracts.{key} must resolve to a JSON object schema: {exc}")
+                        continue
+                    _require(
+                        referenced.get("$id") == EXPECTED_OPENAI_SCHEMA_ID,
+                        "root contracts.openAiProposalSchema must reference the canonical OpenAI proposal schema",
+                        errors,
+                    )
 
     storage = _load_json(base / "storage.contract.v2.json")
     _require(storage.get("destructiveApplyDefault") is False, "storage destructiveApplyDefault must be false", errors)
@@ -178,6 +249,18 @@ def validate_contracts(base: Path = BASE) -> list[str]:
         errors,
     )
     _require(ids == EXPECTED_PROFILES, f"profile set mismatch: {sorted(ids)}", errors)
+    default_profile = catalog.get("defaultProfile")
+    _require(default_profile == "personal", "profile catalog defaultProfile must remain personal", errors)
+    default_entry = (
+        next((entry for entry in profiles if isinstance(entry, Mapping) and entry.get("id") == default_profile), None)
+        if isinstance(default_profile, str)
+        else None
+    )
+    _require(default_entry is not None, "profile catalog defaultProfile must reference a defined profile", errors)
+    if isinstance(default_entry, Mapping):
+        _require(default_entry.get("administrator") is False, "default profile must not be an administrator profile", errors)
+        _require(default_entry.get("enabledByDefault", True) is True, "default profile must be enabled by default", errors)
+        _require(default_entry.get("hidden", False) is False, "default profile must not be hidden", errors)
     administrators = [entry for entry in profiles if isinstance(entry, Mapping) and entry.get("administrator") is True]
     _require(
         len(administrators) == 1 and administrators[0].get("id") == "sysadmin",
@@ -228,6 +311,15 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     alvis = _load_json(base / "alvis-tool-budgets.v2.json")
     _require(alvis.get("administratorDenied") is True, "ALVIS administratorDenied must be true", errors)
     _require(alvis.get("externalWriteRequiresApproval") is True, "ALVIS externalWriteRequiresApproval must be true", errors)
+    denied_operations = alvis.get("deniedOperations", [])
+    _require(isinstance(denied_operations, list), "ALVIS deniedOperations must be a list", errors)
+    if isinstance(denied_operations, list):
+        denied_operation_set = {item for item in denied_operations if isinstance(item, str)}
+        _require(
+            EXPECTED_DENIED_OPERATIONS.issubset(denied_operation_set),
+            "ALVIS deniedOperations must include the full protected operation set",
+            errors,
+        )
     alvis_profiles = alvis.get("profiles", {})
     _require(isinstance(alvis_profiles, Mapping), "ALVIS profiles must be an object", errors)
     _require(set(alvis_profiles.keys()) == EXPECTED_PROFILES, "ALVIS profiles must match expected profile set", errors)
@@ -295,12 +387,43 @@ def validate_contracts(base: Path = BASE) -> list[str]:
     _require({"proposalId", "correlationId", "approval", "rollbackPlan", "expiresAtUtc"}.issubset(required), "OpenAI proposal schema must require proposal/approval/rollback fields", errors)
     schema_guards = openai_schema.get("allOf", [])
     _require(isinstance(schema_guards, list) and len(schema_guards) > 0, "OpenAI proposal schema must define conditional safety guards", errors)
+    privileged_guard_present = False
+    if isinstance(schema_guards, list):
+        for guard in schema_guards:
+            if not isinstance(guard, Mapping):
+                continue
+            action_type_enum = (
+                guard.get("if", {})
+                .get("properties", {})
+                .get("actionType", {})
+                .get("enum", [])
+            )
+            guard_action_types = set(action_type_enum) if isinstance(action_type_enum, list) else set()
+            required_const = (
+                guard.get("then", {})
+                .get("properties", {})
+                .get("approval", {})
+                .get("properties", {})
+                .get("required", {})
+                .get("const")
+            )
+            if guard_action_types == EXPECTED_PRIVILEGED_ACTION_TYPES and required_const is True:
+                privileged_guard_present = True
+                break
+    _require(
+        privileged_guard_present,
+        "OpenAI proposal schema must enforce approval.required=true for privileged/deployment/rollback proposals",
+        errors,
+    )
 
     return errors
 
 
 def validate_profile_xml(base: Path = BASE) -> list[str]:
     errors: list[str] = []
+    alvis = _load_json(base / "alvis-tool-budgets.v2.json")
+    alvis_profiles = alvis.get("profiles", {})
+    _require(isinstance(alvis_profiles, Mapping), "ALVIS profiles must be an object for XML budget cross-checks", errors)
     xml_root = base / "xml"
     xsd_path = xml_root / "profile-manifest.v2.xsd"
     if not xsd_path.exists():
@@ -350,6 +473,20 @@ def validate_profile_xml(base: Path = BASE) -> list[str]:
             f"{path}: AlvisMaxToolCallsPerPlan must be a positive integer",
             errors,
         )
+        if max_calls_text.isdigit() and profile_id in EXPECTED_PROFILES and isinstance(alvis_profiles, Mapping):
+            policy = alvis_profiles.get(profile_id)
+            expected_budget = policy.get("maxToolCallsPerPlan") if isinstance(policy, Mapping) else None
+            _require(
+                isinstance(expected_budget, int) and expected_budget > 0,
+                f"{path}: ALVIS profile {profile_id} must define a positive maxToolCallsPerPlan",
+                errors,
+            )
+            if isinstance(expected_budget, int) and expected_budget > 0:
+                _require(
+                    int(max_calls_text) == expected_budget,
+                    f"{path}: AlvisMaxToolCallsPerPlan must match ALVIS profile budget ({expected_budget}) for {profile_id}",
+                    errors,
+                )
 
     _require(seen_ids == EXPECTED_PROFILES, f"XML profile set mismatch: {sorted(seen_ids)}", errors)
     return errors

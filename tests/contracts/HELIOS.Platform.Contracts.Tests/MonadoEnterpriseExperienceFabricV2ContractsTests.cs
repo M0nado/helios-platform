@@ -32,6 +32,17 @@ public class MonadoEnterpriseExperienceFabricV2ContractsTests
     }
 
     [Fact]
+    public void ValidateAndFreezeBudgets_RejectsUnexpectedProfileIds()
+    {
+        var budgets = BuildBudgets().Append(
+            new AlvisProfileToolBudget((MonadoEnterpriseProfileId)999, 5, false, false));
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => MonadoEnterpriseExperienceFabricV2Catalog.ValidateAndFreezeBudgets(budgets));
+        Assert.Contains("Unexpected ALVIS profile budgets", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MonadoOpenAiProposal_RejectsExpiredUtcProposal()
     {
         var now = new DateTimeOffset(2026, 8, 7, 1, 0, 0, TimeSpan.Zero);

@@ -293,6 +293,16 @@ public static class MonadoEnterpriseExperienceFabricV2Catalog
             throw new InvalidOperationException($"Missing ALVIS profile budgets: {string.Join(", ", missing)}");
         }
 
+        var unexpected = materialized
+            .Select(value => value.ProfileId)
+            .Where(profile => !ExpectedProfiles.Contains(profile))
+            .Distinct()
+            .ToArray();
+        if (unexpected.Length > 0)
+        {
+            throw new InvalidOperationException($"Unexpected ALVIS profile budgets: {string.Join(", ", unexpected)}");
+        }
+
         var sysAdmin = materialized.Single(value => value.ProfileId == MonadoEnterpriseProfileId.SysAdmin);
         if (!sysAdmin.ApplyDeniedWithoutExplicitApproval || !sysAdmin.AllowPrivilegedProposal)
         {

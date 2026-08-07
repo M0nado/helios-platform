@@ -39,6 +39,9 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         self.alvis_budget = json.loads(
             (BASE / "alvis-tool-budgets.v2.json").read_text(encoding="utf-8")
         )
+        self.openai_schema = json.loads(
+            (BASE / "openai-proposal.schema.v2.json").read_text(encoding="utf-8")
+        )
 
     def _validate_with_override(self, file_name: str, payload: dict) -> list[str]:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -85,6 +88,18 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         errors = self._validate_with_override("profile-catalog.v2.json", candidate)
         self.assertTrue(any("must not duplicate profile IDs" in error for error in errors))
 
+    def test_root_contract_references_must_target_expected_contract_file(self) -> None:
+        candidate = copy.deepcopy(self.root_contract)
+        candidate["contracts"]["storage"] = "config/monadoblade/experience-fabric/profile-catalog.v2.json"
+        errors = self._validate_with_override("monado-enterprise-experience-fabric.v2.json", candidate)
+        self.assertTrue(any("root contracts.storage must target storage.contract.v2.json" in error for error in errors))
+
+    def test_profile_catalog_default_profile_must_remain_personal(self) -> None:
+        candidate = copy.deepcopy(self.profile_catalog)
+        candidate["defaultProfile"] = "sysadmin"
+        errors = self._validate_with_override("profile-catalog.v2.json", candidate)
+        self.assertTrue(any("defaultProfile must remain personal" in error for error in errors))
+
     def test_sync_envelope_requires_links_and_classification_fields(self) -> None:
         candidate = copy.deepcopy(self.sync_contract)
         required_fields = candidate["envelope"]["requiredFields"]
@@ -117,6 +132,20 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
         errors = self._validate_with_override("alvis-tool-budgets.v2.json", candidate)
         self.assertTrue(any("maxToolCallsPerPlan must be a positive integer" in error for error in errors))
 
+    def test_alvis_denied_operations_must_include_full_safe_set(self) -> None:
+        candidate = copy.deepcopy(self.alvis_budget)
+        candidate["deniedOperations"] = [
+            op for op in candidate["deniedOperations"] if op != "raw-secret-readback"
+        ]
+        errors = self._validate_with_override("alvis-tool-budgets.v2.json", candidate)
+        self.assertTrue(any("must include the full protected operation set" in error for error in errors))
+
+    def test_openai_schema_must_enforce_privileged_approval_guard(self) -> None:
+        candidate = copy.deepcopy(self.openai_schema)
+        candidate["allOf"] = [{"then": {}}]
+        errors = self._validate_with_override("openai-proposal.schema.v2.json", candidate)
+        self.assertTrue(any("must enforce approval.required=true" in error for error in errors))
+
     def test_profile_xml_requires_positive_integer_tool_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             target = Path(temp_dir) / "experience-fabric"
@@ -143,6 +172,21 @@ class MonadoExperienceFabricV2ValidationTests(unittest.TestCase):
             tree.write(xml_path, encoding="utf-8", xml_declaration=True)
             errors = validate_profile_xml(target)
         self.assertTrue(any("must match filename-derived id 'developer'" in error for error in errors))
+
+    def test_profile_xml_tool_budget_must_match_alvis_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target = Path(temp_dir) / "experience-fabric"
+            shutil.copytree(BASE, target)
+            xml_path = target / "xml" / "developer.profile.v2.xml"
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+            namespace = "{https://helios-platform.dev/schemas/monado-profile-v2}"
+            node = root.find(f"{namespace}AlvisMaxToolCallsPerPlan")
+            self.assertIsNotNone(node)
+            node.text = "1"
+            tree.write(xml_path, encoding="utf-8", xml_declaration=True)
+            errors = validate_profile_xml(target)
+        self.assertTrue(any("must match ALVIS profile budget" in error for error in errors))
 
 
 if __name__ == "__main__":
