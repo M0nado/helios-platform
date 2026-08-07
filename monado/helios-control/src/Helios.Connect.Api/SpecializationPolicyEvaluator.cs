@@ -94,9 +94,15 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
         }
         var candidates = new[]
         {
-            Path.GetFullPath(Path.Combine(environment.ContentRootPath, "config", "hermes-xcore9-specialization-packs.json")),
-            Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "..", "config", "hermes-xcore9-specialization-packs.json")),
-            Path.GetFullPath(Path.Combine(environment.ContentRootPath, "..", "..", "..", "config", "hermes-xcore9-specialization-packs.json"))
+            Path.GetFullPath(
+                Path.Combine("config", "hermes-xcore9-specialization-packs.json"),
+                environment.ContentRootPath),
+            Path.GetFullPath(
+                Path.Combine("..", "..", "config", "hermes-xcore9-specialization-packs.json"),
+                environment.ContentRootPath),
+            Path.GetFullPath(
+                Path.Combine("..", "..", "..", "config", "hermes-xcore9-specialization-packs.json"),
+                environment.ContentRootPath)
         };
 
         return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
@@ -523,10 +529,9 @@ public sealed class SpecializationPolicyEvaluator : ISpecializationPolicyEvaluat
                     $"multimodalRouting.requiredProvenanceFields must include '{required}'.");
             }
         }
-        foreach (var field in requiredProvenanceFields)
+        foreach (var field in requiredProvenanceFields.Where(field => !SupportedProvenanceFields.Contains(field)))
         {
-            if (!SupportedProvenanceFields.Contains(field))
-                throw new InvalidOperationException($"Unsupported required provenance field '{field}'.");
+            throw new InvalidOperationException($"Unsupported required provenance field '{field}'.");
         }
 
         var skillIds = new HashSet<string>(Comparer);
