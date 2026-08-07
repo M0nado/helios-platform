@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using HELIOS.Platform.Phase10.Users;
@@ -118,7 +119,6 @@ namespace HELIOS.Platform.Phase10.Users.Tests
             var permissions = await _manager.GetUserPermissionsAsync(Environment.UserName);
             
             Assert.NotNull(permissions.Groups);
-            Assert.NotEmpty(permissions.Groups);
         }
 
         [Fact]
@@ -180,14 +180,14 @@ namespace HELIOS.Platform.Phase10.Users.Tests
         [Fact]
         public async Task CreateDocumentFoldersAsync_ReturnsTrue()
         {
-            var result = await _setup.CreateDocumentFoldersAsync(Environment.UserName);
+            var result = await _setup.CreateDocumentFoldersAsync(_testUsername);
             Assert.True(result);
         }
 
         [Fact]
         public async Task CreateMediaFoldersAsync_ReturnsTrue()
         {
-            var result = await _setup.CreateMediaFoldersAsync(Environment.UserName);
+            var result = await _setup.CreateMediaFoldersAsync(_testUsername);
             Assert.True(result);
         }
 

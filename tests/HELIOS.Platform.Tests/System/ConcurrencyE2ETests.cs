@@ -2,7 +2,7 @@ using Xunit;
 using System;
 using System.Threading.Tasks;
 
-namespace HELIOS.Platform.Tests.System
+namespace HELIOS.Platform.Tests.SystemScenarios
 {
     public class ConcurrencyE2ETests
     {
