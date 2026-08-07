@@ -109,6 +109,30 @@ def doctor() -> dict[str, Any]:
     }
 
 
+def required_tool_failures(doctor_result: dict[str, Any]) -> list[dict[str, str]]:
+    failures: list[dict[str, str]] = []
+    for tool in doctor_result.get("tools", []):
+        if not tool.get("required"):
+            continue
+        command = str(tool.get("command", "unknown"))
+        if not tool.get("available", False):
+            failures.append(
+                {
+                    "command": command,
+                    "reason": "not found on PATH",
+                }
+            )
+            continue
+        if not tool.get("healthy", False):
+            failures.append(
+                {
+                    "command": command,
+                    "reason": "version check failed",
+                }
+            )
+    return failures
+
+
 def validate_environment(environment: str) -> None:
     if environment not in SUPPORTED_ENVIRONMENTS:
         raise ValueError("environment must be azure-dev, azure-test, or azure-prod")
@@ -307,9 +331,26 @@ def devops_sync_plan() -> dict[str, Any]:
     }
 
 
-def runner_plan() -> dict[str, Any]:
+def runner_plan(environment: str) -> dict[str, Any]:
+    validate_environment(environment)
+    plan = read_asset("runner-topology.json")
+    configured_release_environment = str(
+        plan.get("release", {}).get("environment", "")
+    ).strip()
+    if configured_release_environment != environment:
+        expected_environment = configured_release_environment or "unset"
+        return {
+            **plan,
+            "environment": environment,
+            "executionMode": "blocked",
+            "reason": (
+                "Runner release environment mismatch: "
+                f"configured '{expected_environment}' but requested '{environment}'."
+            ),
+        }
     return {
-        **read_asset("runner-topology.json"),
+        **plan,
+        "environment": environment,
         "executionMode": "plan-only",
     }
 
@@ -326,19 +367,38 @@ def edge_plan(environment: str) -> dict[str, Any]:
 def full_setup(environment: str, skip_oidc: bool = False) -> dict[str, Any]:
     validate_environment(environment)
     doctor_result = doctor()
-    required_tools_ready = bool(doctor_result.get("requiredToolsReady"))
+    doctor_failures = required_tool_failures(doctor_result)
+    doctor_step = {
+        **doctor_result,
+        "requiredToolFailures": doctor_failures,
+    }
+    required_tools_ready = bool(doctor_result.get("requiredToolsReady")) and not doctor_failures
     oidc_required = not skip_oidc
     oidc_ready = not oidc_required
+    runner_result = runner_plan(environment)
+    runners_ready = runner_result.get("executionMode") != "blocked"
 
     steps: dict[str, Any] = {
-        "doctor": doctor_result,
+        "doctor": doctor_step,
         "targets": read_targets(),
         "plan": release_plan(environment),
         "edge": edge_plan(environment),
         "devopsSync": devops_sync_plan(),
-        "runners": runner_plan(),
+        "runners": runner_result,
     }
     blocked: list[dict[str, str]] = []
+
+    if doctor_failures:
+        failures_text = ", ".join(
+            f"{failure['command']} ({failure['reason']})"
+            for failure in doctor_failures
+        )
+        blocked.append(
+            {
+                "step": "doctor",
+                "reason": f"Required tools are not ready: {failures_text}",
+            }
+        )
 
     if oidc_required:
         try:
@@ -357,11 +417,24 @@ def full_setup(environment: str, skip_oidc: bool = False) -> dict[str, Any]:
             "reason": "Skipped by --skip-oidc.",
         }
 
+    if not runners_ready:
+        blocked.append(
+            {
+                "step": "runners",
+                "reason": str(
+                    runner_result.get(
+                        "reason",
+                        "Runner topology did not match the requested environment.",
+                    )
+                ),
+            }
+        )
+
     return {
         "mode": "read-only",
         "command": "all",
         "environment": environment,
-        "ready": required_tools_ready and oidc_ready and not blocked,
+        "ready": required_tools_ready and oidc_ready and runners_ready and not blocked,
         "requiredToolsReady": required_tools_ready,
         "oidcRequired": oidc_required,
         "oidcReady": oidc_ready,
@@ -372,19 +445,85 @@ def full_setup(environment: str, skip_oidc: bool = False) -> dict[str, Any]:
 
 def print_human(payload: dict[str, Any]) -> None:
     if payload.get("command") == "all" and "steps" in payload:
+        steps = payload["steps"]
         print(f"HELIOS full setup ({payload['environment']})")
-        print(
-            "  required tools: "
-            + ("ready" if payload.get("requiredToolsReady") else "missing")
-        )
-        if payload.get("oidcRequired", False):
-            print(
-                "  oidc contract: "
-                + ("ready" if payload.get("oidcReady") else "blocked")
-            )
+        doctor_step = steps.get("doctor", {})
+        doctor_failures = doctor_step.get("requiredToolFailures", [])
+        if doctor_failures:
+            print("  doctor: required tools missing or unhealthy")
+            for failure in doctor_failures:
+                print(f"    - {failure['command']}: {failure['reason']}")
         else:
-            print("  oidc contract: skipped (--skip-oidc)")
-        print("  targets/plan/edge/devops-sync/runners: prepared")
+            print("  doctor: required tools ready")
+
+        targets_step = steps.get("targets", {})
+        targets_authorities = targets_step.get("authorities", {})
+        targets_state = targets_step.get("state", {})
+        if targets_authorities.get("github"):
+            print(f"  targets github: {targets_authorities['github']}")
+        if targets_state.get("azure"):
+            print(f"  targets azure state: {targets_state['azure']}")
+
+        plan_step = steps.get("plan", {})
+        gates = plan_step.get("administratorGates", [])
+        if gates:
+            print(f"  plan gates ({len(gates)}):")
+            for index, gate in enumerate(gates, start=1):
+                print(f"    GATE {index}: {gate}")
+
+        oidc_step = steps.get("oidc", {})
+        if oidc_step.get("executionMode") == "skipped":
+            print("  oidc: skipped (--skip-oidc)")
+        elif oidc_step.get("executionMode") == "blocked":
+            print(f"  oidc: blocked ({oidc_step.get('reason', 'unknown reason')})")
+        else:
+            if oidc_step.get("selectedSubject"):
+                print(f"  oidc subject: {oidc_step['selectedSubject']}")
+            if "useImmutableSubject" in oidc_step:
+                print(
+                    "  oidc immutable subject: "
+                    + str(oidc_step["useImmutableSubject"]).lower()
+                )
+
+        edge_step = steps.get("edge", {})
+        edge_target = edge_step.get("targetEdge", {})
+        edge_workflow = edge_step.get("workflow", {})
+        if edge_target.get("service") and edge_target.get("connectivity"):
+            print(
+                "  edge target: "
+                + f"{edge_target['service']} via {edge_target['connectivity']}"
+            )
+        if edge_workflow.get("apply"):
+            print(f"  edge apply gate: {edge_workflow['apply']}")
+
+        devops_step = steps.get("devopsSync", {})
+        sync = devops_step.get("synchronization", {})
+        if sync.get("direction"):
+            print(
+                "  devops sync: "
+                + f"{sync['direction']} (automatic writes: {str(sync.get('automaticWrites', True)).lower()})"
+            )
+        azure_devops = devops_step.get("azureDevOps", {})
+        if "readOnly" in azure_devops:
+            print("  devops read-only: " + str(azure_devops["readOnly"]).lower())
+
+        runners_step = steps.get("runners", {})
+        release = runners_step.get("release", {})
+        self_hosted = runners_step.get("selfHosted", {})
+        if release.get("environment"):
+            print(f"  runners release environment: {release['environment']}")
+        if "enabled" in self_hosted:
+            print(
+                "  runners self-hosted enabled: "
+                + str(self_hosted["enabled"]).lower()
+            )
+        if runners_step.get("executionMode") == "blocked":
+            print(
+                "  runners: blocked ("
+                + str(runners_step.get("reason", "unknown reason"))
+                + ")"
+            )
+
         for blocked in payload.get("blocked", []):
             print(f"  blocked {blocked['step']}: {blocked['reason']}")
         print(
@@ -419,8 +558,12 @@ def print_human(payload: dict[str, Any]) -> None:
         print("  writes: disabled")
     elif "selfHosted" in payload:
         print("HELIOS runner topology")
+        if payload.get("environment"):
+            print(f"  requested environment: {payload['environment']}")
         print(f"  validation: {payload['validation']['provider']}")
         print(f"  release environment: {payload['release']['environment']}")
+        if payload.get("executionMode") == "blocked":
+            print(f"  blocked: {payload.get('reason', 'unknown reason')}")
         print("  self-hosted runners: disabled")
     elif "targetEdge" in payload:
         print(f"HELIOS Azure Edge plan ({payload['environment']})")
@@ -464,7 +607,7 @@ def build_parser() -> argparse.ArgumentParser:
     sync_parser = subparsers.add_parser("devops-sync", help="Show the read-only Azure DevOps sync plan")
     sync_parser.add_argument("--json", action="store_true")
     runner_parser = subparsers.add_parser("runners", help="Show the governed GitHub runner topology")
-    runner_parser.add_argument("--json", action="store_true")
+    add_environment_argument(runner_parser)
     edge_parser = subparsers.add_parser("edge", help="Show the Azure Front Door private-edge activation plan")
     add_environment_argument(edge_parser)
     return parser
@@ -486,7 +629,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "devops-sync":
             payload = devops_sync_plan()
         elif args.command == "runners":
-            payload = runner_plan()
+            payload = runner_plan(args.environment)
         else:
             payload = edge_plan(args.environment)
     except (RuntimeError, ValueError) as error:
