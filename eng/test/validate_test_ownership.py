@@ -9,7 +9,8 @@ MANIFEST = ROOT / "eng/test/test-ownership.json"
 LAYERS = {"portable", "windows", "privileged", "integration", "performance", "end-to-end"}
 
 def include_path(path: Path):
-    return "obj" not in path.parts and "bin" not in path.parts
+    parts = path.relative_to(ROOT).parts
+    return "obj" not in parts and "bin" not in parts
 
 def sources():
     roots = [ROOT / "tests", ROOT / "src/tests", ROOT / "monado/helios-control/tests"]

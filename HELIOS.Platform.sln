@@ -8,7 +8,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "core", "core", "{052B01DE-8
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform.Contracts", "src\core\HELIOS.Platform.Contracts\HELIOS.Platform.Contracts.csproj", "{36AB8D6E-C49C-4A2C-ACDB-DD6DF7C8EB95}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform", "src\core\HELIOS.Platform.Minimal\HELIOS.Platform.csproj", "{BECAE842-4DAD-4E42-9A63-D16CED0F817C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HELIOS.Platform", "src\core\HELIOS.Platform\HELIOS.Platform.csproj", "{BECAE842-4DAD-4E42-9A63-D16CED0F817C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecurityValidator", "src\Security\SecurityValidator.csproj", "{9A1228F8-B9F6-49F1-80DB-DB1B92514EB4}"
 EndProject
