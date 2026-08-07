@@ -93,9 +93,9 @@ steps:
 
     root = Path("appPackage")
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-    if manifest["version"] != "0.4.0":
+    if manifest["version"] != "0.6.0":
         raise AssertionError("Unexpected appPackage/manifest.json version.")
-    expected_resource = "api://" + "$" + "{{ENTRA_APP_ID}}"
+    expected_resource = "api://" + "$" + "{{PUBLIC_HOSTNAME}}/" + "$" + "{{ENTRA_APP_ID}}"
     if manifest["webApplicationInfo"]["resource"] != expected_resource:
         raise AssertionError("Unexpected webApplicationInfo.resource placeholder.")
     for name, expected in (("color.png", (192, 192)), ("outline.png", (32, 32))):
