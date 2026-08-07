@@ -140,6 +140,10 @@ rejects public-origin runs until that variable matches
 `HELIOS_CONNECTOR_PUBLIC_BASE_URL=https://<front-door-hostname>`, redeploy the
 connector through `helios-cloud-deploy`, and only then rerun `azure-infra` with
 `edge_route_cutover_approved=true` to enable the public route.
+For production `network_only=false`, `azure-infra` now also verifies that
+`connector_backend_url` exactly matches the deployed connector ingress origin
+and that any `container_registry_id` matches the connector's active ACR
+resource ID before allowing private-endpoint-only image-pull egress.
 
 For private-network production verification, the workflow requires a
 self-hosted runner with VNet/private-DNS reachability before deploy mode can

@@ -9,6 +9,7 @@ param connectorRelayDestinations array
 
 var networkPathPolicy = loadJsonContent('../../../monado/helios-control/config/network-paths.json')
 var approvedDestinations = networkPathPolicy.egress.approvedDestinations
+var environmentRuleCollectionPriority = environmentName == 'prod' ? 320 : environmentName == 'test' ? 310 : 300
 var selectedProfileRules = [for profile in enabledEgressProfiles: {
   name: 'Allow-${profile}'
   ruleType: 'ApplicationRule'
@@ -49,7 +50,7 @@ resource heliosRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleColle
   parent: firewallPolicy
   name: '${namePrefix}-${environmentName}-egress'
   properties: {
-    priority: 300
+    priority: environmentRuleCollectionPriority
     ruleCollections: [{
       name: 'enabled-integration-profiles'
       priority: 100

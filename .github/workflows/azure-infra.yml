@@ -234,6 +234,26 @@ jobs:
               echo "azure_firewall_policy_id must target the same subscription/resource-group scope as hub_virtual_network_id for reviewed hub governance updates." >&2
               exit 1
             fi
+            firewall_matches_json="$(az network firewall list \
+              --subscription "${hub_virtual_network_subscription_id}" \
+              --resource-group "${hub_virtual_network_resource_group}" \
+              --query "[?contains(join(',', ipConfigurations[].privateIPAddress), '${INPUT_AZURE_FIREWALL_PRIVATE_IP}')]" \
+              --output json)"
+            firewall_match_count="$(jq 'length' <<<"${firewall_matches_json}")"
+            if [[ "${firewall_match_count}" != "1" ]]; then
+              echo "Exactly one Azure Firewall in '${hub_virtual_network_resource_group}' must expose private IP '${INPUT_AZURE_FIREWALL_PRIVATE_IP}' for egress_mode=azureFirewall." >&2
+              exit 1
+            fi
+            firewall_policy_binding="$(jq -r '.[0].firewallPolicy.id // empty' <<<"${firewall_matches_json}")"
+            if [[ -z "${firewall_policy_binding}" || "${firewall_policy_binding,,}" != "${INPUT_AZURE_FIREWALL_POLICY_ID,,}" ]]; then
+              echo "azure_firewall_policy_id must match the policy attached to the Azure Firewall using '${INPUT_AZURE_FIREWALL_PRIVATE_IP}'." >&2
+              exit 1
+            fi
+            firewall_ip_subnet_id="$(jq -r --arg ip "${INPUT_AZURE_FIREWALL_PRIVATE_IP}" '.[0].ipConfigurations[] | select((.privateIPAddress // "") == $ip) | .subnet.id // empty' <<<"${firewall_matches_json}" | head -n1)"
+            if [[ -z "${firewall_ip_subnet_id}" || "${firewall_ip_subnet_id,,}" != "${INPUT_HUB_VIRTUAL_NETWORK_ID,,}/subnets/"* ]]; then
+              echo "azure_firewall_private_ip must belong to an Azure Firewall IP configuration in hub_virtual_network_id." >&2
+              exit 1
+            fi
           fi
 
           case "${INPUT_EDGE_ROUTE_CUTOVER_APPROVED,,}" in
@@ -307,7 +327,79 @@ jobs:
               echo "Production azureFirewall deployments require enabled_egress_profiles to include containerAppsPlatform for Container Apps platform egress." >&2
               exit 1
             fi
-            if [[ -z "${INPUT_CONTAINER_REGISTRY_ID}" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
+            if [[ "${INPUT_NETWORK_ONLY}" != "true" ]]; then
+              if [[ ! "${INPUT_CONNECTOR_BACKEND_URL}" =~ ^https://[^/?#]+$ ]]; then
+                echo "Production connector_backend_url must be one HTTPS origin without path, query, or fragment when network_only=false." >&2
+                exit 1
+              fi
+              container_app_name="helios-connector-${INPUT_ENVIRONMENT_NAME}-api"
+              set +e
+              deployed_connector_ingress_fqdn="$(az resource show \
+                --resource-group "${INPUT_RESOURCE_GROUP}" \
+                --resource-type "Microsoft.App/containerApps" \
+                --name "${container_app_name}" \
+                --api-version 2024-03-01 \
+                --query properties.configuration.ingress.fqdn \
+                --output tsv 2>&1)"
+              deployed_connector_ingress_exit=$?
+              set -e
+              if [[ ${deployed_connector_ingress_exit} -ne 0 ]]; then
+                echo "${deployed_connector_ingress_fqdn}" >&2
+                echo "connector_backend_url must match the deployed connector ingress origin; deploy '${container_app_name}' before production cutover." >&2
+                exit 1
+              fi
+              if [[ -z "${deployed_connector_ingress_fqdn}" || "${deployed_connector_ingress_fqdn}" == "null" ]]; then
+                echo "connector_backend_url must match the deployed connector ingress origin; '${container_app_name}' has no ingress FQDN." >&2
+                exit 1
+              fi
+              expected_connector_backend_url="https://${deployed_connector_ingress_fqdn}"
+              if [[ "${INPUT_CONNECTOR_BACKEND_URL,,}" != "${expected_connector_backend_url,,}" ]]; then
+                echo "connector_backend_url must match deployed connector ingress origin '${expected_connector_backend_url}' for reviewed production cutover." >&2
+                exit 1
+              fi
+            fi
+            if [[ -n "${INPUT_CONTAINER_REGISTRY_ID}" ]]; then
+              if [[ ! "${INPUT_CONTAINER_REGISTRY_ID}" =~ ^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.ContainerRegistry/registries/[^/]+$ ]]; then
+                echo "container_registry_id must be a full Azure Container Registry resource ID when supplied." >&2
+                exit 1
+              fi
+              if [[ "${INPUT_NETWORK_ONLY}" != "true" ]]; then
+                container_app_name="helios-connector-${INPUT_ENVIRONMENT_NAME}-api"
+                set +e
+                connector_image="$(az resource show \
+                  --resource-group "${INPUT_RESOURCE_GROUP}" \
+                  --resource-type "Microsoft.App/containerApps" \
+                  --name "${container_app_name}" \
+                  --api-version 2024-03-01 \
+                  --query properties.template.containers[0].image \
+                  --output tsv 2>&1)"
+                connector_image_exit=$?
+                set -e
+                if [[ ${connector_image_exit} -ne 0 ]]; then
+                  echo "${connector_image}" >&2
+                  echo "container_registry_id requires a deployed connector so the bound registry can be verified." >&2
+                  exit 1
+                fi
+                if [[ -z "${connector_image}" || "${connector_image}" == "null" || "${connector_image}" != *.azurecr.io/* ]]; then
+                  echo "container_registry_id requires connector image metadata with an *.azurecr.io registry binding." >&2
+                  exit 1
+                fi
+                connector_registry_name="${connector_image%%.azurecr.io/*}"
+                set +e
+                expected_container_registry_id="$(az acr show --name "${connector_registry_name}" --query id --output tsv 2>&1)"
+                expected_container_registry_exit=$?
+                set -e
+                if [[ ${expected_container_registry_exit} -ne 0 || -z "${expected_container_registry_id}" || "${expected_container_registry_id}" == "null" ]]; then
+                  echo "${expected_container_registry_id}" >&2
+                  echo "Could not resolve resource ID for connector registry '${connector_registry_name}'." >&2
+                  exit 1
+                fi
+                if [[ "${expected_container_registry_id,,}" != "${INPUT_CONTAINER_REGISTRY_ID,,}" ]]; then
+                  echo "container_registry_id must match the deployed connector registry '${expected_container_registry_id}' before omitting containerRegistryDataPlane egress." >&2
+                  exit 1
+                fi
+              fi
+            elif [[ "${INPUT_NETWORK_ONLY}" != "true" ]] && ! jq -e 'index("containerRegistryDataPlane") != null' <<<"${enabled_egress_profiles_json}" > /dev/null; then
               echo "Production azureFirewall deployments require container_registry_id (private endpoint) or enabled_egress_profiles including containerRegistryDataPlane for ACR image-pull egress." >&2
               exit 1
             fi

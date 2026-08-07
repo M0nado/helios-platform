@@ -188,6 +188,8 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("does not match requested environment_name", workflow)
         self.assertIn("azure_firewall_policy_id must be a full Firewall Policy resource ID when egress_mode=azureFirewall.", workflow)
         self.assertIn("must target the same subscription/resource-group scope as hub_virtual_network_id", workflow)
+        self.assertIn("must match the policy attached to the Azure Firewall using", workflow)
+        self.assertIn("must belong to an Azure Firewall IP configuration in hub_virtual_network_id.", workflow)
         self.assertIn("--resource-type \"Microsoft.Cdn/profiles/afdEndpoints/routes\"", workflow)
         self.assertIn("Input location '", workflow)
         self.assertIn("platformAddressSpace=", workflow)
@@ -203,6 +205,8 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL", workflow)
         self.assertIn("HELIOS_CONNECTOR_PUBLIC_BASE_URL must match the deployed Front Door endpoint origin", workflow)
         self.assertIn("HELIOS_PUBLIC_BASE_URL", workflow)
+        self.assertIn("connector_backend_url must match deployed connector ingress origin", workflow)
+        self.assertIn("container_registry_id must match the deployed connector registry", workflow)
         self.assertIn("microsoftIdentityAzure for Cosmos readiness egress", workflow)
         self.assertIn("containerAppsPlatform for Container Apps platform egress", workflow)
         self.assertIn("containerRegistryDataPlane for ACR image-pull egress", workflow)
@@ -241,6 +245,8 @@ class AzureDeploymentContractTests(unittest.TestCase):
         self.assertIn("output platformAddressSpace string = resolvedPlatformAddressSpace", network_module)
         self.assertIn("param platformAddressSpace string", hub_governance_module)
         self.assertIn("sourceAddresses: [platformAddressSpace]", hub_governance_module)
+        self.assertIn("var environmentRuleCollectionPriority = environmentName == 'prod' ? 320 : environmentName == 'test' ? 310 : 300", hub_governance_module)
+        self.assertIn("priority: environmentRuleCollectionPriority", hub_governance_module)
 
     def test_reviewed_connector_workflow_propagates_public_base_url(self) -> None:
         workflow = WORKFLOW.read_text(encoding="utf-8")
