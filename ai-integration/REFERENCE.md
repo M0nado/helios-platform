@@ -56,11 +56,16 @@ Invoke-Codex `
 . .\scripts\coordinate-ai.ps1
 
 # Coordinate responses
-Invoke-AICoordination `
+$result = Invoke-AICoordination `
     -ChatGPTResponse $gptResponse `
     -CodexResponse $codexResponse `
     -ConflictResolution $true `
+    -MergeSimilarRecommendations $true `
+    -SimilarityThreshold 0.7 `
     -GenerateReport $true
+
+# Review merged recommendation set
+$result.MergedRecommendations
 
 # Get statistics
 Get-AICoordinationStats -Days 30

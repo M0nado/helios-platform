@@ -8,6 +8,7 @@ AI coordination enables:
 - Using ChatGPT for planning, Codex for code generation
 - Detecting conflicting AI suggestions
 - Unified recommendation generation
+- Merging similar recommendations across agents
 - Automatic conflict resolution
 - Complete audit trail
 
@@ -114,8 +115,13 @@ $result = Invoke-AICoordination `
     -ChatGPTResponse $chatgptAnalysis `
     -CodexResponse $codexGeneration `
     -ConflictResolution $true `
+    -MergeSimilarRecommendations $true `
+    -SimilarityThreshold 0.7 `
     -GenerateReport $true
 ```
+
+The merged output is returned in `$result.MergedRecommendations`, so overlapping
+guidance from ChatGPT and Codex can be reviewed as one recommendation set.
 
 ## Integration Points
 
