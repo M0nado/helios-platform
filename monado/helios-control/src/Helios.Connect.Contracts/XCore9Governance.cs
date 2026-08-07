@@ -96,7 +96,7 @@ public static class XCore9KnaaEvaluator
         var weights = policy.Weights ?? new XCore9KnaaWeights();
         weights.Validate();
 
-        var cleanedEvidence = CleanValues(evidenceLinks);
+        var cleanedEvidence = Array.AsReadOnly(CleanValues(evidenceLinks).ToArray());
         var knownValues = BuildKnownValues(vector, weights);
         var confidence = knownValues.Count / 4d;
         var policyMode = policy.ConservativeAutoBlock ? "conservative-auto-block" : "advisory";
@@ -328,9 +328,10 @@ public sealed class XCore9SpecializationRegistry
         XCore9SpecializationGlobalPolicy? globalPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(packs);
-        _packs = packs
+        var normalizedPacks = packs
             .Select(NormalizePack)
-            .ToDictionary(
+            .ToArray();
+        _packs = normalizedPacks.ToDictionary(
             pack => !string.IsNullOrWhiteSpace(pack.Id)
                 ? pack.Id
                 : throw new ArgumentException("Pack ID is required.", nameof(packs)),
@@ -338,6 +339,7 @@ public sealed class XCore9SpecializationRegistry
         _laneProvenanceRequirements = laneProvenanceRequirements is null
             ? DefaultLaneProvenanceRequirements
             : NormalizeLaneProvenanceRequirements(laneProvenanceRequirements);
+        ValidatePackModalities(normalizedPacks, _laneProvenanceRequirements.Keys);
         _globalPolicy = globalPolicy ?? new XCore9SpecializationGlobalPolicy();
         _globalPolicy.Validate();
     }
@@ -491,6 +493,34 @@ public sealed class XCore9SpecializationRegistry
         .Select(value => value.Trim())
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
+
+    private static void ValidatePackModalities(
+        IEnumerable<XCore9SpecializationPack> packs,
+        IEnumerable<string> registeredModalities)
+    {
+        var knownModalities = new HashSet<string>(
+            (registeredModalities ?? Array.Empty<string>())
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim()),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var pack in packs)
+        {
+            var unknownModalities = pack.Inputs
+                .Concat(pack.Outputs)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(modality => !knownModalities.Contains(modality))
+                .ToArray();
+            if (unknownModalities.Length > 0)
+            {
+                throw new ArgumentException(
+                    $"Pack '{pack.Id}' references modalities without provenance policies: {string.Join(", ", unknownModalities)}.",
+                    nameof(packs));
+            }
+        }
+    }
 
     private IReadOnlySet<string> RequiredProvenanceForModalities(params string[] modalities)
     {

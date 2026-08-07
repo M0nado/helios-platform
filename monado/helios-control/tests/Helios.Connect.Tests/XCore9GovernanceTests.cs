@@ -240,6 +240,19 @@ public sealed class XCore9GovernanceTests
     }
 
     [Fact]
+    public void Knaa_evaluator_exposes_read_only_audit_evidence_links()
+    {
+        var policy = new XCore9KnaaPolicy("knaa-2026-08-06", new XCore9KnaaThresholds(0.35, 0.55, 0.75));
+        var evaluation = XCore9KnaaEvaluator.Evaluate(
+            new XCore9KnaaVector(0.9, 0.7, null, null),
+            policy,
+            new[] { "https://example.test/evidence/audit-1", "https://example.test/evidence/audit-2" });
+
+        var mutableView = Assert.IsAssignableFrom<IList<string>>(evaluation.Audit.EvidenceLinks);
+        Assert.Throws<NotSupportedException>(() => mutableView[0] = "https://example.test/evidence/tampered");
+    }
+
+    [Fact]
     public void Specialization_manifest_requires_lane_provenance_and_parallel_limits()
     {
         using var registry = ReadConfig("xcore9-specialization-packs.v1.json");
@@ -416,6 +429,27 @@ public sealed class XCore9GovernanceTests
         var deniedDecision = registry.Evaluate(CreateInvocation(tool: "git.push"));
         Assert.False(deniedDecision.Allowed);
         Assert.Equal("tool-denied", deniedDecision.Code);
+    }
+
+    [Fact]
+    public void Specialization_registry_rejects_unmapped_pack_modalities()
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new XCore9SpecializationRegistry(new[]
+            {
+                new XCore9SpecializationPack(
+                    Id: "xcore9-audio",
+                    Inputs: new[] { "audio" },
+                    Outputs: new[] { "audio" },
+                    AllowedTools: new[] { "repo.read" },
+                    DeniedTools: new[] { "git.push" },
+                    RequiredCapabilityContracts: new[] { "capability.repo.read-only" },
+                    MaxParallelism: 1,
+                    TimeoutSeconds: 120,
+                    RequireIdempotencyKey: false)
+            }));
+
+        Assert.Contains("without provenance policies", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static XCore9SpecializationRegistry CreateRegistry() =>

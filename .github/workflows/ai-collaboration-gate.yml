@@ -63,15 +63,22 @@ jobs:
           pr_number = os.environ["PR_NUMBER"]
           pr_head_sha = os.environ["PR_HEAD_SHA"]
           placeholder_values = {"", "n/a", "na", "todo", "tbd", "none"}
-          allowed_protected_workflow_paths = {
-              ".github/workflows/helios-cloud-deploy.yml",
-              ".github/workflows/enterprise-bicep.yml",
+          protected_workflow_requirements = {
+              ".github/workflows/helios-cloud-deploy.yml": {
+                  "job_name_markers": (
+                      "reviewed azure what-if",
+                      "deploy after second approval",
+                  ),
+                  "environment_pattern": r"^azure-(dev|test|prod)$",
+              },
+              ".github/workflows/enterprise-bicep.yml": {
+                  "job_name_markers": (
+                      "what-if ",
+                      "deploy ",
+                  ),
+                  "environment_pattern": r"^helios-(dev|test)-(what-if|deploy)$",
+              },
           }
-          protected_job_markers = (
-              "validate deployment request",
-              "reviewed azure what-if",
-              "deploy after second approval",
-          )
           top_level_field_labels = (
               "Correlation ID:",
               "Evidence links:",
@@ -288,7 +295,8 @@ jobs:
                   )
                   raise SystemExit(1)
               workflow_path = str(run_payload.get("path") or "").split("@", maxsplit=1)[0]
-              if workflow_path.lower() not in allowed_protected_workflow_paths:
+              workflow_requirements = protected_workflow_requirements.get(workflow_path.lower())
+              if workflow_requirements is None:
                   print(
                       "Protected approval workflow run must come from an allowed protected workflow.",
                       file=sys.stderr,
@@ -330,11 +338,27 @@ jobs:
                   raise SystemExit(1)
 
               jobs = jobs_payload.get("jobs", []) if isinstance(jobs_payload, dict) else []
-              protected_jobs = [
-                  job
-                  for job in jobs
-                  if any(marker in str(job.get("name") or "").lower() for marker in protected_job_markers)
-              ]
+              protected_job_markers = tuple(
+                  marker.lower()
+                  for marker in workflow_requirements.get("job_name_markers", ())
+                  if marker
+              )
+              environment_pattern = workflow_requirements.get("environment_pattern", "")
+              protected_jobs = []
+              for job in jobs:
+                  job_name = str(job.get("name") or "").lower()
+                  if not any(marker in job_name for marker in protected_job_markers):
+                      continue
+
+                  environment = job.get("environment")
+                  if isinstance(environment, dict):
+                      environment_name = str(environment.get("name") or "")
+                  else:
+                      environment_name = str(environment or "")
+                  if not environment_name or not re.match(environment_pattern, environment_name, flags=re.IGNORECASE):
+                      continue
+
+                  protected_jobs.append(job)
               approved_jobs = [
                   job
                   for job in protected_jobs
