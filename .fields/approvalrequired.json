@@ -1,0 +1,13 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhZ5ZV0",
+    "tier":  3,
+    "name":  "ApprovalRequired",
+    "type":  "SingleSelect",
+    "description":  "Whether approval is required before proceeding",
+    "options":  [
+                    "Yes",
+                    "No"
+                ],
+    "createdAt":  "2026-08-06T18:06:32.5686935-05:00",
+    "default":  "Yes"
+}

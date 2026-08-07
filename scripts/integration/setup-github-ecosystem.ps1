@@ -35,12 +35,11 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$OrganizationName,
     
-    [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/github-ecosystem-integration_$timestamp.log"
@@ -53,7 +52,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # Integration Configuration
@@ -152,7 +151,7 @@ function Configure-IssueLink {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'IssueLink'; status = 'failed'; error = $_ }
+        return @{ name = 'IssueLink'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -188,7 +187,7 @@ function Configure-PRWorkflow {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'PRWorkflow'; status = 'failed'; error = $_ }
+        return @{ name = 'PRWorkflow'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -221,7 +220,7 @@ function Configure-WorkflowStatus {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'WorkflowStatus'; status = 'failed'; error = $_ }
+        return @{ name = 'WorkflowStatus'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -254,7 +253,7 @@ function Configure-Notifications {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'Notifications'; status = 'failed'; error = $_ }
+        return @{ name = 'Notifications'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -288,7 +287,7 @@ function Configure-PagesSync {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'PagesSync'; status = 'failed'; error = $_ }
+        return @{ name = 'PagesSync'; status = 'failed'; error = $_.ToString() }
     }
 }
 

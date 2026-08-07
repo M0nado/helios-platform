@@ -1,0 +1,16 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhZ5ZVs",
+    "tier":  2,
+    "name":  "QAStatus",
+    "type":  "SingleSelect",
+    "description":  "Quality assurance status",
+    "options":  [
+                    "Pending QA",
+                    "In QA",
+                    "QA Approved",
+                    "QA Failed",
+                    "N/A"
+                ],
+    "createdAt":  "2026-08-06T18:06:29.4682894-05:00",
+    "default":  "Pending QA"
+}

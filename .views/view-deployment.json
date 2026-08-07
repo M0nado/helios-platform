@@ -1,0 +1,36 @@
+{
+    "id":  "view-deployment",
+    "filters":  [
+                    {
+                        "field":  "DeploymentEnvironment",
+                        "operator":  "notEquals",
+                        "value":  "null"
+                    },
+                    {
+                        "field":  "Status",
+                        "operator":  "notIn",
+                        "value":  [
+                                      "Backlog",
+                                      "Done"
+                                  ]
+                    }
+                ],
+    "purpose":  "DevOps view of deployment readiness",
+    "description":  "Items in deployment workflow",
+    "fieldVisibility":  [
+                            "DeploymentStatus",
+                            "DeploymentEnvironment",
+                            "AssignedTo",
+                            "QAStatus",
+                            "DataMigration"
+                        ],
+    "layout":  "board",
+    "name":  "Deployment Pipeline",
+    "groupBy":  "DeploymentStatus",
+    "sortBy":  {
+                   "field":  "Priority",
+                   "order":  "descending"
+               },
+    "createdAt":  "2026-08-06T18:06:39.7598822-05:00",
+    "isActive":  true
+}

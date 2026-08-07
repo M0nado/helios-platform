@@ -1,0 +1,7 @@
+{
+    "buildCommand":  "npm run docs:build",
+    "target":  "gh-pages",
+    "autoUpdate":  true,
+    "source":  "docs/",
+    "createdAt":  "2026-08-06T18:06:39.8824825-05:00"
+}

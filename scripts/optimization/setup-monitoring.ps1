@@ -16,6 +16,10 @@
 #>
 
 param(
+    [string]$GitHubToken,
+
+    [switch]$DryRun,
+
     [Parameter(Mandatory=$true)]
     [int]$ProjectNumber,
     
@@ -26,13 +30,11 @@ param(
     [string]$RepositoryName,
     
     [Parameter(Mandatory=$true)]
-    [string]$RepositoryOwner,
-    
-    [switch]$Verbose
+    [string]$RepositoryOwner
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/monitoring-setup_$timestamp.log"
@@ -45,7 +47,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # Monitoring configuration
@@ -130,7 +132,7 @@ function Setup-PerformanceMetrics {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'Metrics'; status = 'failed'; error = $_ }
+        return @{ name = 'Metrics'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -152,7 +154,7 @@ function Setup-HealthChecks {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'HealthChecks'; status = 'failed'; error = $_ }
+        return @{ name = 'HealthChecks'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -180,7 +182,7 @@ function Setup-Alerts {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'Alerts'; status = 'failed'; error = $_ }
+        return @{ name = 'Alerts'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -237,7 +239,7 @@ function Setup-Dashboard {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'Dashboard'; status = 'failed'; error = $_ }
+        return @{ name = 'Dashboard'; status = 'failed'; error = $_.ToString() }
     }
 }
 
@@ -285,7 +287,7 @@ function Setup-Reporting {
     }
     catch {
         Write-Log "  Failed: $_" 'ERROR'
-        return @{ name = 'Reporting'; status = 'failed'; error = $_ }
+        return @{ name = 'Reporting'; status = 'failed'; error = $_.ToString() }
     }
 }
 

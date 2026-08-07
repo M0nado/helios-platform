@@ -1,0 +1,25 @@
+{
+    "successMetrics":  [
+                           "Design review approval rate 100%",
+                           "Architecture complexity score acceptable",
+                           "Schema efficiency rating \u003e 4/5"
+                       ],
+    "name":  "Design \u0026 Architecture",
+    "description":  "System design and architecture planning",
+    "duration":  "7-14 days",
+    "acceptanceCriteria":  [
+                               "Architecture diagram created",
+                               "Design review completed",
+                               "Tech stack validated",
+                               "Database schema defined"
+                           ],
+    "phase":  "Phase 2",
+    "fields":  {
+                   "Priority":  "High",
+                   "Effort":  "L",
+                   "Sprint":  "Sprint 1",
+                   "ArchitectureDecision":  "Required",
+                   "ReviewStatus":  "Not Reviewed"
+               },
+    "createdAt":  "2026-08-06T18:06:39.6116930-05:00"
+}

@@ -1,0 +1,17 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhZ5ZVo",
+    "tier":  2,
+    "name":  "ProgressStatus",
+    "type":  "SingleSelect",
+    "description":  "Execution progress percentage",
+    "options":  [
+                    "Not Started",
+                    "In Progress",
+                    "25% Complete",
+                    "50% Complete",
+                    "75% Complete",
+                    "Complete"
+                ],
+    "createdAt":  "2026-08-06T18:06:28.8323776-05:00",
+    "default":  "Not Started"
+}

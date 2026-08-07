@@ -1,0 +1,33 @@
+{
+    "retries":  3,
+    "endpoint":  "https://api.github.com",
+    "timeout":  30,
+    "checks":  [
+                   {
+                       "interval":  60,
+                       "name":  "GitHub API Availability",
+                       "timeout":  10
+                   },
+                   {
+                       "interval":  300,
+                       "name":  "Project Board Sync",
+                       "timeout":  30
+                   },
+                   {
+                       "interval":  120,
+                       "name":  "Workflow Engine",
+                       "timeout":  15
+                   },
+                   {
+                       "interval":  180,
+                       "name":  "Deployment Pipeline",
+                       "timeout":  20
+                   },
+                   {
+                       "interval":  600,
+                       "name":  "Documentation Site",
+                       "timeout":  10
+                   }
+               ],
+    "createdAt":  "2026-08-06T18:06:39.9156948-05:00"
+}

@@ -1,0 +1,13 @@
+{
+    "triggerOn":  "opened",
+    "conditions":  [
+                       "status: open",
+                       "author: !=bot"
+                   ],
+    "workflows":  [
+                      "build.yml",
+                      "test.yml",
+                      "lint.yml"
+                  ],
+    "createdAt":  "2026-08-06T18:06:39.8640954-05:00"
+}

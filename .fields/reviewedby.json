@@ -1,0 +1,12 @@
+{
+    "id":  "PVTF_lADOEFilTs4BUclNzhZ5ZRg",
+    "tier":  3,
+    "name":  "ReviewedBy",
+    "type":  "Text",
+    "description":  "Team member who reviewed this",
+    "options":  {
+
+                },
+    "createdAt":  "2026-08-06T18:06:32.0028936-05:00",
+    "default":  null
+}

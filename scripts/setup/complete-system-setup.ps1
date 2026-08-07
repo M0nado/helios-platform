@@ -40,12 +40,11 @@ param(
     [string]$RepositoryOwner,
     
     [switch]$DryRun,
-    [switch]$SkipValidation,
-    [switch]$Verbose
+    [switch]$SkipValidation
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/complete-setup_$timestamp.log"
@@ -58,7 +57,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 function Show-Progress {
@@ -96,7 +95,7 @@ function Invoke-OrchestratedStep {
         }
         
         if ($DryRun) { $params['DryRun'] = $true }
-        if ($Verbose) { $params['Verbose'] = $true }
+        if ($isVerbose) { $params['Verbose'] = $true }
         
         $result = & $ScriptPath @params
         
@@ -150,9 +149,9 @@ function Display-MasterSummary {
     param([hashtable]$Report)
     
     Write-Host "`n" -ForegroundColor Cyan
-    Write-Host "╔══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "║         HELIOS PLATFORM - COMPLETE SETUP SUMMARY            ║" -ForegroundColor Cyan
-    Write-Host "╚══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "+--------------------------------------------------------------+" -ForegroundColor Cyan
+    Write-Host "|         HELIOS PLATFORM - COMPLETE SETUP SUMMARY            |" -ForegroundColor Cyan
+    Write-Host "+--------------------------------------------------------------+" -ForegroundColor Cyan
     
     Write-Host "`nConfiguration:" -ForegroundColor Green
     Write-Host "  Organization: $($Report.organization)"
@@ -169,10 +168,10 @@ function Display-MasterSummary {
     Write-Host "`nStep Results:" -ForegroundColor Green
     foreach ($step in $Report.steps) {
         $icon = switch ($step.status) {
-            'completed' { '✓' }
-            'failed' { '✗' }
-            'skipped' { '⊘' }
-            default { '?' }
+            'completed' { '[OK]' }
+            'failed' { '[FAIL]' }
+            'skipped' { '[SKIP]' }
+            default { '[?]' }
         }
         $color = switch ($step.status) {
             'completed' { 'Green' }
@@ -185,10 +184,10 @@ function Display-MasterSummary {
     
     Write-Host "`nOverall Status: " -NoNewline
     if ($Report.success) {
-        Write-Host "✓ SUCCESS" -ForegroundColor Green
+        Write-Host "SUCCESS" -ForegroundColor Green
     }
     else {
-        Write-Host "✗ FAILED" -ForegroundColor Red
+        Write-Host "FAILED" -ForegroundColor Red
     }
     
     Write-Host "`nNext Steps:" -ForegroundColor Green
@@ -203,7 +202,7 @@ function Display-MasterSummary {
         Write-Host "  5. Train team on new board workflows"
     }
     else {
-        Write-Host "  ⚠️  DRY RUN MODE - Review output before running with actual changes"
+        Write-Host "  WARNING: DRY RUN MODE - Review output before running with actual changes"
     }
     
     Write-Host "`n"
@@ -213,9 +212,9 @@ function Display-MasterSummary {
 $script:startTime = Get-Date
 
 try {
-    Write-Log '╔════════════════════════════════════════════════════════════════╗'
-    Write-Log '║    HELIOS PLATFORM - COMPLETE SYSTEM SETUP ORCHESTRATOR       ║'
-    Write-Log '╚════════════════════════════════════════════════════════════════╝'
+    Write-Log '================================================================'
+    Write-Log 'HELIOS PLATFORM - COMPLETE SYSTEM SETUP ORCHESTRATOR'
+    Write-Log '================================================================'
     Write-Log "Started: $timestamp"
     Write-Log "Configuration:"
     Write-Log "  Organization: $OrganizationName"
@@ -238,8 +237,9 @@ try {
             OrganizationName = $OrganizationName
             BoardName = 'HELIOS Platform'
         } `
-        -StepNumber $stepCount++ `
+        -StepNumber $stepCount `
         -TotalSteps $totalSteps
+    $stepCount++
     
     # Step 2: GitHub Ecosystem Integration
     $steps += Invoke-OrchestratedStep -StepName 'GitHub Ecosystem Integration' `
@@ -250,8 +250,9 @@ try {
             ProjectNumber = $ProjectNumber
             OrganizationName = $OrganizationName
         } `
-        -StepNumber $stepCount++ `
+        -StepNumber $stepCount `
         -TotalSteps $totalSteps
+    $stepCount++
     
     # Step 3: Monitoring Setup
     $steps += Invoke-OrchestratedStep -StepName 'Monitoring & Alerting Setup' `
@@ -262,8 +263,9 @@ try {
             RepositoryName = $RepositoryName
             RepositoryOwner = $RepositoryOwner
         } `
-        -StepNumber $stepCount++ `
+        -StepNumber $stepCount `
         -TotalSteps $totalSteps
+    $stepCount++
     
     if (-not $SkipValidation) {
         # Step 4: Validation
@@ -274,14 +276,15 @@ try {
                 OrganizationName = $OrganizationName
                 GenerateReport = $true
             } `
-            -StepNumber $stepCount++ `
+            -StepNumber $stepCount `
             -TotalSteps $totalSteps
+        $stepCount++
     }
     
     $report = Generate-MasterReport -StepResults $steps
     Display-MasterSummary -Report $report
     
-    Write-Log '════════════════════════════════════════════════════════════════'
+    Write-Log '================================================================'
     Write-Log "Completed: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 'SUCCESS'
     
     # Return success/failure status

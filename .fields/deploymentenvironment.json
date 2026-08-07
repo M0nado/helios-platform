@@ -1,0 +1,15 @@
+{
+    "id":  "PVTSSF_lADOEFilTs4BUclNzhZ5ZWA",
+    "tier":  4,
+    "name":  "DeploymentEnvironment",
+    "type":  "SingleSelect",
+    "description":  "Target deployment environment",
+    "options":  [
+                    "Development",
+                    "Staging",
+                    "Production",
+                    "All"
+                ],
+    "createdAt":  "2026-08-06T18:06:34.1985511-05:00",
+    "default":  "Development"
+}

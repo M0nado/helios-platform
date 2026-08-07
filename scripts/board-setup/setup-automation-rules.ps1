@@ -25,12 +25,11 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$OrganizationName,
     
-    [switch]$DryRun,
-    [switch]$Verbose
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
-$VerbosePreference = if ($Verbose) { 'Continue' } else { 'SilentlyContinue' }
+$isVerbose = $VerbosePreference -eq 'Continue'
 
 $timestamp = Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'
 $logFile = "logs/automation-rules_$timestamp.log"
@@ -43,7 +42,7 @@ function Write-Log {
     $ts = Get-Date -Format 'HH:mm:ss'
     $entry = "[$ts] [$Level] $Message"
     Add-Content -Path $logFile -Value $entry
-    if ($Verbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
+    if ($isVerbose -or $Level -eq 'ERROR' -or $Level -eq 'SUCCESS') { Write-Host $entry }
 }
 
 # 4 Automation Rules Definition
@@ -182,7 +181,7 @@ function Test-Rule {
         }
     }
     
-    $testResult.allPassed = $testResult.tests | Where-Object { -not $_.passed } | Measure-Object | Select-Object -ExpandProperty Count -eq 0
+    $testResult.allPassed = (($testResult.tests | Where-Object { -not $_.passed } | Measure-Object | Select-Object -ExpandProperty Count) -eq 0)
     
     return $testResult
 }
@@ -248,7 +247,7 @@ function Create-Rule {
             name = $Rule.name
             id = $Rule.id
             status = 'failed'
-            error = $_
+            error = $_.ToString()
         }
     }
 }
@@ -267,7 +266,7 @@ $(foreach ($rule in $Rules) {
 @"
 ### $($rule.name) (ID: $($rule.id))
 
-**Status**: $($rule.enabled ? 'Enabled' : 'Disabled')
+**Status**: $(if ($rule.enabled) { 'Enabled' } else { 'Disabled' })
 
 **Trigger**: $($rule.trigger)
 - Condition: $($rule.triggerCondition)

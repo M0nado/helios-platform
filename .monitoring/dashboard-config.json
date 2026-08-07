@@ -1,0 +1,53 @@
+{
+    "repository":  "M0nado/helios-platform",
+    "organization":  "M0nado",
+    "createdAt":  "2026-08-06T18:06:39.9247835-05:00",
+    "refreshInterval":  300,
+    "projectNumber":  3,
+    "title":  "HELIOS Platform - Monitoring Dashboard",
+    "widgets":  [
+                    {
+                        "title":  "Workflow Duration",
+                        "metric":  "workflow_duration",
+                        "type":  "metric",
+                        "threshold":  300
+                    },
+                    {
+                        "title":  "Deployment Success Rate",
+                        "metric":  "deployment_success_rate",
+                        "type":  "metric",
+                        "threshold":  95
+                    },
+                    {
+                        "title":  "Build Times Over Time",
+                        "metric":  "build_duration",
+                        "type":  "timeseries"
+                    },
+                    {
+                        "checks":  [
+                                       "github_api",
+                                       "project_board",
+                                       "workflow_engine"
+                                   ],
+                        "title":  "Integration Health",
+                        "type":  "health"
+                    },
+                    {
+                        "title":  "Recent Alerts",
+                        "type":  "alerts",
+                        "severity":  [
+                                         "Critical",
+                                         "High"
+                                     ]
+                    },
+                    {
+                        "title":  "Resource Utilization",
+                        "type":  "resource",
+                        "resources":  [
+                                          "cpu",
+                                          "memory",
+                                          "disk"
+                                      ]
+                    }
+                ]
+}

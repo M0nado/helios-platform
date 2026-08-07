@@ -1,0 +1,66 @@
+{
+    "conditions":  [
+                       "QAStatus = QA Approved",
+                       "ReviewStatus = Approved",
+                       "Current DeploymentStatus != Deployed to Prod"
+                   ],
+    "actionDetails":  {
+                          "actions":  [
+                                          {
+                                              "field":  "DeploymentEnvironment",
+                                              "value":  "Staging",
+                                              "type":  "SetField"
+                                          },
+                                          {
+                                              "field":  "DeploymentStatus",
+                                              "value":  "Ready for Deployment",
+                                              "type":  "SetField"
+                                          },
+                                          {
+                                              "message":  "Ready for deployment: {{issue_title}}",
+                                              "channel":  "slack",
+                                              "type":  "SendNotification"
+                                          }
+                                      ]
+                      },
+    "id":  "rule-qa-deploy",
+    "enabled":  true,
+    "trigger":  "FieldChanged",
+    "createdAt":  "2026-08-06T18:06:39.6984931-05:00",
+    "triggerCondition":  "When QAStatus changes to QA Approved",
+    "description":  "Prepare items for deployment when QA approval received",
+    "name":  "Auto-move to Deployment when QA Approved",
+    "errorHandling":  "Continue",
+    "action":  "MultiAction",
+    "testResults":  {
+                        "action":  "MultiAction",
+                        "ruleName":  "Auto-move to Deployment when QA Approved",
+                        "ruleId":  "rule-qa-deploy",
+                        "trigger":  "FieldChanged",
+                        "enabled":  true,
+                        "tests":  [
+                                      {
+                                          "details":  "Valid trigger type",
+                                          "name":  "Trigger Configuration",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "Valid action type",
+                                          "name":  "Action Configuration",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "3 conditions configured (max 5)",
+                                          "name":  "Condition Count",
+                                          "passed":  true
+                                      },
+                                      {
+                                          "details":  "Valid error handling strategy",
+                                          "name":  "Error Handling",
+                                          "passed":  true
+                                      }
+                                  ],
+                        "allPassed":  true,
+                        "conditions":  3
+                    }
+}
