@@ -7,12 +7,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "eng/test/test-ownership.json"
 LAYERS = {"portable", "windows", "privileged", "integration", "performance", "end-to-end"}
+IGNORED_PARTS = {"bin", "obj", ".git", "node_modules", ".vs", "TestResults"}
+
+def include_path(path: Path) -> bool:
+    return not any(part in IGNORED_PARTS for part in path.parts)
 
 def sources():
     roots = [ROOT / "tests", ROOT / "src/tests", ROOT / "monado/helios-control/tests"]
-    found = {p.relative_to(ROOT).as_posix() for root in roots for ext in ("*.cs", "*.fs") for p in root.rglob(ext)}
+    found = {
+        p.relative_to(ROOT).as_posix()
+        for root in roots
+        for ext in ("*.cs", "*.fs")
+        for p in root.rglob(ext)
+        if include_path(p)
+    }
     core = ROOT / "src/core/HELIOS.Platform"
-    found |= {p.relative_to(ROOT).as_posix() for p in core.rglob("*.cs") if "Tests" in p.parts or p.name.endswith("Tests.cs")}
+    found |= {
+        p.relative_to(ROOT).as_posix()
+        for p in core.rglob("*.cs")
+        if include_path(p) and ("Tests" in p.parts or p.name.endswith("Tests.cs"))
+    }
     return sorted(found)
 
 def owner(path):
