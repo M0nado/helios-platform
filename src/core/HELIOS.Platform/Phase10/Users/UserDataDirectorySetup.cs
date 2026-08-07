@@ -68,7 +68,22 @@ namespace HELIOS.Platform.Phase10.Users
         /// </summary>
         public string GetUserProfilePath(string username)
         {
-            return Path.Combine(Environment.ExpandEnvironmentVariables("%SystemDrive%"), "Users", username);
+            if (string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+            {
+                string currentUserProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (!string.IsNullOrWhiteSpace(currentUserProfile))
+                {
+                    return currentUserProfile;
+                }
+            }
+
+            string systemDrive = Environment.GetEnvironmentVariable("SystemDrive");
+            if (string.IsNullOrWhiteSpace(systemDrive))
+            {
+                systemDrive = Path.GetPathRoot(Environment.SystemDirectory) ?? "C:";
+            }
+
+            return Path.Combine(systemDrive, "Users", username);
         }
 
         /// <summary>
@@ -216,7 +231,7 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    string documentsPath = Path.Combine(GetUserProfilePath(username), "Documents");
+                    string documentsPath = ResolveWritableUserFolder(username, Environment.SpecialFolder.MyDocuments, "Documents");
 
                     var subfolders = new[]
                     {
@@ -227,7 +242,7 @@ namespace HELIOS.Platform.Phase10.Users
                         "Templates"
                     };
 
-                    bool allSuccess = true;
+                    bool allSuccess = await CreateDirectoryAsync(documentsPath);
                     foreach (var folder in subfolders)
                     {
                         if (!await CreateDirectoryAsync(Path.Combine(documentsPath, folder)))
@@ -255,18 +270,22 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
-                    string userProfile = GetUserProfilePath(username);
-
                     var mediaFolders = new Dictionary<string, string[]>
                     {
-                        { Path.Combine(userProfile, "Pictures"), new[] { "Screenshots", "Wallpapers", "Screenshots", "Saved" } },
-                        { Path.Combine(userProfile, "Videos"), new[] { "Recordings", "Movies", "TV Shows", "Edited" } },
-                        { Path.Combine(userProfile, "Music"), new[] { "Artists", "Albums", "Playlists", "Downloaded" } }
+                        { ResolveWritableUserFolder(username, Environment.SpecialFolder.MyPictures, "Pictures"), new[] { "Screenshots", "Wallpapers", "Saved" } },
+                        { ResolveWritableUserFolder(username, Environment.SpecialFolder.MyVideos, "Videos"), new[] { "Recordings", "Movies", "TV Shows", "Edited" } },
+                        { ResolveWritableUserFolder(username, Environment.SpecialFolder.MyMusic, "Music"), new[] { "Artists", "Albums", "Playlists", "Downloaded" } }
                     };
 
                     bool allSuccess = true;
                     foreach (var (mediaDir, subfolders) in mediaFolders)
                     {
+                        if (!await CreateDirectoryAsync(mediaDir))
+                        {
+                            allSuccess = false;
+                            continue;
+                        }
+
                         foreach (var subfolder in subfolders)
                         {
                             if (!await CreateDirectoryAsync(Path.Combine(mediaDir, subfolder)))
@@ -284,6 +303,55 @@ namespace HELIOS.Platform.Phase10.Users
                     return false;
                 }
             });
+        }
+
+        private string GetFolderPathForUser(string username, Environment.SpecialFolder specialFolder, string fallbackLeaf)
+        {
+            if (string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+            {
+                string knownFolderPath = Environment.GetFolderPath(specialFolder);
+                if (!string.IsNullOrWhiteSpace(knownFolderPath))
+                {
+                    return knownFolderPath;
+                }
+            }
+
+            return Path.Combine(GetUserProfilePath(username), fallbackLeaf);
+        }
+
+        private string ResolveWritableUserFolder(string username, Environment.SpecialFolder specialFolder, string fallbackLeaf)
+        {
+            string preferredPath = GetFolderPathForUser(username, specialFolder, fallbackLeaf);
+            if (IsWritableDirectory(preferredPath))
+            {
+                return preferredPath;
+            }
+
+            string fallbackPath = Path.Combine(GetUserProfilePath(username), ".helios", "user-data", fallbackLeaf);
+            LogMessage($"Preferred folder unavailable ({preferredPath}); using fallback ({fallbackPath})", LogLevel.Warning);
+            return fallbackPath;
+        }
+
+        private bool IsWritableDirectory(string path)
+        {
+            try
+            {
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                string probePath = Path.Combine(path, $".helios-write-probe-{Guid.NewGuid():N}.tmp");
+                using (File.Create(probePath, 1, FileOptions.DeleteOnClose))
+                {
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
