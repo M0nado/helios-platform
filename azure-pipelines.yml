@@ -20,3 +20,11 @@ pool:
 steps:
 - checkout: self
   clean: true
+  submodules: false
+  fetchDepth: 1
+
+- script: |
+    echo "Azure pipeline smoke validation"
+    git --version
+    dotnet --info || true
+  displayName: 'Run smoke validation'
