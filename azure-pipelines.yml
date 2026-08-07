@@ -26,6 +26,8 @@ trigger:
     exclude:
       - docs/**
       - '**/*.md'
+      - src/core/HELIOS.Platform/**/Tests/**
+      - src/core/HELIOS.Platform/**/*Tests.cs
 
 pr:
   branches:
@@ -49,6 +51,8 @@ pr:
     exclude:
       - docs/**
       - '**/*.md'
+      - src/core/HELIOS.Platform/**/Tests/**
+      - src/core/HELIOS.Platform/**/*Tests.cs
 
 variables:
   buildConfiguration: Release
