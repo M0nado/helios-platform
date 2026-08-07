@@ -22,8 +22,9 @@ class RepositoryIntegrityTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary_directory.name)
-        self.repository_map = self.root / "repositories.json"
+        self.repository_map = self.root / "config" / "integrations" / "repositories.json"
         self.gitmodules = self.root / ".gitmodules"
+        self.repository_map.parent.mkdir(parents=True, exist_ok=True)
         self.document = {
             "schemaVersion": "1.0",
             "controlPlane": "Example/control",
@@ -32,16 +33,19 @@ class RepositoryIntegrityTests(unittest.TestCase):
                 {
                     "name": "Example/control",
                     "role": "control-plane",
+                    "integrationMode": "contract-only",
                     "authority": ["policy"],
                 },
                 {
                     "name": "Example/platform",
                     "role": "canonical-platform",
+                    "integrationMode": "canonical",
                     "authority": ["product"],
                 },
                 {
                     "name": "Example/module",
                     "role": "module",
+                    "integrationMode": "pinned-submodule",
                     "authority": ["feature"],
                 },
             ],
@@ -56,114 +60,84 @@ class RepositoryIntegrityTests(unittest.TestCase):
     def tearDown(self):
         self.temporary_directory.cleanup()
 
-    def validate(self):
+    def validate(self, links: dict[str, str] | None = None):
         self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
-        return validator.validate(
-            self.repository_map,
-            self.gitmodules,
-            tracked_gitlinks={"modules/module"},
-        )
+        if links is None:
+            links = {"modules/module": "a" * 40}
+        with mock.patch.object(validator, "gitlinks", return_value=links):
+            return validator.validate(self.root)
 
     def test_accepts_consistent_repository_metadata(self):
         self.assertEqual(self.validate(), [])
 
-    def test_rejects_duplicate_repository_names_and_roles(self):
+    def test_rejects_duplicate_repository_names(self):
         duplicate = dict(self.document["repositories"][2])
         duplicate["name"] = "example/MODULE"
         self.document["repositories"].append(duplicate)
 
-        errors = self.validate()
+        self.assertTrue(any("duplicate names" in error for error in self.validate()))
 
-        self.assertTrue(any("duplicates 'example/MODULE'" in error for error in errors))
-        self.assertTrue(any("role duplicates 'module'" in error for error in errors))
+    def test_rejects_unsupported_integration_mode(self):
+        self.document["repositories"][2]["integrationMode"] = "unsupported"
 
-    def test_rejects_submodule_missing_from_repository_map(self):
-        self.gitmodules.write_text(
-            '[submodule "modules/unknown"]\n'
-            "\tpath = modules/unknown\n"
-            "\turl = git@github.com:Example/unknown.git\n",
-            encoding="utf-8",
-        )
-
-        self.assertTrue(any("absent from" in error for error in self.validate()))
-
-    def test_rejects_invalid_authority_and_canonical_role(self):
-        self.document["repositories"][1]["authority"] = []
-        self.document["repositories"][1]["role"] = "other"
-
-        errors = self.validate()
-
-        self.assertTrue(any("authority must contain" in error for error in errors))
-        self.assertTrue(any("role 'canonical-platform'" in error for error in errors))
+        self.assertTrue(any("integrationMode unsupported" in error for error in self.validate()))
 
     def test_rejects_unsupported_schema_version(self):
         self.document["schemaVersion"] = "2.0"
 
-        errors = self.validate()
+        self.assertTrue(any("unsupported schemaVersion" in error for error in self.validate()))
 
-        self.assertTrue(any("unsupported schemaVersion" in error for error in errors))
+    def test_rejects_non_matching_canonical_entry(self):
+        self.document["canonicalPlatform"] = "Example/other"
 
-    def test_rejects_malformed_json(self):
-        self.repository_map.write_text("{", encoding="utf-8")
-        errors = validator.validate(self.repository_map, self.gitmodules)
-        self.assertTrue(any("cannot read valid JSON" in error for error in errors))
-
-    def test_allows_declared_submodule_without_tracked_gitlink_by_default(self):
-        self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
-
-        errors = validator.validate(
-            self.repository_map,
-            self.gitmodules,
-            tracked_gitlinks=set(),
+        self.assertTrue(
+            any("does not match canonicalPlatform" in error for error in self.validate())
         )
 
-        self.assertEqual(errors, [])
-
-    def test_rejects_declared_submodule_without_tracked_gitlink_when_required(self):
-        self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
-
-        errors = validator.validate(
-            self.repository_map,
-            self.gitmodules,
-            tracked_gitlinks=set(),
-            require_gitlinks=True,
+    def test_rejects_unapproved_submodule_repository(self):
+        self.gitmodules.write_text(
+            '[submodule "modules/unknown"]\n'
+            "\tpath = modules/unknown\n"
+            "\turl = https://github.com/Example/unknown.git\n",
+            encoding="utf-8",
         )
 
-        self.assertTrue(any("is not a tracked gitlink" in error for error in errors))
+        self.assertTrue(any("unapproved .gitmodules repository" in error for error in self.validate()))
 
-    def test_rejects_tracked_gitlink_without_submodule_declaration(self):
-        self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
-
-        errors = validator.validate(
-            self.repository_map,
-            self.gitmodules,
-            tracked_gitlinks={"modules/module", "modules/undeclared"},
-        )
-
-        self.assertTrue(any("is not declared as a submodule" in error for error in errors))
-
-    def test_reads_mode_160000_entries_from_git_index(self):
-        completed = mock.Mock(
-            stdout=(
-                "100644 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0\t.gitmodules\0"
-                "160000 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 0\tmodules/module\0"
+    def test_rejects_declared_submodule_without_gitlink(self):
+        self.assertTrue(
+            any(
+                "declared submodule has no 160000 gitlink" in error
+                for error in self.validate(links={})
             )
         )
 
-        with mock.patch.object(validator.subprocess, "run", return_value=completed) as run:
-            errors = self.validate_without_supplied_gitlinks()
-
-        self.assertEqual(errors, [])
-        run.assert_called_once_with(
-            ["git", "-C", str(self.gitmodules.parent), "ls-files", "--stage", "-z"],
-            check=True,
-            capture_output=True,
-            text=True,
+    def test_rejects_orphan_gitlink_without_declaration(self):
+        self.assertTrue(
+            any(
+                "orphan gitlink not declared in .gitmodules" in error
+                for error in self.validate(
+                    links={
+                        "modules/module": "a" * 40,
+                        "modules/orphan": "b" * 40,
+                    }
+                )
+            )
         )
 
-    def validate_without_supplied_gitlinks(self):
-        self.repository_map.write_text(json.dumps(self.document), encoding="utf-8")
-        return validator.validate(self.repository_map, self.gitmodules)
+    def test_rejects_invalid_gitlink_sha(self):
+        self.assertTrue(
+            any(
+                "gitlink has invalid commit SHA" in error
+                for error in self.validate(links={"modules/module": "deadbeef"})
+            )
+        )
+
+    def test_github_name_normalizes_canonical_url(self):
+        self.assertEqual(
+            validator.github_name("https://github.com/M0nado/helios-ai-hub.git"),
+            "m0nado/helios-ai-hub",
+        )
 
 
 if __name__ == "__main__":

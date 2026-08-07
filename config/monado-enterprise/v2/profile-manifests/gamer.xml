@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonadoProfileManifest version="2.0.0" profileId="gamer">
+  <DisplayName>Gamer</DisplayName>
+  <SemanticUi>latency-first-overlay</SemanticUi>
+  <Theme>gamer-green-energy</Theme>
+  <ChromaProfile>gamer-performance</ChromaProfile>
+  <WyvernAudioProfile>gamer-impact</WyvernAudioProfile>
+  <ServiceBudget alwaysOnMax="6" backgroundPriority="throttled" />
+  <ProcessBudget maxHighPriorityProcesses="3" />
+  <NetworkPolicy>gaming-low-latency-firewalled</NetworkPolicy>
+  <TelemetryPolicy>frame-time-focused</TelemetryPolicy>
+  <AlvisToolBudget maxConcurrentTools="2" denyAutonomousApply="true" />
+  <StateModel recoveryState="false" quarantineState="false" overlayAirgapAllowed="false" />
+</MonadoProfileManifest>

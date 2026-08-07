@@ -6,56 +6,67 @@
     {
       "name": "Heli0s-Dynamics/adaptive-multibrain-bootstrap",
       "role": "control-plane",
+      "integrationMode": "contract-only",
       "authority": ["policy", "github-bootstrap", "azure-bootstrap", "fleet-evaluation", "integration-contracts"]
     },
     {
       "name": "M0nado/helios-platform",
       "role": "canonical-platform",
+      "integrationMode": "canonical",
       "authority": ["product-architecture", "windows-control-plane", "deployment", "platform-services", "release"]
     },
     {
       "name": "M0nado/Helios-Control-Center",
       "role": "operator-control-center",
+      "integrationMode": "contract-only",
       "authority": ["operator-gui", "status-dashboard", "approved-command-surface"]
     },
     {
       "name": "M0nado/helios-ai-hub",
       "role": "ai-orchestration",
+      "integrationMode": "pinned-submodule",
       "authority": ["model-adapters", "agent-runtime", "memory-adapters", "foundry-connectors"]
-    },
-    {
-      "name": "M0nado/helios-dev-ai-hub",
-      "role": "development-ai-orchestration",
-      "authority": ["development-model-adapters", "development-agent-runtime"]
     },
     {
       "name": "M0nado/helios-monado-blade",
       "role": "monado-engine",
+      "integrationMode": "pinned-submodule",
       "authority": ["monado-blade", "themed-interaction", "engine-contracts"]
     },
     {
       "name": "M0nado/helios-gui-framework",
       "role": "gui-framework",
+      "integrationMode": "pinned-submodule",
       "authority": ["shared-ui", "xenoblade-theme", "visual-components"]
     },
     {
       "name": "M0nado/helios-build-agents",
       "role": "build-agents",
+      "integrationMode": "pinned-submodule",
       "authority": ["build-images", "test-workers", "artifact-production"]
     },
     {
       "name": "M0nado/helios-software-stack",
       "role": "software-stack",
+      "integrationMode": "pinned-submodule",
       "authority": ["tool-manifests", "developer-bootstrap", "driver-catalog"]
     },
     {
       "name": "M0nado/helios-security-setup",
       "role": "security-module",
+      "integrationMode": "pinned-submodule",
       "authority": ["security-baselines", "hardening-plans", "compliance-evidence"]
+    },
+    {
+      "name": "M0nado/helios-dev-ai-hub",
+      "role": "ai-development",
+      "integrationMode": "pinned-submodule",
+      "authority": ["development-model-adapters", "agent-experiments", "integration-testing"]
     },
     {
       "name": "Yolkster64/hermes-fleet-platforms",
       "role": "companion-fleet",
+      "integrationMode": "contract-only",
       "authority": ["hermes-workers", "xcore-workers", "fleet-experiments"]
     }
   ],
