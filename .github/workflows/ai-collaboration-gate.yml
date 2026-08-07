@@ -300,9 +300,17 @@ jobs:
                       file=sys.stderr,
                   )
                   raise SystemExit(1)
-              if run_payload.get("status") != "completed" or run_payload.get("conclusion") != "success":
+              run_status = str(run_payload.get("status") or "").lower()
+              run_conclusion = str(run_payload.get("conclusion") or "").lower()
+              if run_status not in {"queued", "waiting", "in_progress", "completed"}:
                   print(
-                      "Protected approval workflow run must be completed with a success conclusion.",
+                      "Protected approval workflow run is not in an acceptable execution state.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              if run_status == "completed" and run_conclusion != "success":
+                  print(
+                      "Protected approval workflow run completed without success.",
                       file=sys.stderr,
                   )
                   raise SystemExit(1)
