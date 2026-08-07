@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MonadoProfileManifest version="3.0.0" profileId="core">
+  <DisplayName>Core</DisplayName>
+  <Glyph>核</Glyph>
+  <SemanticUi>neutral-command-center</SemanticUi>
+  <Theme>core-silver-blue</Theme>
+  <ChromaProfile>core-calm</ChromaProfile>
+  <WyvernAudioProfile>core-neutral</WyvernAudioProfile>
+  <ServiceBudget alwaysOnMax="8" backgroundPriority="normal" />
+  <ProcessBudget maxHighPriorityProcesses="4" />
+  <NetworkPolicy>protected-default</NetworkPolicy>
+  <TelemetryPolicy>balanced</TelemetryPolicy>
+  <AlvisToolBudget maxConcurrentTools="2" denyAutonomousApply="true" />
+  <StateModel recoveryWorkflow="false" quarantineWorkflow="false" postAuthShellEnabled="true" />
+</MonadoProfileManifest>
