@@ -21,7 +21,7 @@ The `./helios.sh all` command follows `config/execution-order.json`:
 4. Azure inventory.
 5. Control-plane permissions model.
 6. Build graph.
-7. Branch merge/prune recommendations.
+7. Branch merge/prune recommendations and Codex PR merge-train planning.
 8. Dashboard actions page.
 9. Codex task packet generation.
 10. Opt-in AI enrichment.
@@ -43,6 +43,7 @@ The `./helios.sh all` command follows `config/execution-order.json`:
 | `./helios.sh build` | Generate or run the build graph. |
 | `./helios.sh codex` | Generate Codex-ready task packets. |
 | `./helios.sh recommendations` | Generate branch merge/prune recommendations. |
+| `./helios.sh pr-trains` | Generate Codex/Copilot PR overlap matrix and merge-train plan. |
 | `./helios.sh all` | Run the safe reporting pipeline in the required order. |
 
 ## Safety

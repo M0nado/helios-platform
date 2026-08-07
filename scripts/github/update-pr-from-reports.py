@@ -29,6 +29,10 @@ Run locally:
 
 {read(Path('reports/branch-intelligence/merge-prune-recommendations.md'))}
 
+### Codex PR Merge Trains
+
+{read(Path('reports/branch-intelligence/codex-pr-merge-trains.md'))}
+
 ### Hybrid Gap Analysis
 
 {read(Path('reports/project-inventory/hybrid-gap-analysis.md'))}
