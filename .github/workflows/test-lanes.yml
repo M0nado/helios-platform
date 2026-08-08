@@ -30,9 +30,7 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
-      - shell: pwsh
-        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~HELIOS.Platform.Phase10.AIOrchestration.Tests|FullyQualifiedName~HELIOS.Platform.Phase10.BootEnvironment.Tests|FullyQualifiedName~HELIOS.Platform.Phase10.BuilderUI.Tests|FullyQualifiedName~HELIOS.Platform.Phase10.Optimizer.Tests|FullyQualifiedName~HELIOS.Platform.Phase10.Profiles.Tests"
 
   privileged:
     name: Tests / Privileged
@@ -46,7 +44,7 @@ jobs:
       - shell: pwsh
         run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
       - shell: pwsh
-        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~HELIOS.Platform.Phase10.Drivers.Tests"
       - shell: pwsh
         run: dotnet test src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj --configuration Release
 
@@ -60,6 +58,8 @@ jobs:
           global-json-file: global.json
       - shell: pwsh
         run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+      - shell: pwsh
+        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj --configuration Release --filter "FullyQualifiedName~HELIOS.Platform.Tests.AI"
 
   performance:
     name: Tests / Performance
@@ -70,7 +70,7 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Performance.Tests.csproj --configuration Release
+        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Performance.Tests.csproj --configuration Release --filter "FullyQualifiedName!~PerformanceReportE2ETests"
 
   end-to-end:
     name: Tests / End-to-End
@@ -81,4 +81,4 @@ jobs:
         with:
           global-json-file: global.json
       - shell: pwsh
-        run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+        run: dotnet test tests/HELIOS.Platform.Tests/HELIOS.Platform.Performance.Tests.csproj --configuration Release --filter "FullyQualifiedName~PerformanceReportE2ETests"
