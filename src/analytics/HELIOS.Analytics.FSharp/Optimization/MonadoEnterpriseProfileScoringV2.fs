@@ -53,6 +53,11 @@ module private MonadoEnterpriseNumeric =
             1.0 - clamp01 (value / maximum)
 
 module private MonadoEnterpriseTelemetryValidation =
+    let private inRange minimum maximum value =
+        value >= minimum && value <= maximum
+
+    let private isNonNegative value = value >= 0.0
+
     let isFinite (telemetry: MonadoEnterpriseTelemetry) : bool =
         [|
             telemetry.CpuUtilization
@@ -69,6 +74,21 @@ module private MonadoEnterpriseTelemetryValidation =
         |]
         |> Array.forall Double.IsFinite
 
+    let isWithinExpectedBounds (telemetry: MonadoEnterpriseTelemetry) : bool =
+        inRange 0.0 100.0 telemetry.CpuUtilization
+        && inRange 0.0 100.0 telemetry.GpuUtilization
+        && inRange 0.0 100.0 telemetry.MemoryUtilization
+        && inRange 0.0 100.0 telemetry.ThermalPressure
+        && inRange 0.0 100.0 telemetry.SecurityRisk
+        && inRange 0.0 100.0 telemetry.VmMemoryPressure
+        && isNonNegative telemetry.StorageLatencyMs
+        && isNonNegative telemetry.NetworkLatencyMs
+        && isNonNegative telemetry.ModelLatencyMs
+        && isNonNegative telemetry.AudioXruns
+        && isNonNegative telemetry.FrameTimeMs
+
+    let isValid telemetry = isFinite telemetry && isWithinExpectedBounds telemetry
+
 module MonadoEnterpriseProfilePolicy =
     let private safetyFloor (telemetry: MonadoEnterpriseTelemetry) : float =
         let thermal = MonadoEnterpriseNumeric.normalizedPercent telemetry.ThermalPressure
@@ -76,7 +96,7 @@ module MonadoEnterpriseProfilePolicy =
         1.0 - ((thermal * 0.35) + (risk * 0.65))
 
     let score (profile: MonadoEnterpriseProfileId) (telemetry: MonadoEnterpriseTelemetry) : float =
-        if not (MonadoEnterpriseTelemetryValidation.isFinite telemetry) then
+        if not (MonadoEnterpriseTelemetryValidation.isValid telemetry) then
             0.0
         else
             let cpuHeadroom = 1.0 - MonadoEnterpriseNumeric.normalizedPercent telemetry.CpuUtilization
@@ -108,7 +128,7 @@ module MonadoEnterpriseProfilePolicy =
         (profile: MonadoEnterpriseProfileId)
         (telemetry: MonadoEnterpriseTelemetry)
         : MonadoEnterpriseRecommendation =
-        if not (MonadoEnterpriseTelemetryValidation.isFinite telemetry) then
+        if not (MonadoEnterpriseTelemetryValidation.isValid telemetry) then
             {
                 Profile = profile
                 FitnessScore = 0.0

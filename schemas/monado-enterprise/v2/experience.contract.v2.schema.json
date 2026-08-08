@@ -248,7 +248,8 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "pattern": "^(?!.*(?:^|[._-])(apply|deploy|promote|write|send|rbac|tenant|firewall|disk)(?:$|[._-]))[a-z0-9]+(?:[._-][a-z0-9]+)*$"
               }
             },
             "deny": {

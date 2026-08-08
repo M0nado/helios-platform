@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 import sys
 import xml.etree.ElementTree as ET
 
@@ -50,6 +51,11 @@ EXPECTED_IDEMPOTENCY_TEMPLATE = (
     "sha256(normalized-length-prefixed:{routeId}:{source.eventId}:{target.system}:{operation})"
 )
 READ_ONLY_ROUTE_OPERATIONS = {"read-only-mirror-record"}
+ALVIS_ALLOWLIST_BLOCKED_VERBS = {"apply", "deploy", "promote", "write", "send", "rbac", "tenant", "firewall", "disk"}
+EXPECTED_OWNERSHIP_BOUNDARIES = {
+    "M0nado/helios-platform": "canonical-product-and-execution",
+    "Heli0s-Dynamics/adaptive-multibrain-bootstrap": "cross-repository-control-plane",
+}
 
 
 def _read_json(path: Path) -> dict:
@@ -63,6 +69,11 @@ def _resolve_contract_path(root: Path, relative_path: str) -> Path:
 def _append(errors: list[str], condition: bool, message: str) -> None:
     if not condition:
         errors.append(message)
+
+
+def _alvis_uses_privileged_verb(tool_name: str) -> bool:
+    verb_tokens = [token for token in re.split(r"[._-]", tool_name.casefold()) if token]
+    return any(token in ALVIS_ALLOWLIST_BLOCKED_VERBS for token in verb_tokens)
 
 
 def validate_index(index: dict, root: Path) -> list[str]:
@@ -294,6 +305,32 @@ def validate_experience_contract(experience_contract: dict) -> list[str]:
         isinstance(profile_map, dict) and EXPECTED_PROFILES.issubset(profile_map.keys()),
         "experience.profiles must include all permanent profiles",
     )
+    if isinstance(profile_map, dict):
+        for profile_id in sorted(EXPECTED_PROFILES):
+            profile = profile_map.get(profile_id)
+            if not isinstance(profile, dict):
+                errors.append(f"experience.profiles.{profile_id} must be an object")
+                continue
+            tool_budget = profile.get("alvisToolBudget", {})
+            if not isinstance(tool_budget, dict):
+                errors.append(f"experience.profiles.{profile_id}.alvisToolBudget must be an object")
+                continue
+            allow_list = tool_budget.get("allow")
+            if not isinstance(allow_list, list):
+                errors.append(f"experience.profiles.{profile_id}.alvisToolBudget.allow must be an array")
+                continue
+            for tool in allow_list:
+                if not isinstance(tool, str) or not tool:
+                    errors.append(f"experience.profiles.{profile_id}.alvisToolBudget.allow entries must be non-empty strings")
+                    continue
+                _append(
+                    errors,
+                    not _alvis_uses_privileged_verb(tool),
+                    (
+                        f"experience.profiles.{profile_id}.alvisToolBudget.allow contains privileged verb: "
+                        f"{tool}"
+                    ),
+                )
     return errors
 
 
@@ -413,6 +450,26 @@ def validate_repository_map_contract(repository_map: dict) -> list[str]:
         repository_map.get("canonicalRepository") == "M0nado/helios-platform",
         "repositoryMap canonicalRepository must be M0nado/helios-platform",
     )
+    boundaries = repository_map.get("ownershipBoundaries")
+    if not isinstance(boundaries, list):
+        errors.append("repositoryMap ownershipBoundaries must be an array")
+    else:
+        by_repository: dict[str, dict] = {
+            entry.get("repository"): entry
+            for entry in boundaries
+            if isinstance(entry, dict) and isinstance(entry.get("repository"), str)
+        }
+        for repository, expected_role in EXPECTED_OWNERSHIP_BOUNDARIES.items():
+            entry = by_repository.get(repository)
+            if not isinstance(entry, dict):
+                errors.append(f"repositoryMap ownershipBoundaries missing canonical entry for {repository}")
+                continue
+            actual_role = entry.get("role")
+            _append(
+                errors,
+                actual_role == expected_role,
+                f"repositoryMap ownershipBoundaries.{repository}.role must be {expected_role}",
+            )
     dedicated_targets = repository_map.get("dedicatedTargets", {})
     gui = dedicated_targets.get("gui", {}) if isinstance(dedicated_targets, dict) else {}
     usb = dedicated_targets.get("usbWizard", {}) if isinstance(dedicated_targets, dict) else {}

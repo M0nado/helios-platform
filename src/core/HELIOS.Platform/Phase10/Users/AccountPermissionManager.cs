@@ -409,9 +409,9 @@ namespace HELIOS.Platform.Phase10.Users
                     LogMessage($"Error getting user groups: {ex.Message}", LogLevel.Error);
                 }
 
-                if (groups.Count == 0 && string.Equals(username, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+                if (groups.Count == 0)
                 {
-                    groups.Add("Users");
+                    LogMessage($"No groups were resolved for user inventory: {username}", LogLevel.Warning);
                 }
 
                 return groups;

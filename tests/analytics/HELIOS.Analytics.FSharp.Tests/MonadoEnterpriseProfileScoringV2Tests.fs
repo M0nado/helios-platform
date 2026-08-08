@@ -71,3 +71,13 @@ module MonadoEnterpriseProfileScoringV2Tests =
         Assert.Equal(0.0, score)
         Assert.True(recommendation.RequiresApproval)
         Assert.Contains("require-operator-telemetry-review", recommendation.Actions)
+
+    [<Fact>]
+    let ``Negative telemetry values fail closed`` () =
+        let signal = telemetry -1.0 20.0 0.0 15.0 18.0 6.0
+        let score = MonadoEnterpriseProfileScoringV2.Score(MonadoEnterpriseProfileId.Core, signal)
+        let recommendation = MonadoEnterpriseProfileScoringV2.Recommend(MonadoEnterpriseProfileId.Core, signal)
+
+        Assert.Equal(0.0, score)
+        Assert.True(recommendation.RequiresApproval)
+        Assert.Contains("require-operator-telemetry-review", recommendation.Actions)

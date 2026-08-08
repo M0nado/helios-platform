@@ -96,6 +96,12 @@ class MonadoEnterpriseV2ValidationTests(unittest.TestCase):
         errors = validate_experience_contract(candidate)
         self.assertTrue(any("must include all permanent profiles" in error for error in errors))
 
+    def test_experience_fails_when_allowlist_contains_privileged_verb(self) -> None:
+        candidate = copy.deepcopy(self.bundle["experience"])
+        candidate["profiles"]["core"]["alvisToolBudget"]["allow"] = ["disk.apply"]
+        errors = validate_experience_contract(candidate)
+        self.assertTrue(any("contains privileged verb" in error for error in errors))
+
     def test_sync_fails_when_not_proposal_only(self) -> None:
         candidate = copy.deepcopy(self.bundle["synchronization"])
         candidate["executionMode"] = "apply"
@@ -133,6 +139,33 @@ class MonadoEnterpriseV2ValidationTests(unittest.TestCase):
         candidate["canonicalRepository"] = "example/not-canonical"
         errors = validate_repository_map_contract(candidate)
         self.assertTrue(any("canonicalRepository" in error for error in errors))
+
+    def test_repository_map_fails_when_canonical_boundary_is_missing(self) -> None:
+        candidate = copy.deepcopy(self.bundle["repositoryMap"])
+        candidate["ownershipBoundaries"] = [
+            entry
+            for entry in candidate["ownershipBoundaries"]
+            if entry.get("repository") != "M0nado/helios-platform"
+        ]
+        errors = validate_repository_map_contract(candidate)
+        self.assertTrue(any("missing canonical entry for M0nado/helios-platform" in error for error in errors))
+
+    def test_repository_map_fails_when_bootstrap_boundary_role_changes(self) -> None:
+        candidate = copy.deepcopy(self.bundle["repositoryMap"])
+        target = next(
+            entry
+            for entry in candidate["ownershipBoundaries"]
+            if entry["repository"] == "Heli0s-Dynamics/adaptive-multibrain-bootstrap"
+        )
+        target["role"] = "untrusted-mirror"
+        errors = validate_repository_map_contract(candidate)
+        self.assertTrue(
+            any(
+                "ownershipBoundaries.Heli0s-Dynamics/adaptive-multibrain-bootstrap.role must be cross-repository-control-plane"
+                in error
+                for error in errors
+            )
+        )
 
     def test_expected_profile_set_is_stable(self) -> None:
         self.assertSetEqual(

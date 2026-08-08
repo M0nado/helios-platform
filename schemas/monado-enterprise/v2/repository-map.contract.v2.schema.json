@@ -36,6 +36,46 @@
     "ownershipBoundaries": {
       "type": "array",
       "minItems": 1,
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "repository",
+              "role"
+            ],
+            "properties": {
+              "repository": {
+                "const": "M0nado/helios-platform"
+              },
+              "role": {
+                "const": "canonical-product-and-execution"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "repository",
+              "role"
+            ],
+            "properties": {
+              "repository": {
+                "const": "Heli0s-Dynamics/adaptive-multibrain-bootstrap"
+              },
+              "role": {
+                "const": "cross-repository-control-plane"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ],
       "items": {
         "type": "object",
         "additionalProperties": false,

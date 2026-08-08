@@ -315,6 +315,28 @@ jobs:
           print('v1 AIHub and automation invariants passed')
           PY
 
+      - name: Enforce v2 runtime governance invariants
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          runtime = json.loads(Path('config/runtime/helios-fabric-services.v2.json').read_text(encoding='utf-8'))
+          governance = runtime.get('governance')
+          if not isinstance(governance, dict):
+              raise SystemExit('Runtime governance contract must be an object')
+          required_true = [
+              'failClosed',
+              'idempotentWritesOnly',
+              'approvalRequiredForPrivilegedApply',
+              'noDirectExecutorSurfaceInPresentationLayers',
+          ]
+          if not all(governance.get(key) is True for key in required_true):
+              raise SystemExit(f'Runtime governance invariants are incomplete: {required_true}')
+          print('v2 runtime governance invariants passed')
+          PY
+
       - name: Validate v2 JSON schema pairs
         shell: bash
         run: |
