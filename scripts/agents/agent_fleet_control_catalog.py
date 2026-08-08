@@ -79,7 +79,7 @@ def main():
  args=parser.parse_args()
  tools={name:cmd_ok(name) for name in TOOLS}
  payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'requestedAgents':args.agents,'requestedMode':args.mode,'budgetMode':args.budget,'principle':'All agents are Hermes or XCore variants. Local-first, budget-aware fleets use free/local Ollama/web models and repo runners first, then paid/cloud providers only when outcome score justifies cost. C# exposes the safe GUI/control plane; Python launches agents/providers; F# scores outcome/cost/speed; C++ accelerates hot paths; XCore and Hermes carry XP, tools, prompts, and fleet roles.','capabilities':CAPS,'providers':PROVIDERS,'agentTypes':AGENT_TYPES,'fleetTemplates':fleet_templates(args.agents,args.mode),'setupSteps':setup_steps(args.agents,args.mode),'tools':tools,'mcpServers':MCP_SERVERS,'promptPacks':PROMPT_PACKS,'specializationVariables':SPECIALIZATION_VARIABLES,'refs':git_refs()[:88],'safety':'This catalog plans GitHub/Azure/Codespaces/wiki/runner control but does not push, delete branches, mutate cloud, or publish wiki without explicit human auth and separate commands.'}
- OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(payload,indent=2)+'\n')
+ OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(payload,indent=2)+'\n', encoding='utf-8')
  lines=['# Agent Fleet Control Catalog','',f"Generated: `{payload['generatedUtc']}`",'',payload['principle'],'','## Tool readiness']
  lines += [f"- {k}: {'available' if v else 'missing'}" for k,v in tools.items()]
  lines += ['','## MCP / MCR servers']+[f"- `{m['id']}` — {m['scope']} (local={m['local']}, cloud={m['cloud']})" for m in payload['mcpServers']]
@@ -92,7 +92,7 @@ def main():
  lines += ['','## Safe setup / runner / takeover plan']+[f"- `{s['command']}` — {s['area']}: {s['safe']}" for s in payload['setupSteps']]
  lines += ['','## Visible refs for packets']+[f"- `{r['ref']}` {r['commit']} — {r['subject']}" for r in payload['refs']]
  lines += ['','## Safety boundary',payload['safety']]
- MD.write_text('\n'.join(lines)+'\n')
+ MD.write_text('\n'.join(lines)+'\n', encoding='utf-8')
  print(f'Wrote {OUT.relative_to(ROOT)}'); print(f'Wrote {MD.relative_to(ROOT)}')
  return 0
 if __name__=='__main__': raise SystemExit(main())

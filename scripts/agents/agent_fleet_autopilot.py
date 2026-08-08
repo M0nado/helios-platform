@@ -83,8 +83,12 @@ def load(path, default):
  except Exception: return default
 
 def rg_files():
- p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
- return p.stdout.splitlines()
+ if shutil.which('rg'):
+  p=subprocess.run(['rg','--files'],cwd=ROOT,text=True,capture_output=True)
+  if p.returncode in (0,1):
+   return [x for x in p.stdout.splitlines() if x]
+ p=subprocess.run(['git','ls-files'],cwd=ROOT,text=True,capture_output=True)
+ return [x for x in p.stdout.splitlines() if x] if p.returncode==0 else []
 
 def score_domains(files):
  text=' '.join(files).lower(); scores={}
@@ -162,7 +166,7 @@ def main():
  units=plan_units(scores,tools,catalog,args.agents,args.mode)
  if args.unit!='all': units=[u for u in units if u['unit']==args.unit]
  payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'requestedAgents':args.agents,'requestedMode':args.mode,'unitFilter':args.unit,'principle':'Autopilot is report-only: it scores repo domains, tool readiness, local/cloud capacity signals, and catalog providers to choose smart fleet units. The GUI can copy commands, but live GitHub/Azure/wiki/cloud mutation still requires explicit auth and human review.','tools':tools,'domainScores':scores,'units':units,'guiActions':gui_actions(units),'ideMesh':IDE_MESH,'optimalJobBoard':optimal_job_board(units,tools),'xcoreTypes':XCORE_TYPES,'hermesModelTypes':HERMES_MODEL_TYPES,'subagentSliders':SUBAGENT_SLIDERS,'smartAutoParty':smart_auto_party(units),'setupCenter':setup_center(units),'dataCenters':['reports JSON/MD','status-site GUI','SQL/Cosmos/vector manifests','knowledge absorption ledgers','agent XP/fleet XP ledgers'],'learningLoops':['score domain','select agent/tool/provider','run safe check','record outcome','raise/lower XP','promote prompt/tool/MCP server','prune redundant work','keep abstract ideas']}
- OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(payload,indent=2)+'\n')
+ OUT.parent.mkdir(parents=True,exist_ok=True); OUT.write_text(json.dumps(payload,indent=2)+'\n', encoding='utf-8')
  lines=['# Agent Fleet Autopilot','',f"Generated: `{payload['generatedUtc']}`",'',payload['principle'],'','## Smart units','','| Unit | Score | Status | Agents | Mode | Required tools |','| --- | ---: | --- | ---: | --- | --- |']
  for u in units: lines.append(f"| {u['unit']} | {u['score']} | {u['status']} | {u['recommendedAgents']} | {u['mode']} | {', '.join(u['requiredTools'])} |")
  lines += ['','## Unified IDE mesh']+[f"- `{i['id']}` — {i['role']} / {i['bestFor']} (`{i['safeCommand']}`)" for i in payload['ideMesh']]
@@ -175,7 +179,7 @@ def main():
  lines += ['','## GUI actions']+[f"- **{a['label']}**: `{a['command']}` — {a['safe']}" for a in payload['guiActions']]
  lines += ['','## Setup center']+[f"- **{s['name']}**: `{s['command']}` — {s['note']}" for s in payload['setupCenter']]
  lines += ['','## Learning loops']+[f"- {x}" for x in payload['learningLoops']]
- MD.write_text('\n'.join(lines)+'\n')
+ MD.write_text('\n'.join(lines)+'\n', encoding='utf-8')
  print(f'Wrote {OUT.relative_to(ROOT)}'); print(f'Wrote {MD.relative_to(ROOT)}')
  return 0
 if __name__=='__main__': raise SystemExit(main())

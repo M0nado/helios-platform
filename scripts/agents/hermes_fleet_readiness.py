@@ -36,11 +36,11 @@ def main():
     ok=all(checks[name]['ok'] for name in required)
     OUT.parent.mkdir(parents=True,exist_ok=True)
     payload={'generatedUtc':datetime.now(timezone.utc).isoformat(),'fleetName':cfg.get('fleetName','hermes-fleet-production'),'configPath':str(cfg_path.relative_to(ROOT) if cfg_path.exists() and ROOT in cfg_path.parents else cfg_path),'mode':cfg.get('mode','dry-run'),'ok':ok,'checks':checks,'nextActions':['Set OPENAI_API_KEY or Azure OpenAI env for live AI routing.','Run az login only if Azure-backed fleet automation is enabled.','Keep production mutations behind dry-run/apply gates.']}
-    OUT.write_text(json.dumps(payload,indent=2)+'\n')
+    OUT.write_text(json.dumps(payload,indent=2)+'\n', encoding='utf-8')
     lines=['# Hermes/Fleet Readiness','',f"Generated: `{payload['generatedUtc']}`",'',f"Fleet: `{payload['fleetName']}`",f"Mode: `{payload['mode']}`",f"Status: {'PASS' if ok else 'WARN'}`",'', '| Check | Status | Detail |','| --- | --- | --- |']
     lines += [f"| {name} | {'✅' if data['ok'] else '⚠️'} | `{data['detail']}` |" for name,data in checks.items()]
     lines += ['','## Next actions','']+[f"- {action}" for action in payload['nextActions']]
-    MD.write_text('\n'.join(lines)+'\n')
+    MD.write_text('\n'.join(lines)+'\n', encoding='utf-8')
     if args.json:
         print(json.dumps(payload,indent=2))
     else:

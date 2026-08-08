@@ -23,7 +23,7 @@ SOURCES = {
 def load(path: Path, fallback):
     if not path.exists():
         return fallback
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding='utf-8'))
 
 
 def summarize() -> dict[str, object]:
@@ -73,7 +73,7 @@ def summarize() -> dict[str, object]:
 def main() -> int:
     payload = summarize()
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(payload, indent=2) + '\n')
+    OUT.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
     lines = ['# AIHub Learning Feedback Loop', '', payload['principle'], '', f"Easy command: `{payload['easyCommand']}`", '', '## Transfer edges']
     lines += [f"- `{edge['from']}` → `{edge['to']}`: {edge['teaches']}" for edge in payload['transferEdges']]
     lines += ['', '## Top keep/absorb lessons']
@@ -86,7 +86,7 @@ def main() -> int:
     lines += [f"- `{item.get('branch','')}` recommendation `{item.get('recommendation','')}` graded lines `{item.get('gradedLineCount',0)}` keep `{item.get('complexGrade',{}).get('avgKeepScore',0)}`" for item in payload['mergeRecommendations'][:10]]
     lines += ['', '## Auto-connect plan']
     lines += [f"- `{step.get('command','')}` — {step.get('gui','')}" for step in payload['autoConnectPlan']]
-    MD.write_text('\n'.join(lines) + '\n')
+    MD.write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print(f'Wrote {OUT.relative_to(ROOT)}')
     print(f'Wrote {MD.relative_to(ROOT)}')
     return 0

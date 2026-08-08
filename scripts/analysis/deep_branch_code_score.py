@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import json, subprocess
+import json, shutil, subprocess
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -57,10 +57,12 @@ def refs() -> list[str]:
     return sorted(set(found or [current]))
 
 def repo_files() -> list[str]:
-    proc = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
-    if proc.returncode in (0, 1):
-        return [line for line in proc.stdout.splitlines() if line]
-    return []
+    if shutil.which('rg'):
+        proc = subprocess.run(['rg', '--files'], cwd=ROOT, text=True, capture_output=True)
+        if proc.returncode in (0, 1):
+            return [line for line in proc.stdout.splitlines() if line]
+    proc = subprocess.run(['git', 'ls-files'], cwd=ROOT, text=True, capture_output=True)
+    return [line for line in proc.stdout.splitlines() if line] if proc.returncode == 0 else []
 
 def branch_files(ref: str, target: str, all_files: list[str]) -> list[str]:
     if ref == target:
@@ -128,7 +130,7 @@ def main() -> int:
         'branches': sorted(rows, key=lambda r: (not r['isTarget'], -r['score'], r['branch'])),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(payload, indent=2) + '\n')
+    OUT.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
     lines = ['# Deep Branch Code Score', '', f"Generated: `{payload['generatedUtc']}`", '', f"Target branch: `{target}`", '', payload['summary'], '', '| Branch | Target | Score | Files | Languages | Domains | Action |', '| --- | --- | ---: | ---: | --- | --- | --- |']
     for row in payload['branches']:
         langs = ', '.join(f"{k}:{v}" for k, v in row['languageCounts'].items() if v)
@@ -140,7 +142,7 @@ def main() -> int:
             lines += [f"- `{cmd}`" for cmd in row['broadPlans']]
         else:
             lines += ['- No code-domain plan detected; run `python3 scripts/analysis/super_branch_unification.py` for merge context.']
-    MD.write_text('\n'.join(lines) + '\n')
+    MD.write_text('\n'.join(lines) + '\n', encoding='utf-8')
     print(f"Wrote {OUT.relative_to(ROOT)}")
     print(f"Wrote {MD.relative_to(ROOT)}")
     return 0

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using HELIOS.Platform.Phase10.Users;
@@ -113,12 +114,12 @@ namespace HELIOS.Platform.Phase10.Users.Tests
         }
 
         [Fact]
-        public async Task GetUserPermissionsAsync_ContainsGroups()
+        public async Task GetUserPermissionsAsync_GroupsContainValidNames()
         {
             var permissions = await _manager.GetUserPermissionsAsync(Environment.UserName);
             
             Assert.NotNull(permissions.Groups);
-            Assert.NotEmpty(permissions.Groups);
+            Assert.All(permissions.Groups, group => Assert.False(string.IsNullOrWhiteSpace(group)));
         }
 
         [Fact]
