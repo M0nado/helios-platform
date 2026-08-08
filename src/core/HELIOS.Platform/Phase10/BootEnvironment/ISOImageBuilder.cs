@@ -69,7 +69,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                 await ConfigureISOBootAsync(isoPath);
 
                 // Verify ISO integrity
-                if (!await VerifyISOIntegrityAsync(isoPath))
+                if (!await VerifyISOIntegrityCoreAsync(isoPath))
                 {
                     _logger.Warning("ISO integrity check found issues");
                 }
@@ -96,38 +96,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             await _semaphore.WaitAsync();
             try
             {
-                _logger.Info($"Verifying ISO integrity: {isoPath}");
-
-                if (!File.Exists(isoPath))
-                {
-                    _logger.Error($"ISO file not found: {isoPath}");
-                    return false;
-                }
-
-                var fileInfo = new FileInfo(isoPath);
-                _logger.Debug($"ISO size: {fileInfo.Length / (1024 * 1024)} MB");
-
-                // Check for required boot files in ISO
-                var isValid = true;
-
-                if (fileInfo.Length == 0)
-                {
-                    _logger.Error("ISO file is empty");
-                    isValid = false;
-                }
-
-                if (fileInfo.Length > MAX_ISO_SIZE_4GB)
-                {
-                    _logger.Error($"ISO exceeds maximum size: {MAX_ISO_SIZE_4GB / (1024 * 1024 * 1024)} GB");
-                    isValid = false;
-                }
-
-                if (isValid)
-                {
-                    _logger.Info("ISO integrity verification passed");
-                }
-
-                return isValid;
+                return await VerifyISOIntegrityCoreAsync(isoPath);
             }
             catch (Exception ex)
             {
@@ -334,6 +303,42 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             {
                 _logger.Error("Failed to configure ISO boot", ex);
             }
+        }
+
+        private async Task<bool> VerifyISOIntegrityCoreAsync(string isoPath)
+        {
+            _logger.Info($"Verifying ISO integrity: {isoPath}");
+
+            if (!File.Exists(isoPath))
+            {
+                _logger.Error($"ISO file not found: {isoPath}");
+                return false;
+            }
+
+            var fileInfo = new FileInfo(isoPath);
+            _logger.Debug($"ISO size: {fileInfo.Length / (1024 * 1024)} MB");
+
+            var isValid = true;
+
+            if (fileInfo.Length == 0)
+            {
+                _logger.Error("ISO file is empty");
+                isValid = false;
+            }
+
+            if (fileInfo.Length > MAX_ISO_SIZE_4GB)
+            {
+                _logger.Error($"ISO exceeds maximum size: {MAX_ISO_SIZE_4GB / (1024 * 1024 * 1024)} GB");
+                isValid = false;
+            }
+
+            if (isValid)
+            {
+                _logger.Info("ISO integrity verification passed");
+            }
+
+            await Task.CompletedTask;
+            return isValid;
         }
     }
 }

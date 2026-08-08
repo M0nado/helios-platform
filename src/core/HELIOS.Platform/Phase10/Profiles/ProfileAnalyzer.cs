@@ -368,20 +368,7 @@ public class ProfileAnalyzer : IProfileAnalyzer
     {
         try
         {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "tasklist",
-                    Arguments = "/v /FO CSV",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                }
-            };
-            process.Start();
-            process.WaitForExit();
-            return 45.0;
+            return TryRunCommand("tasklist", "/v /FO CSV", 5000) ? 45.0 : 0.0;
         }
         catch { }
         return 0.0;
@@ -391,23 +378,36 @@ public class ProfileAnalyzer : IProfileAnalyzer
     {
         try
         {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "ping",
-                    Arguments = "8.8.8.8 -n 1",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true
-                }
-            };
-            process.Start();
-            process.WaitForExit();
-            return 25;
+            return TryRunCommand("ping", "8.8.8.8 -n 1", 5000) ? 25 : 0;
         }
         catch { }
         return 0;
+    }
+
+    private static bool TryRunCommand(string fileName, string arguments, int timeoutMs)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            }
+        };
+
+        process.Start();
+        _ = process.StandardOutput.ReadToEnd();
+
+        if (!process.WaitForExit(timeoutMs))
+        {
+            process.Kill(entireProcessTree: true);
+            return false;
+        }
+
+        return process.ExitCode == 0;
     }
 
     private double MeasureApplicationResponseTime()

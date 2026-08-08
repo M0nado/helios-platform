@@ -82,19 +82,26 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
         {
             try
             {
+                List<string> toolsToStop;
                 await _toolsLock.WaitAsync();
-
-                _logger.LogInformation("Shutting down ToolOrchestratorEngine");
-
-                _isRunning = false;
-                _orchestrationTimer.Change(Timeout.Infinite, Timeout.Infinite);
-
-                foreach (var tool in _tools.Values.ToList())
+                try
                 {
-                    if (tool.Status != ToolStatus.Stopped)
-                    {
-                        await StopToolAsync(tool.ToolId);
-                    }
+                    _logger.LogInformation("Shutting down ToolOrchestratorEngine");
+                    _isRunning = false;
+                    _orchestrationTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                    toolsToStop = _tools.Values
+                        .Where(tool => tool.Status != ToolStatus.Stopped)
+                        .Select(tool => tool.ToolId)
+                        .ToList();
+                }
+                finally
+                {
+                    _toolsLock.Release();
+                }
+
+                foreach (var toolId in toolsToStop)
+                {
+                    await StopToolAsync(toolId);
                 }
 
                 await _healthMonitor.ShutdownAsync();
@@ -104,10 +111,6 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during ToolOrchestratorEngine shutdown");
-            }
-            finally
-            {
-                _toolsLock.Release();
             }
         }
 

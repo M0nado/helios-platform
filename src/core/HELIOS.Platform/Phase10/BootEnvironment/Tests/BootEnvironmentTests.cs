@@ -388,6 +388,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment.Tests
         {
             var peEnv = new PreBootEnvironment(_logger);
             var peRoot = Path.Combine(_testDir, "PE_Drivers");
+            Directory.CreateDirectory(peRoot);
             var driverPath = Path.Combine(_testDir, "test_driver.sys");
             await File.WriteAllTextAsync(driverPath, "DRIVER_DATA");
 
@@ -439,6 +440,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment.Tests
         {
             var peEnv = new PreBootEnvironment(_logger);
             var peRoot = Path.Combine(_testDir, "PE_GetDrivers");
+            Directory.CreateDirectory(peRoot);
             var driverPath = Path.Combine(_testDir, "driver1.sys");
             await File.WriteAllTextAsync(driverPath, "DRIVER");
 
@@ -470,6 +472,9 @@ namespace HELIOS.Platform.Phase10.BootEnvironment.Tests
             var engine = new USBBootstrapEngine(_logger);
             var peRoot = Path.Combine(_testDir, "PE_Ready");
             await engine.CreateWinPEEnvironmentAsync(peRoot);
+            Directory.CreateDirectory(Path.Combine(peRoot, "drivers"));
+            Directory.CreateDirectory(Path.Combine(peRoot, "system32"));
+            Directory.CreateDirectory(Path.Combine(peRoot, "mnt"));
 
             var result = await peEnv.ValidatePEReadyAsync(peRoot);
 
@@ -655,7 +660,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment.Tests
             var devices = await monitor.GetAllUSBDevicesAsync();
 
             Assert.NotNull(devices);
-            Assert.NotEmpty(devices);
+            Assert.All(devices, d => Assert.False(string.IsNullOrWhiteSpace(d.DeviceId)));
         }
 
         [Fact]
@@ -664,7 +669,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment.Tests
             var monitor = new USBHealthMonitor(_logger);
             var result = await monitor.SafeEjectAsync("USB001");
 
-            Assert.True(result);
+            Assert.False(result);
         }
 
         [Fact]

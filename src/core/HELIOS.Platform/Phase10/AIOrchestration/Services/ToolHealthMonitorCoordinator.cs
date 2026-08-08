@@ -148,11 +148,18 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
 
             try
             {
+                List<string> toolIds;
                 await _metricsLock.WaitAsync();
+                try
+                {
+                    toolIds = _healthMetrics.Keys.ToList();
+                }
+                finally
+                {
+                    _metricsLock.Release();
+                }
 
                 // Iterate through all tool pairs and check for conflicts
-                var toolIds = _healthMetrics.Keys.ToList();
-
                 for (int i = 0; i < toolIds.Count; i++)
                 {
                     for (int j = i + 1; j < toolIds.Count; j++)
@@ -164,10 +171,18 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
                             {
                                 conflicts.Add(conflict);
 
-                                if (!_toolConflicts.ContainsKey(toolIds[i]))
-                                    _toolConflicts[toolIds[i]] = new List<ToolConflict>();
+                                await _metricsLock.WaitAsync();
+                                try
+                                {
+                                    if (!_toolConflicts.ContainsKey(toolIds[i]))
+                                        _toolConflicts[toolIds[i]] = new List<ToolConflict>();
 
-                                _toolConflicts[toolIds[i]].Add(conflict);
+                                    _toolConflicts[toolIds[i]].Add(conflict);
+                                }
+                                finally
+                                {
+                                    _metricsLock.Release();
+                                }
 
                                 _logger.LogWarning("Conflict detected between {Tool1} and {Tool2}: {Description}", 
                                     toolIds[i], toolIds[j], conflict.Description);
@@ -182,9 +197,10 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
 
                 return conflicts;
             }
-            finally
+            catch (Exception ex)
             {
-                _metricsLock.Release();
+                _logger.LogError(ex, "Error detecting tool conflicts");
+                return conflicts;
             }
         }
 
@@ -195,42 +211,59 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
 
             try
             {
+                ToolConflict? conflictToResolve = null;
                 await _metricsLock.WaitAsync();
-
-                // Find and resolve the conflict
-                foreach (var toolConflicts in _toolConflicts.Values)
+                try
                 {
-                    var conflict = toolConflicts.FirstOrDefault(c => c.ConflictId == conflictId);
-                    if (conflict != null)
+                    // Find conflict snapshot
+                    foreach (var toolConflicts in _toolConflicts.Values)
                     {
-                        var resolved = await _conflictResolver.ResolveAsync(conflict);
-                        if (resolved)
+                        conflictToResolve = toolConflicts.FirstOrDefault(c => c.ConflictId == conflictId);
+                        if (conflictToResolve != null)
                         {
-                            conflict.AutoResolved = true;
-                            _logger.LogInformation("Conflict {ConflictId} resolved", conflictId);
-
-                            await LogEventAsync(new OrchestrationEvent
-                            {
-                                Type = EventType.ConflictResolved,
-                                Message = $"Conflict between {conflict.Tool1} and {conflict.Tool2} resolved",
-                                Severity = EventSeverity.Warning
-                            });
+                            break;
                         }
-
-                        return resolved;
                     }
                 }
+                finally
+                {
+                    _metricsLock.Release();
+                }
 
-                return false;
+                if (conflictToResolve == null)
+                {
+                    return false;
+                }
+
+                var resolved = await _conflictResolver.ResolveAsync(conflictToResolve);
+                if (!resolved)
+                {
+                    return false;
+                }
+
+                await _metricsLock.WaitAsync();
+                try
+                {
+                    conflictToResolve.AutoResolved = true;
+                    _logger.LogInformation("Conflict {ConflictId} resolved", conflictId);
+                    AddEventLocked(new OrchestrationEvent
+                    {
+                        Type = EventType.ConflictResolved,
+                        Message = $"Conflict between {conflictToResolve.Tool1} and {conflictToResolve.Tool2} resolved",
+                        Severity = EventSeverity.Warning
+                    });
+                }
+                finally
+                {
+                    _metricsLock.Release();
+                }
+
+                return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error resolving conflict {ConflictId}", conflictId);
                 return false;
-            }
-            finally
-            {
-                _metricsLock.Release();
             }
         }
 
@@ -245,10 +278,15 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
 
                 _logger.LogInformation("Restarting tool {ToolId}", toolId);
 
-                var metrics = await GetHealthMetricsAsync(toolId);
+                if (!_healthMetrics.TryGetValue(toolId, out var metrics))
+                {
+                    metrics = new ToolHealthMetrics();
+                    _healthMetrics[toolId] = metrics;
+                }
+
                 metrics.CrashCount++;
 
-                await LogEventAsync(new OrchestrationEvent
+                AddEventLocked(new OrchestrationEvent
                 {
                     ToolId = toolId,
                     Type = EventType.ToolRestarted,
@@ -305,7 +343,7 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
 
                 _logger.LogInformation("Maintenance scheduled for tool {ToolId}: {Type}", toolId, type);
 
-                await LogEventAsync(new OrchestrationEvent
+                AddEventLocked(new OrchestrationEvent
                 {
                     ToolId = toolId,
                     Type = EventType.MaintenanceScheduled,
@@ -384,9 +422,16 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
         {
             try
             {
+                List<string> toolIds;
                 await _metricsLock.WaitAsync();
-
-                var toolIds = _healthMetrics.Keys.ToList();
+                try
+                {
+                    toolIds = _healthMetrics.Keys.ToList();
+                }
+                finally
+                {
+                    _metricsLock.Release();
+                }
 
                 foreach (var toolId in toolIds)
                 {
@@ -400,9 +445,9 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
                     }
                 }
             }
-            finally
+            catch (Exception ex)
             {
-                _metricsLock.Release();
+                _logger.LogDebug(ex, "Error during periodic health check");
             }
         }
 
@@ -423,6 +468,15 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
             finally
             {
                 _metricsLock.Release();
+            }
+        }
+
+        private void AddEventLocked(OrchestrationEvent evt)
+        {
+            _eventLog.Add(evt);
+            if (_eventLog.Count > MAX_EVENT_LOG_SIZE)
+            {
+                _eventLog.RemoveRange(0, _eventLog.Count - MAX_EVENT_LOG_SIZE);
             }
         }
 

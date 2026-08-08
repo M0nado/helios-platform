@@ -130,7 +130,9 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
             {
                 await _cacheLock.WaitAsync();
 
-                var metrics = await GetPerformanceMetricsAsync(toolId);
+                var metrics = _metricsCache.TryGetValue(toolId, out var cachedMetrics)
+                    ? cachedMetrics
+                    : new ToolPerformanceMetrics();
 
                 // Analyze CPU usage
                 if (metrics.AverageCpuUsage > CPU_THRESHOLD)
@@ -248,7 +250,9 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Services
             {
                 await _cacheLock.WaitAsync();
 
-                var metrics = await GetPerformanceMetricsAsync(toolId);
+                var metrics = _metricsCache.TryGetValue(toolId, out var cachedMetrics)
+                    ? cachedMetrics
+                    : new ToolPerformanceMetrics();
                 
                 var allocation = new ToolResourceAllocation();
 

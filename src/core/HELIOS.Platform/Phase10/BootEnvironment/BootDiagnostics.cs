@@ -89,7 +89,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                 }
 
                 // Check memory
-                var memoryOk = await CheckMemoryHealthAsync();
+                var memoryOk = await CheckMemoryHealthCoreAsync();
                 if (!memoryOk)
                 {
                     result.Errors.Add("Memory health check failed");
@@ -101,7 +101,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                 }
 
                 // Check CPU
-                if (!await CheckCPUSupportAsync())
+                if (!await CheckCPUSupportCoreAsync())
                 {
                     result.Errors.Add("CPU does not meet minimum requirements");
                     result.OverallHealthy = false;
@@ -197,23 +197,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             await _semaphore.WaitAsync();
             try
             {
-                _logger.Info("Checking CPU support");
-
-                var processorCount = await GetProcessorCountAsync();
-                if (processorCount < 1)
-                {
-                    _logger.Error("Processor count is too low");
-                    return false;
-                }
-
-                // Check for required CPU features
-                var hasSSSE3 = await CheckCPUFeatureAsync("SSSE3");
-                var hasSSE42 = await CheckCPUFeatureAsync("SSE4.2");
-
-                _logger.Debug($"CPU Features - SSSE3: {hasSSSE3}, SSE4.2: {hasSSE42}");
-
-                _logger.Info($"CPU check passed - {processorCount} processor(s)");
-                return true;
+                return await CheckCPUSupportCoreAsync();
             }
             catch (Exception ex)
             {
@@ -258,19 +242,7 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             await _semaphore.WaitAsync();
             try
             {
-                _logger.Debug("Checking memory health");
-
-                var totalMemory = await GetTotalMemoryAsync();
-                var minimumMemory = 512; // 512 MB minimum
-
-                if (totalMemory < minimumMemory)
-                {
-                    _logger.Warning($"Low memory: {totalMemory} MB (minimum: {minimumMemory} MB)");
-                    return false;
-                }
-
-                _logger.Debug($"Memory health good: {totalMemory} MB available");
-                return true;
+                return await CheckMemoryHealthCoreAsync();
             }
             catch (Exception ex)
             {
@@ -427,6 +399,43 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
             {
                 return false;
             }
+        }
+
+        private async Task<bool> CheckCPUSupportCoreAsync()
+        {
+            _logger.Info("Checking CPU support");
+
+            var processorCount = await GetProcessorCountAsync();
+            if (processorCount < 1)
+            {
+                _logger.Error("Processor count is too low");
+                return false;
+            }
+
+            var hasSSSE3 = await CheckCPUFeatureAsync("SSSE3");
+            var hasSSE42 = await CheckCPUFeatureAsync("SSE4.2");
+
+            _logger.Debug($"CPU Features - SSSE3: {hasSSSE3}, SSE4.2: {hasSSE42}");
+
+            _logger.Info($"CPU check passed - {processorCount} processor(s)");
+            return true;
+        }
+
+        private async Task<bool> CheckMemoryHealthCoreAsync()
+        {
+            _logger.Debug("Checking memory health");
+
+            var totalMemory = await GetTotalMemoryAsync();
+            var minimumMemory = 512;
+
+            if (totalMemory < minimumMemory)
+            {
+                _logger.Warning($"Low memory: {totalMemory} MB (minimum: {minimumMemory} MB)");
+                return false;
+            }
+
+            _logger.Debug($"Memory health good: {totalMemory} MB available");
+            return true;
         }
     }
 }

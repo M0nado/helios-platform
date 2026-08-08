@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
 using HELIOS.Platform.Phase10.Profiles;
@@ -16,6 +17,20 @@ public class ProfileManagerTests
     {
         _testProfilePath = Path.Combine(Path.GetTempPath(), $"helios_test_profiles_{Guid.NewGuid()}");
         _manager = new ProfileManager(_testProfilePath);
+    }
+
+    private static async Task<TInnerException> AssertInvalidOperationWithInnerAsync<TInnerException>(Func<Task> action)
+        where TInnerException : Exception
+    {
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(action);
+        return Assert.IsAssignableFrom<TInnerException>(ex.InnerException);
+    }
+
+    private static async Task<TInnerException> AssertInvalidOperationWithInnerAsync<TInnerException, TResult>(Func<Task<TResult>> action)
+        where TInnerException : Exception
+    {
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await action());
+        return Assert.IsAssignableFrom<TInnerException>(ex.InnerException);
     }
 
     public void Dispose()
@@ -38,7 +53,7 @@ public class ProfileManagerTests
     public async Task CreateProfileAsync_WithEmptyName_ThrowsException()
     {
         var settings = new Dictionary<string, object>();
-        await Assert.ThrowsAsync<ArgumentException>(() => _manager.CreateProfileAsync("", settings));
+        await AssertInvalidOperationWithInnerAsync<ArgumentException>(() => _manager.CreateProfileAsync("", settings));
     }
 
     [Fact]
@@ -64,7 +79,7 @@ public class ProfileManagerTests
     [Fact]
     public async Task ReadProfileAsync_WithNonexistentName_ThrowsException()
     {
-        await Assert.ThrowsAsync<FileNotFoundException>(() => _manager.ReadProfileAsync("NonexistentProfile"));
+        await AssertInvalidOperationWithInnerAsync<FileNotFoundException>(() => _manager.ReadProfileAsync("NonexistentProfile"));
     }
 
     [Fact]
@@ -83,7 +98,7 @@ public class ProfileManagerTests
     public async Task UpdateProfileAsync_WithNonexistentName_ThrowsException()
     {
         var settings = new Dictionary<string, object>();
-        await Assert.ThrowsAsync<FileNotFoundException>(() => _manager.UpdateProfileAsync("NonexistentProfile", settings));
+        await AssertInvalidOperationWithInnerAsync<FileNotFoundException>(() => _manager.UpdateProfileAsync("NonexistentProfile", settings));
     }
 
     [Fact]
@@ -100,7 +115,7 @@ public class ProfileManagerTests
     [Fact]
     public async Task DeleteProfileAsync_WithNonexistentName_ThrowsException()
     {
-        await Assert.ThrowsAsync<FileNotFoundException>(() => _manager.DeleteProfileAsync("NonexistentProfile"));
+        await AssertInvalidOperationWithInnerAsync<FileNotFoundException>(() => _manager.DeleteProfileAsync("NonexistentProfile"));
     }
 
     [Fact]
@@ -141,7 +156,7 @@ public class ProfileManagerTests
     [Fact]
     public async Task ExportProfileAsync_WithNonexistentName_ThrowsException()
     {
-        await Assert.ThrowsAsync<FileNotFoundException>(() => _manager.ExportProfileAsync("NonexistentProfile"));
+        await AssertInvalidOperationWithInnerAsync<FileNotFoundException>(() => _manager.ExportProfileAsync("NonexistentProfile"));
     }
 
     [Fact]
@@ -156,13 +171,13 @@ public class ProfileManagerTests
     [Fact]
     public async Task ImportProfileAsync_WithEmptyJson_ThrowsException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(() => _manager.ImportProfileAsync("ImportTest", ""));
+        await AssertInvalidOperationWithInnerAsync<ArgumentException>(() => _manager.ImportProfileAsync("ImportTest", ""));
     }
 
     [Fact]
     public async Task ImportProfileAsync_WithInvalidJson_ThrowsException()
     {
-        await Assert.ThrowsAsync<Exception>(() => _manager.ImportProfileAsync("ImportTest", "invalid json"));
+        await AssertInvalidOperationWithInnerAsync<JsonException>(() => _manager.ImportProfileAsync("ImportTest", "invalid json"));
     }
 }
 
@@ -427,10 +442,10 @@ public class ProfileSwitcherTests
     {
         var profiles = new Dictionary<string, IProfileService>
         {
-            { "Gaming", new GamingProfile() },
-            { "Work", new WorkProfile() },
-            { "Development", new DevelopmentProfile() },
-            { "Secure", new SecureProfile() }
+            { "Gaming", new TestProfileService("Gaming") },
+            { "Work", new TestProfileService("Work") },
+            { "Development", new TestProfileService("Development") },
+            { "Secure", new TestProfileService("Secure") }
         };
         _switcher = new ProfileSwitcher(profiles);
     }
@@ -445,7 +460,8 @@ public class ProfileSwitcherTests
     [Fact]
     public async Task SwitchProfileAsync_WithEmptyName_ThrowsException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(() => _switcher.SwitchProfileAsync(""));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _switcher.SwitchProfileAsync(""));
+        Assert.IsType<ArgumentException>(ex.InnerException);
     }
 
     [Fact]
@@ -486,6 +502,23 @@ public class ProfileSwitcherTests
         var second = await _switcher.GetCurrentProfileAsync();
 
         Assert.NotEqual(first, second);
+    }
+
+    private sealed class TestProfileService : IProfileService
+    {
+        public string ProfileName { get; }
+        public string ProfileDescription => $"{ProfileName} test profile";
+
+        public TestProfileService(string profileName)
+        {
+            ProfileName = profileName;
+        }
+
+        public Task<bool> ApplyAsync() => Task.FromResult(true);
+
+        public Task<bool> ValidateAsync() => Task.FromResult(true);
+
+        public Task<bool> RevertAsync() => Task.FromResult(true);
     }
 }
 
