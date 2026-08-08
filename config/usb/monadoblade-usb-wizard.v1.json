@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.1.0",
+  "wizardId": "monadoblade-usb-wizard",
+  "defaultMode": "dry-run",
+  "routes": {
+    "inventory": "read-only",
+    "storage-plan": "device-specific-plan-only",
+    "apply": "approval-gated-storage-guardrails"
+  },
+  "applyRequirements": {
+    "storageContract": "config/storage/monadoblade-partitions.2x2tb.v1.json",
+    "requireWhatIf": true,
+    "requirePhysicalAuthorization": true,
+    "requireBackupEvidenceBeforeApply": true,
+    "requireBitLockerRecoveryEvidence": true,
+    "requireRollbackNotes": true,
+    "requireExactDiskIdentity": true,
+    "requiredConfirmationPhrase": "APPLY MONADOBLADE STORAGE LAYOUT"
+  },
+  "boundaries": {
+    "allowPhysicalDiskWriteWithoutApproval": false,
+    "requireDeviceIdentityForStoragePlan": true,
+    "recoveryWorkflowProfile": "sysadmin-offline",
+    "quarantineWorkflowProfile": "sysadmin-offline",
+    "recoveryIsNotAProfile": true,
+    "quarantineIsNotAProfile": true
+  }
+}

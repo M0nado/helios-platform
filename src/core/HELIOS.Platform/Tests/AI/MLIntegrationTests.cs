@@ -305,7 +305,7 @@ namespace HELIOS.Platform.Tests.AI
 
             Assert.Equal("Success", recommendations.Status);
             Assert.NotEmpty(recommendations.Recommendations);
-            Assert.Any(recommendations.Recommendations, r => r.Category == "Performance");
+            Assert.Contains(recommendations.Recommendations, r => r.Category == "Performance");
         }
 
         [Fact]
@@ -322,7 +322,7 @@ namespace HELIOS.Platform.Tests.AI
             var recommendations = await engine.GenerateRecommendationsAsync();
 
             Assert.NotEmpty(recommendations.Recommendations);
-            Assert.Any(recommendations.Recommendations, r => r.Category == "Memory");
+            Assert.Contains(recommendations.Recommendations, r => r.Category == "Memory");
         }
 
         #endregion
@@ -400,15 +400,14 @@ namespace HELIOS.Platform.Tests.AI
         }
 
         [Fact]
-        public void DataPipeline_GetMetricsHistory_ReturnsLimitedHistory()
+        public async Task DataPipeline_GetMetricsHistory_ReturnsLimitedHistory()
         {
             var pipeline = new DataPipeline(_dataLogger);
 
             // Collect multiple snapshots
             for (int i = 0; i < 5; i++)
             {
-                var snapshot = new SystemMetricSnapshot { CpuUsage = 50 + i };
-                var _ = pipeline.ExtractFeatures(snapshot);
+                await pipeline.CollectMetricsAsync();
             }
 
             var history = pipeline.GetMetricsHistory(3);

@@ -4,6 +4,7 @@ using System.DirectoryServices;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Security.Principal;
 using System.Threading.Tasks;
 
 namespace HELIOS.Platform.Phase10.Users
@@ -343,6 +344,16 @@ namespace HELIOS.Platform.Phase10.Users
             {
                 try
                 {
+                    if (IsCurrentLocalIdentity(username))
+                    {
+                        using var currentIdentity = WindowsIdentity.GetCurrent();
+                        var currentPrincipal = new WindowsPrincipal(currentIdentity);
+                        if (currentPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
+                        {
+                            return true;
+                        }
+                    }
+
                     DirectoryEntry groupEntry = new DirectoryEntry($"WinNT://{Environment.MachineName}/Administrators,group");
                     var isMember = groupEntry.Invoke("IsMember", new object[] { $"WinNT://{Environment.MachineName}/{username},user" });
                     groupEntry?.Dispose();
@@ -403,14 +414,100 @@ namespace HELIOS.Platform.Phase10.Users
                         }
                         catch { }
                     }
+
+                    if (groups.Count == 0 && IsCurrentLocalIdentity(username))
+                    {
+                        groups.AddRange(GetCurrentIdentityGroupNames());
+                    }
                 }
                 catch (Exception ex)
                 {
                     LogMessage($"Error getting user groups: {ex.Message}", LogLevel.Error);
                 }
 
-                return groups;
+                return groups
+                    .Where(group => !string.IsNullOrWhiteSpace(group))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
             });
+        }
+
+        private List<string> GetCurrentIdentityGroupNames()
+        {
+            try
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                if (identity.Groups == null)
+                {
+                    return new List<string>();
+                }
+
+                return identity.Groups
+                    .Select(groupSid =>
+                    {
+                        try
+                        {
+                            return groupSid.Translate(typeof(NTAccount)).Value;
+                        }
+                        catch
+                        {
+                            return groupSid.Value;
+                        }
+                    })
+                    .Where(groupName => !string.IsNullOrWhiteSpace(groupName))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error getting current identity groups: {ex.Message}", LogLevel.Warning);
+                return new List<string>();
+            }
+        }
+
+        private bool IsCurrentLocalIdentity(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return false;
+            }
+
+            try
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                if (identity.User is null)
+                {
+                    return false;
+                }
+
+                if (TryResolveLocalUserSid(username, out var candidateSid))
+                {
+                    return string.Equals(identity.User.Value, candidateSid, StringComparison.OrdinalIgnoreCase);
+                }
+
+                var expectedLocalName = $@"{Environment.MachineName}\{username}";
+                return string.Equals(identity.Name, expectedLocalName, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Error checking current local identity match: {ex.Message}", LogLevel.Warning);
+                return false;
+            }
+        }
+
+        private static bool TryResolveLocalUserSid(string username, out string sid)
+        {
+            sid = string.Empty;
+            try
+            {
+                var account = new NTAccount(Environment.MachineName, username);
+                sid = account.Translate(typeof(SecurityIdentifier)).Value;
+                return !string.IsNullOrWhiteSpace(sid);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void EnsureLogDirectory()

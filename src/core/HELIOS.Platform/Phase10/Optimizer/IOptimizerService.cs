@@ -84,7 +84,7 @@ namespace HELIOS.Platform.Phase10.Optimizer
         public float GPUUsage { get; set; }
         public float NetworkBandwidth { get; set; }
         public float Temperature { get; set; }
-        public DateTime Timestamp { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 
     /// <summary>

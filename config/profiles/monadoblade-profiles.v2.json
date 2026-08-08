@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "2.1.0",
+  "contractName": "monadoblade-six-profile-delivery-fabric",
+  "legacyInput": "config/profiles/monadoblade-profiles.v1.json",
+  "defaultProfile": "core",
+  "profiles": [
+    {
+      "id": "core",
+      "displayName": "Core",
+      "kanji": "核",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "admin": false,
+      "color": "#BBD7FF",
+      "softwareBundles": ["common-core", "personal-productivity", "personal-media", "personal-communications"],
+      "roots": ["personal", "common", "crosspartition-sanitized", "backups-user"],
+      "resourcePolicy": {
+        "cpuMode": "balanced-quiet",
+        "gpuMode": "balanced",
+        "memoryReserveGb": 6,
+        "containerBudgetGb": 0,
+        "vmBudgetGb": 0,
+        "modelBudgetGb": 4,
+        "backgroundPriority": "low-noise"
+      },
+      "networkPolicy": "normal-protected"
+    },
+    {
+      "id": "developer",
+      "displayName": "Developer",
+      "kanji": "創",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "admin": false,
+      "color": "#00D8FF",
+      "softwareBundles": ["common-core", "developer-core", "developer-ai", "developer-azure", "developer-native"],
+      "roots": ["dev", "models-read", "common", "crosspartition", "telemetry-user"],
+      "resourcePolicy": {
+        "cpuMode": "build-throughput",
+        "gpuMode": "balanced-compute",
+        "memoryReserveGb": 8,
+        "containerBudgetGb": 24,
+        "vmBudgetGb": 32,
+        "modelBudgetGb": 24,
+        "backgroundPriority": "normal"
+      },
+      "networkPolicy": "developer-approved-egress"
+    },
+    {
+      "id": "studio",
+      "displayName": "Studio",
+      "kanji": "響",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "admin": false,
+      "color": "#D64DFF",
+      "softwareBundles": ["common-core", "studio-audio", "studio-video", "studio-3d", "studio-plugins"],
+      "roots": ["studio", "models-media", "common", "crosspartition-sanitized", "renders"],
+      "resourcePolicy": {
+        "cpuMode": "audio-realtime",
+        "gpuMode": "render-balanced",
+        "memoryReserveGb": 12,
+        "containerBudgetGb": 4,
+        "vmBudgetGb": 0,
+        "modelBudgetGb": 12,
+        "backgroundPriority": "audio-critical"
+      },
+      "networkPolicy": "plugin-and-cloud-approved"
+    },
+    {
+      "id": "gamer",
+      "displayName": "Gamer",
+      "kanji": "迅",
+      "windowsRole": "standard-user",
+      "interactive": true,
+      "admin": false,
+      "color": "#62FF4A",
+      "softwareBundles": ["common-core", "gamer-launchers", "gamer-capture", "gamer-peripherals"],
+      "roots": ["games", "common", "crosspartition-sanitized", "captures"],
+      "resourcePolicy": {
+        "cpuMode": "frame-time",
+        "gpuMode": "latency-max-performance",
+        "memoryReserveGb": 6,
+        "containerBudgetGb": 0,
+        "vmBudgetGb": 0,
+        "modelBudgetGb": 2,
+        "backgroundPriority": "throttled"
+      },
+      "networkPolicy": "gaming-low-latency-firewalled"
+    },
+    {
+      "id": "ai-server",
+      "displayName": "AI / Server",
+      "kanji": "智",
+      "windowsRole": "bounded-service-and-operator",
+      "interactive": true,
+      "admin": false,
+      "color": "#6D7B8D",
+      "softwareBundles": ["common-core", "sysops-security", "sysops-observability", "sysops-cloud", "sysops-performance", "server-runtime", "server-containers", "server-observability", "server-security", "server-ai-workers"],
+      "roots": ["server", "models-service", "telemetry", "backups-service", "server-ops", "dev-read", "common", "crosspartition", "quarantine-read"],
+      "resourcePolicy": {
+        "cpuMode": "observability-responsive",
+        "gpuMode": "worker-scheduled",
+        "memoryReserveGb": 10,
+        "containerBudgetGb": 48,
+        "vmBudgetGb": 48,
+        "modelBudgetGb": 32,
+        "backgroundPriority": "service-controlled"
+      },
+      "networkPolicy": "deny-by-default-service-allowlist"
+    },
+    {
+      "id": "sysadmin-offline",
+      "displayName": "Sysadmin (Local / Offline)",
+      "kanji": "統",
+      "windowsRole": "local-administrator",
+      "interactive": true,
+      "admin": true,
+      "hidden": true,
+      "enabledByDefault": false,
+      "activation": {
+        "physicalPresenceRequired": true,
+        "minimumFactors": 2,
+        "allowedFactors": ["fido2", "encrypted-usb-token", "windows-hello", "offline-recovery-secret"],
+        "remoteActivationDenied": true,
+        "cloudActivationDenied": true,
+        "aiActivationDenied": true,
+        "offlineOnly": true
+      },
+      "color": "#FFB000",
+      "softwareBundles": ["common-core-minimal", "sysadmin-security", "sysadmin-recovery", "sysadmin-driver-disk"],
+      "roots": ["all-gated"],
+      "resourcePolicy": {
+        "cpuMode": "stability-first",
+        "gpuMode": "minimal",
+        "memoryReserveGb": 12,
+        "containerBudgetGb": 0,
+        "vmBudgetGb": 16,
+        "modelBudgetGb": 4,
+        "backgroundPriority": "security-critical"
+      },
+      "networkPolicy": "local-first-restricted"
+    }
+  ]
+}

@@ -38,13 +38,22 @@ namespace HELIOS.Platform.AI.MLService
 
             try
             {
+                var replacingExisting = false;
                 _registryLock.EnterWriteLock();
-                if (_modelRegistry.ContainsKey(model.ModelId))
+                try
+                {
+                    replacingExisting = _modelRegistry.ContainsKey(model.ModelId);
+                    _modelRegistry[model.ModelId] = model;
+                }
+                finally
+                {
+                    _registryLock.ExitWriteLock();
+                }
+
+                if (replacingExisting)
                 {
                     _logger.LogWarning("Model {ModelId} already registered, updating", model.ModelId);
                 }
-
-                _modelRegistry[model.ModelId] = model;
                 _logger.LogInformation("Model {ModelId} registered successfully", model.ModelId);
 
                 if (!await model.LoadAsync())
@@ -53,17 +62,14 @@ namespace HELIOS.Platform.AI.MLService
                     return false;
                 }
 
-                _metricsCache.TryAdd($"{model.ModelId}_metrics", await model.GetMetricsAsync());
+                var metrics = await model.GetMetricsAsync();
+                _metricsCache.AddOrUpdate($"{model.ModelId}_metrics", metrics, (_, _) => metrics);
                 return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error registering model {ModelId}", model.ModelId);
                 return false;
-            }
-            finally
-            {
-                _registryLock.ExitWriteLock();
             }
         }
 
@@ -74,23 +80,39 @@ namespace HELIOS.Platform.AI.MLService
         {
             try
             {
+                IMLModel? modelToUnload = null;
                 _registryLock.EnterWriteLock();
-                if (_modelRegistry.TryGetValue(modelId, out var model))
+                try
                 {
-                    await model.UnloadAsync();
-                    _modelRegistry.Remove(modelId);
-                    _metricsCache.TryRemove($"{modelId}_metrics", out _);
-                    _predictionCache.TryRemove(modelId, out _);
+                    if (_modelRegistry.TryGetValue(modelId, out var model))
+                    {
+                        modelToUnload = model;
+                        _modelRegistry.Remove(modelId);
+                        _metricsCache.TryRemove($"{modelId}_metrics", out _);
+
+                        var predictionKeys = _predictionCache.Keys
+                            .Where(key => key.StartsWith(modelId, StringComparison.Ordinal))
+                            .ToList();
+                        foreach (var key in predictionKeys)
+                        {
+                            _predictionCache.TryRemove(key, out _);
+                        }
+                    }
+                }
+                finally
+                {
+                    _registryLock.ExitWriteLock();
+                }
+
+                if (modelToUnload != null)
+                {
+                    await modelToUnload.UnloadAsync();
                     _logger.LogInformation("Model {ModelId} unregistered", modelId);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error unregistering model {ModelId}", modelId);
-            }
-            finally
-            {
-                _registryLock.ExitWriteLock();
             }
         }
 
@@ -110,11 +132,19 @@ namespace HELIOS.Platform.AI.MLService
 
             try
             {
+                IMLModel model;
                 _registryLock.EnterReadLock();
-                if (!_modelRegistry.TryGetValue(modelId, out var model))
+                try
                 {
-                    _logger.LogWarning("Model {ModelId} not found", modelId);
-                    return new PredictionResult { Status = "Error: Model not found" };
+                    if (!_modelRegistry.TryGetValue(modelId, out model))
+                    {
+                        _logger.LogWarning("Model {ModelId} not found", modelId);
+                        return new PredictionResult { Status = "Error: Model not found" };
+                    }
+                }
+                finally
+                {
+                    _registryLock.ExitReadLock();
                 }
 
                 var sw = Stopwatch.StartNew();
@@ -136,7 +166,6 @@ namespace HELIOS.Platform.AI.MLService
             }
             finally
             {
-                _registryLock.ExitReadLock();
                 CleanupCacheIfNeeded();
             }
         }
@@ -151,11 +180,19 @@ namespace HELIOS.Platform.AI.MLService
 
             try
             {
+                IMLModel model;
                 _registryLock.EnterReadLock();
-                if (!_modelRegistry.TryGetValue(modelId, out var model))
+                try
                 {
-                    _logger.LogWarning("Model {ModelId} not found for batch prediction", modelId);
-                    return new List<PredictionResult>();
+                    if (!_modelRegistry.TryGetValue(modelId, out model))
+                    {
+                        _logger.LogWarning("Model {ModelId} not found for batch prediction", modelId);
+                        return new List<PredictionResult>();
+                    }
+                }
+                finally
+                {
+                    _registryLock.ExitReadLock();
                 }
 
                 var sw = Stopwatch.StartNew();
@@ -176,10 +213,6 @@ namespace HELIOS.Platform.AI.MLService
             {
                 _logger.LogError(ex, "Error in batch prediction with model {ModelId}", modelId);
                 return new List<PredictionResult>();
-            }
-            finally
-            {
-                _registryLock.ExitReadLock();
             }
         }
 
@@ -225,20 +258,29 @@ namespace HELIOS.Platform.AI.MLService
 
             try
             {
+                IMLModel model;
                 _registryLock.EnterReadLock();
-                if (!_modelRegistry.TryGetValue(modelId, out var model))
+                try
                 {
-                    _logger.LogWarning("Model {ModelId} not found", modelId);
-                    return new ModelMetrics();
+                    if (!_modelRegistry.TryGetValue(modelId, out model))
+                    {
+                        _logger.LogWarning("Model {ModelId} not found", modelId);
+                        return new ModelMetrics();
+                    }
+                }
+                finally
+                {
+                    _registryLock.ExitReadLock();
                 }
 
                 var metrics = await model.GetMetricsAsync();
                 _metricsCache.AddOrUpdate(cacheKey, metrics, (k, v) => metrics);
                 return metrics;
             }
-            finally
+            catch (Exception ex)
             {
-                _registryLock.ExitReadLock();
+                _logger.LogError(ex, "Error getting metrics for model {ModelId}", modelId);
+                return new ModelMetrics();
             }
         }
 

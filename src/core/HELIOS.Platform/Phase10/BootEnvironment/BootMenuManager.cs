@@ -400,11 +400,18 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
 
                 var content = await File.ReadAllTextAsync(bootConfigPath);
                 var config = new BootConfiguration { MenuEntries = new List<BootMenuEntry>() };
+                var menuEntries = new Dictionary<int, BootMenuEntry>();
 
                 // Parse configuration
                 var lines = content.Split('\n');
-                foreach (var line in lines)
+                foreach (var rawLine in lines)
                 {
+                    var line = rawLine.Trim();
+                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith("[", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
                     if (line.StartsWith("DefaultBootOption="))
                     {
                         config.DefaultBootOption = int.Parse(line.Split('=')[1]);
@@ -417,6 +424,69 @@ namespace HELIOS.Platform.Phase10.BootEnvironment
                     {
                         config.EnableGraphicalMenu = bool.Parse(line.Split('=')[1]);
                     }
+                    else if (line.StartsWith("EnableNetworkBoot="))
+                    {
+                        config.EnableNetworkBoot = bool.Parse(line.Split('=')[1]);
+                    }
+                    else if (line.StartsWith("Entry", StringComparison.Ordinal))
+                    {
+                        var separatorIndex = line.IndexOf('=');
+                        if (separatorIndex <= 0 || separatorIndex == line.Length - 1)
+                        {
+                            continue;
+                        }
+
+                        var key = line[..separatorIndex];
+                        var value = line[(separatorIndex + 1)..];
+
+                        var numericStart = "Entry".Length;
+                        var numericEnd = numericStart;
+                        while (numericEnd < key.Length && char.IsDigit(key[numericEnd]))
+                        {
+                            numericEnd++;
+                        }
+
+                        if (numericEnd == numericStart ||
+                            !int.TryParse(key.Substring(numericStart, numericEnd - numericStart), out var entryIndex))
+                        {
+                            continue;
+                        }
+
+                        var fieldName = key[numericEnd..];
+                        if (!menuEntries.TryGetValue(entryIndex, out var entry))
+                        {
+                            entry = new BootMenuEntry { OrderIndex = entryIndex };
+                            menuEntries[entryIndex] = entry;
+                        }
+
+                        switch (fieldName)
+                        {
+                            case "DisplayName":
+                                entry.DisplayName = value;
+                                break;
+                            case "LoaderPath":
+                                entry.LoaderPath = value;
+                                break;
+                            case "Description":
+                                entry.Description = value;
+                                break;
+                            case "IsDefault":
+                                entry.IsDefault = bool.TryParse(value, out var isDefault) && isDefault;
+                                break;
+                        }
+                    }
+                }
+
+                config.MenuEntries = menuEntries
+                    .OrderBy(kvp => kvp.Key)
+                    .Select(kvp => kvp.Value)
+                    .ToList();
+
+                if (!config.MenuEntries.Any(entry => entry.IsDefault) &&
+                    config.DefaultBootOption >= 0 &&
+                    config.DefaultBootOption < config.MenuEntries.Count)
+                {
+                    config.MenuEntries[config.DefaultBootOption].IsDefault = true;
                 }
 
                 return config;

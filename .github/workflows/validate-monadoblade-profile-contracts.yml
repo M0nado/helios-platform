@@ -4,25 +4,55 @@ on:
   pull_request:
     paths:
       - 'config/profiles/monadoblade-profiles.v1.json'
+      - 'config/profiles/monadoblade-profiles.v2.json'
+      - 'config/profiles/monadoblade-profiles.migration.v1-to-v2.json'
+      - 'config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json'
+      - 'src/core/HELIOS.Platform.Contracts/MonadobladeProfileContracts.cs'
       - 'config/storage/monadoblade-*.json'
       - 'config/software/monadoblade-profile-software.v1.json'
       - 'config/gui/monado-profile-shell.v1.json'
+      - 'config/gui/monado-profile-shell.v2.json'
       - 'config/aihub/profile-optimization-policies.v1.json'
+      - 'config/aihub/alvis-capabilities.v1.json'
       - 'config/automation/monadoblade-14-script-manifest.v1.json'
       - 'config/runtime/helios-fabric-services.v1.json'
+      - 'config/runtime/helios-fabric-services.v2.json'
+      - 'config/integrations/monadoblade-collaboration-projection.v1.json'
+      - 'config/integrations/event-contract.schema.json'
+      - 'config/usb/monadoblade-usb-wizard.v1.json'
+      - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
+      - 'docs/WIKI/README.md'
+      - 'docs/WIKI/INDEX.md'
       - 'docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md'
+      - 'scripts/utilities/wiki/generate-wiki.ps1'
       - '.github/workflows/validate-monadoblade-profile-contracts.yml'
   push:
     branches:
       - main
     paths:
       - 'config/profiles/monadoblade-profiles.v1.json'
+      - 'config/profiles/monadoblade-profiles.v2.json'
+      - 'config/profiles/monadoblade-profiles.migration.v1-to-v2.json'
+      - 'config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json'
+      - 'src/core/HELIOS.Platform.Contracts/MonadobladeProfileContracts.cs'
       - 'config/storage/monadoblade-*.json'
       - 'config/software/monadoblade-profile-software.v1.json'
       - 'config/gui/monado-profile-shell.v1.json'
+      - 'config/gui/monado-profile-shell.v2.json'
       - 'config/aihub/profile-optimization-policies.v1.json'
+      - 'config/aihub/alvis-capabilities.v1.json'
       - 'config/automation/monadoblade-14-script-manifest.v1.json'
       - 'config/runtime/helios-fabric-services.v1.json'
+      - 'config/runtime/helios-fabric-services.v2.json'
+      - 'config/integrations/monadoblade-collaboration-projection.v1.json'
+      - 'config/integrations/event-contract.schema.json'
+      - 'config/usb/monadoblade-usb-wizard.v1.json'
+      - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
+      - 'docs/WIKI/README.md'
+      - 'docs/WIKI/INDEX.md'
+      - 'docs/architecture/MONADOBLADE_PROFILE_STORAGE_GUI_SYSTEM.md'
+      - 'scripts/utilities/wiki/generate-wiki.ps1'
+      - '.github/workflows/validate-monadoblade-profile-contracts.yml'
   workflow_dispatch:
 
 permissions:
@@ -50,13 +80,22 @@ jobs:
 
           paths = [
               Path('config/profiles/monadoblade-profiles.v1.json'),
+              Path('config/profiles/monadoblade-profiles.v2.json'),
+              Path('config/profiles/monadoblade-profiles.migration.v1-to-v2.json'),
+              Path('config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json'),
               Path('config/storage/monadoblade-partitions.2x2tb.v1.json'),
               Path('config/storage/monadoblade-folder-hierarchy.v1.json'),
               Path('config/software/monadoblade-profile-software.v1.json'),
               Path('config/gui/monado-profile-shell.v1.json'),
+              Path('config/gui/monado-profile-shell.v2.json'),
               Path('config/aihub/profile-optimization-policies.v1.json'),
+              Path('config/aihub/alvis-capabilities.v1.json'),
               Path('config/automation/monadoblade-14-script-manifest.v1.json'),
               Path('config/runtime/helios-fabric-services.v1.json'),
+              Path('config/runtime/helios-fabric-services.v2.json'),
+              Path('config/integrations/monadoblade-collaboration-projection.v1.json'),
+              Path('config/integrations/event-contract.schema.json'),
+              Path('config/usb/monadoblade-usb-wizard.v1.json'),
           ]
           for path in paths:
               if not path.exists():
@@ -92,6 +131,478 @@ jobs:
           if activation.get('minimumFactors', 0) < 2:
               raise SystemExit('SysAdmin requires at least two local factors')
           print('profile invariants passed')
+          PY
+
+      - name: Enforce six-profile delivery-fabric invariants
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          six = json.loads(Path('config/profiles/monadoblade-profiles.v2.json').read_text(encoding='utf-8'))
+          profiles = six['profiles']
+          ids = [p['id'] for p in profiles]
+          expected = ['core', 'developer', 'studio', 'gamer', 'ai-server', 'sysadmin-offline']
+          if ids != expected:
+              raise SystemExit(f'v2 profile sequence mismatch: {ids}')
+          if six.get('defaultProfile') != 'core':
+              raise SystemExit('v2 default profile must be core')
+
+          by_id = {p['id']: p for p in profiles}
+          for profile_id, kanji in {
+              'core': '核',
+              'developer': '創',
+              'studio': '響',
+              'gamer': '迅',
+              'ai-server': '智',
+              'sysadmin-offline': '統',
+          }.items():
+              if by_id[profile_id].get('kanji') != kanji:
+                  raise SystemExit(f'v2 kanji mismatch for {profile_id}')
+
+          admin = by_id['sysadmin-offline']
+          activation = admin.get('activation', {})
+          required = ['physicalPresenceRequired', 'remoteActivationDenied', 'cloudActivationDenied', 'aiActivationDenied', 'offlineOnly']
+          if not all(activation.get(key) is True for key in required):
+              raise SystemExit('sysadmin-offline activation boundary incomplete')
+          if activation.get('minimumFactors', 0) < 2:
+              raise SystemExit('sysadmin-offline requires at least two local factors')
+
+          ai_server_bundles = set(by_id['ai-server'].get('softwareBundles', []))
+          required_ai_server_bundles = {
+              'common-core',
+              'sysops-security',
+              'sysops-observability',
+              'sysops-cloud',
+              'sysops-performance',
+              'server-runtime',
+              'server-containers',
+              'server-observability',
+              'server-security',
+              'server-ai-workers',
+          }
+          missing_bundles = sorted(required_ai_server_bundles - ai_server_bundles)
+          if missing_bundles:
+              raise SystemExit(f'AI/Server software bundle set is incomplete: {missing_bundles}')
+          ai_server_roots = set(by_id['ai-server'].get('roots', []))
+          required_ai_server_roots = {
+              'server',
+              'models-service',
+              'telemetry',
+              'backups-service',
+              'server-ops',
+              'dev-read',
+              'common',
+              'crosspartition',
+              'quarantine-read',
+          }
+          missing_roots = sorted(required_ai_server_roots - ai_server_roots)
+          if missing_roots:
+              raise SystemExit(f'AI/Server roots must retain SysOps and ServerBackground access: {missing_roots}')
+          for profile_id in expected:
+              resource_policy = by_id[profile_id].get('resourcePolicy')
+              if not isinstance(resource_policy, dict):
+                  raise SystemExit(f'{profile_id} must define a resourcePolicy object in v2')
+          expected_ai_server_resource_policy = {
+              'cpuMode': 'observability-responsive',
+              'gpuMode': 'worker-scheduled',
+              'memoryReserveGb': 10,
+              'containerBudgetGb': 48,
+              'vmBudgetGb': 48,
+              'modelBudgetGb': 32,
+              'backgroundPriority': 'service-controlled',
+          }
+          if by_id['ai-server'].get('resourcePolicy') != expected_ai_server_resource_policy:
+              raise SystemExit('AI/Server v2 resourcePolicy must match deterministic merged budgets')
+
+          migration = json.loads(Path('config/profiles/monadoblade-profiles.migration.v1-to-v2.json').read_text(encoding='utf-8'))
+          map_v1_to_v2 = migration['mapV1ToV2']
+          required_mappings = {
+              'developer': 'developer',
+              'sysadmin': 'sysadmin-offline',
+              'sysops': 'ai-server',
+              'gamer': 'gamer',
+              'studio': 'studio',
+              'personal': 'core',
+              'server-background': 'ai-server',
+          }
+          if map_v1_to_v2 != required_mappings:
+              raise SystemExit(f'Unexpected v1->v2 mapping: {map_v1_to_v2}')
+
+          legacy_surfaces = migration.get('legacySurfaceContracts', {})
+          required_legacy_surfaces = {
+              'software': 'config/software/monadoblade-profile-software.v1.json',
+              'aihubPolicy': 'config/aihub/profile-optimization-policies.v1.json',
+              'storagePartitions': 'config/storage/monadoblade-partitions.2x2tb.v1.json',
+              'storageHierarchy': 'config/storage/monadoblade-folder-hierarchy.v1.json',
+              'shellV1': 'config/gui/monado-profile-shell.v1.json',
+          }
+          if legacy_surfaces != required_legacy_surfaces:
+              raise SystemExit(f'Unexpected legacy surface contract map: {legacy_surfaces}')
+          for path in legacy_surfaces.values():
+              if not Path(path).exists():
+                  raise SystemExit(f'Missing legacy surface contract: {path}')
+
+          surface_mappings = migration.get('surfaceMappings', {})
+          required_surface_keys = {'softwareScopes', 'aihubPolicies', 'guiThemes', 'storageWorkspaces', 'resourcePolicies'}
+          if set(surface_mappings.keys()) != required_surface_keys:
+              raise SystemExit(f'Unexpected migration surface keys: {set(surface_mappings.keys())}')
+          expected_set = set(expected)
+          for key in required_surface_keys:
+              profile_map = surface_mappings.get(key)
+              if not isinstance(profile_map, dict):
+                  raise SystemExit(f'{key} must be a profile-to-legacy mapping object')
+              if set(profile_map.keys()) != expected_set:
+                  raise SystemExit(f'{key} must map every v2 profile: {set(profile_map.keys())}')
+          if surface_mappings['softwareScopes']['core'] != ['personal']:
+              raise SystemExit('core software scope migration must map from personal')
+          if surface_mappings['softwareScopes']['ai-server'] != ['sysops', 'server-background']:
+              raise SystemExit('ai-server software scope migration must include sysops and server-background')
+          if surface_mappings['softwareScopes']['sysadmin-offline'] != ['sysadmin']:
+              raise SystemExit('sysadmin-offline software scope migration must map from sysadmin')
+          if surface_mappings['resourcePolicies']['ai-server'] != ['sysops', 'server-background']:
+              raise SystemExit('ai-server resource policy migration must include sysops and server-background')
+
+          resolution = migration.get('deterministicResolution', {})
+          ai_server_aihub = resolution.get('aihubPolicies', {}).get('ai-server', {})
+          if ai_server_aihub.get('strategy') != 'field-level-union':
+              raise SystemExit('AI/Server aihubPolicies resolution must use field-level-union')
+          if ai_server_aihub.get('sources') != ['sysops', 'server-background']:
+              raise SystemExit('AI/Server aihubPolicies must merge sysops and server-background')
+          if ai_server_aihub.get('unionFields') != ['primaryObjectives', 'learningSignals', 'automaticActions', 'approvalActions']:
+              raise SystemExit('AI/Server aihubPolicies union fields are not deterministic')
+          if ai_server_aihub.get('precedenceForConflictScalars') != ['sysops', 'server-background']:
+              raise SystemExit('AI/Server aihubPolicies precedence must remain deterministic')
+          if ai_server_aihub.get('requireApprovalActions') != ['service-restart', 'rollback', 'external-message', 'data-removal']:
+              raise SystemExit('AI/Server aihubPolicies must preserve both SysOps and ServerBackground approval gates')
+          ai_server_gui = resolution.get('guiThemes', {}).get('ai-server', {})
+          if ai_server_gui.get('strategy') != 'precedence-merge':
+              raise SystemExit('AI/Server guiThemes resolution must use precedence-merge')
+          if ai_server_gui.get('primarySource') != 'sysops':
+              raise SystemExit('AI/Server guiThemes primary source must be sysops')
+          if ai_server_gui.get('secondarySource') != 'server-background':
+              raise SystemExit('AI/Server guiThemes secondary source must be server-background')
+          if ai_server_gui.get('scalarFieldsFromPrimary') != ['backgroundVariant', 'panelStyle', 'density']:
+              raise SystemExit('AI/Server guiThemes scalar precedence is not deterministic')
+
+          ai_server_workspace = resolution.get('storageWorkspaces', {}).get('ai-server', {})
+          if ai_server_workspace.get('strategy') != 'multi-source-merge':
+              raise SystemExit('AI/Server storage workspace resolution must use multi-source-merge')
+          if ai_server_workspace.get('sources') != ['SysOps', 'ServerBackground']:
+              raise SystemExit('AI/Server storage workspace sources must retain SysOps and ServerBackground')
+          if ai_server_workspace.get('mergeMode') != 'union':
+              raise SystemExit('AI/Server storage workspace merge mode must be union')
+          if ai_server_workspace.get('primaryWorkspace') != 'SysOps':
+              raise SystemExit('AI/Server storage workspace primary workspace must remain SysOps')
+          if ai_server_workspace.get('preserveLegacyWorkspace') != 'ServerBackground':
+              raise SystemExit('AI/Server storage workspace must preserve ServerBackground lineage')
+
+          sysadmin_workspace = resolution.get('storageWorkspaces', {}).get('sysadmin-offline', {})
+          if sysadmin_workspace.get('source') != 'SysAdmin':
+              raise SystemExit('sysadmin-offline storage workspace source must be SysAdmin')
+          if sysadmin_workspace.get('requiresManagedRootPath') != '04_ProfileWorkspaces/SysAdmin':
+              raise SystemExit('sysadmin-offline storage workspace path requirement is missing')
+          ai_server_resource_resolution = resolution.get('resourcePolicies', {}).get('ai-server', {})
+          if ai_server_resource_resolution.get('strategy') != 'field-level-merge':
+              raise SystemExit('AI/Server resource policy resolution must use field-level-merge')
+          if ai_server_resource_resolution.get('sources') != ['sysops', 'server-background']:
+              raise SystemExit('AI/Server resource policy sources must include sysops and server-background')
+          if ai_server_resource_resolution.get('scalarPrecedence') != {
+              'cpuMode': 'sysops',
+              'gpuMode': 'server-background',
+              'backgroundPriority': 'server-background',
+          }:
+              raise SystemExit('AI/Server resource policy scalar precedence is not deterministic')
+          if ai_server_resource_resolution.get('numericMerge') != {
+              'memoryReserveGb': 'max',
+              'containerBudgetGb': 'max',
+              'vmBudgetGb': 'max',
+              'modelBudgetGb': 'max',
+          }:
+              raise SystemExit('AI/Server resource policy numeric merge rules are incomplete')
+          if ai_server_resource_resolution.get('materializedPolicy') != expected_ai_server_resource_policy:
+              raise SystemExit('AI/Server resource policy materialized result must match the v2 contract')
+
+          hierarchy = json.loads(Path('config/storage/monadoblade-folder-hierarchy.v1.json').read_text(encoding='utf-8'))
+          dev_roots = hierarchy['managedRoots']['MONADO_DEV']
+          secure_roots = hierarchy['managedRoots']['MONADO_SECURE']
+          if '04_ProfileWorkspaces/SysAdmin' not in dev_roots:
+              raise SystemExit('MONADO_DEV must include 04_ProfileWorkspaces/SysAdmin')
+          if '02_ProfileData/SysAdmin' not in secure_roots:
+              raise SystemExit('MONADO_SECURE must include 02_ProfileData/SysAdmin')
+
+          shell = json.loads(Path('config/gui/monado-profile-shell.v2.json').read_text(encoding='utf-8'))
+          if shell.get('inheritsFrom') != 'config/gui/monado-profile-shell.v1.json':
+              raise SystemExit('Shell v2 must declare inheritance from shell v1')
+          if not Path(shell['inheritsFrom']).exists():
+              raise SystemExit(f'Shell v2 inheritance contract is missing: {shell["inheritsFrom"]}')
+          inheritance = shell.get('inheritance', {})
+          if inheritance.get('mode') != 'overlay-readiness-and-wheel':
+              raise SystemExit('Shell v2 inheritance mode must be overlay-readiness-and-wheel')
+          if inheritance.get('preserveSections') != ['rendering', 'scene', 'blade', 'quickSwitch', 'profileThemes', 'accessibility']:
+              raise SystemExit('Shell v2 must preserve rendering, scene, blade, quickSwitch, profileThemes, and accessibility sections from v1')
+          chain = shell.get('postAuthStateMachine', [])
+          if chain != ['safe-boot', 'identity-verified', 'wheel-ready', 'profile-selected', 'readiness-check', 'shell-ready']:
+              raise SystemExit(f'Unexpected shell post-auth chain: {chain}')
+          if shell['securityBoundary'].get('runsAfterWindowsAuthentication') is not True:
+              raise SystemExit('Shell v2 must be post-auth only')
+          guard_requirements = [
+              'identityVerifiedRequiredBeforeWheel',
+              'sysadminRequiresLocalOfflineAuthorization',
+              'profilePolicyValidatedBeforeShellReady',
+              'managedVolumesOnlineBeforeShellReady',
+              'requiredServicesHealthyBeforeShellReady',
+              'firewallPolicyLoadedBeforeShellReady',
+              'safeNeutralOnGuardFailure',
+          ]
+          if not all(shell.get('stateGuards', {}).get(key) is True for key in guard_requirements):
+              raise SystemExit('Shell v2 readiness guard requirements are incomplete')
+          if shell.get('stateGuards', {}).get('readinessFailureState') != 'safe-neutral':
+              raise SystemExit('Shell v2 readiness failures must route to safe-neutral')
+          if shell.get('readinessChecks') != [
+              'profile-policy-valid',
+              'required-volumes-online',
+              'required-services-healthy',
+              'firewall-policy-loaded',
+          ]:
+              raise SystemExit(f'Unexpected shell v2 readiness checks: {shell.get("readinessChecks")}')
+
+          runtime = json.loads(Path('config/runtime/helios-fabric-services.v2.json').read_text(encoding='utf-8'))
+          if runtime.get('inheritsFrom') != 'config/runtime/helios-fabric-services.v1.json':
+              raise SystemExit('Runtime v2 must declare v1 inheritance for continuity')
+          if not Path(runtime['inheritsFrom']).exists():
+              raise SystemExit(f'Runtime v2 inheritance contract is missing: {runtime["inheritsFrom"]}')
+          if runtime.get('fabricId') != 'helios-fabric':
+              raise SystemExit('Runtime v2 fabricId must stay aligned with inherited helios-fabric identity')
+          if runtime.get('defaultTransport') != 'local-grpc':
+              raise SystemExit('Runtime v2 default transport must remain local-grpc')
+          if not runtime.get('services'):
+              raise SystemExit('Runtime v2 must retain a non-empty service graph')
+          required_message_requirements = [
+              'typedContracts',
+              'correlationId',
+              'causationId',
+              'idempotencyKey',
+              'profileId',
+              'securityClassification',
+              'schemaVersion',
+              'createdAtUtc',
+              'evidenceReference',
+              'secretValuesDenied',
+          ]
+          message_requirements = runtime.get('messageRequirements', {})
+          if not all(message_requirements.get(key) is True for key in required_message_requirements):
+              raise SystemExit('Runtime v2 message requirements are incomplete')
+          required_auth_requirements = [
+              'denyByDefault',
+              'managedIdentityInAzure',
+              'localServiceIdentityOnWindows',
+              'perToolPolicy',
+              'perProfilePolicy',
+              'externalWritesNeedApproval',
+              'productionNeedsProtectedEnvironment',
+              'sysAdminNeedsPhysicalTwoFactor',
+          ]
+          auth = runtime.get('authorization', {})
+          if not all(auth.get(key) is True for key in required_auth_requirements):
+              raise SystemExit('Runtime v2 authorization requirements are incomplete')
+          expected_profile_contracts = {
+              'active': 'config/profiles/monadoblade-profiles.v2.json',
+              'legacyInput': 'config/profiles/monadoblade-profiles.v1.json',
+              'migration': 'config/profiles/monadoblade-profiles.migration.v1-to-v2.json',
+              'typedAdapter': 'config/profiles/monadoblade-profiles.typed-adapter.v2-to-v1.json',
+          }
+          if runtime.get('profileContracts') != expected_profile_contracts:
+              raise SystemExit(f'Unexpected runtime profile contract links: {runtime.get("profileContracts")}')
+          typed_adapter_path = Path(expected_profile_contracts['typedAdapter'])
+          if not typed_adapter_path.exists():
+              raise SystemExit(f'Missing v2 typed adapter contract: {typed_adapter_path}')
+          typed_adapter = json.loads(typed_adapter_path.read_text(encoding='utf-8'))
+          if typed_adapter.get('sourceCatalog') != expected_profile_contracts['active']:
+              raise SystemExit('Typed adapter source catalog must match the active v2 profile catalog')
+          if typed_adapter.get('targetTypedModelMode') != 'legacy-seven-profile-enum':
+              raise SystemExit('Typed adapter must target the legacy seven-profile typed model mode')
+          expected_projection_pairs = {
+              ('core', 'personal'),
+              ('developer', 'developer'),
+              ('studio', 'studio'),
+              ('gamer', 'gamer'),
+              ('ai-server', 'sysops'),
+              ('ai-server', 'server-background'),
+              ('sysadmin-offline', 'sysadmin'),
+          }
+          projection_rules = typed_adapter.get('projectionRules', [])
+          if len(projection_rules) != len(expected_projection_pairs):
+              raise SystemExit(f'Typed adapter projectionRules must contain exactly {len(expected_projection_pairs)} deterministic rules; found {len(projection_rules)}')
+          projection_pairs = {(rule.get('sourceProfile'), rule.get('targetTypedProfile')) for rule in projection_rules}
+          if len(projection_pairs) != len(projection_rules):
+              raise SystemExit('Typed adapter projectionRules contains duplicate source/target mappings')
+          if projection_pairs != expected_projection_pairs:
+              raise SystemExit(f'Typed adapter projection map mismatch: {projection_pairs}')
+          required_adapter_fields = ['glyph', 'soundCue', 'background', 'aihubMode', 'dashboardWidgets']
+          for rule in projection_rules:
+              source_profile = rule.get('sourceProfile')
+              target_profile = rule.get('targetTypedProfile')
+              for field in required_adapter_fields:
+                  if field not in rule:
+                      raise SystemExit(f'Typed adapter rule {source_profile}->{target_profile} is missing {field}')
+              if not isinstance(rule['dashboardWidgets'], list) or not rule['dashboardWidgets']:
+                  raise SystemExit(f'Typed adapter rule {source_profile}->{target_profile} must define dashboardWidgets as a non-empty list')
+          typed_contract_path = Path(typed_adapter.get('targetTypedContract', ''))
+          if not typed_contract_path.exists():
+              raise SystemExit(f'Typed adapter target contract path is missing: {typed_contract_path}')
+          typed_contract_source = typed_contract_path.read_text(encoding='utf-8')
+          if 'OfflineOnly' not in typed_contract_source:
+              raise SystemExit('Typed profile activation contract must expose OfflineOnly to preserve sysadmin-offline boundaries')
+          sysadmin_rule = next(
+              (
+                  rule
+                  for rule in projection_rules
+                  if rule.get('sourceProfile') == 'sysadmin-offline' and rule.get('targetTypedProfile') == 'sysadmin'
+              ),
+              None,
+          )
+          if sysadmin_rule is None:
+              raise SystemExit('Typed adapter must include a sysadmin-offline -> sysadmin projection rule')
+          expected_sysadmin_activation_overrides = {
+              'physicalPresenceRequired': True,
+              'minimumFactors': 2,
+              'remoteActivationDenied': True,
+              'cloudActivationDenied': True,
+              'aiActivationDenied': True,
+              'offlineOnly': True,
+          }
+          if sysadmin_rule.get('activationPolicyOverrides') != expected_sysadmin_activation_overrides:
+              raise SystemExit('Sysadmin typed adapter projection must preserve offline-only activation boundaries')
+          server_background_rule = next(
+              (
+                  rule
+                  for rule in projection_rules
+                  if rule.get('sourceProfile') == 'ai-server' and rule.get('targetTypedProfile') == 'server-background'
+              ),
+              None,
+          )
+          if server_background_rule is None:
+              raise SystemExit('Typed adapter must include an ai-server -> server-background projection rule')
+          expected_server_background_overrides = {
+              'windowsRole': 'service-identities',
+              'interactive': False,
+          }
+          if server_background_rule.get('targetScalarOverrides') != expected_server_background_overrides:
+              raise SystemExit('Server-background typed adapter projection must force non-interactive service identity scalars')
+          ai_server_profile = by_id['ai-server']
+          if ai_server_profile.get('interactive') is not True:
+              raise SystemExit('AI/Server source profile must remain interactive in the six-profile catalog')
+          if ai_server_profile.get('windowsRole') != 'bounded-service-and-operator':
+              raise SystemExit('AI/Server source profile windowsRole drifted from bounded-service-and-operator')
+          adapter_invariants = typed_adapter.get('safetyInvariants', {})
+          expected_adapter_invariants = [
+              'allLegacyTypedProfilesProjected',
+              'requiresDeterministicOneToOneRulePerTarget',
+              'forbidRemoteActivationForSysadminTarget',
+              'preserveOfflineOnlyForSysadminTarget',
+              'preserveServerBackgroundNonInteractiveTarget',
+              'denySecretValueProjection',
+          ]
+          if not all(adapter_invariants.get(key) is True for key in expected_adapter_invariants):
+              raise SystemExit('Typed adapter safety invariants are incomplete')
+          surface_contracts = runtime.get('surfaceContracts', {})
+          for key in ('shell', 'usbWizard', 'alvisCapabilities', 'integrationProjection'):
+              path = surface_contracts.get(key)
+              if not path:
+                  raise SystemExit(f'Runtime surface contract missing key: {key}')
+              if not Path(path).exists():
+                  raise SystemExit(f'Runtime surface contract path missing: {path}')
+
+          usb = json.loads(Path('config/usb/monadoblade-usb-wizard.v1.json').read_text(encoding='utf-8'))
+          if usb.get('defaultMode') != 'dry-run':
+              raise SystemExit('USB wizard must default to dry-run')
+          if usb['routes'].get('inventory') != 'read-only':
+              raise SystemExit('USB wizard inventory route must be read-only')
+          if usb['routes'].get('apply') != 'approval-gated-storage-guardrails':
+              raise SystemExit('USB wizard apply route must enforce storage guardrails')
+          apply = usb.get('applyRequirements', {})
+          if apply.get('storageContract') != 'config/storage/monadoblade-partitions.2x2tb.v1.json':
+              raise SystemExit('USB wizard apply must bind to the storage layout contract')
+          for key in (
+              'requireWhatIf',
+              'requirePhysicalAuthorization',
+              'requireBackupEvidenceBeforeApply',
+              'requireBitLockerRecoveryEvidence',
+              'requireRollbackNotes',
+              'requireExactDiskIdentity',
+          ):
+              if apply.get(key) is not True:
+                  raise SystemExit(f'USB wizard apply requirement missing: {key}')
+          if apply.get('requiredConfirmationPhrase') != 'APPLY MONADOBLADE STORAGE LAYOUT':
+              raise SystemExit('USB wizard apply confirmation phrase must match storage guardrails')
+          if usb['boundaries'].get('recoveryWorkflowProfile') != 'sysadmin-offline':
+              raise SystemExit('Recovery workflow must remain sysadmin-offline')
+          if usb['boundaries'].get('quarantineWorkflowProfile') != 'sysadmin-offline':
+              raise SystemExit('Quarantine workflow must remain sysadmin-offline')
+
+          alvis = json.loads(Path('config/aihub/alvis-capabilities.v1.json').read_text(encoding='utf-8'))
+          if alvis['capabilities'].get('search') != ['search_*', 'fetch_*']:
+              raise SystemExit('ALVIS search/fetch capabilities must remain read-only verbs')
+          if alvis['capabilities'].get('plan') != ['plan_*']:
+              raise SystemExit('ALVIS plan capability must remain plan-only')
+          if alvis['capabilities'].get('request') != ['request_*']:
+              raise SystemExit('ALVIS request capability must remain approval-pending')
+          if alvis.get('directExecutorToolsDenied') is not True:
+              raise SystemExit('ALVIS direct executor tools must be denied')
+
+          projection = json.loads(Path('config/integrations/monadoblade-collaboration-projection.v1.json').read_text(encoding='utf-8'))
+          if projection.get('sourceOfTruth') != 'github':
+              raise SystemExit('Integration projection source of truth must be GitHub')
+          if projection.get('eventContractSchema') != 'config/integrations/event-contract.schema.json':
+              raise SystemExit('Integration projection must pin the normalized event-contract schema')
+          schema_path = Path(projection['eventContractSchema'])
+          if not schema_path.exists():
+              raise SystemExit(f'Referenced integration event schema is missing: {schema_path}')
+          schema = json.loads(schema_path.read_text(encoding='utf-8'))
+          schema_properties = schema.get('properties', {})
+          schema_required = schema.get('required', [])
+          projection_required = projection.get('requiredEnvelopeFields', [])
+          if not isinstance(projection_required, list) or not projection_required:
+              raise SystemExit('Integration projection requiredEnvelopeFields must be a non-empty list')
+          if len(projection_required) != len(set(projection_required)):
+              raise SystemExit('Integration projection requiredEnvelopeFields cannot contain duplicates')
+          missing_schema_required = sorted(set(schema_required) - set(projection_required))
+          if missing_schema_required:
+              raise SystemExit(f'Projection is missing schema-required envelope fields: {missing_schema_required}')
+          unknown_projection_fields = sorted(set(projection_required) - set(schema_properties))
+          if unknown_projection_fields:
+              raise SystemExit(f'Projection requires fields not defined by schema: {unknown_projection_fields}')
+          if projection.get('requireSchemaValidationBeforeProjection') is not True:
+              raise SystemExit('Integration projection must require schema validation before projection')
+          payload_projection_policy = projection.get('payloadProjectionPolicy', {})
+          if payload_projection_policy.get('mode') != 'sanitized-link-only':
+              raise SystemExit('Projection payload policy must enforce sanitized-link-only mode')
+          if payload_projection_policy.get('allowRawPayloadForwarding') is not False:
+              raise SystemExit('Projection payload policy must deny raw payload forwarding')
+          if payload_projection_policy.get('denySecretValues') is not True:
+              raise SystemExit('Projection payload policy must deny secret values')
+          if payload_projection_policy.get('redactUnknownFields') is not True:
+              raise SystemExit('Projection payload policy must redact unknown fields')
+          if payload_projection_policy.get('maxPayloadBytes') != 8192:
+              raise SystemExit('Projection payload policy must cap payload size at 8192 bytes')
+          expected_allowed_payload_fields = ['summary', 'evidenceReference', 'artifactUri', 'artifactDigest', 'status', 'changeScope']
+          if payload_projection_policy.get('allowedFields') != expected_allowed_payload_fields:
+              raise SystemExit('Projection payload policy allowed fields are not deterministic')
+          expected_classification_routing = {
+              'public': ['linear', 'slack', 'teams', 'sharepoint', 'azure-devops'],
+              'internal': ['linear', 'teams', 'sharepoint', 'azure-devops'],
+              'confidential': ['sharepoint', 'azure-devops'],
+              'restricted': ['sharepoint'],
+          }
+          if projection.get('classificationRouting') != expected_classification_routing:
+              raise SystemExit('Projection classification routing must enforce confidential/restricted target boundaries')
+          if projection.get('requireClassificationRoutingEnforcement') is not True:
+              raise SystemExit('Projection must require classification routing enforcement')
+          if projection.get('allowExecutionFromProjectedSystems') is not False:
+              raise SystemExit('Projected systems cannot trigger execution')
+          print('six-profile delivery-fabric invariants passed')
           PY
 
       - name: Enforce storage guardrails

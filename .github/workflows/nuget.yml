@@ -46,8 +46,13 @@ jobs:
       - name: Build solution
         run: dotnet build src/core/HELIOS.Platform/HELIOS.Platform.csproj -c Release --no-restore -v minimal
 
-      - name: Run tests
+      - name: Run Windows profile tests
+        if: runner.os == 'Windows'
         run: dotnet test src/tests/HELIOS.Platform.Tests.csproj -c Release --logger "trx;LogFileName=test-results.trx" --verbosity minimal
+
+      - name: Run portable tests
+        if: runner.os != 'Windows'
+        run: dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj -c Release --logger "trx;LogFileName=test-results.trx" --verbosity minimal
 
       - name: Upload test results
         if: always()

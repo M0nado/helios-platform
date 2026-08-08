@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.2.0",
+  "projectionId": "monadoblade-collaboration-evidence",
+  "sourceOfTruth": "github",
+  "eventContractSchema": "config/integrations/event-contract.schema.json",
+  "requiredEnvelopeFields": [
+    "schemaVersion",
+    "eventId",
+    "source",
+    "eventType",
+    "repository",
+    "correlationId",
+    "environment",
+    "occurredAt",
+    "dataClassification",
+    "actor",
+    "links",
+    "payload"
+  ],
+  "requireSchemaValidationBeforeProjection": true,
+  "requireEvidenceLinks": true,
+  "requireCorrelationForTargetWrites": true,
+  "projectableRecords": ["approved-pr-link", "approved-evidence-link"],
+  "targets": ["linear", "slack", "teams", "sharepoint", "azure-devops"],
+  "payloadProjectionPolicy": {
+    "mode": "sanitized-link-only",
+    "allowRawPayloadForwarding": false,
+    "denySecretValues": true,
+    "redactUnknownFields": true,
+    "maxPayloadBytes": 8192,
+    "allowedFields": ["summary", "evidenceReference", "artifactUri", "artifactDigest", "status", "changeScope"]
+  },
+  "classificationRouting": {
+    "public": ["linear", "slack", "teams", "sharepoint", "azure-devops"],
+    "internal": ["linear", "teams", "sharepoint", "azure-devops"],
+    "confidential": ["sharepoint", "azure-devops"],
+    "restricted": ["sharepoint"]
+  },
+  "requireClassificationRoutingEnforcement": true,
+  "allowExecutionFromProjectedSystems": false,
+  "targetBehavior": {
+    "linear": "tracking-only",
+    "slack": "notification-only",
+    "teams": "notification-only",
+    "sharepoint": "governed-evidence-storage",
+    "azure-devops": "discovery-and-sync-only"
+  }
+}

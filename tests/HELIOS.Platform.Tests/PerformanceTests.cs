@@ -1,303 +1,99 @@
-using Xunit;
-using HELIOS.Platform;
-using HELIOS.Platform.Components;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using HELIOS.Platform.Core;
+using Xunit;
 
 namespace HELIOS.Platform.Tests
 {
     /// <summary>
-    /// Performance Tests - Benchmarking and resource monitoring
+    /// Performance tests for deployment execution and scaling helpers.
     /// </summary>
     public class PerformanceTests
     {
-        // ==================== DEPLOYMENT SPEED TESTS ====================
-
-        [Fact]
-        public async Task Perf_ProfessionalDeployment_CompletesUnder30Seconds()
+        [Theory]
+        [InlineData(DeploymentTier.Professional, 1000)]
+        [InlineData(DeploymentTier.Enterprise, 1000)]
+        [InlineData(DeploymentTier.Ultimate, 1000)]
+        public async Task Perf_DeploymentExecution_CompletesWithinBudget(DeploymentTier tier, int maxMilliseconds)
         {
             var deployment = new HeliosDeployment();
             var sw = Stopwatch.StartNew();
-            
-            var result = await deployment.DeployAsync(DeploymentTier.Professional);
-            
+
+            var result = await deployment.Execute(tier);
+
             sw.Stop();
             Assert.True(result.Success);
-            Assert.True(sw.ElapsedMilliseconds < 30000, $"Deployment took {sw.ElapsedMilliseconds}ms");
+            Assert.True(result.Phases.Count >= 6);
+            Assert.True(sw.ElapsedMilliseconds < maxMilliseconds, $"Execution took {sw.ElapsedMilliseconds}ms");
         }
 
         [Fact]
-        public async Task Perf_EnterpriseDeployment_CompletesUnder60Seconds()
+        public async Task Perf_ConcurrentDeploymentExecution_CompletesUnderLoad()
         {
-            var deployment = new HeliosDeployment();
+            const int concurrency = 24;
             var sw = Stopwatch.StartNew();
-            
-            var result = await deployment.DeployAsync(DeploymentTier.Enterprise);
-            
+
+            var tasks = Enumerable.Range(0, concurrency)
+                .Select(_ => new HeliosDeployment().Execute(DeploymentTier.Professional))
+                .ToArray();
+            var results = await Task.WhenAll(tasks);
+
             sw.Stop();
-            Assert.True(result.Success);
-            Assert.True(sw.ElapsedMilliseconds < 60000, $"Deployment took {sw.ElapsedMilliseconds}ms");
+            Assert.All(results, result => Assert.True(result.Success));
+            Assert.True(sw.ElapsedMilliseconds < 5000, $"Concurrent execution took {sw.ElapsedMilliseconds}ms");
         }
 
         [Fact]
-        public async Task Perf_UltimateDeployment_CompletesUnder90Seconds()
+        public async Task Perf_DeploymentExecution_HasReasonableMemoryGrowth()
         {
-            var deployment = new HeliosDeployment();
-            var sw = Stopwatch.StartNew();
-            
-            var result = await deployment.DeployAsync(DeploymentTier.Ultimate);
-            
-            sw.Stop();
-            Assert.True(result.Success);
-            Assert.True(sw.ElapsedMilliseconds < 90000, $"Deployment took {sw.ElapsedMilliseconds}ms");
-        }
+            var before = GC.GetTotalMemory(true);
 
-        // ==================== COMPONENT INITIALIZATION SPEED TESTS ====================
-
-        [Fact]
-        public async Task Perf_MonadoEngineInit_CompletesQuickly()
-        {
-            var engine = new MonadoEngine();
-            var sw = Stopwatch.StartNew();
-            
-            await engine.InitializeAsync();
-            
-            sw.Stop();
-            Assert.True(engine.IsHealthy);
-            Assert.True(sw.ElapsedMilliseconds < 1000);
-        }
-
-        [Fact]
-        public async Task Perf_SecuritySystemInit_CompletesQuickly()
-        {
-            var security = new SecuritySystem();
-            var sw = Stopwatch.StartNew();
-            
-            await security.InitializeAsync();
-            
-            sw.Stop();
-            Assert.True(security.IsCompliant);
-            Assert.True(sw.ElapsedMilliseconds < 1000);
-        }
-
-        [Fact]
-        public async Task Perf_AllComponentsInit_ParallelBehavior()
-        {
-            var sw = Stopwatch.StartNew();
-            
-            var tasks = new[]
+            for (var i = 0; i < 50; i++)
             {
-                new MonadoEngine().InitializeAsync(),
-                new SecuritySystem().InitializeAsync(),
-                new AIOrchestrator().InitializeAsync(),
-                new GUIDashboard().InitializeAsync(),
-                new BuildAgents().InitializeAsync(),
-                new DevAIHub().InitializeAsync(),
-                new SoftwareStack().InitializeAsync()
-            };
-            
-            await Task.WhenAll(tasks);
-            
-            sw.Stop();
-            // Parallel execution should be faster than sequential
-            Assert.True(sw.ElapsedMilliseconds < 2000);
-        }
-
-        // ==================== VALIDATION SPEED TESTS ====================
-
-        [Fact]
-        public async Task Perf_ValidationCompletes_Under5Seconds()
-        {
-            var deployment = new HeliosDeployment();
-            var sw = Stopwatch.StartNew();
-            
-            var result = await deployment.ValidateAsync();
-            
-            sw.Stop();
-            Assert.True(result);
-            Assert.True(sw.ElapsedMilliseconds < 5000);
-        }
-
-        // ==================== STATUS QUERY TESTS ====================
-
-        [Fact]
-        public async Task Perf_GetStatus_RespondsFast()
-        {
-            var deployment = new HeliosDeployment();
-            await deployment.DeployAsync(DeploymentTier.Professional);
-            
-            var sw = Stopwatch.StartNew();
-            
-            for (int i = 0; i < 100; i++)
-            {
-                await deployment.GetStatusAsync();
+                var result = await new HeliosDeployment().Execute(DeploymentTier.Professional);
+                Assert.True(result.Success);
             }
-            
-            sw.Stop();
-            // 100 status queries should complete quickly
-            Assert.True(sw.ElapsedMilliseconds < 1000);
-        }
 
-        // ==================== ROLLBACK SPEED TESTS ====================
-
-        [Fact]
-        public async Task Perf_RollbackCompletion_Fast()
-        {
-            var deployment = new HeliosDeployment();
-            await deployment.DeployAsync(DeploymentTier.Ultimate);
-            
-            var sw = Stopwatch.StartNew();
-            
-            var result = await deployment.RollbackAsync(0);
-            
-            sw.Stop();
-            Assert.True(result);
-            Assert.True(sw.ElapsedMilliseconds < 1000);
-        }
-
-        // ==================== UNDEPLOY SPEED TESTS ====================
-
-        [Fact]
-        public async Task Perf_UndeployCompletion_Fast()
-        {
-            var deployment = new HeliosDeployment();
-            await deployment.DeployAsync(DeploymentTier.Ultimate);
-            
-            var sw = Stopwatch.StartNew();
-            
-            await deployment.UndeployAsync();
-            
-            sw.Stop();
-            Assert.True(sw.ElapsedMilliseconds < 1000);
-        }
-
-        // ==================== RESOURCE UTILIZATION TESTS ====================
-
-        [Fact]
-        public async Task Perf_DeploymentNoMemoryLeak()
-        {
-            var initialMemory = GC.GetTotalMemory(true);
-            
-            // Deploy and undeploy multiple times
-            for (int i = 0; i < 5; i++)
-            {
-                var deployment = new HeliosDeployment();
-                await deployment.DeployAsync(DeploymentTier.Professional);
-                await deployment.UndeployAsync();
-            }
-            
             GC.Collect();
-            var finalMemory = GC.GetTotalMemory(true);
-            
-            // Memory growth should be reasonable
-            var memoryGrowth = finalMemory - initialMemory;
-            Assert.True(memoryGrowth < 50_000_000, $"Memory grew by {memoryGrowth} bytes");
-        }
-
-        // ==================== CONCURRENT DEPLOYMENT TESTS ====================
-
-        [Fact]
-        public async Task Perf_ConcurrentDeployments_HandleMultiple()
-        {
-            var tasks = new Task[5];
-            var sw = Stopwatch.StartNew();
-            
-            for (int i = 0; i < 5; i++)
-            {
-                tasks[i] = Task.Run(async () =>
-                {
-                    var deployment = new HeliosDeployment();
-                    var result = await deployment.DeployAsync(DeploymentTier.Professional);
-                    Assert.True(result.Success);
-                });
-            }
-            
-            await Task.WhenAll(tasks);
-            sw.Stop();
-            
-            // All concurrent deployments should complete
-            Assert.True(sw.ElapsedMilliseconds < 60000);
-        }
-
-        // ==================== SUSTAINED OPERATIONS TESTS ====================
-
-        [Fact]
-        public async Task Perf_MultipleRollbacks_Consistent()
-        {
-            var deployment = new HeliosDeployment();
-            await deployment.DeployAsync(DeploymentTier.Ultimate);
-            
-            var sw = Stopwatch.StartNew();
-            
-            for (int i = 0; i < 10; i++)
-            {
-                await deployment.RollbackAsync(i % 8);
-            }
-            
-            sw.Stop();
-            // Multiple rollbacks should be consistent
-            Assert.True(sw.ElapsedMilliseconds < 2000);
+            var after = GC.GetTotalMemory(true);
+            var growthBytes = after - before;
+            Assert.True(growthBytes < 50_000_000, $"Memory grew by {growthBytes} bytes");
         }
 
         [Fact]
-        public async Task Perf_RepeatedValidations_Consistent()
+        public async Task Perf_AgentFleetSimulation_MeetsBaseline()
         {
-            var deployment = new HeliosDeployment();
-            
-            var sw = Stopwatch.StartNew();
-            
-            for (int i = 0; i < 50; i++)
-            {
-                var result = await deployment.ValidateAsync();
-                Assert.True(result);
-            }
-            
-            sw.Stop();
-            // All validations should be similarly fast
-            Assert.True(sw.ElapsedMilliseconds < 10000);
+            var simulator = new AgentFleetSimulator(numberOfAgents: 20, requestsPerAgent: 10, concurrency: 40);
+            var metrics = await simulator.RunSimulationAsync(TimeSpan.FromSeconds(30));
+
+            Assert.True(metrics.TotalRequestsSent > 0);
+            Assert.True(metrics.SuccessRate > 0.95, $"Success rate was {metrics.SuccessRate:P2}");
+            Assert.True(metrics.RequestsPerSecond > 50, $"Throughput was {metrics.RequestsPerSecond:F2} req/sec");
         }
 
-        // ==================== THROUGHPUT TESTS ====================
-
         [Fact]
-        public async Task Perf_StatusQueryThroughput_High()
+        public async Task Perf_ConcurrencyStressTester_CompletesWithoutDeadlocks()
         {
-            var deployment = new HeliosDeployment();
-            await deployment.DeployAsync(DeploymentTier.Professional);
-            
-            var sw = Stopwatch.StartNew();
-            const int queryCount = 1000;
-            
-            for (int i = 0; i < queryCount; i++)
-            {
-                await deployment.GetStatusAsync();
-            }
-            
-            sw.Stop();
-            var queriesPerSecond = (queryCount * 1000.0) / sw.ElapsedMilliseconds;
-            
-            // Should handle significant query throughput
-            Assert.True(queriesPerSecond > 100);
+            var result = await ConcurrencyStressTester.TestConcurrentAccessAsync(
+                agents: 20,
+                operationsPerAgent: 20,
+                operation: async _ => await Task.Delay(1));
+
+            Assert.Equal(0, result.DeadlocksDetected);
+            Assert.Equal(0, result.ExceptionsThrown);
+            Assert.True(result.TotalOperations > 0);
         }
 
-        // ==================== LATENCY TESTS ====================
-
         [Fact]
-        public async Task Perf_StatusQuery_LowLatency()
+        public void Perf_LoadDistributionAnalyzer_ReportsFairForBalancedLoad()
         {
-            var deployment = new HeliosDeployment();
-            await deployment.DeployAsync(DeploymentTier.Professional);
-            
-            for (int i = 0; i < 10; i++)
-            {
-                var sw = Stopwatch.StartNew();
-                await deployment.GetStatusAsync();
-                sw.Stop();
-                
-                // Individual queries should be very fast
-                Assert.True(sw.ElapsedMilliseconds < 10);
-            }
+            var analysis = LoadDistributionAnalyzer.AnalyzeDistribution(new[] { 100, 98, 102, 101, 99 });
+
+            Assert.True(analysis.IsFair);
+            Assert.True(analysis.CoefficientOfVariation < 0.2);
+            Assert.True(analysis.JainIndex > 0.8);
         }
     }
 }

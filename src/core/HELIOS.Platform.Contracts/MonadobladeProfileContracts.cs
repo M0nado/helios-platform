@@ -51,6 +51,8 @@ public sealed record ProfileActivationPolicy(
     bool CloudActivationDenied,
     bool AiActivationDenied)
 {
+    public bool OfflineOnly { get; init; }
+
     public static ProfileActivationPolicy StandardUser { get; } = new(
         PhysicalPresenceRequired: false,
         MinimumFactors: 0,
@@ -109,9 +111,10 @@ public sealed record MonadobladeProfileDefinition(
                 ActivationPolicy.MinimumFactors < 2 ||
                 !ActivationPolicy.RemoteActivationDenied ||
                 !ActivationPolicy.CloudActivationDenied ||
-                !ActivationPolicy.AiActivationDenied)
+                !ActivationPolicy.AiActivationDenied ||
+                !ActivationPolicy.OfflineOnly)
             {
-                throw new InvalidOperationException("SysAdmin requires two-factor local physical authorization and denies remote, cloud, and AI activation.");
+                throw new InvalidOperationException("SysAdmin requires two-factor local physical authorization, denies remote/cloud/AI activation, and remains offline-only.");
             }
         }
         else if (IsAdministrator)

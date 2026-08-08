@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "adapterId": "monadoblade-v2-typed-v1-projection",
+  "sourceCatalog": "config/profiles/monadoblade-profiles.v2.json",
+  "targetTypedContract": "src/core/HELIOS.Platform.Contracts/MonadobladeProfileContracts.cs",
+  "targetTypedModelMode": "legacy-seven-profile-enum",
+  "projectionRules": [
+    {
+      "sourceProfile": "core",
+      "targetTypedProfile": "personal",
+      "glyph": "HOME",
+      "soundCue": "soft-chime",
+      "background": "calm-grass-silver-blue",
+      "aihubMode": "quiet-assistant-privacy-backup",
+      "dashboardWidgets": ["privacy", "backup", "security", "storage", "memory", "network"]
+    },
+    {
+      "sourceProfile": "developer",
+      "targetTypedProfile": "developer",
+      "glyph": "DEV",
+      "soundCue": "glass-code-rise",
+      "background": "grass-code-grid-aurora",
+      "aihubMode": "builder-assist-code-test-model-route",
+      "dashboardWidgets": ["build", "test", "repo", "model", "container", "vm", "cpu", "gpu", "memory", "security"]
+    },
+    {
+      "sourceProfile": "studio",
+      "targetTypedProfile": "studio",
+      "glyph": "WAVE",
+      "soundCue": "harmonic-bloom",
+      "background": "waveform-grass-violet",
+      "aihubMode": "creative-latency-render-orchestration",
+      "dashboardWidgets": ["asio", "buffer", "xruns", "cpu", "gpu", "memory", "disk-stream", "plugins", "render"]
+    },
+    {
+      "sourceProfile": "gamer",
+      "targetTypedProfile": "gamer",
+      "glyph": "PLAY",
+      "soundCue": "low-latency-charge",
+      "background": "energy-field-green",
+      "aihubMode": "performance-fps-network-balance",
+      "dashboardWidgets": ["fps", "frame-time", "gpu", "cpu", "memory", "storage-latency", "network-latency"]
+    },
+    {
+      "sourceProfile": "ai-server",
+      "targetTypedProfile": "sysops",
+      "glyph": "OPS",
+      "soundCue": "network-pulse",
+      "background": "operations-constellation",
+      "aihubMode": "operations-incident-response-observability",
+      "dashboardWidgets": ["services", "security", "performance", "latency", "network", "vm", "container", "memory", "azure", "github"]
+    },
+    {
+      "sourceProfile": "ai-server",
+      "targetTypedProfile": "server-background",
+      "glyph": "DAEMON",
+      "soundCue": "sub-bass-service",
+      "background": "graphite-service-mesh",
+      "aihubMode": "headless-model-worker-automation",
+      "dashboardWidgets": ["uptime", "queues", "services", "firewall", "container", "vm", "model-workers", "memory", "power", "backup"],
+      "targetScalarOverrides": {
+        "windowsRole": "service-identities",
+        "interactive": false
+      }
+    },
+    {
+      "sourceProfile": "sysadmin-offline",
+      "targetTypedProfile": "sysadmin",
+      "glyph": "ROOT",
+      "soundCue": "sealed-vault",
+      "background": "sealed-vault-night",
+      "aihubMode": "offline-recovery-and-approval-only",
+      "dashboardWidgets": ["integrity", "secureboot", "tpm", "bitlocker", "driver-trust", "firewall", "recovery"],
+      "activationPolicyOverrides": {
+        "physicalPresenceRequired": true,
+        "minimumFactors": 2,
+        "remoteActivationDenied": true,
+        "cloudActivationDenied": true,
+        "aiActivationDenied": true,
+        "offlineOnly": true
+      }
+    }
+  ],
+  "safetyInvariants": {
+    "allLegacyTypedProfilesProjected": true,
+    "requiresDeterministicOneToOneRulePerTarget": true,
+    "forbidRemoteActivationForSysadminTarget": true,
+    "preserveOfflineOnlyForSysadminTarget": true,
+    "preserveServerBackgroundNonInteractiveTarget": true,
+    "denySecretValueProjection": true
+  }
+}

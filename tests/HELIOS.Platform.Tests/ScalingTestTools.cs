@@ -99,16 +99,19 @@ namespace HELIOS.Platform.Tests
                 // Wait for all agents with timeout
                 if (timeout.HasValue)
                 {
+                    var allAgentsTask = Task.WhenAll(agentTasks);
                     var completed = await Task.WhenAny(
-                        Task.WhenAll(agentTasks),
+                        allAgentsTask,
                         Task.Delay(timeout.Value)
                     ).ConfigureAwait(false);
 
-                    if (completed != Task.WhenAll(agentTasks))
+                    if (completed != allAgentsTask)
                     {
                         // Timeout occurred
                         throw new TimeoutException($"Simulation exceeded {timeout.Value.TotalSeconds}s");
                     }
+
+                    await allAgentsTask.ConfigureAwait(false);
                 }
                 else
                 {
@@ -398,7 +401,7 @@ namespace HELIOS.Platform.Tests
                     for (int op = 0; op < operationsPerAgent; op++)
                     {
                         var agentId = agent;
-                        tasks.Add(async () =>
+                        tasks.Add(Task.Run(async () =>
                         {
                             await semaphore.WaitAsync();
                             try
@@ -416,7 +419,7 @@ namespace HELIOS.Platform.Tests
                             {
                                 semaphore.Release();
                             }
-                        }());
+                        }));
                     }
                 }
 

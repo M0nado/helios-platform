@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 using Moq;
@@ -166,6 +167,8 @@ namespace HELIOS.Platform.Phase10.AIOrchestration.Tests
             var tool2 = new ToolInfo { ToolId = "tool-2", ToolName = "TestTool2", Status = ToolStatus.Failed };
             await _orchestrator.RegisterToolAsync(tool1);
             await _orchestrator.RegisterToolAsync(tool2);
+            tool1.Status = ToolStatus.Running;
+            tool2.Status = ToolStatus.Failed;
 
             // Act
             var stats = await _orchestrator.GetStatsAsync();
