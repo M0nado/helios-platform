@@ -51,9 +51,12 @@ def main() -> int:
     preview_policy = json.loads((PREVIEW / "preview-lane.json").read_text())
     if preview_policy.get("lane") != "preview" or preview_policy.get("publish") is not False:
         fail("preview policy must identify a non-publishing preview lane", errors)
-    docker_from = (PREVIEW / "Dockerfile").read_text().splitlines()[0]
+    dockerfile = (PREVIEW / "Dockerfile").read_text()
+    docker_from = next(line for line in dockerfile.splitlines() if line.startswith("FROM "))
     if not re.fullmatch(r"FROM\s+[^\s]+@sha256:[0-9a-f]{64}", docker_from):
         fail("preview container base image must be pinned by sha256 digest", errors)
+    if "type=secret,id=ca_cert" not in dockerfile or re.search(r"trusted-host|verify\s*=\s*false|--insecure", dockerfile, re.I):
+        fail("preview container must pass custom CAs as secrets without disabling TLS", errors)
     for preview_lock in (PREVIEW / "pyproject.toml", PREVIEW / "uv.lock", PREVIEW / "requirements-preview.txt"):
         if not preview_lock.is_file():
             fail(f"isolated preview dependency file is required: {preview_lock.relative_to(ROOT)}", errors)

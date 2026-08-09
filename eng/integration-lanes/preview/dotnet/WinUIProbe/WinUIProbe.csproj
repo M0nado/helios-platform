@@ -5,6 +5,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
+    <AppxGeneratePriEnabled Condition="'$(OS)' != 'Windows_NT'">false</AppxGeneratePriEnabled>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>

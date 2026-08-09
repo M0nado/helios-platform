@@ -78,9 +78,9 @@ jobs:
           uv export --project eng/integration-lanes/preview --format requirements.txt --no-dev --no-emit-project --no-header --output-file "$RUNNER_TEMP/requirements-preview.txt"
           diff -u eng/integration-lanes/preview/requirements-preview.txt "$RUNNER_TEMP/requirements-preview.txt"
       - name: Build isolated non-release preview image
-        run: docker build --tag helios-preview:${GITHUB_SHA} eng/integration-lanes/preview
-      - name: Verify preview image is non-release
-        run: test "$(docker inspect --format '{{ index .Config.Labels \"org.helios.release-artifact\" }}' helios-preview:${GITHUB_SHA})" = false
+        env:
+          HELIOS_PREVIEW_IMAGE: helios-preview:${{ github.sha }}
+        run: eng/integration-lanes/preview/build-container.sh
 
   preview-dotnet-11-windows:
     name: Non-publishing .NET 11 / WinUI / C++ probe
@@ -97,11 +97,11 @@ jobs:
       - name: Compile isolated C# and F# probes
         working-directory: eng/integration-lanes/preview/dotnet
         run: |
-          dotnet build CSharpProbe/CSharpProbe.csproj --configuration Release
-          dotnet build FSharpProbe/FSharpProbe.fsproj --configuration Release
+          dotnet build CSharpProbe/CSharpProbe.csproj --configuration Release -p:RestoreLockedMode=true
+          dotnet build FSharpProbe/FSharpProbe.fsproj --configuration Release -p:RestoreLockedMode=true
       - name: Compile isolated WinUI 3 probe
         working-directory: eng/integration-lanes/preview/dotnet
-        run: dotnet build WinUIProbe/WinUIProbe.csproj --configuration Release
+        run: dotnet build WinUIProbe/WinUIProbe.csproj --configuration Release -p:RestoreLockedMode=true
       - name: Compile and run isolated C++23 renderer probe
         run: |
           cmake -S eng/integration-lanes/preview/native -B $env:RUNNER_TEMP/helios-preview-native -A x64
