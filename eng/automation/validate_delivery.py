@@ -9,6 +9,33 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
+DEPLOYMENT_UNBLOCK_SEQUENCE = [
+    "exact-sha-build-and-tests",
+    "reviewed-current-infrastructure-plan",
+    "inspected-and-attested-immutable-artifact",
+    "protected-least-privilege-identity",
+    "independent-exact-sha-approval",
+    "protected-merge",
+    "immediate-preflight-revalidation",
+    "digest-bound-deployment",
+    "provider-observed-verification",
+    "proven-rollback",
+    "revocation-and-cleanup",
+    "zero-blocker-terminal-proof",
+]
+
+DEPLOYMENT_INVALIDATION_INPUTS = {
+    "source-sha",
+    "infrastructure-plan",
+    "artifact-digest",
+    "identity",
+    "approval",
+    "target-environment",
+    "policy",
+    "capability",
+    "rollback-state",
+}
+
 
 def load(path: str) -> dict:
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
@@ -49,6 +76,16 @@ def main() -> None:
     require(policy["automation"]["autoMerge"] is False, "automatic protected merge is forbidden")
     require(policy["merge"]["previewArtifactsAllowed"] is False, "preview artifacts cannot enter stable release")
     require(policy["merge"]["credentialsAllowed"] is False, "credentials cannot enter artifacts")
+    deployment = policy["deployment"]
+    require(deployment["failClosed"] is True, "deployment gates must fail closed")
+    require(
+        deployment["unblockSequence"] == DEPLOYMENT_UNBLOCK_SEQUENCE,
+        "deployment gates are missing or out of order",
+    )
+    require(
+        set(deployment["invalidateOnChange"]) == DEPLOYMENT_INVALIDATION_INPUTS,
+        "deployment evidence invalidation inputs are incomplete",
+    )
     print("delivery contracts valid")
 
 

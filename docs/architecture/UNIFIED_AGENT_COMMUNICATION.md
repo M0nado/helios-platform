@@ -73,6 +73,29 @@ GitHub Actions authenticates through workload identity federation. Azure resourc
 
 Every Azure infrastructure change starts with Bicep validation and what-if. Production deployment requires a protected GitHub environment and explicit approval.
 
+## Required unblock sequence
+
+```text
+exact-SHA build and tests
+  -> reviewed current infrastructure plan
+  -> inspected and attested immutable artifact
+  -> protected least-privilege identity
+  -> independent exact-SHA approval
+  -> protected merge
+  -> immediate preflight revalidation
+  -> digest-bound deployment
+  -> provider-observed verification
+  -> proven rollback
+  -> revocation and cleanup
+  -> zero-blocker terminal proof
+```
+
+The sequence is fail-closed and order-sensitive. A change to the source SHA,
+infrastructure plan, artifact digest, identity, approval, target environment,
+policy, calculated capability, or rollback state invalidates that step and all
+dependent evidence. A successful API response is not deployment proof: the
+provider-observed state must match the approved target and immutable digest.
+
 ## Privileged commands
 
 The following cannot execute from a conversational request alone:
