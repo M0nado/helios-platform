@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.dev/operator/approval-record.v1.schema.json",
+  "title": "HELIOS signed operator approval record v1",
+  "type": "object",
+  "required": ["schemaVersion", "authorityId", "approverId", "correlationId", "planSha256", "approvedAt", "signature"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "authorityId": { "type": "string", "minLength": 1 },
+    "approverId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "format": "uuid" },
+    "planSha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+    "approvedAt": { "type": "string", "format": "date-time" },
+    "signature": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": false
+}

@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
+using System.Text;
 using Json.Schema;
 
 namespace Helios.Operator;
@@ -10,7 +12,7 @@ public static class Program
     {
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("usage: Helios.Operator <validate|plan|approve|export|manual-command> <manifest.json> [plan.json] [--output <path>]");
+            Console.Error.WriteLine("usage: Helios.Operator <validate|plan|approve|export|manual-command> <manifest.json> [plan.json] [--approval-record <path>] [--output <path>]");
             return 2;
         }
 
@@ -19,6 +21,8 @@ public static class Program
         var plan = args.Length > 2 && !args[2].StartsWith("--", StringComparison.Ordinal) ? args[2] : null;
         var outputIndex = Array.IndexOf(args, "--output");
         var output = outputIndex >= 0 && outputIndex + 1 < args.Length ? args[outputIndex + 1] : null;
+        var approvalIndex = Array.IndexOf(args, "--approval-record");
+        var approvalRecord = approvalIndex >= 0 && approvalIndex + 1 < args.Length ? args[approvalIndex + 1] : null;
 
         if (command is "plan" or "approve" or "export" or "manual-command" && plan is null)
         {
@@ -26,7 +30,7 @@ public static class Program
             return 2;
         }
 
-        var validation = ValidateAndLoad(manifest, plan, command);
+        var validation = ValidateAndLoad(manifest, plan, command, approvalRecord);
         var diagnostics = validation.Diagnostics;
         if (diagnostics.Count != 0)
         {
@@ -53,9 +57,9 @@ public static class Program
     }
 
     public static IReadOnlyList<PolicyDiagnostic> Validate(string manifestPath, string? planPath = null)
-        => ValidateAndLoad(manifestPath, planPath, "validate").Diagnostics;
+        => ValidateAndLoad(manifestPath, planPath, "validate", null).Diagnostics;
 
-    private static ValidationResult ValidateAndLoad(string manifestPath, string? planPath, string command)
+    private static ValidationResult ValidateAndLoad(string manifestPath, string? planPath, string command, string? approvalRecordPath)
     {
         var diagnostics = new List<PolicyDiagnostic>();
         JsonNodeDocument? manifest = LoadAndValidate(manifestPath, SchemaPath("environment-manifest.schema.json"), "manifest", diagnostics);
@@ -64,7 +68,12 @@ public static class Program
         {
             diagnostics.AddRange(OperatorPolicyValidator.Validate(manifest.Root, plan.Root));
             if (command == "approve")
-                diagnostics.AddRange(OperatorPolicyValidator.ValidateApproval(plan.Root));
+            {
+                var approvalRecord = approvalRecordPath is null
+                    ? null
+                    : LoadAndValidate(approvalRecordPath, SchemaPath("approval-record.v1.schema.json"), "approvalRecord", diagnostics);
+                diagnostics.AddRange(OperatorPolicyValidator.ValidateApproval(manifest.Root, plan.Root, plan.Bytes, approvalRecord?.Root));
+            }
         }
         return new(diagnostics, manifest, plan);
     }
@@ -74,6 +83,7 @@ public static class Program
         try
         {
             var bytes = File.ReadAllBytes(path);
+            RejectDuplicateProperties(bytes);
             using var document = JsonDocument.Parse(bytes);
             var root = document.RootElement.Clone();
             var schema = JsonSchema.FromText(File.ReadAllText(schemaPath));
@@ -100,6 +110,21 @@ public static class Program
         catch (IOException ex) { diagnostics.Add(new(label, ex.Message)); }
         catch (JsonSchemaException ex) { diagnostics.Add(new(label, $"schema error: {ex.Message}")); }
         return null;
+    }
+
+    private static void RejectDuplicateProperties(ReadOnlySpan<byte> json)
+    {
+        var reader = new Utf8JsonReader(json, new JsonReaderOptions { CommentHandling = JsonCommentHandling.Disallow });
+        var objectProperties = new Stack<HashSet<string>>();
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.StartObject)
+                objectProperties.Push(new(StringComparer.Ordinal));
+            else if (reader.TokenType == JsonTokenType.EndObject)
+                objectProperties.Pop();
+            else if (reader.TokenType == JsonTokenType.PropertyName && !objectProperties.Peek().Add(reader.GetString()!))
+                throw new JsonException($"duplicate property '{reader.GetString()}' is not allowed");
+        }
     }
 
     private static string SchemaPath(string name)
@@ -191,7 +216,7 @@ public static partial class OperatorPolicyValidator
         return errors;
     }
 
-    public static IReadOnlyList<PolicyDiagnostic> ValidateApproval(JsonElement plan)
+    public static IReadOnlyList<PolicyDiagnostic> ValidateApproval(JsonElement manifest, JsonElement plan, byte[] planBytes, JsonElement? approvalRecord)
     {
         var errors = new List<PolicyDiagnostic>();
         var actorId = Text(plan, "actor", "id");
@@ -202,8 +227,8 @@ public static partial class OperatorPolicyValidator
             var type = Text(action, "type")?.ToLowerInvariant() ?? "";
             var principal = Text(action, "principalId") ?? Text(action, "target");
             var environment = Text(action, "environment") ?? Text(plan, "environment");
-            return (type.Contains("rbac") && !Equal(principal, actorId, actorLogin, actorPrincipal)) ||
-                   (type.Contains("deploy") && string.Equals(environment, "production", StringComparison.OrdinalIgnoreCase));
+            return IsGatedOperation(type, environment) ||
+                   (type.Contains("rbac") && !Equal(principal, actorId, actorLogin, actorPrincipal));
         });
         if (!privileged)
             return errors;
@@ -214,7 +239,70 @@ public static partial class OperatorPolicyValidator
             Add(errors, "plan/approvalEvidence/approverId", "approval evidence must come from an independent approver");
         if (!plan.TryGetProperty("rollbackEvidence", out _))
             Add(errors, "plan/rollbackEvidence", "privileged approval requires rollback evidence");
+        ValidateAuthenticatedApproval(manifest, plan, planBytes, approvalRecord, errors);
         return errors;
+    }
+
+    private static bool IsGatedOperation(string type, string? environment)
+    {
+        if (type.Contains("deploy") && Equal(environment, "production")) return true;
+        var normalized = type.Replace('-', '.').Replace('_', '.');
+        return (normalized.Contains("disk") && (normalized.Contains("format") || normalized.Contains("partition"))) ||
+               normalized.Contains("bitlocker") || normalized.Contains("vhdx.key") ||
+               normalized.Contains("wdac") || normalized.Contains("applocker") ||
+               (normalized.Contains("firewall") && normalized.Contains("lockdown")) ||
+               (normalized.Contains("process") && normalized.Contains("terminat")) ||
+               normalized.Contains("entra") || normalized.Contains("rbac") || normalized.Contains("tenant.permission") ||
+               normalized.Contains("intune") || normalized.Contains("purview") ||
+               (normalized.Contains("secret") && normalized.Contains("rotat"));
+    }
+
+    private static void ValidateAuthenticatedApproval(JsonElement manifest, JsonElement plan, byte[] planBytes, JsonElement? record, List<PolicyDiagnostic> errors)
+    {
+        if (record is null)
+        {
+            Add(errors, "approvalRecord", "privileged approval requires a separately supplied, signed approval record");
+            return;
+        }
+
+        var authorityId = Text(record.Value, "authorityId");
+        var approverId = Text(record.Value, "approverId");
+        var correlationId = Text(record.Value, "correlationId");
+        var planSha256 = Text(record.Value, "planSha256");
+        var approvedAt = Text(record.Value, "approvedAt");
+        var signature = Text(record.Value, "signature");
+        var expectedCorrelation = Text(plan, "provenance", "correlationId");
+        var expectedHash = Convert.ToHexString(SHA256.HashData(planBytes)).ToLowerInvariant();
+
+        if (!Equal(correlationId, expectedCorrelation))
+            Add(errors, "approvalRecord/correlationId", "approval record must be bound to the plan correlation ID");
+        if (!string.Equals(planSha256, expectedHash, StringComparison.OrdinalIgnoreCase))
+            Add(errors, "approvalRecord/planSha256", "approval record must be bound to the exact plan bytes");
+        if (plan.TryGetProperty("approvalEvidence", out var evidence) && !Equal(approverId, Text(evidence, "approverId")))
+            Add(errors, "approvalRecord/approverId", "signed approver must match the plan approval evidence");
+
+        var authority = manifest.TryGetProperty("approvalAuthorities", out var authorities)
+            ? authorities.EnumerateArray().FirstOrDefault(item => Equal(Text(item, "id"), authorityId))
+            : default;
+        var publicKey = authority.ValueKind == JsonValueKind.Object ? Text(authority, "publicKeyPem") : null;
+        if (publicKey is null)
+        {
+            Add(errors, "approvalRecord/authorityId", "approval authority is not trusted by the governing manifest");
+            return;
+        }
+
+        try
+        {
+            using var verifier = ECDsa.Create();
+            verifier.ImportFromPem(publicKey);
+            var payload = Encoding.UTF8.GetBytes(string.Join('\n', "1.0", authorityId, approverId, correlationId, planSha256, approvedAt));
+            if (!verifier.VerifyData(payload, Convert.FromBase64String(signature!), HashAlgorithmName.SHA256))
+                Add(errors, "approvalRecord/signature", "approval record signature is invalid");
+        }
+        catch (Exception ex) when (ex is CryptographicException or FormatException or ArgumentException)
+        {
+            Add(errors, "approvalRecord/signature", "approval record signature is invalid");
+        }
     }
 
     private static bool IsWeakening(JsonElement action) =>

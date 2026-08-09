@@ -6,7 +6,20 @@
   "required": ["version", "environment", "declared"],
   "properties": {
     "version": { "const": "1.0" },
-    "environment": { "type": "string", "minLength": 1 },
+    "environment": { "type": "string", "enum": ["local", "development", "test", "staging", "production"] },
+    "approvalAuthorities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["id", "publicKeyPem"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "publicKeyPem": { "type": "string", "pattern": "^-----BEGIN PUBLIC KEY-----" }
+        },
+        "additionalProperties": false
+      }
+    },
     "declared": {
       "type": "object",
       "required": ["githubApps", "secretReads", "oidcSubjects"],

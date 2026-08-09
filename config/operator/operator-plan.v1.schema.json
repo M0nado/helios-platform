@@ -6,7 +6,7 @@
   "required": ["schemaVersion", "environment", "actor", "actions", "provenance", "confidence"],
   "properties": {
     "schemaVersion": { "const": "1.0" },
-    "environment": { "type": "string", "minLength": 1 },
+    "environment": { "type": "string", "enum": ["local", "development", "test", "staging", "production"] },
     "actor": {
       "type": "object",
       "required": ["id", "githubLogin", "azurePrincipalId"],
