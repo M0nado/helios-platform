@@ -223,14 +223,14 @@ function Split-HybridResourceEnvelope {
     $localMemoryGb = [int] [Math]::Ceiling($totalMemoryGb / 2.0)
     $dockerMemoryGb = [int] ($totalMemoryGb - $localMemoryGb)
 
-    $localEnvelope = [ordered]@{
+    $localEnvelope = [pscustomobject]@{
         maxCpuCores = $localCpu
         maxMemoryGb = $localMemoryGb
         maxGpuProcesses = [int] $ResourceEnvelope.maxGpuProcesses
         maxConcurrentDeepLearningJobs = [int] $ResourceEnvelope.maxConcurrentDeepLearningJobs
         maxConcurrentAgentRuns = [int] $ResourceEnvelope.maxConcurrentAgentRuns
     }
-    $dockerEnvelope = [ordered]@{
+    $dockerEnvelope = [pscustomobject]@{
         maxCpuCores = $dockerCpu
         maxMemoryGb = $dockerMemoryGb
         maxGpuProcesses = [int] $ResourceEnvelope.maxGpuProcesses
