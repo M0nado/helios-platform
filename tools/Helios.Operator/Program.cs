@@ -77,8 +77,13 @@ public static class Program
             if (!result.IsValid)
             {
                 foreach (var detail in result.Details.Where(x => x.HasErrors))
-                    foreach (var error in detail.Errors ?? [])
+                {
+                    if (detail.Errors is null)
+                        continue;
+
+                    foreach (var error in detail.Errors)
                         diagnostics.Add(new($"{label}{detail.InstanceLocation}", error.Value));
+                }
                 return null;
             }
             return new(root);

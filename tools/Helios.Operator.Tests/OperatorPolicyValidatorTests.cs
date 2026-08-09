@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Helios.Operator;
+using Xunit;
 
 namespace Helios.Operator.Tests;
 
