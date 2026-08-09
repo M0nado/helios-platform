@@ -252,6 +252,28 @@ public sealed class OperatorPolicyValidatorTests
         Assert.Contains(errors, error => error.Message.Contains("byte limit", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Theory]
+    [InlineData("approve", "manifest.json", "plan.json", "--approval-record", "--output", "out.json")]
+    [InlineData("export", "manifest.json", "plan.json", "--output", "one.json", "--output", "two.json")]
+    [InlineData("validate", "manifest.json", "--unknown", "value")]
+    [InlineData("export", "manifest.json")]
+    [InlineData("validate", "manifest.json", "--approval-record", "approval.json")]
+    public void RejectsMalformedOrCommandInappropriateArguments(params string[] args)
+    {
+        var previousError = Console.Error;
+        using var error = new StringWriter();
+        Console.SetError(error);
+        try
+        {
+            Assert.Equal(2, Program.Main(args));
+            Assert.Contains("arguments:", error.ToString());
+        }
+        finally
+        {
+            Console.SetError(previousError);
+        }
+    }
+
     [Fact]
     public void ExportWritesTheExactValidatedPlanBytes()
     {

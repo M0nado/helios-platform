@@ -11,30 +11,19 @@ public static class Program
     private const long MaximumInputBytes = 4 * 1024 * 1024;
     public static int Main(string[] args)
     {
-        if (args.Length < 2)
+        if (!TryParseArguments(args, out var options, out var argumentError))
         {
+            Console.Error.WriteLine($"arguments: {argumentError}");
             Console.Error.WriteLine("usage: Helios.Operator <validate|plan|approve|export|manual-command> <manifest.json> [plan.json] [--approval-record <path>] [--output <path>]");
             return 2;
         }
 
-        var command = args[0].ToLowerInvariant();
-        var manifest = args[1];
-        var plan = args.Length > 2 && !args[2].StartsWith("--", StringComparison.Ordinal) ? args[2] : null;
-        var outputIndex = Array.IndexOf(args, "--output");
-        var output = outputIndex >= 0 && outputIndex + 1 < args.Length ? args[outputIndex + 1] : null;
-        var approvalIndex = Array.IndexOf(args, "--approval-record");
-        var approvalRecord = approvalIndex >= 0 && approvalIndex + 1 < args.Length ? args[approvalIndex + 1] : null;
-
-        if (command is "plan" or "approve" or "export" or "manual-command" && plan is null)
-        {
-            Console.Error.WriteLine("plan: a versioned plan document is required before producing operator output");
-            return 2;
-        }
+        var command = options!.Command;
 
         ValidationResult validation;
         try
         {
-            validation = ValidateAndLoad(manifest, plan, command, approvalRecord);
+            validation = ValidateAndLoad(options.ManifestPath, options.PlanPath, command, options.ApprovalRecordPath);
         }
         catch (OperatorConfigurationException ex)
         {
@@ -58,12 +47,58 @@ public static class Program
         }
 
         // All persistent output is deliberately below the complete validation gate.
-        var document = plan is null ? validation.Manifest!.Bytes : validation.Plan!.Bytes;
-        if (output is null)
-            Console.OpenStandardOutput().Write(document);
-        else
-            AtomicWrite(output, document);
+        var document = options.PlanPath is null ? validation.Manifest!.Bytes : validation.Plan!.Bytes;
+        try
+        {
+            if (options.OutputPath is null)
+                Console.OpenStandardOutput().Write(document);
+            else
+                AtomicWrite(options.OutputPath, document);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            Console.Error.WriteLine($"output: unable to write operator artifact: {ex.Message}");
+            return 1;
+        }
         return 0;
+    }
+
+    private static bool TryParseArguments(string[] args, out CommandOptions? options, out string error)
+    {
+        options = null;
+        error = string.Empty;
+        if (args.Length < 2) { error = "a command and manifest path are required"; return false; }
+        var command = args[0].ToLowerInvariant();
+        if (command is not ("validate" or "plan" or "approve" or "export" or "manual-command"))
+        { error = $"unsupported command '{args[0]}'"; return false; }
+
+        string? plan = null, approval = null, output = null;
+        var index = 2;
+        if (index < args.Length && !args[index].StartsWith("--", StringComparison.Ordinal)) plan = args[index++];
+        while (index < args.Length)
+        {
+            var option = args[index++];
+            if (option is not ("--approval-record" or "--output")) { error = $"unknown option '{option}'"; return false; }
+            if (index >= args.Length || args[index].StartsWith("--", StringComparison.Ordinal))
+            { error = $"option '{option}' requires a value"; return false; }
+            var value = args[index++];
+            if (option == "--approval-record")
+            {
+                if (approval is not null) { error = "option '--approval-record' may be specified only once"; return false; }
+                approval = value;
+            }
+            else
+            {
+                if (output is not null) { error = "option '--output' may be specified only once"; return false; }
+                output = value;
+            }
+        }
+        if (command is "plan" or "approve" or "export" or "manual-command" && plan is null)
+        { error = $"command '{command}' requires a versioned plan document"; return false; }
+        if (command != "approve" && approval is not null)
+        { error = "option '--approval-record' is valid only for the approve command"; return false; }
+        options = new(command, args[1], plan, approval, output);
+        return true;
     }
 
     public static IReadOnlyList<PolicyDiagnostic> Validate(string manifestPath, string? planPath = null)
@@ -144,13 +179,9 @@ public static class Program
 
     private static string SchemaPath(string name)
     {
-        var candidates = new[] {
-            Path.Combine(AppContext.BaseDirectory, "config", "operator", name),
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "config", "operator", name)),
-            Path.Combine(Directory.GetCurrentDirectory(), "config", "operator", name)
-        };
-        return candidates.FirstOrDefault(File.Exists)
-            ?? throw new OperatorConfigurationException($"required operator schema '{name}' was not found");
+        var path = Path.Combine(AppContext.BaseDirectory, "config", "operator", name);
+        return File.Exists(path) ? path
+            : throw new OperatorConfigurationException($"required packaged operator schema '{name}' was not found");
     }
 
     private static void AtomicWrite(string path, byte[] value)
@@ -178,6 +209,7 @@ public static class Program
 
     private sealed record JsonNodeDocument(JsonElement Root, byte[] Bytes);
     private sealed record ValidationResult(IReadOnlyList<PolicyDiagnostic> Diagnostics, JsonNodeDocument? Manifest, JsonNodeDocument? Plan);
+    private sealed record CommandOptions(string Command, string ManifestPath, string? PlanPath, string? ApprovalRecordPath, string? OutputPath);
 }
 
 public sealed class OperatorConfigurationException(string message) : Exception(message);
