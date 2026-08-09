@@ -44,12 +44,19 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.MapGet("/setup", () => Results.Redirect("/wizard/index.html"));
 
-app.MapGet("/health", () => Results.Ok(new { service = "helios-connect", status = "healthy", mode = Environment.GetEnvironmentVariable("HELIOS_EXECUTION_MODE") ?? "dry-run" }));
+app.MapGet("/health", () => Results.Ok(new
+{
+    service = "helios-connect",
+    status = "healthy",
+    mode = Environment.GetEnvironmentVariable("HELIOS_EXECUTION_MODE") ?? "dry-run",
+    runtimeCorrelationId = Environment.GetEnvironmentVariable("HELIOS_CORRELATION_ID") ?? string.Empty
+}));
 
 app.MapGet("/health/live", () => Results.Ok(new
 {
     service = "helios-connect",
-    status = "live"
+    status = "live",
+    runtimeCorrelationId = Environment.GetEnvironmentVariable("HELIOS_CORRELATION_ID") ?? string.Empty
 }));
 
 app.MapGet("/health/ready", async (IConfiguration configuration, IControlRunStore store, CancellationToken cancellationToken) =>
@@ -829,10 +836,11 @@ static async Task<IResult> BuildReadinessResultAsync(
     IControlRunStore store,
     CancellationToken cancellationToken)
 {
+    var runtimeCorrelationId = configuration["HELIOS_CORRELATION_ID"] ?? Environment.GetEnvironmentVariable("HELIOS_CORRELATION_ID") ?? string.Empty;
     var requiresAzureConfiguration = RequiresEntraAuthorization(configuration);
     if (!requiresAzureConfiguration)
     {
-        return Results.Ok(new { service = "helios-connect", status = "ready", runtime = "development" });
+        return Results.Ok(new { service = "helios-connect", status = "ready", runtime = "development", runtimeCorrelationId });
     }
 
     var requiredSettings = new[]
@@ -852,7 +860,7 @@ static async Task<IResult> BuildReadinessResultAsync(
 
     if (missingSettings.Length > 0)
         return Results.Json(
-            new { service = "helios-connect", status = "not-ready", missingConfiguration = missingSettings },
+            new { service = "helios-connect", status = "not-ready", missingConfiguration = missingSettings, runtimeCorrelationId },
             statusCode: StatusCodes.Status503ServiceUnavailable);
 
     var expectedApplicationIdUri = GetExpectedApplicationIdUri(configuration);
@@ -862,7 +870,7 @@ static async Task<IResult> BuildReadinessResultAsync(
             expectedApplicationIdUri,
             StringComparison.OrdinalIgnoreCase))
         return Results.Json(
-            new { service = "helios-connect", status = "not-ready", invalidConfiguration = "HELIOS_ENTRA_APPLICATION_ID_URI" },
+            new { service = "helios-connect", status = "not-ready", invalidConfiguration = "HELIOS_ENTRA_APPLICATION_ID_URI", runtimeCorrelationId },
             statusCode: StatusCodes.Status503ServiceUnavailable);
 
     using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -870,12 +878,12 @@ static async Task<IResult> BuildReadinessResultAsync(
     try
     {
         await store.ProbeAsync(timeout.Token);
-        return Results.Ok(new { service = "helios-connect", status = "ready", runtime = "azure", controlRunStore = "reachable" });
+        return Results.Ok(new { service = "helios-connect", status = "ready", runtime = "azure", controlRunStore = "reachable", runtimeCorrelationId });
     }
     catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
     {
         return Results.Json(
-            new { service = "helios-connect", status = "not-ready", dependency = "control-run-store" },
+            new { service = "helios-connect", status = "not-ready", dependency = "control-run-store", runtimeCorrelationId },
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 }

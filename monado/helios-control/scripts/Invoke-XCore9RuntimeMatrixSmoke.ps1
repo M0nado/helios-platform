@@ -41,7 +41,9 @@ function Wait-ForHealthEndpoint {
         [int] $TimeoutSeconds = 0,
         [Parameter(Mandatory = $true)] [int] $ProbeTimeoutSeconds,
         [datetime] $DeadlineUtc = [datetime]::MinValue,
-        [string] $CorrelationId = ''
+        [string] $CorrelationId = '',
+        [System.Diagnostics.Process] $RequiredProcess = $null,
+        [string] $ExpectedRuntimeCorrelationId = ''
     )
 
     if ($DeadlineUtc -gt [datetime]::MinValue) {
@@ -60,6 +62,13 @@ function Wait-ForHealthEndpoint {
     }
 
     while ((Get-Date) -lt $deadline) {
+        if ($null -ne $RequiredProcess) {
+            $RequiredProcess.Refresh()
+            if ($RequiredProcess.HasExited) {
+                return $false
+            }
+        }
+
         $remainingSeconds = [int] [Math]::Ceiling(($deadline - (Get-Date)).TotalSeconds)
         if ($remainingSeconds -le 0) {
             break
@@ -73,6 +82,33 @@ function Wait-ForHealthEndpoint {
                 $response = Invoke-WebRequest -Uri $Endpoint -Method GET -TimeoutSec $effectiveProbeTimeout
             }
             if ($response.StatusCode -eq 200) {
+                if (-not [string]::IsNullOrWhiteSpace($ExpectedRuntimeCorrelationId)) {
+                    $matchesRuntimeCorrelation = $false
+                    try {
+                        $responseContent = [string] $response.Content
+                        if (-not [string]::IsNullOrWhiteSpace($responseContent)) {
+                            $payload = $responseContent | ConvertFrom-Json -ErrorAction Stop
+                            if ($null -ne $payload -and $payload.PSObject.Properties.Name -contains 'runtimeCorrelationId') {
+                                $matchesRuntimeCorrelation = ([string] $payload.runtimeCorrelationId -eq $ExpectedRuntimeCorrelationId)
+                            }
+                        }
+                    }
+                    catch [System.Management.Automation.RuntimeException] {
+                        $matchesRuntimeCorrelation = $false
+                    }
+
+                    if (-not $matchesRuntimeCorrelation) {
+                        Start-Sleep -Seconds ([int] [Math]::Max(1, [Math]::Min(2, $remainingSeconds)))
+                        continue
+                    }
+                }
+
+                if ($null -ne $RequiredProcess) {
+                    $RequiredProcess.Refresh()
+                    if ($RequiredProcess.HasExited) {
+                        return $false
+                    }
+                }
                 return $true
             }
         }
@@ -481,17 +517,23 @@ try {
         $localRuntimeStdout = $localRuntime.stdoutPath
         $localRuntimeStderr = $localRuntime.stderrPath
         Add-LocalRuntimeResourceCheck -Checks $checks -ResourceEnvironment $localRuntime.resourceEnvironment
-        $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId
+        $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId -RequiredProcess $localRuntime.process -ExpectedRuntimeCorrelationId $correlationId
         if ($healthy) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) returned HTTP 200."
         }
         else {
-            Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'failed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) did not become healthy in time."
+            $localRuntime.process.Refresh()
+            if ($localRuntime.process.HasExited) {
+                Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'failed' -Detail 'Launched local runtime process exited before readiness could be verified.'
+            }
+            else {
+                Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'failed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) did not become healthy with the expected runtime correlation ID in time."
+            }
         }
     }
     elseif ($Mode -eq 'local-docker') {
         $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $startupEnvironment -ResourceEnvelope $modeConfig.resourceEnvelope
-        $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId
+        $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId -ExpectedRuntimeCorrelationId $correlationId
         if ($healthy) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) returned HTTP 200."
         }
@@ -511,14 +553,20 @@ try {
 
         $endpoints = [string[]] $modeConfig.healthContract.endpoints
         $sharedDeadline = (Get-Date).AddSeconds([int] $modeConfig.healthContract.maxStartupSeconds)
-        $healthyWindows = Wait-ForHealthEndpoint -Endpoint $endpoints[0] -DeadlineUtc $sharedDeadline -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId
-        $healthyDocker = Wait-ForHealthEndpoint -Endpoint $endpoints[1] -DeadlineUtc $sharedDeadline -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId
+        $healthyWindows = Wait-ForHealthEndpoint -Endpoint $endpoints[0] -DeadlineUtc $sharedDeadline -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId -RequiredProcess $localRuntime.process -ExpectedRuntimeCorrelationId $correlationId
+        $healthyDocker = Wait-ForHealthEndpoint -Endpoint $endpoints[1] -DeadlineUtc $sharedDeadline -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId -ExpectedRuntimeCorrelationId $correlationId
 
         if ($healthyWindows -and $healthyDocker) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail 'Both hybrid runtime endpoints returned HTTP 200.'
         }
         else {
-            Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'failed' -Detail 'One or more hybrid runtime endpoints failed health checks.'
+            $localRuntime.process.Refresh()
+            if ($localRuntime.process.HasExited) {
+                Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'failed' -Detail 'Launched local runtime process exited before hybrid readiness could be verified.'
+            }
+            else {
+                Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'failed' -Detail 'One or more hybrid runtime endpoints failed health checks with the expected runtime correlation ID.'
+            }
         }
 
         $secretScopes = $manifest.modes | ForEach-Object { [string] $_.boundaries.secrets.scopeId }

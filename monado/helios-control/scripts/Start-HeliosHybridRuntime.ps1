@@ -116,6 +116,38 @@ function Get-RunningContainerId {
     return [string] ((& docker ps --filter "name=^/$ContainerName$" --format '{{.ID}}' 2>$null) | Select-Object -First 1)
 }
 
+function Get-ProcessTreeIds {
+    param([Parameter(Mandatory = $true)] [int] $RootProcessId)
+
+    if ($RootProcessId -le 0) {
+        return @()
+    }
+
+    $visited = [System.Collections.Generic.HashSet[int]]::new()
+    function Add-TreeNode {
+        param(
+            [int] $ProcessId,
+            [System.Collections.Generic.HashSet[int]] $Visited
+        )
+
+        if ($ProcessId -le 0 -or -not $Visited.Add($ProcessId)) {
+            return
+        }
+
+        if (-not $IsWindows) {
+            return
+        }
+
+        $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $ProcessId" -ErrorAction SilentlyContinue)
+        foreach ($child in $children) {
+            Add-TreeNode -ProcessId ([int] $child.ProcessId) -Visited $Visited
+        }
+    }
+
+    Add-TreeNode -ProcessId $RootProcessId -Visited $visited
+    return @($visited.ToArray() | Sort-Object)
+}
+
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
 $startLocalScript = Join-Path $PSScriptRoot 'Start-HeliosLocal.ps1'
 if (-not (Test-Path -LiteralPath $startLocalScript)) {
@@ -223,11 +255,21 @@ try {
         throw "Hybrid runtime failed readiness verification (localExited=$($localProcess.HasExited), containerState=$containerState, windowsReady=$windowsReady, dockerReady=$dockerReady)."
     }
 
+    $localRuntimeProcessIds = Get-ProcessTreeIds -RootProcessId $localProcess.Id
+    $localRuntimeStopCommand = if ($localRuntimeProcessIds.Count -gt 0) {
+        "Stop-Process -Id $($localRuntimeProcessIds -join ',') -Force"
+    }
+    else {
+        "Stop-Process -Id $($localProcess.Id) -Force"
+    }
+
     $result = [ordered]@{
         schemaVersion = 1
         startupMode = 'persistent-hybrid-runtime'
         correlationId = $correlationId
         localRuntimeProcessId = $localProcess.Id
+        localRuntimeProcessIds = $localRuntimeProcessIds
+        localRuntimeStopCommand = $localRuntimeStopCommand
         localRuntimeStdoutLog = $localStdoutPath
         localRuntimeStderrLog = $localStderrPath
         localRuntimeResourceEnvironment = $localResourceEnvironment
@@ -239,7 +281,7 @@ try {
         }
         notes = @(
             'This command starts persistent local and Docker runtimes.',
-            'Use Stop-Process on localRuntimeProcessId and docker stop on dockerContainerName to stop both runtimes.'
+            'Use localRuntimeStopCommand and docker stop on dockerContainerName to stop both runtimes.'
         )
     }
 
