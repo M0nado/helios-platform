@@ -1,0 +1,79 @@
+from __future__ import annotations
+
+import copy
+from pathlib import Path
+import sys
+import unittest
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPOSITORY_ROOT / "scripts" / "contracts"))
+
+from validate_xcore9_runtime_matrix import (  # noqa: E402
+    EXPECTED_MODES,
+    load_manifest,
+    validate_manifest,
+    validate_matrix,
+)
+
+
+class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.manifest = load_manifest(REPOSITORY_ROOT)
+
+    def test_canonical_manifest_is_valid(self) -> None:
+        self.assertEqual(validate_matrix(REPOSITORY_ROOT), [])
+
+    def test_modes_fail_when_required_mode_is_missing(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        candidate["modes"] = [
+            mode for mode in candidate["modes"] if mode["id"] != "local-docker"
+        ]
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("modes must be exactly" in error for error in errors))
+
+    def test_mode_fails_when_boundary_is_missing(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-windows")
+        local["boundaries"].pop("network")
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("boundaries must include" in error for error in errors))
+
+    def test_mode_fails_when_required_deny_item_is_removed(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-windows")
+        local["disallowedOperations"].remove("automatic-merge")
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("missing required deny items" in error for error in errors))
+
+    def test_mode_fails_when_startup_is_not_dry_run(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        local["startupContract"]["requiredEnvironment"]["HELIOS_EXECUTION_MODE"] = "live"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("HELIOS_EXECUTION_MODE must be dry-run" in error for error in errors))
+
+    def test_manifest_fails_when_secret_scope_is_reused(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        docker = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        hybrid = next(mode for mode in candidate["modes"] if mode["id"] == "hybrid-windows-docker-fleet")
+        hybrid["boundaries"]["secrets"]["scopeId"] = docker["boundaries"]["secrets"]["scopeId"]
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("scopeId must be unique per mode" in error for error in errors))
+
+    def test_manifest_fails_when_governance_flags_are_weakened(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        candidate["governance"]["productionMutationRequiresProtectedApproval"] = False
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("productionMutationRequiresProtectedApproval must be true" in error for error in errors))
+
+    def test_expected_modes_are_stable(self) -> None:
+        self.assertSetEqual(
+            EXPECTED_MODES,
+            {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

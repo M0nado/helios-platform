@@ -1,0 +1,323 @@
+{
+  "schemaVersion": 1,
+  "contractId": "xcore9-runtime-matrix",
+  "version": "1.0.0",
+  "status": "governed",
+  "ownerRepository": "M0nado/helios-platform",
+  "defaultMode": "local-windows",
+  "defaultExecutionMode": "validation-first",
+  "governance": {
+    "nonDestructiveDefault": true,
+    "productionMutationRequiresProtectedApproval": true,
+    "crossTenantSecretReuseAllowed": false,
+    "crossModeTokenReuseAllowed": false,
+    "approvalBoundary": "github-protected-environment",
+    "requiredEvidenceFields": [
+      "correlationId",
+      "evidenceLinks"
+    ]
+  },
+  "requiredDenyList": [
+    "automatic-production-deploy",
+    "automatic-rbac-change",
+    "automatic-consent-grant",
+    "automatic-merge",
+    "cross-tenant-secret-reuse",
+    "cross-mode-token-reuse",
+    "unbounded-recursive-agents",
+    "plaintext-secret-export",
+    "bypass-protected-approval"
+  ],
+  "modes": [
+    {
+      "id": "local-windows",
+      "displayName": "Local Windows execution",
+      "enabledByDefault": true,
+      "boundaries": {
+        "identity": {
+          "principalType": "interactive-operator-session",
+          "authentication": "entra-user-session-or-local-development",
+          "tenantIsolation": "single-tenant-selection-per-run",
+          "crossTenantTokenReuseAllowed": false
+        },
+        "network": {
+          "ingress": "loopback-only",
+          "outboundPolicy": "allowlisted-operator-initiated",
+          "publicIngressAllowed": false,
+          "dockerBridgeRequired": false
+        },
+        "storage": {
+          "stateDirectory": "monado/helios-control/runtime/fleet",
+          "evidenceDirectory": "monado/helios-control/artifacts/fleet-evidence",
+          "destructiveDiskOperationsAllowed": false
+        },
+        "toolAccess": {
+          "allowedTools": [
+            "dotnet",
+            "pwsh",
+            "gh",
+            "az",
+            "azd",
+            "jq"
+          ],
+          "localMcpReadOnlyRequired": true,
+          "dockerRequired": false
+        },
+        "secrets": {
+          "source": "environment-or-key-vault-reference",
+          "scopeId": "xcore9-local-windows",
+          "plaintextInRepositoryAllowed": false,
+          "crossModeReuseAllowed": false
+        }
+      },
+      "startupContract": {
+        "command": "pwsh ./monado/helios-control/scripts/Start-HeliosLocal.ps1",
+        "workingDirectory": ".",
+        "requiredEnvironment": {
+          "HELIOS_EXECUTION_MODE": "dry-run",
+          "HELIOS_CLOUD_RUNTIME_ONLY": "false",
+          "HELIOS_LOCAL_RUNTIME_ALLOWED": "true"
+        },
+        "startupTimeoutSeconds": 180
+      },
+      "healthContract": {
+        "method": "GET",
+        "endpoint": "http://127.0.0.1:5080/health/ready",
+        "expectedStatusCode": 200,
+        "probeTimeoutSeconds": 10,
+        "maxStartupSeconds": 180
+      },
+      "artifactPinning": {
+        "type": "binary-hash",
+        "algorithm": "sha256",
+        "subject": "Helios.Connect.Api.dll",
+        "referenceSource": "dotnet-publish-output",
+        "immutableReferenceRequired": true
+      },
+      "resourceEnvelope": {
+        "maxCpuCores": 8,
+        "maxMemoryGb": 16,
+        "maxGpuProcesses": 1,
+        "maxConcurrentDeepLearningJobs": 2,
+        "maxConcurrentAgentRuns": 4
+      },
+      "rollback": {
+        "strategy": "stop-runtime-and-restart-last-known-good-binary-hash",
+        "failureDomain": "single-workstation-process-space",
+        "isolationBoundary": "local-user-session-only",
+        "requiresProtectedApprovalForLiveMutation": true
+      },
+      "disallowedOperations": [
+        "automatic-production-deploy",
+        "automatic-rbac-change",
+        "automatic-consent-grant",
+        "automatic-merge",
+        "cross-tenant-secret-reuse",
+        "cross-mode-token-reuse",
+        "unbounded-recursive-agents",
+        "plaintext-secret-export",
+        "bypass-protected-approval",
+        "destructive-disk-format",
+        "public-ingress-binding"
+      ],
+      "smokeEvidence": {
+        "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.md",
+        "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.json"
+      }
+    },
+    {
+      "id": "local-docker",
+      "displayName": "Local Docker execution",
+      "enabledByDefault": false,
+      "boundaries": {
+        "identity": {
+          "principalType": "container-runtime-identity",
+          "authentication": "host-operator-approved",
+          "tenantIsolation": "single-tenant-selection-per-container-run",
+          "crossTenantTokenReuseAllowed": false
+        },
+        "network": {
+          "ingress": "loopback-port-mapping-only",
+          "outboundPolicy": "allowlisted-container-egress",
+          "publicIngressAllowed": false,
+          "dockerBridgeRequired": true
+        },
+        "storage": {
+          "stateDirectory": "container-temporary-runtime",
+          "evidenceDirectory": "monado/helios-control/artifacts/fleet-evidence",
+          "destructiveDiskOperationsAllowed": false
+        },
+        "toolAccess": {
+          "allowedTools": [
+            "docker",
+            "pwsh",
+            "dotnet",
+            "gh"
+          ],
+          "localMcpReadOnlyRequired": true,
+          "dockerRequired": true
+        },
+        "secrets": {
+          "source": "environment-or-key-vault-reference",
+          "scopeId": "xcore9-local-docker",
+          "plaintextInRepositoryAllowed": false,
+          "crossModeReuseAllowed": false
+        }
+      },
+      "startupContract": {
+        "command": "docker build --file monado/helios-control/src/Helios.Connect.Api/Dockerfile --tag helios-connect:xcore9-local monado/helios-control && docker run --detach --rm --name helios-connect-xcore9-local --publish 5081:8080 --env HELIOS_EXECUTION_MODE=dry-run --env HELIOS_CLOUD_RUNTIME_ONLY=true helios-connect:xcore9-local",
+        "workingDirectory": ".",
+        "requiredEnvironment": {
+          "HELIOS_EXECUTION_MODE": "dry-run",
+          "HELIOS_CLOUD_RUNTIME_ONLY": "true"
+        },
+        "startupTimeoutSeconds": 240
+      },
+      "healthContract": {
+        "method": "GET",
+        "endpoint": "http://127.0.0.1:5081/health/ready",
+        "expectedStatusCode": 200,
+        "probeTimeoutSeconds": 10,
+        "maxStartupSeconds": 240
+      },
+      "artifactPinning": {
+        "type": "image-digest",
+        "algorithm": "sha256",
+        "subject": "helios-connect:xcore9-local",
+        "referenceSource": "docker-image-inspect",
+        "immutableReferenceRequired": true
+      },
+      "resourceEnvelope": {
+        "maxCpuCores": 6,
+        "maxMemoryGb": 12,
+        "maxGpuProcesses": 1,
+        "maxConcurrentDeepLearningJobs": 2,
+        "maxConcurrentAgentRuns": 3
+      },
+      "rollback": {
+        "strategy": "stop-container-and-restart-last-approved-image-digest",
+        "failureDomain": "single-container-instance",
+        "isolationBoundary": "container-runtime-and-volume-scope",
+        "requiresProtectedApprovalForLiveMutation": true
+      },
+      "disallowedOperations": [
+        "automatic-production-deploy",
+        "automatic-rbac-change",
+        "automatic-consent-grant",
+        "automatic-merge",
+        "cross-tenant-secret-reuse",
+        "cross-mode-token-reuse",
+        "unbounded-recursive-agents",
+        "plaintext-secret-export",
+        "bypass-protected-approval",
+        "latest-tag-only-deployment",
+        "host-network-container"
+      ],
+      "smokeEvidence": {
+        "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.md",
+        "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.json"
+      }
+    },
+    {
+      "id": "hybrid-windows-docker-fleet",
+      "displayName": "Hybrid Windows + Docker fleet execution",
+      "enabledByDefault": false,
+      "boundaries": {
+        "identity": {
+          "principalType": "split-windows-and-container-principals",
+          "authentication": "operator-gated-dual-runtime",
+          "tenantIsolation": "tenant-boundaries-enforced-per-runtime-mode",
+          "crossTenantTokenReuseAllowed": false
+        },
+        "network": {
+          "ingress": "dual-loopback-endpoints",
+          "outboundPolicy": "allowlisted-per-runtime",
+          "publicIngressAllowed": false,
+          "dockerBridgeRequired": true
+        },
+        "storage": {
+          "stateDirectory": "monado/helios-control/runtime/fleet",
+          "evidenceDirectory": "monado/helios-control/artifacts/fleet-evidence",
+          "destructiveDiskOperationsAllowed": false
+        },
+        "toolAccess": {
+          "allowedTools": [
+            "dotnet",
+            "pwsh",
+            "docker",
+            "gh",
+            "az",
+            "azd",
+            "jq"
+          ],
+          "localMcpReadOnlyRequired": true,
+          "dockerRequired": true
+        },
+        "secrets": {
+          "source": "isolated-per-runtime-scope",
+          "scopeId": "xcore9-hybrid-fleet",
+          "plaintextInRepositoryAllowed": false,
+          "crossModeReuseAllowed": false
+        }
+      },
+      "startupContract": {
+        "command": "pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode hybrid-windows-docker-fleet",
+        "workingDirectory": ".",
+        "requiredEnvironment": {
+          "HELIOS_EXECUTION_MODE": "dry-run",
+          "HELIOS_CLOUD_RUNTIME_ONLY": "false",
+          "HELIOS_LOCAL_RUNTIME_ALLOWED": "true"
+        },
+        "startupTimeoutSeconds": 300
+      },
+      "healthContract": {
+        "method": "MULTI",
+        "endpoints": [
+          "http://127.0.0.1:5080/health/ready",
+          "http://127.0.0.1:5081/health/ready"
+        ],
+        "expectedStatusCode": 200,
+        "probeTimeoutSeconds": 10,
+        "maxStartupSeconds": 300
+      },
+      "artifactPinning": {
+        "type": "binary-hash-and-image-digest",
+        "algorithm": "sha256",
+        "subject": "Helios.Connect.Api.dll + helios-connect:xcore9-local",
+        "referenceSource": "dotnet-publish-output-and-docker-image-inspect",
+        "immutableReferenceRequired": true
+      },
+      "resourceEnvelope": {
+        "maxCpuCores": 12,
+        "maxMemoryGb": 24,
+        "maxGpuProcesses": 2,
+        "maxConcurrentDeepLearningJobs": 3,
+        "maxConcurrentAgentRuns": 6
+      },
+      "rollback": {
+        "strategy": "isolate-failing-runtime-and-revert-only-that-runtime",
+        "failureDomain": "split-local-runtime-and-container-runtime",
+        "isolationBoundary": "mode-scoped-processes-secrets-and-network-segments",
+        "requiresProtectedApprovalForLiveMutation": true
+      },
+      "disallowedOperations": [
+        "automatic-production-deploy",
+        "automatic-rbac-change",
+        "automatic-consent-grant",
+        "automatic-merge",
+        "cross-tenant-secret-reuse",
+        "cross-mode-token-reuse",
+        "unbounded-recursive-agents",
+        "plaintext-secret-export",
+        "bypass-protected-approval",
+        "shared-secret-scope-between-modes",
+        "cross-mode-token-forwarding",
+        "unbounded-hybrid-fleet-spawn"
+      ],
+      "smokeEvidence": {
+        "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.md",
+        "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.json"
+      }
+    }
+  ]
+}

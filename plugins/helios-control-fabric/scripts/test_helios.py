@@ -162,6 +162,17 @@ class HeliosCliTests(unittest.TestCase):
         self.assertFalse(plan["automaticApply"])
         self.assertEqual(plan["workflow"]["apply"], "separate protected-environment approval")
 
+    def test_runtime_matrix_contract_is_governed(self) -> None:
+        matrix = HELIOS.runtime_matrix_contract()
+        self.assertEqual(matrix["contract"], "xcore9-runtime-matrix")
+        self.assertEqual(matrix["defaultExecutionMode"], "validation-first")
+        self.assertEqual(
+            set(matrix["modeIds"]),
+            {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
+        )
+        self.assertFalse(matrix["crossModeTokenReuseAllowed"])
+        self.assertTrue(matrix["smokeEvidenceLinked"])
+
     def test_all_assets_are_json(self) -> None:
         for name in (
             "connections.json",
@@ -169,6 +180,7 @@ class HeliosCliTests(unittest.TestCase):
             "devops-sync.json",
             "runner-topology.json",
             "edge-runtime.json",
+            "xcore9-runtime-matrix.json",
             "microsoft-mcp.template.json",
         ):
             json.loads((HELIOS.ASSETS / name).read_text(encoding="utf-8"))

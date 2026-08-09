@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "contract": "xcore9-runtime-matrix",
+  "sourceManifest": "monado/helios-control/config/xcore9-runtime-matrix.v1.json",
+  "defaultExecutionMode": "validation-first",
+  "modes": [
+    "local-windows",
+    "local-docker",
+    "hybrid-windows-docker-fleet"
+  ],
+  "smokeEvidenceIndex": "monado/helios-control/docs/XCORE9_RUNTIME_SMOKE_EVIDENCE.md"
+}

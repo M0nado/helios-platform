@@ -32,8 +32,8 @@ Key Vault references, signing secrets, outbound workers, and destination
 allowlists are implemented and reviewed. Providers without an implemented
 verifier remain fail-closed.
 
-See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`, and
-`config/integrations.json`.
+See `docs/ARCHITECTURE.md`, `docs/CONNECTION_RUNBOOK.md`,
+`docs/XCORE9_RUNTIME_MATRIX_V1.md`, and `config/integrations.json`.
 
 ## Edge and Copilot setup wizard
 
@@ -92,11 +92,14 @@ routes without publishing to Teams or Copilot.
 ## Online-only production target
 
 `config/cloud-runtime.json` distinguishes the implemented hosted connector slice
-from the target production architecture. The current Bicep hosts the API, remote
-MCP, Cosmos control-run state, Key Vault shell, and telemetry in Azure. Durable
-Service Bus fan-out, agent jobs, artifact stores, APIM/private ingress, and
-Foundry agents are explicitly marked unimplemented. Local VS Code, Claude Code, and CLI processes are administration
-clients only and are never a production runtime dependency.
+from the target production architecture. `config/xcore9-runtime-matrix.v1.json`
+defines local Windows, local Docker, and hybrid fleet execution contracts with
+startup, health, deny-list, and rollback invariants. The current Bicep hosts the
+API, remote MCP, Cosmos control-run state, Key Vault shell, and telemetry in
+Azure. Durable Service Bus fan-out, agent jobs, artifact stores, APIM/private
+ingress, and Foundry agents are explicitly marked unimplemented. Local VS Code,
+Claude Code, and CLI processes are administration clients only and are never a
+production runtime dependency.
 
 Set `HELIOS_CLOUD_RUNTIME_ONLY=true` in Azure. The local-development MCP route
 is mapped only when `HELIOS_LOCAL_RUNTIME_ALLOWED=true` and cloud-only mode is

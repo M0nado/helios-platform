@@ -1,0 +1,105 @@
+name: XCore9 Runtime Matrix Validate
+
+on:
+  pull_request:
+    paths:
+      - 'monado/helios-control/config/xcore9-runtime-matrix.v1.json'
+      - 'monado/helios-control/docs/XCORE9_RUNTIME_MATRIX_V1.md'
+      - 'monado/helios-control/docs/XCORE9_RUNTIME_SMOKE_EVIDENCE.md'
+      - 'monado/helios-control/docs/evidence/xcore9-runtime-matrix/**'
+      - 'monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1'
+      - 'scripts/contracts/validate_xcore9_runtime_matrix.py'
+      - 'scripts/contracts/tests/test_validate_xcore9_runtime_matrix.py'
+      - '.github/workflows/xcore9-runtime-matrix-validate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'monado/helios-control/config/xcore9-runtime-matrix.v1.json'
+      - 'monado/helios-control/docs/XCORE9_RUNTIME_MATRIX_V1.md'
+      - 'monado/helios-control/docs/XCORE9_RUNTIME_SMOKE_EVIDENCE.md'
+      - 'monado/helios-control/docs/evidence/xcore9-runtime-matrix/**'
+      - 'monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1'
+      - 'scripts/contracts/validate_xcore9_runtime_matrix.py'
+      - 'scripts/contracts/tests/test_validate_xcore9_runtime_matrix.py'
+      - '.github/workflows/xcore9-runtime-matrix-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parse runtime matrix and evidence JSON
+        run: |
+          python -m json.tool monado/helios-control/config/xcore9-runtime-matrix.v1.json > /dev/null
+          python -m json.tool monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.json > /dev/null
+          python -m json.tool monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.json > /dev/null
+          python -m json.tool monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.json > /dev/null
+      - name: Validate matrix contract shape and deny-list enforcement
+        run: |
+          python scripts/contracts/validate_xcore9_runtime_matrix.py
+          python -m unittest scripts/contracts/tests/test_validate_xcore9_runtime_matrix.py -v
+
+  smoke-local-windows:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run local Windows smoke
+        shell: pwsh
+        run: |
+          pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode local-windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xcore9-local-windows-smoke
+          path: |
+            monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.md
+            monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.json
+
+  smoke-local-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run local Docker smoke
+        shell: pwsh
+        run: |
+          pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode local-docker
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xcore9-local-docker-smoke
+          path: |
+            monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.md
+            monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.json
+
+  smoke-hybrid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run hybrid runtime smoke
+        shell: pwsh
+        run: |
+          pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode hybrid-windows-docker-fleet
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xcore9-hybrid-smoke
+          path: |
+            monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.md
+            monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.json

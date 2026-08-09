@@ -327,6 +327,45 @@ def edge_plan(environment: str) -> dict[str, Any]:
     }
 
 
+def runtime_matrix_contract() -> dict[str, Any]:
+    matrix_asset = read_asset("xcore9-runtime-matrix.json")
+    repository_root = ROOT.parents[1]
+    source_manifest = repository_root / matrix_asset["sourceManifest"]
+    if not source_manifest.exists():
+        raise RuntimeError(
+            "XCore9 runtime matrix manifest is missing. "
+            "Ensure monado/helios-control/config/xcore9-runtime-matrix.v1.json exists."
+        )
+    manifest = json.loads(source_manifest.read_text(encoding="utf-8"))
+    modes = manifest.get("modes", [])
+    mode_ids = [
+        mode.get("id")
+        for mode in modes
+        if isinstance(mode, dict) and isinstance(mode.get("id"), str)
+    ]
+    smoke_linked = all(
+        isinstance(mode, dict)
+        and isinstance(mode.get("smokeEvidence"), dict)
+        and isinstance(mode["smokeEvidence"].get("summary"), str)
+        and isinstance(mode["smokeEvidence"].get("data"), str)
+        for mode in modes
+    )
+    return {
+        **matrix_asset,
+        "manifestExists": True,
+        "defaultMode": manifest.get("defaultMode"),
+        "modeCount": len(mode_ids),
+        "modeIds": mode_ids,
+        "requiredDenyListCount": len(manifest.get("requiredDenyList", [])),
+        "nonDestructiveDefault": manifest.get("governance", {}).get("nonDestructiveDefault"),
+        "productionMutationRequiresProtectedApproval": manifest.get("governance", {}).get(
+            "productionMutationRequiresProtectedApproval"
+        ),
+        "crossModeTokenReuseAllowed": manifest.get("governance", {}).get("crossModeTokenReuseAllowed"),
+        "smokeEvidenceLinked": smoke_linked,
+    }
+
+
 def print_human(payload: dict[str, Any]) -> None:
     if "tools" in payload:
         print("HELIOS doctor (read-only)")
@@ -363,6 +402,14 @@ def print_human(payload: dict[str, Any]) -> None:
         print(f"  service: {payload['targetEdge']['service']}")
         print(f"  connectivity: {payload['targetEdge']['connectivity']}")
         print("  automatic apply: false")
+    elif payload.get("contract") == "xcore9-runtime-matrix":
+        print("HELIOS XCore9 runtime matrix")
+        print(f"  source manifest: {payload['sourceManifest']}")
+        print(f"  default mode: {payload['defaultMode']}")
+        print(f"  modes: {', '.join(payload['modeIds'])}")
+        print(f"  deny-list entries: {payload['requiredDenyListCount']}")
+        print(f"  non-destructive default: {str(payload['nonDestructiveDefault']).lower()}")
+        print(f"  smoke evidence linked: {str(payload['smokeEvidenceLinked']).lower()}")
     else:
         print(f"HELIOS {payload['environment']} release plan")
         for index, gate in enumerate(payload["administratorGates"], start=1):
@@ -396,6 +443,8 @@ def build_parser() -> argparse.ArgumentParser:
     runner_parser.add_argument("--json", action="store_true")
     edge_parser = subparsers.add_parser("edge", help="Show the Azure Front Door private-edge activation plan")
     add_environment_argument(edge_parser)
+    matrix_parser = subparsers.add_parser("runtime-matrix", help="Show the governed XCore9 runtime matrix contract")
+    matrix_parser.add_argument("--json", action="store_true")
     return parser
 
 
@@ -414,6 +463,8 @@ def main(argv: list[str] | None = None) -> int:
             payload = devops_sync_plan()
         elif args.command == "runners":
             payload = runner_plan()
+        elif args.command == "runtime-matrix":
+            payload = runtime_matrix_contract()
         else:
             payload = edge_plan(args.environment)
     except (RuntimeError, ValueError) as error:
