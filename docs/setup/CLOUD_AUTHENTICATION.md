@@ -7,6 +7,13 @@ scripts/setup/configure-cloud-auth.sh --interactive
 scripts/setup/configure-cloud-auth.sh --status
 ```
 
+The bootstrap installs the base Azure CLI and checks the `azure-devops` and `ml`
+extensions independently. If an extension download is interrupted, rerunning the
+same command repairs the incomplete setup instead of treating the base CLI as a
+complete installation. Extension failures leave provider login and Azure
+mutations blocked; do not disable TLS verification. Install the organization CA
+chain when HTTPS inspection prevents Azure's extension index from validating.
+
 The interactive mode delegates credentials to GitHub CLI and Azure CLI credential stores. It
 never accepts a token argument, prints a token, or writes credentials into this repository.
 Use `HELIOS_AZURE_SUBSCRIPTION` or `--subscription` to select an approved subscription.

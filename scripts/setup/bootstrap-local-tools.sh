@@ -18,6 +18,21 @@ DOTNET_CHANNEL="${DOTNET_CHANNEL:-8.0}"
 RG_VERSION="${RG_VERSION:-14.1.1}"
 
 mkdir -p "$TOOLS_DIR"
+setup_failures=0
+
+ensure_az_extension() {
+  local name="$1" version="$2"
+  if "$AZ_DIR/bin/az" extension show --name "$name" >/dev/null 2>&1; then
+    echo "Azure CLI extension $name is already installed"
+    return
+  fi
+  echo "Installing Azure CLI extension $name $version"
+  if ! "$AZ_DIR/bin/az" extension add --name "$name" --version "$version" --yes --only-show-errors; then
+    echo "WARNING: Azure CLI extension $name could not be installed." >&2
+    echo "Verify HTTPS interception/CA trust for azcliextensionsync.blob.core.windows.net, then rerun this script." >&2
+    setup_failures=1
+  fi
+}
 
 if [ ! -x "$DOTNET_DIR/dotnet" ]; then
   echo "Installing .NET SDK channel $DOTNET_CHANNEL into $DOTNET_DIR"
@@ -44,11 +59,14 @@ if [ ! -x "$AZ_DIR/bin/az" ]; then
   python3 -m venv "$AZ_DIR"
   "$AZ_DIR/bin/pip" install --disable-pip-version-check --upgrade pip
   "$AZ_DIR/bin/pip" install --disable-pip-version-check "azure-cli==$AZURE_CLI_VERSION"
-  "$AZ_DIR/bin/az" extension add --name azure-devops --version "$AZURE_DEVOPS_EXTENSION_VERSION" --yes
-  "$AZ_DIR/bin/az" extension add --name ml --version "$AZURE_ML_EXTENSION_VERSION" --yes
 else
   echo "Azure CLI already installed at $AZ_DIR"
 fi
+
+# Extensions are checked independently from the base CLI so an interrupted
+# first run is repairable on the next invocation.
+ensure_az_extension azure-devops "$AZURE_DEVOPS_EXTENSION_VERSION"
+ensure_az_extension ml "$AZURE_ML_EXTENSION_VERSION"
 
 if [ ! -x "$RG_DIR/bin/rg" ]; then
   echo "Installing ripgrep $RG_VERSION into $RG_DIR"
@@ -75,3 +93,8 @@ export OPENAI_API_KEY="..."
 export AZURE_OPENAI_ENDPOINT="..."
 export AZURE_OPENAI_API_KEY="..."
 PATHINFO
+
+if ((setup_failures != 0)); then
+  echo "Tool bootstrap completed with extension failures; provider login and Azure mutations remain blocked." >&2
+  exit 1
+fi

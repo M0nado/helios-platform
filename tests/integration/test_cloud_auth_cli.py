@@ -6,9 +6,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 AUTH = ROOT / "scripts/setup/helios-auth"
+BOOTSTRAP = ROOT / "scripts/setup/bootstrap-local-tools.sh"
 
 
 class CloudAuthCliTests(unittest.TestCase):
+    def test_bootstrap_script_is_valid_bash(self):
+        result = subprocess.run(
+            ["bash", "-n", str(BOOTSTRAP)],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_help_exposes_review_gated_github_pr_command(self):
         result = subprocess.run(
             [str(AUTH), "--help"],
