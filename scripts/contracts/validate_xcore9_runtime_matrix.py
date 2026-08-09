@@ -35,6 +35,8 @@ REQUIRED_BASELINE_DENY = {
     "plaintext-secret-export",
     "bypass-protected-approval",
 }
+EXPECTED_OWNER_REPOSITORY = "M0nado/helios-platform"
+EXPECTED_APPROVAL_BOUNDARY = "github-protected-environment"
 REQUIRED_EVIDENCE_FIELDS = {"correlationId", "evidenceLinks"}
 EXPECTED_HEALTH_ENDPOINTS = {
     "local-windows": "http://127.0.0.1:5080/health/ready",
@@ -43,6 +45,19 @@ EXPECTED_HEALTH_ENDPOINTS = {
         "http://127.0.0.1:5080/health/ready",
         "http://127.0.0.1:5081/health/ready",
     ],
+}
+EXPECTED_STARTUP_COMMANDS = {
+    "local-windows": "pwsh ./monado/helios-control/scripts/Start-HeliosLocal.ps1",
+    "local-docker": (
+        "docker build --file monado/helios-control/src/Helios.Connect.Api/Dockerfile --tag "
+        "helios-connect:xcore9-local monado/helios-control && docker run --detach --rm --name "
+        "helios-connect-xcore9-local --publish 127.0.0.1:5081:8080 --env HELIOS_EXECUTION_MODE=dry-run "
+        "--env HELIOS_CLOUD_RUNTIME_ONLY=false --env HELIOS_LOCAL_RUNTIME_ALLOWED=true helios-connect:xcore9-local"
+    ),
+    "hybrid-windows-docker-fleet": (
+        "pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode "
+        "hybrid-windows-docker-fleet"
+    ),
 }
 EXPECTED_SMOKE_EVIDENCE_PATHS = {
     "local-windows": {
@@ -79,6 +94,11 @@ def validate_top_level(manifest: dict) -> list[str]:
     _append(errors, manifest.get("schemaVersion") == 1, "schemaVersion must be 1")
     _append(errors, manifest.get("contractId") == "xcore9-runtime-matrix", "contractId must be xcore9-runtime-matrix")
     _append(errors, isinstance(manifest.get("version"), str) and bool(manifest["version"]), "version must be a non-empty string")
+    _append(
+        errors,
+        manifest.get("ownerRepository") == EXPECTED_OWNER_REPOSITORY,
+        f"ownerRepository must be exactly {EXPECTED_OWNER_REPOSITORY}",
+    )
     _append(errors, manifest.get("defaultMode") in EXPECTED_MODES, "defaultMode must be one of the required runtime modes")
     _append(errors, manifest.get("defaultExecutionMode") == "validation-first", "defaultExecutionMode must be validation-first")
 
@@ -92,6 +112,11 @@ def validate_top_level(manifest: dict) -> list[str]:
         errors,
         governance.get("productionMutationRequiresProtectedApproval") is True,
         "governance.productionMutationRequiresProtectedApproval must be true",
+    )
+    _append(
+        errors,
+        governance.get("approvalBoundary") == EXPECTED_APPROVAL_BOUNDARY,
+        f"governance.approvalBoundary must be exactly {EXPECTED_APPROVAL_BOUNDARY}",
     )
     _append(
         errors,
@@ -216,10 +241,11 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
     startup = mode.get("startupContract")
     _append(errors, isinstance(startup, dict), f"{mode_id}: startupContract must be an object")
     if isinstance(startup, dict):
+        expected_command = EXPECTED_STARTUP_COMMANDS.get(mode_id)
         _append(
             errors,
-            isinstance(startup.get("command"), str) and bool(startup["command"]),
-            f"{mode_id}: startupContract.command must be a non-empty string",
+            isinstance(startup.get("command"), str) and startup.get("command") == expected_command,
+            f"{mode_id}: startupContract.command must be exactly {expected_command}",
         )
         _append(
             errors,
@@ -312,6 +338,17 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
                 errors,
                 resource["maxConcurrentDeepLearningJobs"] <= resource["maxConcurrentAgentRuns"],
                 f"{mode_id}: maxConcurrentDeepLearningJobs cannot exceed maxConcurrentAgentRuns",
+            )
+        if mode_id == "hybrid-windows-docker-fleet":
+            _append(
+                errors,
+                _is_positive_int(resource.get("maxCpuCores")) and resource["maxCpuCores"] >= 2,
+                f"{mode_id}: resourceEnvelope.maxCpuCores must be >= 2 to split limits across runtimes",
+            )
+            _append(
+                errors,
+                _is_positive_int(resource.get("maxMemoryGb")) and resource["maxMemoryGb"] >= 2,
+                f"{mode_id}: resourceEnvelope.maxMemoryGb must be >= 2 to split limits across runtimes",
             )
 
     rollback = mode.get("rollback")

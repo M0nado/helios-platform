@@ -10,9 +10,12 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPOSITORY_ROOT / "scripts" / "contracts"))
 
 from validate_xcore9_runtime_matrix import (  # noqa: E402
+    EXPECTED_APPROVAL_BOUNDARY,
     EXPECTED_MODES,
     REQUIRED_BASELINE_DENY,
+    EXPECTED_OWNER_REPOSITORY,
     EXPECTED_SMOKE_EVIDENCE_PATHS,
+    EXPECTED_STARTUP_COMMANDS,
     load_manifest,
     validate_manifest,
     validate_matrix,
@@ -62,6 +65,13 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("HELIOS_EXECUTION_MODE must be dry-run" in error for error in errors))
 
+    def test_mode_fails_when_startup_command_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        local["startupContract"]["command"] = "docker run --rm ubuntu:latest"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("startupContract.command must be exactly" in error for error in errors))
+
     def test_mode_fails_when_loopback_endpoint_is_modified(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
@@ -90,6 +100,15 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("startupTimeoutSeconds must be a positive integer" in error for error in errors))
 
+    def test_hybrid_mode_fails_when_resources_cannot_be_split(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        hybrid = next(mode for mode in candidate["modes"] if mode["id"] == "hybrid-windows-docker-fleet")
+        hybrid["resourceEnvelope"]["maxCpuCores"] = 1
+        hybrid["resourceEnvelope"]["maxMemoryGb"] = 1
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("maxCpuCores must be >= 2 to split limits across runtimes" in error for error in errors))
+        self.assertTrue(any("maxMemoryGb must be >= 2 to split limits across runtimes" in error for error in errors))
+
     def test_manifest_fails_when_secret_scope_is_reused(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         docker = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
@@ -103,6 +122,18 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         candidate["governance"]["productionMutationRequiresProtectedApproval"] = False
         errors = validate_manifest(candidate)
         self.assertTrue(any("productionMutationRequiresProtectedApproval must be true" in error for error in errors))
+
+    def test_manifest_fails_when_approval_boundary_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        candidate["governance"]["approvalBoundary"] = "none"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("approvalBoundary must be exactly" in error for error in errors))
+
+    def test_manifest_fails_when_owner_repository_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        candidate["ownerRepository"] = "Heli0s-Dynamics/adaptive-multibrain-bootstrap"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("ownerRepository must be exactly" in error for error in errors))
 
     def test_mode_fails_when_public_ingress_is_enabled(self) -> None:
         candidate = copy.deepcopy(self.manifest)
@@ -138,6 +169,28 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         self.assertSetEqual(
             EXPECTED_MODES,
             {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
+        )
+
+    def test_expected_owner_and_boundary_are_stable(self) -> None:
+        self.assertEqual(EXPECTED_OWNER_REPOSITORY, "M0nado/helios-platform")
+        self.assertEqual(EXPECTED_APPROVAL_BOUNDARY, "github-protected-environment")
+
+    def test_expected_startup_commands_are_stable(self) -> None:
+        self.assertDictEqual(
+            EXPECTED_STARTUP_COMMANDS,
+            {
+                "local-windows": "pwsh ./monado/helios-control/scripts/Start-HeliosLocal.ps1",
+                "local-docker": (
+                    "docker build --file monado/helios-control/src/Helios.Connect.Api/Dockerfile --tag "
+                    "helios-connect:xcore9-local monado/helios-control && docker run --detach --rm --name "
+                    "helios-connect-xcore9-local --publish 127.0.0.1:5081:8080 --env HELIOS_EXECUTION_MODE=dry-run "
+                    "--env HELIOS_CLOUD_RUNTIME_ONLY=false --env HELIOS_LOCAL_RUNTIME_ALLOWED=true helios-connect:xcore9-local"
+                ),
+                "hybrid-windows-docker-fleet": (
+                    "pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode "
+                    "hybrid-windows-docker-fleet"
+                ),
+            },
         )
 
     def test_expected_smoke_evidence_paths_are_stable(self) -> None:

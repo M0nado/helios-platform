@@ -118,8 +118,9 @@ function Get-LocalRuntimeResourceEnvironment {
         $maxMemoryGb = [int] $ResourceEnvelope.maxMemoryGb
         if ($maxMemoryGb -gt 0) {
             $maxMemoryBytes = [Int64] $maxMemoryGb * 1GB
-            $environmentOverrides['DOTNET_GCHeapHardLimit'] = [string] $maxMemoryBytes
-            $environmentOverrides['COMPlus_GCHeapHardLimit'] = [string] $maxMemoryBytes
+            $hexMemoryBytes = ('0x{0:x}' -f $maxMemoryBytes)
+            $environmentOverrides['DOTNET_GCHeapHardLimit'] = $hexMemoryBytes
+            $environmentOverrides['COMPlus_GCHeapHardLimit'] = $hexMemoryBytes
         }
     }
 
@@ -197,6 +198,51 @@ function Add-LocalRuntimeResourceCheck {
 
     $resourceDetail = ($ResourceEnvironment.GetEnumerator() | Sort-Object Name | ForEach-Object { "{0}={1}" -f $_.Key, $_.Value }) -join ', '
     Add-SmokeCheck -Checks $Checks -Name 'local-resource-envelope' -Status 'passed' -Detail ("Applied local runtime resource envelope via process environment: $resourceDetail")
+}
+
+function Split-HybridResourceEnvelope {
+    param(
+        [Parameter(Mandatory = $true)] [object] $ResourceEnvelope
+    )
+
+    if ($null -eq $ResourceEnvelope -or $null -eq $ResourceEnvelope.PSObject) {
+        throw 'Hybrid mode requires a valid resource envelope.'
+    }
+
+    $totalCpu = [int] $ResourceEnvelope.maxCpuCores
+    $totalMemoryGb = [int] $ResourceEnvelope.maxMemoryGb
+    if ($totalCpu -lt 2) {
+        throw 'Hybrid mode requires resourceEnvelope.maxCpuCores >= 2 so limits can be split across runtimes.'
+    }
+    if ($totalMemoryGb -lt 2) {
+        throw 'Hybrid mode requires resourceEnvelope.maxMemoryGb >= 2 so limits can be split across runtimes.'
+    }
+
+    $localCpu = [int] [Math]::Ceiling($totalCpu / 2.0)
+    $dockerCpu = [int] ($totalCpu - $localCpu)
+    $localMemoryGb = [int] [Math]::Ceiling($totalMemoryGb / 2.0)
+    $dockerMemoryGb = [int] ($totalMemoryGb - $localMemoryGb)
+
+    $localEnvelope = [ordered]@{
+        maxCpuCores = $localCpu
+        maxMemoryGb = $localMemoryGb
+        maxGpuProcesses = [int] $ResourceEnvelope.maxGpuProcesses
+        maxConcurrentDeepLearningJobs = [int] $ResourceEnvelope.maxConcurrentDeepLearningJobs
+        maxConcurrentAgentRuns = [int] $ResourceEnvelope.maxConcurrentAgentRuns
+    }
+    $dockerEnvelope = [ordered]@{
+        maxCpuCores = $dockerCpu
+        maxMemoryGb = $dockerMemoryGb
+        maxGpuProcesses = [int] $ResourceEnvelope.maxGpuProcesses
+        maxConcurrentDeepLearningJobs = [int] $ResourceEnvelope.maxConcurrentDeepLearningJobs
+        maxConcurrentAgentRuns = [int] $ResourceEnvelope.maxConcurrentAgentRuns
+    }
+
+    return [ordered]@{
+        local = $localEnvelope
+        docker = $dockerEnvelope
+        summary = "local maxCpuCores=$localCpu maxMemoryGb=$localMemoryGb; docker maxCpuCores=$dockerCpu maxMemoryGb=$dockerMemoryGb; total maxCpuCores=$totalCpu maxMemoryGb=$totalMemoryGb"
+    }
 }
 
 function Start-DockerRuntime {
@@ -406,11 +452,14 @@ try {
         }
     }
     else {
-        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot -ResourceEnvelope $modeConfig.resourceEnvelope
+        $hybridEnvelope = Split-HybridResourceEnvelope -ResourceEnvelope $modeConfig.resourceEnvelope
+        Add-SmokeCheck -Checks $checks -Name 'hybrid-resource-envelope' -Status 'passed' -Detail ("Split hybrid envelope across runtimes: $($hybridEnvelope.summary)")
+
+        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot -ResourceEnvelope $hybridEnvelope.local
         $localRuntimeStdout = $localRuntime.stdoutPath
         $localRuntimeStderr = $localRuntime.stderrPath
         Add-LocalRuntimeResourceCheck -Checks $checks -ResourceEnvironment $localRuntime.resourceEnvironment
-        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment -ResourceEnvelope $modeConfig.resourceEnvelope
+        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment -ResourceEnvelope $hybridEnvelope.docker
 
         $endpoints = [string[]] $modeConfig.healthContract.endpoints
         $healthyWindows = Wait-ForHealthEndpoint -Endpoint $endpoints[0] -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
