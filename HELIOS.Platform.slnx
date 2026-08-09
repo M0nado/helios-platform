@@ -17,4 +17,8 @@
   <Folder Name="/src/Security/">
     <Project Path="src/Security/SecurityValidator.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Helios.Operator/Helios.Operator.csproj" />
+    <Project Path="tools/Helios.Operator.Tests/Helios.Operator.Tests.csproj" />
+  </Folder>
 </Solution>

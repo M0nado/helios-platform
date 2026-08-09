@@ -38,6 +38,63 @@ public sealed class OperatorPolicyValidatorTests
     }
 
     [Theory]
+    [InlineData("{\"type\":\"azure.rbac.assign\",\"target\":\"subscriptions/production\",\"principalId\":\"11111111-1111-1111-1111-111111111111\"}", "principalId")]
+    [InlineData("{\"type\":\"github.environment.reviewer.add\",\"target\":\"production\",\"reviewer\":\"helios-agent\"}", "reviewer")]
+    public void RejectsActionSpecificSelfAssignmentWhenResourceTargetIsPresent(string action, string field)
+    {
+        var errors = Validate(action);
+
+        Assert.Contains(errors, error => error.Path.EndsWith(field, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RejectsRulesetWeakening()
+    {
+        var errors = Validate("{\"type\":\"github.ruleset.update\",\"requireStatusChecks\":false}");
+
+        Assert.Contains(errors, error => error.Message.Contains("weakened", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void RejectsUndeclaredExactOidcSubject()
+    {
+        var errors = Validate("{\"type\":\"azure.oidc.configure\",\"subject\":\"repo:someone/else:environment:production\"}");
+
+        Assert.Contains(errors, error => error.Message.Contains("not declared", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void RejectsSelfApprovalByAzurePrincipalId()
+    {
+        var errors = Validate("{\"type\":\"approval.grant\",\"approver\":\"11111111-1111-1111-1111-111111111111\"}");
+
+        Assert.Contains(errors, error => error.Message.Contains("own changes", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("/password:plaintext")]
+    [InlineData("Server=db;User Id=user;Password=plaintext")]
+    public void RejectsWindowsAndConnectionStringSecretArguments(string argument)
+    {
+        var action = JsonSerializer.Serialize(new { type = "command.execute", args = new[] { argument } });
+
+        var errors = Validate(action);
+
+        Assert.Contains(errors, error => error.Message.Contains("CLI arguments", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void RejectsPlanIdentityReuseForUnrelatedActions()
+    {
+        using var manifest = JsonDocument.Parse(Manifest);
+        using var plan = JsonDocument.Parse(Plan("{\"type\":\"repository.checkout\"}", identities: "{\"development\":\"shared\",\"production\":\"shared\"}"));
+
+        var errors = OperatorPolicyValidator.Validate(manifest.RootElement, plan.RootElement);
+
+        Assert.Contains(errors, error => error.Path == "plan/identities" && error.Message.Contains("must not reuse", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
     [InlineData("{\"source\":\"\",\"correlationId\":\"not-a-uuid\",\"evidenceLinks\":[]}", "0.8")]
     [InlineData("{\"source\":\"test\",\"correlationId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"evidenceLinks\":[\"https://example.test/evidence\"]}", "1.1")]
     [InlineData("{\"source\":\"test\",\"correlationId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"evidenceLinks\":[\"https://example.test/evidence\"]}", "\"high\"")]
@@ -57,10 +114,18 @@ public sealed class OperatorPolicyValidatorTests
         Directory.Delete(directory, true);
     }
 
-    private static string Plan(string action, string? provenance = null, string confidence = "0.8") => $$"""
+    private static IReadOnlyList<PolicyDiagnostic> Validate(string action)
+    {
+        using var manifest = JsonDocument.Parse(Manifest);
+        using var plan = JsonDocument.Parse(Plan(action));
+        return OperatorPolicyValidator.Validate(manifest.RootElement, plan.RootElement);
+    }
+
+    private static string Plan(string action, string? provenance = null, string confidence = "0.8", string? identities = null) => $$"""
       {
         "schemaVersion":"1.0",
         "actor":{"id":"agent-1","githubLogin":"helios-agent","azurePrincipalId":"11111111-1111-1111-1111-111111111111"},
+        {{(identities is null ? "" : $"\"identities\":{identities},")}}
         "actions":[{{action}}],
         "provenance":{{provenance ?? "{\"source\":\"test\",\"correlationId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"evidenceLinks\":[\"https://example.test/evidence\"]}"}},
         "confidence":{{confidence}}

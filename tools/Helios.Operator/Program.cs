@@ -123,6 +123,10 @@ public static partial class OperatorPolicyValidator
         var actorPrincipal = Text(plan, "actor", "azurePrincipalId") ?? Text(plan, "agent", "azurePrincipalId");
         var declaredApps = Strings(manifest, "githubApps");
         var declaredSecrets = Strings(manifest, "secretReads");
+        var declaredOidcSubjects = Strings(manifest, "oidcSubjects");
+
+        if (ReusesProductionIdentity(plan))
+            Add(errors, "plan/identities", "development and production must not reuse an identity");
 
         if (!plan.TryGetProperty("actions", out var actions)) return errors;
         var index = 0;
@@ -130,28 +134,36 @@ public static partial class OperatorPolicyValidator
         {
             var path = $"plan/actions/{index++}";
             var type = Text(action, "type")?.ToLowerInvariant() ?? "";
-            var target = Text(action, "target") ?? Text(action, "principalId") ?? Text(action, "subject") ?? Text(action, "reviewer");
-            if (type.Contains("rbac") && Equal(target, actorPrincipal, actorId))
-                Add(errors, path + "/target", "an agent cannot expand its own RBAC permissions");
-            if (type.Contains("reviewer") && Equal(target, actorLogin, actorId))
-                Add(errors, path + "/target", "an agent cannot add itself as a GitHub environment reviewer");
-            if (type.Contains("branch") && IsWeakening(action))
+            var target = Text(action, "target");
+            var principalId = Text(action, "principalId");
+            var reviewer = Text(action, "reviewer");
+            if (type.Contains("rbac") && (Equal(principalId, actorPrincipal, actorId) || Equal(target, actorPrincipal, actorId)))
+                Add(errors, path + (Equal(principalId, actorPrincipal, actorId) ? "/principalId" : "/target"), "an agent cannot expand its own RBAC permissions");
+            if (type.Contains("reviewer") && (Equal(reviewer, actorLogin, actorId) || Equal(target, actorLogin, actorId)))
+                Add(errors, path + (Equal(reviewer, actorLogin, actorId) ? "/reviewer" : "/target"), "an agent cannot add itself as a GitHub environment reviewer");
+            if ((type.Contains("branch") || type.Contains("ruleset")) && IsWeakening(action))
                 Add(errors, path, "branch protection or rulesets cannot be weakened");
             if (type.Contains("github.app") && !Declared(Text(action, "app") ?? target, declaredApps))
                 Add(errors, path + "/app", "GitHub App is not declared by the environment manifest");
             if (type.Contains("secret") && type.Contains("read") && !Declared(Text(action, "secret") ?? target, declaredSecrets))
                 Add(errors, path + "/secret", "secret read is not declared by the environment manifest");
-            if ((type.Contains("oidc") || action.TryGetProperty("oidcSubject", out _)) && ContainsWildcard(Text(action, "subject") ?? Text(action, "oidcSubject")))
-                Add(errors, path + "/subject", "OIDC subjects must not contain wildcards");
+            var oidcSubject = Text(action, "subject") ?? Text(action, "oidcSubject");
+            if (type.Contains("oidc") || action.TryGetProperty("oidcSubject", out _))
+            {
+                if (ContainsWildcard(oidcSubject))
+                    Add(errors, path + "/subject", "OIDC subjects must not contain wildcards");
+                else if (!Declared(oidcSubject, declaredOidcSubjects))
+                    Add(errors, path + "/subject", "OIDC subject is not declared by the environment manifest");
+            }
             if (action.TryGetProperty("image", out var image) && MutableImage(image.GetString()))
                 Add(errors, path + "/image", "container images must use an immutable digest");
             if (action.TryGetProperty("ref", out var reference) && MutableRef(reference.GetString()))
                 Add(errors, path + "/ref", "repository refs must be immutable commit SHAs");
             if (action.TryGetProperty("args", out var args) && HasSecretArgument(args))
                 Add(errors, path + "/args", "secrets must not be passed in CLI arguments");
-            if ((type.Contains("identity") || type.Contains("deploy")) && ReusesProductionIdentity(action, plan))
+            if ((type.Contains("identity") || type.Contains("deploy")) && ReusesProductionIdentity(action))
                 Add(errors, path, "development and production must not reuse an identity");
-            if (type.Contains("approv") && Equal(Text(action, "approver") ?? target, actorId, actorLogin))
+            if (type.Contains("approv") && Equal(Text(action, "approver") ?? target, actorId, actorLogin, actorPrincipal))
                 Add(errors, path + "/approver", "agents cannot approve their own changes");
         }
         return errors;
@@ -163,10 +175,10 @@ public static partial class OperatorPolicyValidator
         Bool(action, "allowForcePushes") == true || Bool(action, "allowDeletions") == true ||
         (Number(action, "requiredApprovingReviewCount") is double count && count < 1);
 
-    private static bool ReusesProductionIdentity(JsonElement action, JsonElement plan)
+    private static bool ReusesProductionIdentity(JsonElement node)
     {
-        var dev = Text(action, "developmentIdentity") ?? Text(plan, "identities", "development");
-        var prod = Text(action, "productionIdentity") ?? Text(plan, "identities", "production");
+        var dev = Text(node, "developmentIdentity") ?? Text(node, "identities", "development");
+        var prod = Text(node, "productionIdentity") ?? Text(node, "identities", "production");
         return !string.IsNullOrWhiteSpace(dev) && string.Equals(dev, prod, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -190,6 +202,6 @@ public static partial class OperatorPolicyValidator
             : new(StringComparer.OrdinalIgnoreCase);
     }
 
-    [GeneratedRegex(@"(?i)(--?(password|passwd|token|secret|api[-_]?key|client[-_]?secret)(=|$)|Bearer\s+[A-Za-z0-9._~+/-]+|://[^\s/:]+:[^\s/@]+@)")]
+    [GeneratedRegex(@"(?i)(?:--?(?:password|passwd|token|secret|api[-_]?key|client[-_]?secret)(?:=|$)|/(?:password|passwd|token|secret|api[-_]?key|client[-_]?secret)(?::|=)|(?:^|;)\s*(?:password|pwd|user\s*id|uid)\s*=|Bearer\s+[A-Za-z0-9._~+/-]+|://[^\s/:]+:[^\s/@]+@)")]
     private static partial Regex SecretArgumentRegex();
 }
