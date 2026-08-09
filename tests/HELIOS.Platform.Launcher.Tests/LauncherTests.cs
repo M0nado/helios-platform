@@ -110,15 +110,13 @@ public sealed class LauncherTests
     }
 
     [Theory]
-    [InlineData(LauncherCommand.Start, false, "setup", "--changed-only")]
-    [InlineData(LauncherCommand.Dashboard, false, "dashboard", "--changed-only")]
-    [InlineData(LauncherCommand.Start, true, "-Profile", "-ChangedOnly")]
-    [InlineData(LauncherCommand.Dashboard, true, "-Profile", "-ChangedOnly")]
+    [InlineData(LauncherCommand.Start, false)]
+    [InlineData(LauncherCommand.Dashboard, false)]
+    [InlineData(LauncherCommand.Start, true)]
+    [InlineData(LauncherCommand.Dashboard, true)]
     public void CommandBuilder_does_not_filter_full_profile(
         LauncherCommand command,
-        bool isWindows,
-        string expectedCommandArgument,
-        string changedOnlyArgument)
+        bool isWindows)
     {
         var root = CreateRepository();
         try
@@ -127,9 +125,28 @@ public sealed class LauncherTests
 
             var invocation = CommandBuilder.Build(root, options, isWindows);
 
-            Assert.Contains(expectedCommandArgument, invocation.Arguments);
-            Assert.Contains("full", invocation.Arguments);
-            Assert.DoesNotContain(changedOnlyArgument, invocation.Arguments);
+            if (isWindows)
+            {
+                var expected = new List<string>
+                {
+                    "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+                    Path.Combine(root, "scripts", "setup", "helios-dev.ps1"),
+                    "-Profile", "full", "-MaxWorkers", "6"
+                };
+                if (command == LauncherCommand.Dashboard)
+                    expected.Add("-Serve");
+
+                Assert.Equal(expected, invocation.Arguments);
+                Assert.DoesNotContain("-ChangedOnly", invocation.Arguments);
+            }
+            else
+            {
+                var action = command == LauncherCommand.Start ? "setup" : "dashboard";
+                Assert.Equal(
+                    [Path.Combine(root, "helios.sh"), action, "--profile", "full", "--max-workers", "6"],
+                    invocation.Arguments);
+                Assert.DoesNotContain("--changed-only", invocation.Arguments);
+            }
         }
         finally
         {
@@ -139,7 +156,7 @@ public sealed class LauncherTests
 
     private static string CreateRepository()
     {
-        var root = Path.Combine(Path.GetTempPath(), $"helios-launcher-{Guid.NewGuid():N}");
+        var root = Path.Combine(Path.GetTempPath(), $"helios launcher {Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(root, "config", "integrations"));
         File.WriteAllText(Path.Combine(root, "helios.sh"), "#!/usr/bin/env bash\n");
         File.WriteAllText(Path.Combine(root, "config", "integrations", "event-contract.schema.json"), "{}");
