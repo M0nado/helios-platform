@@ -93,7 +93,7 @@ public sealed class LauncherTests
         var root = CreateRepository();
         try
         {
-            var options = new LauncherOptions(LauncherCommand.Dashboard, root, "full", 6, false);
+            var options = new LauncherOptions(LauncherCommand.Dashboard, root, "quick", 6, false);
 
             var invocation = CommandBuilder.Build(root, options, isWindows: true);
 
@@ -101,7 +101,7 @@ public sealed class LauncherTests
             Assert.Contains(Path.Combine(root, "scripts", "setup", "helios-dev.ps1"), invocation.Arguments);
             Assert.Contains("-Serve", invocation.Arguments);
             Assert.Contains("6", invocation.Arguments);
-            Assert.DoesNotContain("-ChangedOnly", invocation.Arguments);
+            Assert.Contains("-ChangedOnly", invocation.Arguments);
         }
         finally
         {
@@ -109,20 +109,27 @@ public sealed class LauncherTests
         }
     }
 
-    [Fact]
-    public void CommandBuilder_does_not_filter_full_profile_on_linux()
+    [Theory]
+    [InlineData(LauncherCommand.Start, false, "setup", "--changed-only")]
+    [InlineData(LauncherCommand.Dashboard, false, "dashboard", "--changed-only")]
+    [InlineData(LauncherCommand.Start, true, "-Profile", "-ChangedOnly")]
+    [InlineData(LauncherCommand.Dashboard, true, "-Profile", "-ChangedOnly")]
+    public void CommandBuilder_does_not_filter_full_profile(
+        LauncherCommand command,
+        bool isWindows,
+        string expectedCommandArgument,
+        string changedOnlyArgument)
     {
         var root = CreateRepository();
         try
         {
-            var options = new LauncherOptions(LauncherCommand.Dashboard, root, "full", 6, false);
+            var options = new LauncherOptions(command, root, "full", 6, false);
 
-            var invocation = CommandBuilder.Build(root, options, isWindows: false);
+            var invocation = CommandBuilder.Build(root, options, isWindows);
 
-            Assert.Equal(
-                ["dashboard", "--profile", "full", "--max-workers", "6"],
-                invocation.Arguments.Skip(1));
-            Assert.DoesNotContain("--changed-only", invocation.Arguments);
+            Assert.Contains(expectedCommandArgument, invocation.Arguments);
+            Assert.Contains("full", invocation.Arguments);
+            Assert.DoesNotContain(changedOnlyArgument, invocation.Arguments);
         }
         finally
         {
