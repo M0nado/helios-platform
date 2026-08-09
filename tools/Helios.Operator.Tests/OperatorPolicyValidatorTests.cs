@@ -164,6 +164,7 @@ public sealed class OperatorPolicyValidatorTests
     {
         using var authority = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var publicKey = authority.ExportSubjectPublicKeyInfoPem().Replace("\r", "");
+        var approvedAt = DateTimeOffset.UtcNow.ToString("O");
         var manifest = JsonSerializer.Serialize(new
         {
             version = "1.0",
@@ -171,12 +172,12 @@ public sealed class OperatorPolicyValidatorTests
             approvalAuthorities = new[] { new { id = "github-environment", publicKeyPem = publicKey } },
             declared = new { githubApps = Array.Empty<string>(), secretReads = Array.Empty<string>(), oidcSubjects = Array.Empty<string>() }
         });
-        const string evidence = "\"approvalEvidence\":{\"approverId\":\"human-reviewer\",\"approvedAt\":\"2026-08-09T00:00:00Z\",\"evidenceLinks\":[\"https://example.test/approval\"]},\"rollbackEvidence\":{\"procedure\":\"Revert the assignment\",\"evidenceLinks\":[\"https://example.test/rollback\"]},";
+        var evidence = $"\"approvalEvidence\":{{\"approverId\":\"human-reviewer\",\"approvedAt\":{JsonSerializer.Serialize(approvedAt)},\"evidenceLinks\":[\"https://example.test/approval\"]}},\"rollbackEvidence\":{{\"procedure\":\"Revert the assignment\",\"evidenceLinks\":[\"https://example.test/rollback\"]}},";
         var plan = Plan("{\"type\":\"disk.format\"}", extra: evidence);
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(plan))).ToLowerInvariant();
-        var payload = string.Join('\n', "1.0", "github-environment", "human-reviewer", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", hash, "2026-08-09T00:00:00Z");
-        var signature = Convert.ToBase64String(authority.SignData(Encoding.UTF8.GetBytes(payload), HashAlgorithmName.SHA256));
-        var record = JsonSerializer.Serialize(new { schemaVersion = "1.0", authorityId = "github-environment", approverId = "human-reviewer", correlationId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", planSha256 = hash, approvedAt = "2026-08-09T00:00:00Z", signature });
+        var payload = OperatorPolicyValidator.ApprovalSignaturePayload("1.0", "github-environment", "human-reviewer", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", hash, approvedAt);
+        var signature = Convert.ToBase64String(authority.SignData(payload, HashAlgorithmName.SHA256));
+        var record = JsonSerializer.Serialize(new { schemaVersion = "1.0", authorityId = "github-environment", approverId = "human-reviewer", correlationId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", planSha256 = hash, approvedAt, signature });
 
         var result = RunOperatorWithFiles("approve", manifest, plan, record);
 
@@ -213,6 +214,42 @@ public sealed class OperatorPolicyValidatorTests
         var errors = Program.Validate(manifestPath, planPath);
 
         Assert.Contains(errors, error => error.Message.Contains("duplicate property", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("{\"type\":\"container.deploy\",\"image\":42}")]
+    [InlineData("{\"type\":\"repository.checkout\",\"ref\":{}}")]
+    [InlineData("{\"type\":\"command.execute\",\"args\":\"--token=secret\"}")]
+    [InlineData("{\"type\":\"github.ruleset.update\",\"requiredApprovingReviewCount\":\"zero\"}")]
+    public void SchemaRejectsInvalidPolicyFieldTypesWithoutThrowing(string action)
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var manifestPath = Path.Combine(directory, "manifest.json");
+        var planPath = Path.Combine(directory, "plan.json");
+        File.WriteAllText(manifestPath, Manifest);
+        File.WriteAllText(planPath, Plan(action));
+
+        var exception = Record.Exception(() => Program.Validate(manifestPath, planPath));
+        var errors = Program.Validate(manifestPath, planPath);
+
+        Assert.Null(exception);
+        Assert.NotEmpty(errors);
+    }
+
+    [Fact]
+    public void RejectsOversizedPlanBeforeParsing()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var manifestPath = Path.Combine(directory, "manifest.json");
+        var planPath = Path.Combine(directory, "plan.json");
+        File.WriteAllText(manifestPath, Manifest);
+        File.WriteAllBytes(planPath, new byte[4 * 1024 * 1024 + 1]);
+
+        var errors = Program.Validate(manifestPath, planPath);
+
+        Assert.Contains(errors, error => error.Message.Contains("byte limit", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

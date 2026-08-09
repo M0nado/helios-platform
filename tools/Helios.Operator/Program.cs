@@ -8,6 +8,7 @@ namespace Helios.Operator;
 
 public static class Program
 {
+    private const long MaximumInputBytes = 4 * 1024 * 1024;
     public static int Main(string[] args)
     {
         if (args.Length < 2)
@@ -30,7 +31,16 @@ public static class Program
             return 2;
         }
 
-        var validation = ValidateAndLoad(manifest, plan, command, approvalRecord);
+        ValidationResult validation;
+        try
+        {
+            validation = ValidateAndLoad(manifest, plan, command, approvalRecord);
+        }
+        catch (OperatorConfigurationException ex)
+        {
+            Console.Error.WriteLine($"configuration: {ex.Message}");
+            return 1;
+        }
         var diagnostics = validation.Diagnostics;
         if (diagnostics.Count != 0)
         {
@@ -82,6 +92,11 @@ public static class Program
     {
         try
         {
+            var file = new FileInfo(path);
+            if (!file.Exists)
+                throw new IOException($"{label} file does not exist");
+            if (file.Length > MaximumInputBytes)
+                throw new IOException($"{label} exceeds the {MaximumInputBytes}-byte limit");
             var bytes = File.ReadAllBytes(path);
             RejectDuplicateProperties(bytes);
             using var document = JsonDocument.Parse(bytes);
@@ -134,7 +149,8 @@ public static class Program
             Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "config", "operator", name)),
             Path.Combine(Directory.GetCurrentDirectory(), "config", "operator", name)
         };
-        return candidates.First(File.Exists);
+        return candidates.FirstOrDefault(File.Exists)
+            ?? throw new OperatorConfigurationException($"required operator schema '{name}' was not found");
     }
 
     private static void AtomicWrite(string path, byte[] value)
@@ -142,13 +158,29 @@ public static class Program
         var fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         var temporary = fullPath + ".tmp-" + Guid.NewGuid().ToString("N");
-        File.WriteAllBytes(temporary, value);
-        File.Move(temporary, fullPath, true);
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                       4096, FileOptions.WriteThrough))
+            {
+                stream.Write(value);
+                stream.Flush(true);
+            }
+            if (!OperatingSystem.IsWindows())
+                File.SetUnixFileMode(temporary, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            File.Move(temporary, fullPath, true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
 
     private sealed record JsonNodeDocument(JsonElement Root, byte[] Bytes);
     private sealed record ValidationResult(IReadOnlyList<PolicyDiagnostic> Diagnostics, JsonNodeDocument? Manifest, JsonNodeDocument? Plan);
 }
+
+public sealed class OperatorConfigurationException(string message) : Exception(message);
 
 public sealed record PolicyDiagnostic(string Path, string Message);
 
@@ -202,9 +234,9 @@ public static partial class OperatorPolicyValidator
                 else if (!Declared(oidcSubject, declaredOidcSubjects))
                     Add(errors, path + "/subject", "OIDC subject is not declared by the environment manifest");
             }
-            if (action.TryGetProperty("image", out var image) && MutableImage(image.GetString()))
+            if (action.TryGetProperty("image", out _) && MutableImage(Text(action, "image")))
                 Add(errors, path + "/image", "container images must use an immutable digest");
-            if (action.TryGetProperty("ref", out var reference) && MutableRef(reference.GetString()))
+            if (action.TryGetProperty("ref", out _) && MutableRef(Text(action, "ref")))
                 Add(errors, path + "/ref", "repository refs must be immutable commit SHAs");
             if (action.TryGetProperty("args", out var args) && HasSecretArgument(args))
                 Add(errors, path + "/args", "secrets must not be passed in CLI arguments");
@@ -280,6 +312,10 @@ public static partial class OperatorPolicyValidator
             Add(errors, "approvalRecord/planSha256", "approval record must be bound to the exact plan bytes");
         if (plan.TryGetProperty("approvalEvidence", out var evidence) && !Equal(approverId, Text(evidence, "approverId")))
             Add(errors, "approvalRecord/approverId", "signed approver must match the plan approval evidence");
+        if (plan.TryGetProperty("approvalEvidence", out evidence) && !SameInstant(approvedAt, Text(evidence, "approvedAt")))
+            Add(errors, "approvalRecord/approvedAt", "signed approval time must match the plan approval evidence");
+        if (!DateTimeOffset.TryParse(approvedAt, out var approvalTime) || approvalTime > DateTimeOffset.UtcNow.AddMinutes(5) || approvalTime < DateTimeOffset.UtcNow.AddDays(-7))
+            Add(errors, "approvalRecord/approvedAt", "approval record must be recent and must not be future-dated");
 
         var authority = manifest.TryGetProperty("approvalAuthorities", out var authorities)
             ? authorities.EnumerateArray().FirstOrDefault(item => Equal(Text(item, "id"), authorityId))
@@ -295,7 +331,7 @@ public static partial class OperatorPolicyValidator
         {
             using var verifier = ECDsa.Create();
             verifier.ImportFromPem(publicKey);
-            var payload = Encoding.UTF8.GetBytes(string.Join('\n', "1.0", authorityId, approverId, correlationId, planSha256, approvedAt));
+            var payload = ApprovalSignaturePayload("1.0", authorityId, approverId, correlationId, planSha256, approvedAt);
             if (!verifier.VerifyData(payload, Convert.FromBase64String(signature!), HashAlgorithmName.SHA256))
                 Add(errors, "approvalRecord/signature", "approval record signature is invalid");
         }
@@ -304,6 +340,23 @@ public static partial class OperatorPolicyValidator
             Add(errors, "approvalRecord/signature", "approval record signature is invalid");
         }
     }
+
+    public static byte[] ApprovalSignaturePayload(params string?[] fields)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, true);
+        foreach (var field in fields)
+        {
+            var bytes = Encoding.UTF8.GetBytes(field ?? string.Empty);
+            writer.Write(bytes.Length);
+            writer.Write(bytes);
+        }
+        writer.Flush();
+        return stream.ToArray();
+    }
+
+    private static bool SameInstant(string? left, string? right) =>
+        DateTimeOffset.TryParse(left, out var leftTime) && DateTimeOffset.TryParse(right, out var rightTime) && leftTime == rightTime;
 
     private static bool IsWeakening(JsonElement action) =>
         Bool(action, "requiredReviews") == false || Bool(action, "requirePullRequest") == false ||
@@ -329,7 +382,7 @@ public static partial class OperatorPolicyValidator
     private static string? Text(JsonElement node, string property) => node.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     private static string? Text(JsonElement node, string parent, string property) => node.TryGetProperty(parent, out var child) ? Text(child, property) : null;
     private static bool? Bool(JsonElement node, string property) => node.TryGetProperty(property, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False ? value.GetBoolean() : null;
-    private static double? Number(JsonElement node, string property) => node.TryGetProperty(property, out var value) && value.TryGetDouble(out var number) ? number : null;
+    private static double? Number(JsonElement node, string property) => node.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var number) ? number : null;
     private static HashSet<string> Strings(JsonElement node, string property)
     {
         if (node.TryGetProperty("declared", out var declared)) node = declared;
