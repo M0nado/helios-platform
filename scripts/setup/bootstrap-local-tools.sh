@@ -10,7 +10,7 @@ GH_DIR="$TOOLS_DIR/gh"
 AZ_DIR="$TOOLS_DIR/azcli-venv"
 RG_DIR="$TOOLS_DIR/rg"
 GH_VERSION="${GH_VERSION:-2.76.2}"
-DOTNET_CHANNEL="${DOTNET_CHANNEL:-8.0}"
+DOTNET_VERSION="${DOTNET_VERSION:-$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' global.json | head -1)}"
 RG_VERSION="${RG_VERSION:-14.1.1}"
 
 case "$(uname -s)" in
@@ -18,7 +18,7 @@ case "$(uname -s)" in
     exec powershell.exe -NoProfile -ExecutionPolicy Bypass \
       -File "$(cygpath -w "$(pwd)/scripts/setup/bootstrap-local-tools.ps1")" \
       -ToolsDirectory "$(cygpath -w "$TOOLS_DIR")" \
-      -DotnetChannel "$DOTNET_CHANNEL" -GhVersion "$GH_VERSION" -RgVersion "$RG_VERSION"
+      -DotnetVersion "$DOTNET_VERSION" -GhVersion "$GH_VERSION" -RgVersion "$RG_VERSION"
     ;;
   Linux*)
     PLATFORM="linux"
@@ -51,12 +51,17 @@ extract_archive() {
 
 mkdir -p "$TOOLS_DIR"
 
-if [ ! -x "$DOTNET_DIR/dotnet$EXE_SUFFIX" ]; then
-  echo "Installing .NET SDK channel $DOTNET_CHANNEL into $DOTNET_DIR"
+if [ ! -x "$DOTNET_DIR/dotnet$EXE_SUFFIX" ] || [ "$("$DOTNET_DIR/dotnet$EXE_SUFFIX" --version 2>/dev/null || true)" != "$DOTNET_VERSION" ]; then
+  echo "Installing .NET SDK $DOTNET_VERSION into $DOTNET_DIR"
   curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$TOOLS_DIR/dotnet-install.sh"
-  bash "$TOOLS_DIR/dotnet-install.sh" --channel "$DOTNET_CHANNEL" --install-dir "$DOTNET_DIR" --no-path --os "$PLATFORM"
+  bash "$TOOLS_DIR/dotnet-install.sh" --version "$DOTNET_VERSION" --install-dir "$DOTNET_DIR" --no-path --os "$PLATFORM"
 else
   echo ".NET already installed at $DOTNET_DIR"
+fi
+INSTALLED_DOTNET_VERSION="$("$DOTNET_DIR/dotnet$EXE_SUFFIX" --version)"
+if [ "$INSTALLED_DOTNET_VERSION" != "$DOTNET_VERSION" ]; then
+  echo "Expected .NET SDK $DOTNET_VERSION, but local dotnet selected $INSTALLED_DOTNET_VERSION." >&2
+  exit 1
 fi
 
 if [ ! -x "$GH_DIR/bin/gh$EXE_SUFFIX" ]; then

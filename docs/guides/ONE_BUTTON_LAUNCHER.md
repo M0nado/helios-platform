@@ -52,7 +52,9 @@ When the package is outside the checkout, point it at the repository:
 
 The default `start` action bootstraps the approved local tools and runs the
 safe, changed-project `quick` build-graph profile. It uses at most four workers
-by default. Override the bounded worker count when needed:
+by default. The local bootstrap reads `global.json` and installs that exact .NET
+SDK version into `.tools`, avoiding machine-wide changes and SDK feature-band
+drift. Override the bounded worker count when needed:
 
 ```bash
 ./run-helios.sh start --max-workers 8

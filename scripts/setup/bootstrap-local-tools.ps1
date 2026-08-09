@@ -1,12 +1,16 @@
 [CmdletBinding()]
 param(
     [string] $ToolsDirectory = (Join-Path (Get-Location) '.tools'),
-    [string] $DotnetChannel = '8.0',
+    [string] $DotnetVersion,
     [string] $GhVersion = '2.76.2',
     [string] $RgVersion = '14.1.1'
 )
 
 $ErrorActionPreference = 'Stop'
+$repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+if (-not $DotnetVersion) {
+    $DotnetVersion = (Get-Content -Raw (Join-Path $repositoryRoot 'global.json') | ConvertFrom-Json).sdk.version
+}
 $ToolsDirectory = [IO.Path]::GetFullPath($ToolsDirectory)
 $dotnetDirectory = Join-Path $ToolsDirectory 'dotnet'
 $ghDirectory = Join-Path $ToolsDirectory 'gh'
@@ -15,13 +19,19 @@ $rgDirectory = Join-Path $ToolsDirectory 'rg'
 $pythonDirectory = Join-Path $ToolsDirectory 'python'
 New-Item -ItemType Directory -Force -Path $ToolsDirectory | Out-Null
 
-if (-not (Test-Path (Join-Path $dotnetDirectory 'dotnet.exe'))) {
-    Write-Host "Installing .NET SDK channel $DotnetChannel into $dotnetDirectory"
+$dotnetCommand = Join-Path $dotnetDirectory 'dotnet.exe'
+$installedDotnetVersion = if (Test-Path $dotnetCommand) { & $dotnetCommand --version 2>$null } else { $null }
+if ($installedDotnetVersion -ne $DotnetVersion) {
+    Write-Host "Installing .NET SDK $DotnetVersion into $dotnetDirectory"
     $installer = Join-Path $ToolsDirectory 'dotnet-install.ps1'
     Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile $installer
-    & $installer -Channel $DotnetChannel -InstallDir $dotnetDirectory -NoPath
+    & $installer -Version $DotnetVersion -InstallDir $dotnetDirectory -NoPath
 } else {
     Write-Host ".NET already installed at $dotnetDirectory"
+}
+$installedDotnetVersion = & $dotnetCommand --version
+if ($installedDotnetVersion -ne $DotnetVersion) {
+    throw "Expected .NET SDK $DotnetVersion, but local dotnet selected $installedDotnetVersion."
 }
 
 if (-not (Test-Path (Join-Path $ghDirectory 'bin/gh.exe'))) {
@@ -46,12 +56,8 @@ if (-not $python) { throw 'Python 3 is required to install the Azure CLI.' }
 New-Item -ItemType Directory -Force -Path $pythonDirectory | Out-Null
 $python3Command = Join-Path $pythonDirectory 'python3.cmd'
 $usesPythonLauncher = [IO.Path]::GetFileNameWithoutExtension($python.Source) -eq 'py'
-$pythonArguments = if ($usesPythonLauncher) { ' -3' } else { '' }
-$escapedPythonSource = $python.Source.Replace('%', '%%')
-Set-Content -Encoding Ascii -Path $python3Command -Value @(
-    '@echo off'
-    "`"$escapedPythonSource`"$pythonArguments %*"
-)
+& (Join-Path $PSScriptRoot 'New-Python3Shim.ps1') -InterpreterPath $python.Source `
+    -OutputPath $python3Command -UsePythonLauncher:$usesPythonLauncher
 
 $azureCommand = Join-Path $azureDirectory 'Scripts/az.cmd'
 if (-not (Test-Path $azureCommand)) {
