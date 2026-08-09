@@ -154,6 +154,7 @@ $localProcessParameters = @{
 }
 
 $containerName = 'helios-connect-xcore9-hybrid'
+$containerStarted = $false
 $localProcess = Start-ProcessWithEnvironment -Parameters $localProcessParameters -Environment $localResourceEnvironment
 
 try {
@@ -196,6 +197,7 @@ try {
         }
         throw ("Docker run failed: " + $joinedOutput)
     }
+    $containerStarted = $true
 
     $startupDeadline = (Get-Date).AddSeconds($startupTimeoutSeconds)
     $localProcess.Refresh()
@@ -247,7 +249,7 @@ catch {
     if ($null -ne $localProcess -and -not $localProcess.HasExited) {
         Stop-ProcessTreeSafe -ProcessId $localProcess.Id
     }
-    if (-not [string]::IsNullOrWhiteSpace($containerName)) {
+    if ($containerStarted -and -not [string]::IsNullOrWhiteSpace($containerName)) {
         & docker rm --force $containerName *> $null
     }
     throw

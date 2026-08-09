@@ -369,13 +369,13 @@ def runtime_matrix_contract() -> dict[str, Any]:
     return {
         **matrix_asset,
         "manifestExists": False,
-        "defaultMode": None,
+        "defaultMode": matrix_asset.get("defaultMode"),
         "modeCount": len(asset_mode_ids),
         "modeIds": asset_mode_ids,
-        "requiredDenyListCount": 0,
-        "nonDestructiveDefault": None,
-        "productionMutationRequiresProtectedApproval": None,
-        "crossModeTokenReuseAllowed": None,
+        "requiredDenyListCount": matrix_asset.get("requiredDenyListCount"),
+        "nonDestructiveDefault": matrix_asset.get("nonDestructiveDefault"),
+        "productionMutationRequiresProtectedApproval": matrix_asset.get("productionMutationRequiresProtectedApproval"),
+        "crossModeTokenReuseAllowed": matrix_asset.get("crossModeTokenReuseAllowed"),
         "smokeEvidenceLinked": smoke_evidence_linked,
     }
 

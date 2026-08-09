@@ -184,6 +184,11 @@ class HeliosCliTests(unittest.TestCase):
         self.assertEqual(matrix["contract"], "xcore9-runtime-matrix")
         self.assertFalse(matrix["manifestExists"])
         self.assertEqual(matrix["defaultExecutionMode"], "validation-first")
+        self.assertEqual(matrix["defaultMode"], "local-windows")
+        self.assertEqual(matrix["requiredDenyListCount"], 9)
+        self.assertTrue(matrix["nonDestructiveDefault"])
+        self.assertTrue(matrix["productionMutationRequiresProtectedApproval"])
+        self.assertFalse(matrix["crossModeTokenReuseAllowed"])
         self.assertEqual(
             set(matrix["modeIds"]),
             {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
