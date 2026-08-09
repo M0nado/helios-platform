@@ -34,7 +34,7 @@ var command = args.ElementAtOrDefault(1)?.ToLowerInvariant() ?? "guided";
     {
         var repository = new RepositoryDetector().Detect(root);
         var session = NewSession(mode, repository);
-        session.Evidence.Add(new("repository", EvidenceKind.Observed, repository.Name, repository.EvidenceHash));
+        session.Evidence.Add(new("repository", EvidenceKind.Observed, repository.Name, repository.EvidenceHash, session.Id, repository.Url));
 
         if (approvedReadOnly)
         {
@@ -46,7 +46,7 @@ var command = args.ElementAtOrDefault(1)?.ToLowerInvariant() ?? "guided";
         }
         else if (mode == ConnectMode.Auto)
         {
-            session.Evidence.Add(new("discovery.approval", EvidenceKind.Unresolved, "Read-only remote discovery not approved.", "Re-run with --approve-read-only."));
+            session.Evidence.Add(new("discovery.approval", EvidenceKind.Unresolved, "Read-only remote discovery not approved.", "Re-run with --approve-read-only.", session.Id, repository.Url));
         }
 
         var path = store.Save(session);

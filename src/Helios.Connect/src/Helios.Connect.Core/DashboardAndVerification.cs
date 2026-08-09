@@ -11,14 +11,14 @@ public sealed class DashboardRenderer
         text.AppendLine($"Commit: {session.Repository?.Sha ?? "unavailable"}");
         text.AppendLine($"Stage: {session.Stage}");
         text.AppendLine($"Observed: {session.Counts.Observed}; Derived: {session.Counts.Derived}; Suggested: {session.Counts.Suggested}; Unresolved: {session.Counts.Unresolved}");
-        text.AppendLine("\n| Kind | Summary | Evidence |\n|---|---|---|");
-        foreach (var item in session.Evidence) text.AppendLine($"| {item.Kind} | {Safe(item.Summary)} | {Safe(item.Source)} |");
+        text.AppendLine("\n| Kind | Summary | Source | Correlation | Evidence reference |\n|---|---|---|---|---|");
+        foreach (var item in session.Evidence) text.AppendLine($"| {item.Kind} | {Safe(item.Summary)} | {Safe(item.Source)} | {Safe(item.CorrelationId)} | {Safe(item.EvidenceReference)} |");
         text.AppendLine("\nCommands executed by HELIOS: 0  ");
         text.AppendLine("Remote mutations performed by HELIOS: 0");
         return text.ToString();
     }
 
-    private static string Safe(string value) => value.Replace("|", "\\|", StringComparison.Ordinal).Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal);
+    private static string Safe(string? value) => (value ?? "unavailable").Replace("|", "\\|", StringComparison.Ordinal).Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal);
 }
 
 public sealed class PostExecutionVerifier(RepositoryDetector detector)

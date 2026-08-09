@@ -14,9 +14,13 @@ var fake = new RecordingRunner("{\"login\":\"operator\"}");
 var github = new GitHubReadOnlyAdapter(fake);
 var discovered = await github.DiscoverAsync(new HashSet<string> { "github:identity" }, CancellationToken.None);
 Assert(discovered.Single().Summary == "operator", "GitHub identity is parsed from live structured output.");
+Assert(discovered.Single().CorrelationId.StartsWith("urn:uuid:", StringComparison.Ordinal), "Provider evidence carries a request correlation ID.");
+Assert(discovered.Single().EvidenceReference == "https://api.github.com/user", "Provider evidence carries a supporting evidence reference.");
 Assert(fake.Arguments.Contains("X-GitHub-Api-Version: 2022-11-28"), "GitHub REST adapter sends the pinned API version.");
 var unapproved = await github.DiscoverAsync(new HashSet<string>(), CancellationToken.None);
 Assert(unapproved.Count == 0 && fake.CallCount == 1, "Unapproved discovery scopes never invoke a provider.");
+var fork = RepositoryDetector.ParseGitHubRemote("git@github.com:example/helios-platform.git");
+Assert(fork.Name == "example/helios-platform" && fork.Url == "https://github.com/example/helios-platform", "Repository identity is derived from the checkout origin, not the canonical manifest.");
 
 if (failures.Count != 0)
 {

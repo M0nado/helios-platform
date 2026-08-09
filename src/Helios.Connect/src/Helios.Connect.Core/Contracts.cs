@@ -8,7 +8,7 @@ public enum DriftKind { Matched, Missing, Unexpected, Changed, Stale, Unverifiab
 
 public sealed record RepositoryIdentity(string Name, string Url, string Sha, string Branch, bool IsDirty, string Ownership, string EvidenceHash);
 public sealed record AzureIdentity(string Cloud, string Tenant, string Subscription, string Principal, string PrincipalType, string Access);
-public sealed record EvidenceItem(string Id, EvidenceKind Kind, string Summary, string Source);
+public sealed record EvidenceItem(string Id, EvidenceKind Kind, string Summary, string Source, string CorrelationId, string EvidenceReference);
 public sealed record SessionCounts(int Observed, int Derived, int Suggested, int Unresolved);
 public sealed record CommandPlan(string Category, string Description, string Command, string RequiredRole, string Risk, string PlanHash);
 public sealed record DriftItem(string Target, DriftKind Classification, string Evidence);
@@ -20,7 +20,7 @@ public sealed class ConnectSession
     public required ConnectMode Mode { get; init; }
     public ConnectStage Stage { get; set; }
     public RepositoryIdentity? Repository { get; set; }
-public Collection<EvidenceItem> Evidence { get; init; } = [];
+    public Collection<EvidenceItem> Evidence { get; init; } = [];
     public Collection<CommandPlan> Plans { get; init; } = [];
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public int CommandsExecutedByHelios => 0;

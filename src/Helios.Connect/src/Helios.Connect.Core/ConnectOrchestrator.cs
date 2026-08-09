@@ -15,7 +15,7 @@ public sealed class ConnectOrchestrator(IEnumerable<IReadOnlyDiscoveryAdapter> a
             }
 catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or System.Text.Json.JsonException)
             {
-                var item = new EvidenceItem($"{adapter.Provider}.unavailable", EvidenceKind.Unresolved, "unavailable", $"{adapter.Provider}: {ex.Message}");
+                var item = new EvidenceItem($"{adapter.Provider}.unavailable", EvidenceKind.Unresolved, "unavailable", $"{adapter.Provider}: {ex.Message}", $"urn:uuid:{Guid.NewGuid():D}", $"urn:helios:provider:{adapter.Provider}");
                 session.Evidence.Add(item);
                 results.Add(new(adapter.Provider, false, [item], ex.Message));
             }

@@ -23,9 +23,12 @@ public sealed class RepositoryDetector
         if (!string.Equals(canonical, "M0nado/helios-platform", StringComparison.Ordinal))
             throw new InvalidDataException($"Unexpected canonical repository: {canonical}.");
 
-        var context = $"{canonical}\n{sha}\n{branch}\ncanonical\n1.0";
+        var remote = ReadGitOrigin(root);
+        var (repository, repositoryUrl) = ParseGitHubRemote(remote);
+        var ownership = string.Equals(repository, canonical, StringComparison.OrdinalIgnoreCase) ? "canonical" : "fork";
+        var context = $"{repository}\n{repositoryUrl}\n{sha}\n{branch}\n{ownership}\n1.0";
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(context))).ToLowerInvariant();
-        return new(canonical, $"https://github.com/{canonical}", sha, branch, IsDirty(root), "canonical", $"sha256:{hash}");
+        return new(repository, repositoryUrl, sha, branch, IsDirty(root), ownership, $"sha256:{hash}");
     }
 
     public static string FindRoot(string path)
@@ -67,4 +70,44 @@ public sealed class RepositoryDetector
         if (process.ExitCode != 0) throw new InvalidOperationException("Git read-only discovery failed.");
         return output.Length != 0;
     }
+
+    private static string ReadGitOrigin(string root)
+    {
+        using var process = Process.Start(new ProcessStartInfo("git", "remote get-url origin")
+        {
+            WorkingDirectory = root,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        }) ?? throw new InvalidOperationException("Git remote discovery is unavailable.");
+        var output = process.StandardOutput.ReadToEnd().Trim();
+        process.WaitForExit();
+        if (process.ExitCode != 0 || output.Length == 0)
+            throw new InvalidOperationException("An origin remote is required to establish repository ownership.");
+        return output;
+    }
+
+    public static (string Name, string Url) ParseGitHubRemote(string remote)
+    {
+        const string sshPrefix = "git@github.com:";
+        string path;
+        if (remote.StartsWith(sshPrefix, StringComparison.OrdinalIgnoreCase))
+            path = remote[sshPrefix.Length..];
+        else if (Uri.TryCreate(remote, UriKind.Absolute, out var uri) &&
+                 string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase))
+            path = uri.AbsolutePath.TrimStart('/');
+        else
+            throw new InvalidDataException("The origin remote must identify a GitHub repository.");
+
+        if (path.EndsWith(".git", StringComparison.OrdinalIgnoreCase)) path = path[..^4];
+        path = path.TrimEnd('/');
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length != 2 || segments.Any(x => x is "." or ".." || !x.All(IsRepositoryCharacter)))
+            throw new InvalidDataException("The origin remote does not contain a valid owner/repository name.");
+        var name = $"{segments[0]}/{segments[1]}";
+        return (name, $"https://github.com/{name}");
+    }
+
+    private static bool IsRepositoryCharacter(char value) => char.IsAsciiLetterOrDigit(value) || value is '-' or '_' or '.';
 }
