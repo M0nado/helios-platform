@@ -123,7 +123,7 @@ def validate_top_level(manifest: dict) -> list[str]:
         manifest.get("ownerRepository") == EXPECTED_OWNER_REPOSITORY,
         f"ownerRepository must be exactly {EXPECTED_OWNER_REPOSITORY}",
     )
-    _append(errors, manifest.get("defaultMode") in EXPECTED_MODES, "defaultMode must be one of the required runtime modes")
+    _append(errors, manifest.get("defaultMode") == "local-windows", "defaultMode must be local-windows")
     _append(errors, manifest.get("defaultExecutionMode") == "validation-first", "defaultExecutionMode must be validation-first")
 
     governance = manifest.get("governance")
@@ -278,6 +278,7 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
 
     startup = mode.get("startupContract")
     _append(errors, isinstance(startup, dict), f"{mode_id}: startupContract must be an object")
+    startup_timeout = None
     if isinstance(startup, dict):
         expected_command = EXPECTED_STARTUP_COMMANDS.get(mode_id)
         _append(
@@ -307,6 +308,8 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
             _is_positive_int(startup.get("startupTimeoutSeconds")),
             f"{mode_id}: startupContract.startupTimeoutSeconds must be a positive integer",
         )
+        if _is_positive_int(startup.get("startupTimeoutSeconds")):
+            startup_timeout = startup["startupTimeoutSeconds"]
 
     health = mode.get("healthContract")
     _append(errors, isinstance(health, dict), f"{mode_id}: healthContract must be an object")
@@ -332,6 +335,12 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
             _is_positive_int(health.get("maxStartupSeconds")),
             f"{mode_id}: healthContract.maxStartupSeconds must be a positive integer",
         )
+        if startup_timeout is not None and _is_positive_int(health.get("maxStartupSeconds")):
+            _append(
+                errors,
+                startup_timeout >= health["maxStartupSeconds"],
+                f"{mode_id}: startupContract.startupTimeoutSeconds must be >= healthContract.maxStartupSeconds",
+            )
         if mode_id == "hybrid-windows-docker-fleet":
             endpoints = health.get("endpoints")
             _append(

@@ -104,10 +104,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Run hybrid governance smoke
+      - name: Run hybrid runtime smoke
         shell: pwsh
         run: |
-          pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode hybrid-windows-docker-fleet -SkipRuntimeStart
+          pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode hybrid-windows-docker-fleet
       - uses: actions/upload-artifact@v4
         if: always()
         with:

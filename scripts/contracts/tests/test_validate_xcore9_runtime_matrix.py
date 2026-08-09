@@ -41,6 +41,12 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("modes must be exactly" in error for error in errors))
 
+    def test_manifest_fails_when_default_mode_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        candidate["defaultMode"] = "local-docker"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("defaultMode must be local-windows" in error for error in errors))
+
     def test_mode_fails_when_boundary_is_missing(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         local = next(mode for mode in candidate["modes"] if mode["id"] == "local-windows")
@@ -137,6 +143,14 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         local["startupContract"]["startupTimeoutSeconds"] = True
         errors = validate_manifest(candidate)
         self.assertTrue(any("startupTimeoutSeconds must be a positive integer" in error for error in errors))
+
+    def test_mode_fails_when_startup_timeout_is_less_than_health_timeout(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        local["startupContract"]["startupTimeoutSeconds"] = 100
+        local["healthContract"]["maxStartupSeconds"] = 120
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("startupTimeoutSeconds must be >= healthContract.maxStartupSeconds" in error for error in errors))
 
     def test_hybrid_mode_fails_when_resources_cannot_be_split(self) -> None:
         candidate = copy.deepcopy(self.manifest)
