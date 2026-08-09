@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "agents": [
+    {
+      "id": "hermes-router",
+      "ownerRepository": "Yolkster64/hermes-fleet-platforms",
+      "role": "task-routing-and-event-production",
+      "permissions": ["issues:read", "contents:read"],
+      "publishes": ["hermes.task_routed"],
+      "requiresReview": true
+    },
+    {
+      "id": "xcore-evaluator",
+      "ownerRepository": "Yolkster64/hermes-fleet-platforms",
+      "role": "contract-evaluation-and-regression-detection",
+      "permissions": ["contents:read", "checks:write"],
+      "publishes": ["xcore.evaluation_completed"],
+      "requiresReview": true
+    },
+    {
+      "id": "guardian-policy",
+      "ownerRepository": "M0nado/helios-platform",
+      "role": "privileged-change-policy-gate",
+      "permissions": ["contents:read", "pull-requests:read"],
+      "publishes": ["helios-platform.policy_decision"],
+      "requiresReview": true
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+profile="$root/config/integrations/identity-profile.json"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  helios-auth [--status|--interactive] [--repo OWNER/REPO] [--subscription ID]
+  helios-auth azure-devops status
+  helios-auth azure-devops configure [--organization URL] [--project NAME]
+  helios-auth azure-devops create-pr --repository NAME --work-item ID [--source-branch BRANCH] [--target-branch BRANCH]
+
+Authentication remains provider-issued: browser/device login locally, OIDC in CI,
+managed identity in Azure, and a narrowly installed GitHub App for cross-repository work.
+No token is generated, displayed, or stored by this command.
+EOF
+}
+
+json_value() {
+  python3 - "$profile" "$1" <<'PY'
+import json, sys
+value = json.load(open(sys.argv[1], encoding="utf-8"))
+for part in sys.argv[2].split("."):
+    value = value[part]
+print(value)
+PY
+}
+
+print_state() { printf '%-27s %s\n' "$1" "$2"; }
+
+azdo_status() {
+  local failures=0 org="${HELIOS_AZDO_ORGANIZATION:-}" project="${HELIOS_AZDO_PROJECT:-}"
+  if command -v az >/dev/null 2>&1; then print_state "Azure CLI" "installed"; else print_state "Azure CLI" "missing"; failures=1; fi
+  if az extension show --name azure-devops >/dev/null 2>&1; then print_state "Azure DevOps extension" "installed"; else print_state "Azure DevOps extension" "not installed"; failures=1; fi
+  if [[ -n "$org" ]]; then print_state "Azure DevOps org" "configured"; else print_state "Azure DevOps org" "set HELIOS_AZDO_ORGANIZATION"; failures=1; fi
+  if [[ -n "$project" ]]; then print_state "Azure DevOps project" "configured"; else print_state "Azure DevOps project" "set HELIOS_AZDO_PROJECT"; failures=1; fi
+  if [[ -n "${HELIOS_AZDO_SERVICE_CONNECTION:-}" ]]; then print_state "Federated connection" "configured"; else print_state "Federated connection" "set HELIOS_AZDO_SERVICE_CONNECTION"; failures=1; fi
+  return "$failures"
+}
+
+azdo_configure() {
+  local org="${HELIOS_AZDO_ORGANIZATION:-}" project="${HELIOS_AZDO_PROJECT:-}"
+  while (($#)); do
+    case "$1" in
+      --organization) org="${2:?--organization requires a URL}"; shift 2 ;;
+      --project) project="${2:?--project requires a name}"; shift 2 ;;
+      *) echo "Unknown Azure DevOps option: $1" >&2; exit 2 ;;
+    esac
+  done
+  command -v az >/dev/null || { echo "Azure CLI is not installed." >&2; exit 127; }
+  az account show --only-show-errors >/dev/null || { echo "Run helios-auth --interactive first." >&2; exit 1; }
+  az extension add --name azure-devops --only-show-errors
+  [[ -n "$org" && -n "$project" ]] || { echo "Organization and project are required." >&2; exit 2; }
+  az devops configure --defaults organization="$org" project="$project"
+  echo "Azure DevOps defaults configured. An administrator must approve the workload-identity service connection."
+}
+
+azdo_create_pr() {
+  local repository="" work_item="" source="$(git branch --show-current)" target="main"
+  while (($#)); do
+    case "$1" in
+      --repository) repository="${2:?}"; shift 2 ;;
+      --work-item) work_item="${2:?}"; shift 2 ;;
+      --source-branch) source="${2:?}"; shift 2 ;;
+      --target-branch) target="${2:?}"; shift 2 ;;
+      *) echo "Unknown create-pr option: $1" >&2; exit 2 ;;
+    esac
+  done
+  [[ -n "$repository" && "$work_item" =~ ^[0-9]+$ ]] || { echo "--repository and numeric --work-item are required." >&2; exit 2; }
+  az repos pr create --repository "$repository" --source-branch "$source" --target-branch "$target" \
+    --work-items "$work_item" --draft true --title "[$work_item] $source" \
+    --description "Review-gated HELIOS change linked to work item $work_item."
+}
+
+if [[ "${1:-}" == "azure-devops" ]]; then
+  shift
+  case "${1:-status}" in
+    status) shift || true; azdo_status ;;
+    configure) shift; azdo_configure "$@" ;;
+    create-pr) shift; azdo_create_pr "$@" ;;
+    *) usage >&2; exit 2 ;;
+  esac
+  exit
+fi
+
+repo="$(json_value github.repository)"
+args=()
+while (($#)); do
+  case "$1" in
+    --status|--interactive) args+=("$1"); shift ;;
+    --repo|--subscription) args+=("$1" "${2:?$1 requires a value}"); shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+  esac
+done
+if ((${#args[@]} == 0)); then args=(--status); fi
+exec "$root/scripts/setup/configure-cloud-auth.sh" --repo "$repo" "${args[@]}"

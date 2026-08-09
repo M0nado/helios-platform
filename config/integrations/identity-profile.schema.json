@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/identity-profile-v1.json",
+  "title": "HELIOS Identity Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "github", "azure", "azureDevOps"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "environment"],
+      "properties": {
+        "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "environment": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" }
+      }
+    },
+    "azure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subscriptionIdVariable", "tenantIdVariable", "clientIdVariable", "resourceGroupVariable"],
+      "properties": {
+        "subscriptionIdVariable": { "const": "AZURE_SUBSCRIPTION_ID" },
+        "tenantIdVariable": { "const": "AZURE_TENANT_ID" },
+        "clientIdVariable": { "const": "AZURE_CLIENT_ID" },
+        "resourceGroupVariable": { "const": "AZURE_RESOURCE_GROUP" }
+      }
+    },
+    "azureDevOps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["organizationVariable", "projectVariable", "serviceConnectionVariable"],
+      "properties": {
+        "organizationVariable": { "const": "HELIOS_AZDO_ORGANIZATION" },
+        "projectVariable": { "const": "HELIOS_AZDO_PROJECT" },
+        "serviceConnectionVariable": { "const": "HELIOS_AZDO_SERVICE_CONNECTION" }
+      }
+    }
+  }
+}

@@ -12,7 +12,13 @@ on:
       - '**/package-lock.json'
       - '**/*.csproj'
       - eng/integration-lanes/**
+      - eng/automation/**
       - config/integrations/event-contract.schema.json
+      - config/integrations/identity-profile*.json
+      - config/integrations/fleet-agents.json
+      - config/integrations/delivery-policy.json
+      - .github/workflows/reusable-azure-auth.yml
+      - azure-pipelines.yml
       - docs/architecture/decisions/**
   push:
     branches: [main]
@@ -33,6 +39,7 @@ jobs:
           python-version: '3.12'
       - name: Validate stable dependencies and contracts
         run: |
+          python eng/automation/validate_delivery.py
           python eng/integration-lanes/validate_lanes.py --contracts
           python -m unittest discover tests/integration -p 'test_*.py'
       - uses: actions/setup-dotnet@b2d7bde49078d7e2b34cc93653c2d4b2678d7a99 # v4.3.1

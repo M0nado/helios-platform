@@ -1,0 +1,19 @@
+{
+  "$schema": "./identity-profile.schema.json",
+  "schemaVersion": "1.0",
+  "github": {
+    "repository": "M0nado/helios-platform",
+    "environment": "azure-dev"
+  },
+  "azure": {
+    "subscriptionIdVariable": "AZURE_SUBSCRIPTION_ID",
+    "tenantIdVariable": "AZURE_TENANT_ID",
+    "clientIdVariable": "AZURE_CLIENT_ID",
+    "resourceGroupVariable": "AZURE_RESOURCE_GROUP"
+  },
+  "azureDevOps": {
+    "organizationVariable": "HELIOS_AZDO_ORGANIZATION",
+    "projectVariable": "HELIOS_AZDO_PROJECT",
+    "serviceConnectionVariable": "HELIOS_AZDO_SERVICE_CONNECTION"
+  }
+}
