@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios.local/schemas/capability-profiles.schema.json",
+  "title": "HELIOS governed capability profiles",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "defaultDecision", "profiles"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": "1.0" },
+    "defaultDecision": { "const": "deny" },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "provider", "capability", "effect", "scopes", "resources", "environments", "maximumDuration", "approval", "idempotency", "cleanup"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$" },
+        "provider": { "type": "string", "minLength": 1 },
+        "capability": { "type": "string", "minLength": 1 },
+        "effect": { "const": "allow" },
+        "scopes": { "$ref": "#/$defs/nonEmptyStrings" },
+        "resources": { "$ref": "#/$defs/nonEmptyStrings" },
+        "environments": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["local", "development", "test", "staging", "production"] }
+        },
+        "maximumDuration": { "type": "string", "pattern": "^PT(?:[1-9]|[1-9][0-9]|1[01][0-9]|120)M$" },
+        "approval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "approvers"],
+          "properties": {
+            "mode": { "enum": ["none", "review", "protected-environment", "tenant-admin"] },
+            "approvers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+          },
+          "allOf": [
+            { "if": { "properties": { "mode": { "const": "none" } } }, "then": { "properties": { "approvers": { "maxItems": 0 } } } },
+            { "if": { "properties": { "mode": { "enum": ["review", "protected-environment", "tenant-admin"] } } }, "then": { "properties": { "approvers": { "minItems": 1 } } } }
+          ]
+        },
+        "idempotency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "key", "replayWindow"],
+          "properties": {
+            "required": { "type": "boolean" },
+            "key": { "type": ["string", "null"] },
+            "replayWindow": { "type": ["string", "null"], "pattern": "^PT(?:[1-9]|[1-9][0-9]|1[01][0-9]|120)M$" }
+          },
+          "allOf": [
+            { "if": { "properties": { "required": { "const": true } } }, "then": { "properties": { "key": { "type": "string", "minLength": 1 }, "replayWindow": { "type": "string" } } } },
+            { "if": { "properties": { "required": { "const": false } } }, "then": { "properties": { "key": { "type": "null" }, "replayWindow": { "type": "null" } } } }
+          ]
+        },
+        "cleanup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "actions"],
+          "properties": {
+            "required": { "type": "boolean" },
+            "actions": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+          },
+          "allOf": [
+            { "if": { "properties": { "required": { "const": true } } }, "then": { "properties": { "actions": { "minItems": 1 } } } },
+            { "if": { "properties": { "required": { "const": false } } }, "then": { "properties": { "actions": { "maxItems": 0 } } } }
+          ]
+        }
+      }
+    }
+  }
+}

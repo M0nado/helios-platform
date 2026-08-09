@@ -1,0 +1,137 @@
+{
+  "$schema": "./capability-profiles.schema.json",
+  "schemaVersion": "1.0",
+  "defaultDecision": "deny",
+  "profiles": [
+    {
+      "id": "ai.inference", "provider": "aihub", "capability": "Run inference against an approved deployment", "effect": "allow",
+      "scopes": ["inference.invoke"], "resources": ["aihub://deployments/approved/*"], "environments": ["local", "development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "none", "approvers": []}, "idempotency": {"required": false, "key": null, "replayWindow": null}, "cleanup": {"required": true, "actions": ["delete provider request/response payloads after telemetry extraction", "retain only redacted correlation telemetry"]}
+    },
+    {
+      "id": "ai.tool-proposal", "provider": "aihub", "capability": "Propose, but never execute, a bounded tool call", "effect": "allow",
+      "scopes": ["tools.propose"], "resources": ["helios://tool-catalog/approved"], "environments": ["local", "development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "review", "approvers": ["tool-owner"]}, "idempotency": {"required": true, "key": "correlationId+toolName+canonicalArgumentsHash", "replayWindow": "PT30M"}, "cleanup": {"required": true, "actions": ["expire unapproved proposal", "redact transient tool arguments"]}
+    },
+    {
+      "id": "slack.read", "provider": "slack", "capability": "Read approved channels and thread history", "effect": "allow",
+      "scopes": ["channels:read", "channels:history"], "resources": ["slack://workspace/approved/channels/allowlisted/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "none", "approvers": []}, "idempotency": {"required": false, "key": null, "replayWindow": null}, "cleanup": {"required": true, "actions": ["discard message bodies after bounded processing"]}
+    },
+    {
+      "id": "slack.post", "provider": "slack", "capability": "Post to an approved channel", "effect": "allow",
+      "scopes": ["chat:write"], "resources": ["slack://workspace/approved/channels/allowlisted/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT10M",
+      "approval": {"mode": "review", "approvers": ["channel-owner"]}, "idempotency": {"required": true, "key": "correlationId+channelId+messageHash", "replayWindow": "PT60M"}, "cleanup": {"required": true, "actions": ["delete duplicate post", "redact rejected message payload"]}
+    },
+    {
+      "id": "slack.update", "provider": "slack", "capability": "Update a message created by HELIOS", "effect": "allow",
+      "scopes": ["chat:write"], "resources": ["slack://workspace/approved/messages/created-by-helios/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT10M",
+      "approval": {"mode": "review", "approvers": ["channel-owner"]}, "idempotency": {"required": true, "key": "correlationId+channelId+messageTs+contentHash", "replayWindow": "PT60M"}, "cleanup": {"required": true, "actions": ["restore prior message on partial failure", "redact rejected message payload"]}
+    },
+    {
+      "id": "linear.read", "provider": "linear", "capability": "Read allowlisted teams, projects, issues, and workflows", "effect": "allow",
+      "scopes": ["read"], "resources": ["linear://organization/approved/teams/allowlisted/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "none", "approvers": []}, "idempotency": {"required": false, "key": null, "replayWindow": null}, "cleanup": {"required": true, "actions": ["discard issue bodies after bounded processing"]}
+    },
+    {
+      "id": "linear.create", "provider": "linear", "capability": "Create an issue in an allowlisted team", "effect": "allow",
+      "scopes": ["write"], "resources": ["linear://organization/approved/teams/allowlisted/issues"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT10M",
+      "approval": {"mode": "review", "approvers": ["linear-team-owner"]}, "idempotency": {"required": true, "key": "correlationId+teamId+sourceEvidenceId", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["archive duplicate issue", "remove issue created after partial failure"]}
+    },
+    {
+      "id": "linear.comment", "provider": "linear", "capability": "Comment on an allowlisted issue", "effect": "allow",
+      "scopes": ["write"], "resources": ["linear://organization/approved/teams/allowlisted/issues/*/comments"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT10M",
+      "approval": {"mode": "review", "approvers": ["linear-team-owner"]}, "idempotency": {"required": true, "key": "correlationId+issueId+commentHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["delete duplicate comment"]}
+    },
+    {
+      "id": "linear.transition", "provider": "linear", "capability": "Transition an allowlisted issue to an approved workflow state", "effect": "allow",
+      "scopes": ["write"], "resources": ["linear://organization/approved/teams/allowlisted/issues/*/state/approved-transitions/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT10M",
+      "approval": {"mode": "review", "approvers": ["linear-team-owner"]}, "idempotency": {"required": true, "key": "correlationId+issueId+targetStateId", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["restore prior state on downstream failure"]}
+    },
+    {
+      "id": "github.metadata", "provider": "github", "capability": "Read repository metadata", "effect": "allow",
+      "scopes": ["metadata:read"], "resources": ["github://M0nado/helios-platform"], "environments": ["local", "development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "none", "approvers": []}, "idempotency": {"required": false, "key": null, "replayWindow": null}, "cleanup": {"required": false, "actions": []}
+    },
+    {
+      "id": "github.issues", "provider": "github", "capability": "Read and update issues without deleting them", "effect": "allow",
+      "scopes": ["issues:read", "issues:write"], "resources": ["github://M0nado/helios-platform/issues/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "review", "approvers": ["repository-maintainer"]}, "idempotency": {"required": true, "key": "correlationId+repository+issueNumber+mutationHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["remove duplicate comment", "restore prior labels and state on partial failure"]}
+    },
+    {
+      "id": "github.pull-requests", "provider": "github", "capability": "Read and update pull requests without merging", "effect": "allow",
+      "scopes": ["pull_requests:read", "pull_requests:write"], "resources": ["github://M0nado/helios-platform/pulls/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "review", "approvers": ["repository-maintainer"]}, "idempotency": {"required": true, "key": "correlationId+repository+pullNumber+mutationHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["remove duplicate review or comment", "restore prior metadata on partial failure"]}
+    },
+    {
+      "id": "github.checks", "provider": "github", "capability": "Read checks and create or update HELIOS-owned check runs", "effect": "allow",
+      "scopes": ["checks:read", "checks:write"], "resources": ["github://M0nado/helios-platform/check-runs/created-by-helios/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "review", "approvers": ["repository-maintainer"]}, "idempotency": {"required": true, "key": "correlationId+repository+headSha+checkName", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["complete orphaned check as cancelled", "remove transient annotations"]}
+    },
+    {
+      "id": "github.contents", "provider": "github", "capability": "Read contents and write only to a task feature branch", "effect": "allow",
+      "scopes": ["contents:read", "contents:write"], "resources": ["github://M0nado/helios-platform/git/refs/heads/feature/*"], "environments": ["development", "test"], "maximumDuration": "PT30M",
+      "approval": {"mode": "review", "approvers": ["repository-maintainer"]}, "idempotency": {"required": true, "key": "correlationId+repository+branch+treeHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["delete unreferenced temporary branch", "remove transient worktree"]}
+    },
+    {
+      "id": "azure.discovery", "provider": "azure", "capability": "Discover resources through Azure Resource Manager", "effect": "allow",
+      "scopes": ["https://management.azure.com/.default", "Microsoft.Resources/subscriptions/resourceGroups/read", "Microsoft.Resources/resources/read"], "resources": ["azure://tenants/approved/subscriptions/allowlisted/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "none", "approvers": []}, "idempotency": {"required": false, "key": null, "replayWindow": null}, "cleanup": {"required": true, "actions": ["discard raw inventory after evidence redaction"]}
+    },
+    {
+      "id": "azure.what-if", "provider": "azure", "capability": "Run ARM/Bicep validation and what-if", "effect": "allow",
+      "scopes": ["https://management.azure.com/.default", "Microsoft.Resources/deployments/validate/action", "Microsoft.Resources/deployments/whatIf/action"], "resources": ["azure://tenants/approved/subscriptions/allowlisted/resourceGroups/allowlisted/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT30M",
+      "approval": {"mode": "protected-environment", "approvers": ["azure-environment-reviewer"]}, "idempotency": {"required": true, "key": "correlationId+subscriptionId+resourceGroup+templateHash+parametersHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["delete transient parameter file", "expire what-if artifact per evidence retention policy"]}
+    },
+    {
+      "id": "azure.deploy", "provider": "azure", "capability": "Deploy an approved immutable ARM/Bicep artifact", "effect": "allow",
+      "scopes": ["https://management.azure.com/.default", "Microsoft.Resources/deployments/write", "Microsoft.Resources/deployments/operations/read"], "resources": ["azure://tenants/approved/subscriptions/allowlisted/resourceGroups/allowlisted/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT60M",
+      "approval": {"mode": "protected-environment", "approvers": ["azure-environment-reviewer", "service-owner"]}, "idempotency": {"required": true, "key": "correlationId+subscriptionId+resourceGroup+deploymentName+templateHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["run approved rollback deployment on failure", "delete transient parameter file", "revoke job credential"]}
+    },
+    {
+      "id": "acr.pull", "provider": "azure-container-registry", "capability": "Pull immutable images", "effect": "allow",
+      "scopes": ["AcrPull"], "resources": ["azure://tenants/approved/registries/allowlisted/repositories/allowlisted/*@sha256:*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT30M",
+      "approval": {"mode": "none", "approvers": []}, "idempotency": {"required": false, "key": null, "replayWindow": null}, "cleanup": {"required": true, "actions": ["logout registry session", "remove temporary credential material"]}
+    },
+    {
+      "id": "acr.protected-push", "provider": "azure-container-registry", "capability": "Push a signed immutable image without deleting tags", "effect": "allow",
+      "scopes": ["AcrPush"], "resources": ["azure://tenants/approved/registries/allowlisted/repositories/allowlisted/helios-*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT30M",
+      "approval": {"mode": "protected-environment", "approvers": ["registry-owner"]}, "idempotency": {"required": true, "key": "correlationId+registry+repository+imageDigest", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["delete mutable duplicate tag", "logout registry session", "remove temporary credential material"]}
+    },
+    {
+      "id": "graph.read", "provider": "microsoft-graph", "capability": "Read approved user, group, site, and Teams channel metadata", "effect": "allow",
+      "scopes": ["User.Read.All", "Group.Read.All", "Sites.Selected", "Channel.ReadBasic.All"], "resources": ["graph://tenant/approved/users/*", "graph://tenant/approved/groups/*", "graph://tenant/approved/sites/selected/*", "graph://tenant/approved/teams/allowlisted/channels/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "tenant-admin", "approvers": ["entra-tenant-admin"]}, "idempotency": {"required": false, "key": null, "replayWindow": null}, "cleanup": {"required": true, "actions": ["discard Graph response bodies after bounded processing", "revoke delegated session where applicable"]}
+    },
+    {
+      "id": "graph.write", "provider": "microsoft-graph", "capability": "Write selected-site files and approved Teams channel messages", "effect": "allow",
+      "scopes": ["Sites.Selected", "ChannelMessage.Send"], "resources": ["graph://tenant/approved/sites/selected/*/drive/items/*", "graph://tenant/approved/teams/allowlisted/channels/*/messages/created-by-helios/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "tenant-admin", "approvers": ["entra-tenant-admin", "resource-owner"]}, "idempotency": {"required": true, "key": "correlationId+resourceId+contentHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["delete duplicate HELIOS-created object", "restore prior selected-site file version on partial failure", "revoke delegated session where applicable"]}
+    },
+    {
+      "id": "entra.tenant-administration", "provider": "microsoft-entra", "capability": "Perform an explicitly approved bounded tenant administration change", "effect": "allow",
+      "scopes": ["RoleManagement.ReadWrite.Directory", "Application.ReadWrite.All", "Policy.ReadWrite.ConditionalAccess"], "resources": ["graph://tenant/approved/directoryRoles/allowlisted/*", "graph://tenant/approved/applications/allowlisted/*", "graph://tenant/approved/identity/conditionalAccess/policies/allowlisted/*"], "environments": ["production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "tenant-admin", "approvers": ["global-administrator", "security-reviewer"]}, "idempotency": {"required": true, "key": "correlationId+tenantId+resourceId+desiredStateHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["restore captured prior configuration on failure", "remove temporary eligible role assignment", "revoke privileged session", "publish tenant audit evidence"]}
+    },
+    {
+      "id": "fabric.operations", "provider": "microsoft-fabric", "capability": "Read and update approved Fabric workspaces and items", "effect": "allow",
+      "scopes": ["https://api.fabric.microsoft.com/.default", "Workspace.ReadWrite.All", "Item.ReadWrite.All"], "resources": ["fabric://tenant/approved/workspaces/allowlisted/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT30M",
+      "approval": {"mode": "tenant-admin", "approvers": ["fabric-administrator", "workspace-owner"]}, "idempotency": {"required": true, "key": "correlationId+workspaceId+itemId+operationHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["delete duplicate HELIOS-created item", "restore prior item definition on partial failure"]}
+    },
+    {
+      "id": "purview.operations", "provider": "microsoft-purview", "capability": "Scan, classify, and apply approved governance policies", "effect": "allow",
+      "scopes": ["https://purview.azure.net/.default", "DataMap.ReadWrite"], "resources": ["purview://tenant/approved/accounts/allowlisted/collections/allowlisted/*"], "environments": ["staging", "production"], "maximumDuration": "PT30M",
+      "approval": {"mode": "tenant-admin", "approvers": ["purview-administrator", "data-governance-reviewer"]}, "idempotency": {"required": true, "key": "correlationId+purviewAccount+resourceId+policyHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["remove duplicate classification", "restore prior policy assignment on failure", "publish governance audit evidence"]}
+    },
+    {
+      "id": "copilot.operations", "provider": "microsoft-copilot-studio", "capability": "Publish an approved Copilot agent version through the governed broker", "effect": "allow",
+      "scopes": ["CopilotStudio.Environment.Read", "CopilotStudio.Agent.Publish"], "resources": ["copilot://tenant/approved/environments/allowlisted/agents/allowlisted/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT30M",
+      "approval": {"mode": "protected-environment", "approvers": ["copilot-environment-owner", "service-owner"]}, "idempotency": {"required": true, "key": "correlationId+environmentId+agentId+versionHash", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["restore prior published agent version on failure", "remove transient export package"]}
+    },
+    {
+      "id": "evidence.publish", "provider": "helios-evidence", "capability": "Publish redacted immutable evidence", "effect": "allow",
+      "scopes": ["evidence:write", "contents:write", "Sites.Selected"], "resources": ["github://M0nado/helios-platform/actions/artifacts/evidence/*", "graph://tenant/approved/sites/selected/evidence-library/*"], "environments": ["development", "test", "staging", "production"], "maximumDuration": "PT15M",
+      "approval": {"mode": "protected-environment", "approvers": ["evidence-owner", "environment-reviewer"]}, "idempotency": {"required": true, "key": "correlationId+environment+bundleSha256", "replayWindow": "PT120M"}, "cleanup": {"required": true, "actions": ["delete duplicate publication", "purge transient unredacted bundle", "apply governed retention label"]}
+    }
+  ]
+}
