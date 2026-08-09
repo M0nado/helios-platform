@@ -16,6 +16,7 @@ from validate_xcore9_runtime_matrix import (  # noqa: E402
     EXPECTED_OWNER_REPOSITORY,
     EXPECTED_SMOKE_EVIDENCE_PATHS,
     EXPECTED_STARTUP_COMMANDS,
+    REQUIRED_STARTUP_ENVIRONMENT,
     load_manifest,
     validate_manifest,
     validate_matrix,
@@ -65,6 +66,13 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("HELIOS_EXECUTION_MODE must be dry-run" in error for error in errors))
 
+    def test_mode_fails_when_required_environment_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        local["startupContract"]["requiredEnvironment"]["HELIOS_CLOUD_RUNTIME_ONLY"] = "true"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("requiredEnvironment must be exactly" in error for error in errors))
+
     def test_mode_fails_when_startup_command_changes(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
@@ -79,12 +87,26 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("healthContract.endpoint must be exactly" in error for error in errors))
 
+    def test_mode_fails_when_health_method_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-windows")
+        local["healthContract"]["method"] = "POST"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("healthContract.method must be exactly GET" in error for error in errors))
+
     def test_hybrid_mode_fails_when_endpoint_order_changes(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         hybrid = next(mode for mode in candidate["modes"] if mode["id"] == "hybrid-windows-docker-fleet")
         hybrid["healthContract"]["endpoints"] = list(reversed(hybrid["healthContract"]["endpoints"]))
         errors = validate_manifest(candidate)
         self.assertTrue(any("healthContract.endpoints must be exactly" in error for error in errors))
+
+    def test_hybrid_mode_fails_when_health_method_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        hybrid = next(mode for mode in candidate["modes"] if mode["id"] == "hybrid-windows-docker-fleet")
+        hybrid["healthContract"]["method"] = "GET"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("healthContract.method must be exactly MULTI" in error for error in errors))
 
     def test_mode_fails_when_smoke_evidence_path_changes(self) -> None:
         candidate = copy.deepcopy(self.manifest)
@@ -183,13 +205,20 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
                 "local-docker": (
                     "docker build --file monado/helios-control/src/Helios.Connect.Api/Dockerfile --tag "
                     "helios-connect:xcore9-local monado/helios-control && docker run --detach --rm --name "
-                    "helios-connect-xcore9-local --publish 127.0.0.1:5081:8080 --env HELIOS_EXECUTION_MODE=dry-run "
+                    "helios-connect-xcore9-local --publish 127.0.0.1:5081:8080 --cpus 6 --memory 12g --env HELIOS_EXECUTION_MODE=dry-run "
                     "--env HELIOS_CLOUD_RUNTIME_ONLY=false --env HELIOS_LOCAL_RUNTIME_ALLOWED=true helios-connect:xcore9-local"
                 ),
-                "hybrid-windows-docker-fleet": (
-                    "pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode "
-                    "hybrid-windows-docker-fleet"
-                ),
+                "hybrid-windows-docker-fleet": "pwsh ./monado/helios-control/scripts/Start-HeliosHybridRuntime.ps1",
+            },
+        )
+
+    def test_required_startup_environment_is_stable(self) -> None:
+        self.assertDictEqual(
+            REQUIRED_STARTUP_ENVIRONMENT,
+            {
+                "HELIOS_EXECUTION_MODE": "dry-run",
+                "HELIOS_CLOUD_RUNTIME_ONLY": "false",
+                "HELIOS_LOCAL_RUNTIME_ALLOWED": "true",
             },
         )
 

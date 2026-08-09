@@ -188,6 +188,25 @@ class HeliosCliTests(unittest.TestCase):
             set(matrix["modeIds"]),
             {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
         )
+        self.assertFalse(matrix["smokeEvidenceLinked"])
+
+    def test_runtime_matrix_contract_reports_bundled_evidence_when_index_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fake_root = Path(temp_dir) / "plugins" / "helios-control-fabric" / "scripts"
+            fake_root.mkdir(parents=True, exist_ok=True)
+            evidence_file = (
+                fake_root.parents[1]
+                / "monado"
+                / "helios-control"
+                / "docs"
+                / "XCORE9_RUNTIME_SMOKE_EVIDENCE.md"
+            )
+            evidence_file.parent.mkdir(parents=True, exist_ok=True)
+            evidence_file.write_text("# bundled smoke evidence index\n", encoding="utf-8")
+            with patch.object(HELIOS, "ROOT", fake_root):
+                matrix = HELIOS.runtime_matrix_contract()
+
+        self.assertFalse(matrix["manifestExists"])
         self.assertTrue(matrix["smokeEvidenceLinked"])
 
     def test_all_assets_are_json(self) -> None:

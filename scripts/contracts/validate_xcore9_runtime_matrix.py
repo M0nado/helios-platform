@@ -38,6 +38,11 @@ REQUIRED_BASELINE_DENY = {
 EXPECTED_OWNER_REPOSITORY = "M0nado/helios-platform"
 EXPECTED_APPROVAL_BOUNDARY = "github-protected-environment"
 REQUIRED_EVIDENCE_FIELDS = {"correlationId", "evidenceLinks"}
+REQUIRED_STARTUP_ENVIRONMENT = {
+    "HELIOS_EXECUTION_MODE": "dry-run",
+    "HELIOS_CLOUD_RUNTIME_ONLY": "false",
+    "HELIOS_LOCAL_RUNTIME_ALLOWED": "true",
+}
 EXPECTED_HEALTH_ENDPOINTS = {
     "local-windows": "http://127.0.0.1:5080/health/ready",
     "local-docker": "http://127.0.0.1:5081/health/ready",
@@ -51,13 +56,10 @@ EXPECTED_STARTUP_COMMANDS = {
     "local-docker": (
         "docker build --file monado/helios-control/src/Helios.Connect.Api/Dockerfile --tag "
         "helios-connect:xcore9-local monado/helios-control && docker run --detach --rm --name "
-        "helios-connect-xcore9-local --publish 127.0.0.1:5081:8080 --env HELIOS_EXECUTION_MODE=dry-run "
+        "helios-connect-xcore9-local --publish 127.0.0.1:5081:8080 --cpus 6 --memory 12g --env HELIOS_EXECUTION_MODE=dry-run "
         "--env HELIOS_CLOUD_RUNTIME_ONLY=false --env HELIOS_LOCAL_RUNTIME_ALLOWED=true helios-connect:xcore9-local"
     ),
-    "hybrid-windows-docker-fleet": (
-        "pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode "
-        "hybrid-windows-docker-fleet"
-    ),
+    "hybrid-windows-docker-fleet": "pwsh ./monado/helios-control/scripts/Start-HeliosHybridRuntime.ps1",
 }
 EXPECTED_SMOKE_EVIDENCE_PATHS = {
     "local-windows": {
@@ -253,9 +255,15 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
             f"{mode_id}: startupContract.requiredEnvironment must be an object",
         )
         if isinstance(startup.get("requiredEnvironment"), dict):
+            required_environment = startup["requiredEnvironment"]
             _append(
                 errors,
-                startup["requiredEnvironment"].get("HELIOS_EXECUTION_MODE") == "dry-run",
+                required_environment == REQUIRED_STARTUP_ENVIRONMENT,
+                f"{mode_id}: startupContract.requiredEnvironment must be exactly {REQUIRED_STARTUP_ENVIRONMENT}",
+            )
+            _append(
+                errors,
+                required_environment.get("HELIOS_EXECUTION_MODE") == "dry-run",
                 f"{mode_id}: startupContract.requiredEnvironment.HELIOS_EXECUTION_MODE must be dry-run",
             )
         _append(
@@ -267,6 +275,12 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
     health = mode.get("healthContract")
     _append(errors, isinstance(health, dict), f"{mode_id}: healthContract must be an object")
     if isinstance(health, dict):
+        expected_method = "MULTI" if mode_id == "hybrid-windows-docker-fleet" else "GET"
+        _append(
+            errors,
+            health.get("method") == expected_method,
+            f"{mode_id}: healthContract.method must be exactly {expected_method}",
+        )
         _append(
             errors,
             health.get("expectedStatusCode") == 200,

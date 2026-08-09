@@ -362,6 +362,10 @@ def runtime_matrix_contract() -> dict[str, Any]:
         }
 
     asset_mode_ids = [mode for mode in matrix_asset.get("modes", []) if isinstance(mode, str)]
+    smoke_evidence_index = matrix_asset.get("smokeEvidenceIndex")
+    smoke_evidence_linked = False
+    if isinstance(smoke_evidence_index, str) and smoke_evidence_index:
+        smoke_evidence_linked = (repository_root / smoke_evidence_index).exists()
     return {
         **matrix_asset,
         "manifestExists": False,
@@ -372,9 +376,7 @@ def runtime_matrix_contract() -> dict[str, Any]:
         "nonDestructiveDefault": None,
         "productionMutationRequiresProtectedApproval": None,
         "crossModeTokenReuseAllowed": None,
-        "smokeEvidenceLinked": isinstance(matrix_asset.get("smokeEvidenceIndex"), str) and bool(
-            matrix_asset["smokeEvidenceIndex"]
-        ),
+        "smokeEvidenceLinked": smoke_evidence_linked,
     }
 
 

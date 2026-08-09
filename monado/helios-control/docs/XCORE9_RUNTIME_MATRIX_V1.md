@@ -22,8 +22,8 @@ This document defines the governed XCore9 runtime matrix for `monado/helios-cont
 | Mode | Startup command | Health contract |
 | --- | --- | --- |
 | `local-windows` | `pwsh ./monado/helios-control/scripts/Start-HeliosLocal.ps1` | `GET http://127.0.0.1:5080/health/ready` must return `200` |
-| `local-docker` | Build and run `helios-connect:xcore9-local` with explicit `dry-run` env | `GET http://127.0.0.1:5081/health/ready` must return `200` |
-| `hybrid-windows-docker-fleet` | `pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode hybrid-windows-docker-fleet` | Both `:5080/health/ready` and `:5081/health/ready` must return `200` |
+| `local-docker` | Build and run `helios-connect:xcore9-local` with explicit `dry-run` env plus `--cpus 6 --memory 12g` | `GET http://127.0.0.1:5081/health/ready` must return `200` |
+| `hybrid-windows-docker-fleet` | `pwsh ./monado/helios-control/scripts/Start-HeliosHybridRuntime.ps1` | Both `:5080/health/ready` and `:5081/health/ready` must return `200` |
 
 ## Immutable pinning and bounded runtime envelopes
 
