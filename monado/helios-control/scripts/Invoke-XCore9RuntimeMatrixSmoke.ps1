@@ -368,7 +368,7 @@ $result = [ordered]@{
 }
 
 $outputDirectory = Split-Path -Parent $resolvedOutputPath
-if (-not (Test-Path -LiteralPath $outputDirectory)) {
+if (-not [string]::IsNullOrWhiteSpace($outputDirectory) -and -not (Test-Path -LiteralPath $outputDirectory)) {
     New-Item -ItemType Directory -Path $outputDirectory | Out-Null
 }
 

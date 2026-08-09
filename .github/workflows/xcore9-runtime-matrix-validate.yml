@@ -52,6 +52,7 @@ jobs:
           python -m unittest scripts/contracts/tests/test_validate_xcore9_runtime_matrix.py -v
 
   smoke-local-windows:
+    needs: validate-contract
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -72,6 +73,7 @@ jobs:
             monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.json
 
   smoke-local-docker:
+    needs: validate-contract
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -92,6 +94,7 @@ jobs:
             monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.json
 
   smoke-hybrid:
+    needs: validate-contract
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
