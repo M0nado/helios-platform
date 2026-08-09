@@ -138,7 +138,7 @@ function Start-DockerRuntime {
 
 function Write-SmokeSummary {
     param(
-        [Parameter(Mandatory = $true)] [hashtable] $Result,
+        [Parameter(Mandatory = $true)] [System.Collections.IDictionary] $Result,
         [Parameter(Mandatory = $true)] [string] $SummaryPath
     )
 
@@ -148,6 +148,16 @@ function Write-SmokeSummary {
     $lines.Add("- Status: " + [string] $Result.status)
     $lines.Add("- Correlation ID: " + [string] $Result.correlationId)
     $lines.Add("- Generated (UTC): " + [string] $Result.generatedAtUtc)
+    if ($Result.Contains('evidenceLinks')) {
+        $summaryLink = [string] $Result.evidenceLinks.summary
+        $dataLink = [string] $Result.evidenceLinks.data
+        if (-not [string]::IsNullOrWhiteSpace($summaryLink)) {
+            $lines.Add("- Evidence summary: $summaryLink")
+        }
+        if (-not [string]::IsNullOrWhiteSpace($dataLink)) {
+            $lines.Add("- Evidence data: $dataLink")
+        }
+    }
     $lines.Add('')
     $lines.Add('| Check | Status | Detail |')
     $lines.Add('| --- | --- | --- |')
@@ -308,6 +318,10 @@ $result = [ordered]@{
     generatedAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
     correlationId = $correlationId
     manifestPath = $manifestReference
+    evidenceLinks = [ordered]@{
+        summary = [string] $modeConfig.smokeEvidence.summary
+        data = [string] $modeConfig.smokeEvidence.data
+    }
     checks = @($checks)
     diagnostics = [ordered]@{
         localRuntimeLogsCaptured = ($null -ne $localRuntimeStdout -or $null -ne $localRuntimeStderr)

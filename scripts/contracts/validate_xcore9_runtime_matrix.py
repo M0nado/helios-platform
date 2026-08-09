@@ -24,6 +24,18 @@ REQUIRED_RESOURCE_KEYS = {
     "maxConcurrentDeepLearningJobs",
     "maxConcurrentAgentRuns",
 }
+REQUIRED_BASELINE_DENY = {
+    "automatic-production-deploy",
+    "automatic-rbac-change",
+    "automatic-consent-grant",
+    "automatic-merge",
+    "cross-tenant-secret-reuse",
+    "cross-mode-token-reuse",
+    "unbounded-recursive-agents",
+    "plaintext-secret-export",
+    "bypass-protected-approval",
+}
+REQUIRED_EVIDENCE_FIELDS = {"correlationId", "evidenceLinks"}
 
 
 def _append(errors: list[str], condition: bool, message: str) -> None:
@@ -32,7 +44,7 @@ def _append(errors: list[str], condition: bool, message: str) -> None:
 
 
 def _is_positive_int(value: object) -> bool:
-    return isinstance(value, int) and value > 0
+    return type(value) is int and value > 0
 
 
 def load_manifest(root: Path) -> dict:
@@ -69,6 +81,20 @@ def validate_top_level(manifest: dict) -> list[str]:
         governance.get("crossModeTokenReuseAllowed") is False,
         "governance.crossModeTokenReuseAllowed must be false",
     )
+    required_evidence_fields = governance.get("requiredEvidenceFields")
+    _append(
+        errors,
+        isinstance(required_evidence_fields, list),
+        "governance.requiredEvidenceFields must be a list",
+    )
+    if isinstance(required_evidence_fields, list):
+        evidence_field_set = {field for field in required_evidence_fields if isinstance(field, str)}
+        missing_evidence_fields = sorted(REQUIRED_EVIDENCE_FIELDS - evidence_field_set)
+        _append(
+            errors,
+            not missing_evidence_fields,
+            f"governance.requiredEvidenceFields missing mandatory fields: {missing_evidence_fields}",
+        )
 
     required_deny = manifest.get("requiredDenyList")
     _append(errors, isinstance(required_deny, list) and len(required_deny) >= 5, "requiredDenyList must be a non-empty list")
@@ -77,6 +103,13 @@ def validate_top_level(manifest: dict) -> list[str]:
             errors,
             all(isinstance(item, str) and item for item in required_deny),
             "requiredDenyList entries must be non-empty strings",
+        )
+        required_deny_set = {item for item in required_deny if isinstance(item, str)}
+        missing_baseline = sorted(REQUIRED_BASELINE_DENY - required_deny_set)
+        _append(
+            errors,
+            not missing_baseline,
+            f"requiredDenyList missing mandatory baseline deny items: {missing_baseline}",
         )
 
     return errors
@@ -107,6 +140,36 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
             )
         else:
             errors.append(f"{mode_id}: boundaries.identity must be an object")
+
+        network = boundaries.get("network", {})
+        if isinstance(network, dict):
+            _append(
+                errors,
+                network.get("publicIngressAllowed") is False,
+                f"{mode_id}: boundaries.network.publicIngressAllowed must be false",
+            )
+        else:
+            errors.append(f"{mode_id}: boundaries.network must be an object")
+
+        storage = boundaries.get("storage", {})
+        if isinstance(storage, dict):
+            _append(
+                errors,
+                storage.get("destructiveDiskOperationsAllowed") is False,
+                f"{mode_id}: boundaries.storage.destructiveDiskOperationsAllowed must be false",
+            )
+        else:
+            errors.append(f"{mode_id}: boundaries.storage must be an object")
+
+        tool_access = boundaries.get("toolAccess", {})
+        if isinstance(tool_access, dict):
+            _append(
+                errors,
+                tool_access.get("localMcpReadOnlyRequired") is True,
+                f"{mode_id}: boundaries.toolAccess.localMcpReadOnlyRequired must be true",
+            )
+        else:
+            errors.append(f"{mode_id}: boundaries.toolAccess must be an object")
 
         secrets = boundaries.get("secrets", {})
         if isinstance(secrets, dict):
@@ -231,6 +294,11 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
         )
         _append(
             errors,
+            isinstance(rollback.get("strategy"), str) and bool(rollback["strategy"]),
+            f"{mode_id}: rollback.strategy must be a non-empty string",
+        )
+        _append(
+            errors,
             isinstance(rollback.get("isolationBoundary"), str) and bool(rollback["isolationBoundary"]),
             f"{mode_id}: rollback.isolationBoundary must be a non-empty string",
         )
@@ -239,6 +307,12 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
     _append(errors, isinstance(disallowed, list), f"{mode_id}: disallowedOperations must be a list")
     if isinstance(disallowed, list):
         operation_set = {item for item in disallowed if isinstance(item, str)}
+        missing_baseline_deny = sorted(REQUIRED_BASELINE_DENY - operation_set)
+        _append(
+            errors,
+            not missing_baseline_deny,
+            f"{mode_id}: disallowedOperations missing mandatory baseline deny items: {missing_baseline_deny}",
+        )
         missing = sorted(required_deny - operation_set)
         _append(errors, not missing, f"{mode_id}: disallowedOperations missing required deny items: {missing}")
         _append(

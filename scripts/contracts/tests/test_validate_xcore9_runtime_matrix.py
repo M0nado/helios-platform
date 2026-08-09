@@ -11,6 +11,7 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "scripts" / "contracts"))
 
 from validate_xcore9_runtime_matrix import (  # noqa: E402
     EXPECTED_MODES,
+    REQUIRED_BASELINE_DENY,
     load_manifest,
     validate_manifest,
     validate_matrix,
@@ -47,12 +48,25 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("missing required deny items" in error for error in errors))
 
+    def test_manifest_fails_when_baseline_deny_item_is_removed(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        candidate["requiredDenyList"].remove("automatic-rbac-change")
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("requiredDenyList missing mandatory baseline deny items" in error for error in errors))
+
     def test_mode_fails_when_startup_is_not_dry_run(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
         local["startupContract"]["requiredEnvironment"]["HELIOS_EXECUTION_MODE"] = "live"
         errors = validate_manifest(candidate)
         self.assertTrue(any("HELIOS_EXECUTION_MODE must be dry-run" in error for error in errors))
+
+    def test_mode_fails_when_startup_timeout_is_boolean(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        local["startupContract"]["startupTimeoutSeconds"] = True
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("startupTimeoutSeconds must be a positive integer" in error for error in errors))
 
     def test_manifest_fails_when_secret_scope_is_reused(self) -> None:
         candidate = copy.deepcopy(self.manifest)
@@ -67,6 +81,36 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         candidate["governance"]["productionMutationRequiresProtectedApproval"] = False
         errors = validate_manifest(candidate)
         self.assertTrue(any("productionMutationRequiresProtectedApproval must be true" in error for error in errors))
+
+    def test_mode_fails_when_public_ingress_is_enabled(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-windows")
+        local["boundaries"]["network"]["publicIngressAllowed"] = True
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("publicIngressAllowed must be false" in error for error in errors))
+
+    def test_mode_fails_when_rollback_strategy_is_missing(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        docker = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        docker["rollback"].pop("strategy")
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("rollback.strategy must be a non-empty string" in error for error in errors))
+
+    def test_baseline_deny_list_is_stable(self) -> None:
+        self.assertSetEqual(
+            REQUIRED_BASELINE_DENY,
+            {
+                "automatic-production-deploy",
+                "automatic-rbac-change",
+                "automatic-consent-grant",
+                "automatic-merge",
+                "cross-tenant-secret-reuse",
+                "cross-mode-token-reuse",
+                "unbounded-recursive-agents",
+                "plaintext-secret-export",
+                "bypass-protected-approval",
+            },
+        )
 
     def test_expected_modes_are_stable(self) -> None:
         self.assertSetEqual(
