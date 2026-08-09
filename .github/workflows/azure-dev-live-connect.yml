@@ -155,6 +155,10 @@ jobs:
             echo "HELIOS_FEDERATION_SUBJECT_IMMUTABLE=$immutable"
           } >> "$GITHUB_ENV"
 
+      - name: Verify secretless GitHub Actions identity inputs
+        shell: bash
+        run: scripts/setup/configure-cloud-auth.sh --ci-check
+
       - name: Sign in with GitHub OIDC
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43
         with:

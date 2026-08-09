@@ -66,9 +66,9 @@ cat <<PATHINFO
 Add these tools to your shell:
 export PATH="$DOTNET_DIR:$GH_DIR/bin:$AZ_DIR/bin:$RG_DIR/bin:\$PATH"
 
-Authenticate as needed:
-gh auth login
-az login
+Authenticate and verify without storing repository credentials:
+scripts/setup/configure-cloud-auth.sh --interactive
+scripts/setup/configure-cloud-auth.sh --status
 
 Optional OpenAI/Azure OpenAI:
 export OPENAI_API_KEY="..."
