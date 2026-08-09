@@ -93,18 +93,21 @@ jobs:
             monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.json
 
   smoke-hybrid:
-    needs: validate-contract
-    runs-on: windows-2025
+    needs:
+      - validate-contract
+      - smoke-local-windows
+      - smoke-local-docker
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Run hybrid runtime smoke
+      - name: Run hybrid governance smoke
         shell: pwsh
         run: |
-          pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode hybrid-windows-docker-fleet
+          pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode hybrid-windows-docker-fleet -SkipRuntimeStart
       - uses: actions/upload-artifact@v4
         if: always()
         with:
