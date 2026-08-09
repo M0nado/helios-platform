@@ -111,7 +111,7 @@
   },
   "forbiddenRuntimeActions": [
     "physical-usb-write",
-    "disk-or-vhdx-create-without-approval",
+    "vhdx-create-without-approval-from-disk",
     "sysadmin-activation-without-local-two-factor",
     "production-tenant-change"
   ]
