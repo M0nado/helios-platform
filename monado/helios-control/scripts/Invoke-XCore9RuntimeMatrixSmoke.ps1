@@ -68,6 +68,25 @@ function Stop-ProcessSafe {
 
     if ($null -eq $Process) { return }
     if ($Process.HasExited) { return }
+    if ($IsWindows) {
+        function Stop-ProcessTreeWindows {
+            param([int] $ProcessId)
+
+            $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $ProcessId" -ErrorAction SilentlyContinue)
+            foreach ($child in $children) {
+                Stop-ProcessTreeWindows -ProcessId ([int] $child.ProcessId)
+            }
+            try {
+                Stop-Process -Id $ProcessId -Force -ErrorAction Stop
+            }
+            catch {
+            }
+        }
+
+        Stop-ProcessTreeWindows -ProcessId $Process.Id
+        return
+    }
+
     Stop-Process -Id $Process.Id -Force
 }
 
