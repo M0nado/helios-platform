@@ -1,0 +1,27 @@
+{
+  "$schema": "./stable-lane.schema.json",
+  "schemaVersion": "1.0",
+  "lane": "stable",
+  "supportedTargetFrameworks": ["net8.0", "net8.0-windows"],
+  "releaseProjects": ["HELIOS.Platform.csproj", "src/core/HELIOS.Platform/HELIOS.Platform.csproj"],
+  "releasePolicy": {
+    "allowPrereleaseDependencies": false,
+    "requireLockFiles": true,
+    "authentication": ["azure-workload-identity", "managed-identity", "oauth2-authorization-code", "github-app", "key-vault-reference"],
+    "forbiddenAuthentication": ["committed-api-key", "personal-access-token-in-artifact", "client-secret-in-source"],
+    "releaseArtifactExclusions": ["eng/integration-lanes/preview/**", "**/*-preview.*", "**/*.prerelease.*"]
+  },
+  "integrations": [
+    {"name":"dotnet","sdk":"8.0.408","apiVersions":["net8.0"],"authentication":["azure-workload-identity"],"deprecationNotice":"Track .NET support policy before SDK promotion."},
+    {"name":"azure-ai-foundry","sdk":"REST","apiVersions":["2024-10-21"],"authentication":["managed-identity","azure-workload-identity"],"deprecationNotice":"Review Azure API retirement notices quarterly."},
+    {"name":"microsoft-agent-framework","sdk":"contract-only","apiVersions":["v1"],"authentication":["managed-identity"],"deprecationNotice":"No preview Agent Framework package is permitted in stable artifacts."},
+    {"name":"openai","sdk":"openai-agents==0.18.2","apiVersions":["v1"],"authentication":["key-vault-reference"],"deprecationNotice":"Validate model and endpoint deprecations before release."},
+    {"name":"anthropic","sdk":"REST","apiVersions":["2023-06-01"],"authentication":["key-vault-reference"],"deprecationNotice":"Validate model lifecycle notices before release."},
+    {"name":"langchain","sdk":"contract-only","apiVersions":["v1"],"authentication":["key-vault-reference"],"deprecationNotice":"LangChain preview packages remain isolated until an ADR promotion."},
+    {"name":"github","sdk":"REST","apiVersions":["2022-11-28"],"authentication":["github-app","azure-workload-identity"],"deprecationNotice":"Monitor GitHub changelog and sunset headers."},
+    {"name":"microsoft-graph","sdk":"REST","apiVersions":["v1.0"],"authentication":["managed-identity","oauth2-authorization-code"],"deprecationNotice":"Beta Graph endpoints are prohibited in stable artifacts."},
+    {"name":"fabric","sdk":"REST","apiVersions":["v1"],"authentication":["managed-identity"],"deprecationNotice":"Review Fabric REST API notices quarterly."},
+    {"name":"purview","sdk":"REST","apiVersions":["2023-09-01"],"authentication":["managed-identity"],"deprecationNotice":"Policy enforcement remains approval gated."},
+    {"name":"copilot-studio","sdk":"broker-contract","apiVersions":["v1"],"authentication":["oauth2-authorization-code","managed-identity"],"deprecationNotice":"Connector changes require tenant review and contract tests."}
+  ]
+}

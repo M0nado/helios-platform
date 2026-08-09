@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "lane": "preview",
+  "publish": false,
+  "networkCredentials": "development-workload-identity-or-key-vault-only",
+  "allowedEnvironments": ["container", "disposable-virtualenv"],
+  "candidateRuntimes": ["dotnet-11.0-preview", "python-3.14"],
+  "dependencyRules": {
+    "dotnet": "container-local project, NuGet cache, and packages.lock.json",
+    "python": "exact versions and hashes in requirements-preview.txt",
+    "npm": "exact versions in a preview-local package-lock.json"
+  },
+  "promotionEvidence": ["accepted-adr", "contract-tests", "dependency-diff", "security-review", "rollback-plan", "deprecation-review", "release-artifact-inspection"]
+}

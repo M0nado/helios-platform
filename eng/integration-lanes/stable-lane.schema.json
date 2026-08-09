@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/stable-integration-lane-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "lane", "supportedTargetFrameworks", "releaseProjects", "releasePolicy", "integrations"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": "1.0"},
+    "lane": {"const": "stable"},
+    "supportedTargetFrameworks": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^net[0-9]+\\.[0-9]+(?:-windows)?$"}},
+    "releaseProjects": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "\\.csproj$"}},
+    "releasePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowPrereleaseDependencies", "requireLockFiles", "authentication", "forbiddenAuthentication", "releaseArtifactExclusions"],
+      "properties": {
+        "allowPrereleaseDependencies": {"const": false},
+        "requireLockFiles": {"const": true},
+        "authentication": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "forbiddenAuthentication": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "releaseArtifactExclusions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "integrations": {
+      "type": "array",
+      "minItems": 11,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sdk", "apiVersions", "authentication", "deprecationNotice"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "sdk": {"type": "string", "minLength": 1},
+          "apiVersions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+          "authentication": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+          "deprecationNotice": {"type": "string", "minLength": 10}
+        }
+      }
+    }
+  }
+}

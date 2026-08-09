@@ -392,15 +392,6 @@
           "Serilog": "4.2.0"
         }
       },
-      "StyleCop.Analyzers": {
-        "type": "Direct",
-        "requested": "[1.2.0-beta.556, )",
-        "resolved": "1.2.0-beta.556",
-        "contentHash": "llRPgmA1fhC0I0QyFLEcjvtM2239QzKr/tcnbsjArLMJxJlu0AA5G7Fft0OI30pHF3MW63Gf4aSSsjc5m82J1Q==",
-        "dependencies": {
-          "StyleCop.Analyzers.Unstable": "1.2.0.556"
-        }
-      },
       "System.Data.SqlClient": {
         "type": "Direct",
         "requested": "[4.9.1, )",

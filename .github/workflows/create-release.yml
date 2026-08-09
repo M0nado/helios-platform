@@ -25,7 +25,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       with:
         fetch-depth: 0
 
@@ -41,7 +41,7 @@ jobs:
         Write-Output "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@b2d7bde49078d7e2b34cc93653c2d4b2678d7a99 # v4.3.1
       with:
         dotnet-version: 8.0.x
 
@@ -59,6 +59,10 @@ jobs:
           -DistributionPath 'dist' `
           -Version '${{ steps.version.outputs.VERSION }}'
 
+    - name: Enforce stable-lane artifact boundary
+      shell: powershell
+      run: python eng/integration-lanes/validate_release_artifacts.py 'dist/v${{ steps.version.outputs.VERSION }}'
+
     - name: Create GitHub release
       shell: powershell
       env:
@@ -74,7 +78,7 @@ jobs:
           $dryRunFlag
 
     - name: Upload release artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: release-${{ steps.version.outputs.VERSION }}
         path: dist/v${{ steps.version.outputs.VERSION }}/

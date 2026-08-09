@@ -10,7 +10,7 @@
     "check": "node --check src/broker-client.mjs && node --check src/server.mjs && node --check src/http.mjs && node --check src/stdio.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "express": "5.1.0",
     "zod": "3.25.76"
   }
