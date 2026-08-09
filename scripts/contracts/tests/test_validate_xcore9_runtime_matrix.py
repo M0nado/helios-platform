@@ -12,6 +12,7 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "scripts" / "contracts"))
 from validate_xcore9_runtime_matrix import (  # noqa: E402
     EXPECTED_MODES,
     REQUIRED_BASELINE_DENY,
+    EXPECTED_SMOKE_EVIDENCE_PATHS,
     load_manifest,
     validate_manifest,
     validate_matrix,
@@ -75,6 +76,13 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("healthContract.endpoints must be exactly" in error for error in errors))
 
+    def test_mode_fails_when_smoke_evidence_path_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        local["smokeEvidence"]["data"] = "monado/helios-control/docs/evidence/xcore9-runtime-matrix/renamed.json"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("smokeEvidence.data must be exactly" in error for error in errors))
+
     def test_mode_fails_when_startup_timeout_is_boolean(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
@@ -130,6 +138,25 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         self.assertSetEqual(
             EXPECTED_MODES,
             {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
+        )
+
+    def test_expected_smoke_evidence_paths_are_stable(self) -> None:
+        self.assertDictEqual(
+            EXPECTED_SMOKE_EVIDENCE_PATHS,
+            {
+                "local-windows": {
+                    "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.md",
+                    "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.json",
+                },
+                "local-docker": {
+                    "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.md",
+                    "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.json",
+                },
+                "hybrid-windows-docker-fleet": {
+                    "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.md",
+                    "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.json",
+                },
+            },
         )
 
 

@@ -97,9 +97,39 @@ function Stop-ContainerSafe {
     & docker stop $ContainerName *> $null
 }
 
+function Get-LocalRuntimeResourceEnvironment {
+    param(
+        [Parameter(Mandatory = $true)] [object] $ResourceEnvelope
+    )
+
+    $environmentOverrides = @{}
+    if ($null -eq $ResourceEnvelope -or $null -eq $ResourceEnvelope.PSObject) {
+        return $environmentOverrides
+    }
+
+    if ($ResourceEnvelope.PSObject.Properties.Name -contains 'maxCpuCores') {
+        $maxCpuCores = [int] $ResourceEnvelope.maxCpuCores
+        if ($maxCpuCores -gt 0) {
+            $environmentOverrides['DOTNET_PROCESSOR_COUNT'] = [string] $maxCpuCores
+        }
+    }
+
+    if ($ResourceEnvelope.PSObject.Properties.Name -contains 'maxMemoryGb') {
+        $maxMemoryGb = [int] $ResourceEnvelope.maxMemoryGb
+        if ($maxMemoryGb -gt 0) {
+            $maxMemoryBytes = [Int64] $maxMemoryGb * 1GB
+            $environmentOverrides['DOTNET_GCHeapHardLimit'] = [string] $maxMemoryBytes
+            $environmentOverrides['COMPlus_GCHeapHardLimit'] = [string] $maxMemoryBytes
+        }
+    }
+
+    return $environmentOverrides
+}
+
 function Start-LocalRuntime {
     param(
-        [Parameter(Mandatory = $true)] [string] $RepositoryRoot
+        [Parameter(Mandatory = $true)] [string] $RepositoryRoot,
+        [Parameter(Mandatory = $true)] [object] $ResourceEnvelope
     )
 
     $startScript = Join-Path $RepositoryRoot 'monado/helios-control/scripts/Start-HeliosLocal.ps1'
@@ -109,12 +139,64 @@ function Start-LocalRuntime {
 
     $stdoutPath = Join-Path ([System.IO.Path]::GetTempPath()) ("xcore9-local-runtime-{0}.out.log" -f ([Guid]::NewGuid().ToString('N')))
     $stderrPath = Join-Path ([System.IO.Path]::GetTempPath()) ("xcore9-local-runtime-{0}.err.log" -f ([Guid]::NewGuid().ToString('N')))
-    $process = Start-Process -FilePath 'pwsh' -ArgumentList @('-NoProfile', '-File', $startScript) -WorkingDirectory $RepositoryRoot -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+    $resourceEnvironment = Get-LocalRuntimeResourceEnvironment -ResourceEnvelope $ResourceEnvelope
+
+    $startProcessParameters = @{
+        FilePath = 'pwsh'
+        ArgumentList = @('-NoProfile', '-File', $startScript)
+        WorkingDirectory = $RepositoryRoot
+        PassThru = $true
+        RedirectStandardOutput = $stdoutPath
+        RedirectStandardError = $stderrPath
+    }
+
+    $startProcessCommand = Get-Command Start-Process -ErrorAction Stop
+    if ($resourceEnvironment.Count -gt 0 -and $startProcessCommand.Parameters.ContainsKey('Environment')) {
+        $startProcessParameters['Environment'] = $resourceEnvironment
+        $process = Start-Process @startProcessParameters
+    }
+    elseif ($resourceEnvironment.Count -gt 0) {
+        $previousEnvironment = @{}
+        foreach ($entry in $resourceEnvironment.GetEnumerator()) {
+            $entryName = [string] $entry.Key
+            $previousEnvironment[$entryName] = [Environment]::GetEnvironmentVariable($entryName, 'Process')
+            [Environment]::SetEnvironmentVariable($entryName, [string] $entry.Value, 'Process')
+        }
+        try {
+            $process = Start-Process @startProcessParameters
+        }
+        finally {
+            foreach ($entry in $resourceEnvironment.GetEnumerator()) {
+                $entryName = [string] $entry.Key
+                [Environment]::SetEnvironmentVariable($entryName, $previousEnvironment[$entryName], 'Process')
+            }
+        }
+    }
+    else {
+        $process = Start-Process @startProcessParameters
+    }
+
     return [ordered]@{
         process = $process
         stdoutPath = $stdoutPath
         stderrPath = $stderrPath
+        resourceEnvironment = $resourceEnvironment
     }
+}
+
+function Add-LocalRuntimeResourceCheck {
+    param(
+        [Parameter(Mandatory = $true)] [AllowEmptyCollection()] [System.Collections.Generic.List[object]] $Checks,
+        [Parameter(Mandatory = $true)] [hashtable] $ResourceEnvironment
+    )
+
+    if ($ResourceEnvironment.Count -eq 0) {
+        Add-SmokeCheck -Checks $Checks -Name 'local-resource-envelope' -Status 'failed' -Detail 'No local runtime resource envelope was applied.'
+        return
+    }
+
+    $resourceDetail = ($ResourceEnvironment.GetEnumerator() | Sort-Object Name | ForEach-Object { "{0}={1}" -f $_.Key, $_.Value }) -join ', '
+    Add-SmokeCheck -Checks $Checks -Name 'local-resource-envelope' -Status 'passed' -Detail ("Applied local runtime resource envelope via process environment: $resourceDetail")
 }
 
 function Start-DockerRuntime {
@@ -301,9 +383,10 @@ try {
         Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'skipped' -Detail 'Runtime startup checks were skipped by request.'
     }
     elseif ($Mode -eq 'local-windows') {
-        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot
+        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot -ResourceEnvelope $modeConfig.resourceEnvelope
         $localRuntimeStdout = $localRuntime.stdoutPath
         $localRuntimeStderr = $localRuntime.stderrPath
+        Add-LocalRuntimeResourceCheck -Checks $checks -ResourceEnvironment $localRuntime.resourceEnvironment
         $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
         if ($healthy) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) returned HTTP 200."
@@ -323,9 +406,10 @@ try {
         }
     }
     else {
-        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot
+        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot -ResourceEnvelope $modeConfig.resourceEnvelope
         $localRuntimeStdout = $localRuntime.stdoutPath
         $localRuntimeStderr = $localRuntime.stderrPath
+        Add-LocalRuntimeResourceCheck -Checks $checks -ResourceEnvironment $localRuntime.resourceEnvironment
         $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment -ResourceEnvelope $modeConfig.resourceEnvelope
 
         $endpoints = [string[]] $modeConfig.healthContract.endpoints

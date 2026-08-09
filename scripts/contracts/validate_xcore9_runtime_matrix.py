@@ -44,6 +44,20 @@ EXPECTED_HEALTH_ENDPOINTS = {
         "http://127.0.0.1:5081/health/ready",
     ],
 }
+EXPECTED_SMOKE_EVIDENCE_PATHS = {
+    "local-windows": {
+        "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.md",
+        "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.json",
+    },
+    "local-docker": {
+        "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.md",
+        "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.json",
+    },
+    "hybrid-windows-docker-fleet": {
+        "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.md",
+        "data": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.json",
+    },
+}
 
 
 def _append(errors: list[str], condition: bool, message: str) -> None:
@@ -345,12 +359,14 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
     smoke_evidence = mode.get("smokeEvidence")
     _append(errors, isinstance(smoke_evidence, dict), f"{mode_id}: smokeEvidence must be an object")
     if isinstance(smoke_evidence, dict):
+        expected_paths = EXPECTED_SMOKE_EVIDENCE_PATHS.get(mode_id, {})
         for key in ("summary", "data"):
             value = smoke_evidence.get(key)
+            expected_value = expected_paths.get(key)
             _append(
                 errors,
-                isinstance(value, str) and value.startswith("monado/helios-control/docs/evidence/xcore9-runtime-matrix/"),
-                f"{mode_id}: smokeEvidence.{key} must point to docs/evidence/xcore9-runtime-matrix",
+                isinstance(value, str) and value == expected_value,
+                f"{mode_id}: smokeEvidence.{key} must be exactly {expected_value}",
             )
 
     _append(
