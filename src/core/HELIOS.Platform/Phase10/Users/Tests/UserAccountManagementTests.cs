@@ -521,7 +521,7 @@ namespace HELIOS.Platform.Phase10.Users.Tests
             var report = await _monitor.GenerateActivityReportAsync(_testUsername, DateTime.Now.AddHours(-1), DateTime.Now.AddHours(1));
             
             Assert.NotNull(report.RiskLevel);
-            Assert.True(new[] { "Minimal", "Low", "Medium", "High", "Critical" }.Contains(report.RiskLevel));
+            Assert.Contains(report.RiskLevel, new[] { "Minimal", "Low", "Medium", "High", "Critical" });
         }
 
         [Fact]
