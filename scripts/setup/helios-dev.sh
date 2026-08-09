@@ -30,7 +30,7 @@ if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* || "$(uname -s)" == CYGW
 else
   VENV_BIN="bin"
 fi
-export PATH="$TOOLS_DIR/dotnet:$TOOLS_DIR/gh/bin:$TOOLS_DIR/azcli-venv/$VENV_BIN:$TOOLS_DIR/rg:$PATH"
+export PATH="$TOOLS_DIR/python:$TOOLS_DIR/dotnet:$TOOLS_DIR/gh/bin:$TOOLS_DIR/azcli-venv/$VENV_BIN:$TOOLS_DIR/rg:$PATH"
 mkdir -p reports/local-setup
 
 {

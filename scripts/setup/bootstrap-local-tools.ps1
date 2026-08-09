@@ -12,6 +12,7 @@ $dotnetDirectory = Join-Path $ToolsDirectory 'dotnet'
 $ghDirectory = Join-Path $ToolsDirectory 'gh'
 $azureDirectory = Join-Path $ToolsDirectory 'azcli-venv'
 $rgDirectory = Join-Path $ToolsDirectory 'rg'
+$pythonDirectory = Join-Path $ToolsDirectory 'python'
 New-Item -ItemType Directory -Force -Path $ToolsDirectory | Out-Null
 
 if (-not (Test-Path (Join-Path $dotnetDirectory 'dotnet.exe'))) {
@@ -38,10 +39,24 @@ if (-not (Test-Path (Join-Path $ghDirectory 'bin/gh.exe'))) {
 $python = Get-Command py -ErrorAction SilentlyContinue
 if (-not $python) { $python = Get-Command python -ErrorAction SilentlyContinue }
 if (-not $python) { throw 'Python 3 is required to install the Azure CLI.' }
+
+# Git Bash commonly exposes the Windows launcher as `py` or `python`, while the
+# repository's cross-platform scripts invoke `python3`. Keep that contract by
+# placing a small command shim on the PATH used by helios-dev.sh.
+New-Item -ItemType Directory -Force -Path $pythonDirectory | Out-Null
+$python3Command = Join-Path $pythonDirectory 'python3.cmd'
+$usesPythonLauncher = [IO.Path]::GetFileNameWithoutExtension($python.Source) -eq 'py'
+$pythonArguments = if ($usesPythonLauncher) { ' -3' } else { '' }
+$escapedPythonSource = $python.Source.Replace('%', '%%')
+Set-Content -Encoding Ascii -Path $python3Command -Value @(
+    '@echo off'
+    "`"$escapedPythonSource`"$pythonArguments %*"
+)
+
 $azureCommand = Join-Path $azureDirectory 'Scripts/az.cmd'
 if (-not (Test-Path $azureCommand)) {
     Write-Host "Installing Azure CLI into $azureDirectory"
-    if ($python.Name -eq 'py.exe') {
+    if ($usesPythonLauncher) {
         & $python.Source -3 -m venv $azureDirectory
     } else {
         & $python.Source -m venv $azureDirectory
@@ -65,7 +80,7 @@ if (-not (Test-Path (Join-Path $rgDirectory 'rg.exe'))) {
     Write-Host "ripgrep already installed at $rgDirectory"
 }
 
-$pathEntries = @($dotnetDirectory, (Join-Path $ghDirectory 'bin'),
+$pathEntries = @($pythonDirectory, $dotnetDirectory, (Join-Path $ghDirectory 'bin'),
     (Join-Path $azureDirectory 'Scripts'), $rgDirectory) -join ';'
 Write-Host "`nAdd these tools to your shell:"
 Write-Host "`$env:PATH = `"$pathEntries;`$env:PATH`""
