@@ -331,38 +331,50 @@ def runtime_matrix_contract() -> dict[str, Any]:
     matrix_asset = read_asset("xcore9-runtime-matrix.json")
     repository_root = ROOT.parents[1]
     source_manifest = repository_root / matrix_asset["sourceManifest"]
-    if not source_manifest.exists():
-        raise RuntimeError(
-            "XCore9 runtime matrix manifest is missing. "
-            "Ensure monado/helios-control/config/xcore9-runtime-matrix.v1.json exists."
+    if source_manifest.exists():
+        manifest = json.loads(source_manifest.read_text(encoding="utf-8"))
+        modes = manifest.get("modes", [])
+        mode_ids = [
+            mode.get("id")
+            for mode in modes
+            if isinstance(mode, dict) and isinstance(mode.get("id"), str)
+        ]
+        smoke_linked = all(
+            isinstance(mode, dict)
+            and isinstance(mode.get("smokeEvidence"), dict)
+            and isinstance(mode["smokeEvidence"].get("summary"), str)
+            and isinstance(mode["smokeEvidence"].get("data"), str)
+            for mode in modes
         )
-    manifest = json.loads(source_manifest.read_text(encoding="utf-8"))
-    modes = manifest.get("modes", [])
-    mode_ids = [
-        mode.get("id")
-        for mode in modes
-        if isinstance(mode, dict) and isinstance(mode.get("id"), str)
-    ]
-    smoke_linked = all(
-        isinstance(mode, dict)
-        and isinstance(mode.get("smokeEvidence"), dict)
-        and isinstance(mode["smokeEvidence"].get("summary"), str)
-        and isinstance(mode["smokeEvidence"].get("data"), str)
-        for mode in modes
-    )
+        return {
+            **matrix_asset,
+            "manifestExists": True,
+            "defaultMode": manifest.get("defaultMode"),
+            "modeCount": len(mode_ids),
+            "modeIds": mode_ids,
+            "requiredDenyListCount": len(manifest.get("requiredDenyList", [])),
+            "nonDestructiveDefault": manifest.get("governance", {}).get("nonDestructiveDefault"),
+            "productionMutationRequiresProtectedApproval": manifest.get("governance", {}).get(
+                "productionMutationRequiresProtectedApproval"
+            ),
+            "crossModeTokenReuseAllowed": manifest.get("governance", {}).get("crossModeTokenReuseAllowed"),
+            "smokeEvidenceLinked": smoke_linked,
+        }
+
+    asset_mode_ids = [mode for mode in matrix_asset.get("modes", []) if isinstance(mode, str)]
     return {
         **matrix_asset,
-        "manifestExists": True,
-        "defaultMode": manifest.get("defaultMode"),
-        "modeCount": len(mode_ids),
-        "modeIds": mode_ids,
-        "requiredDenyListCount": len(manifest.get("requiredDenyList", [])),
-        "nonDestructiveDefault": manifest.get("governance", {}).get("nonDestructiveDefault"),
-        "productionMutationRequiresProtectedApproval": manifest.get("governance", {}).get(
-            "productionMutationRequiresProtectedApproval"
+        "manifestExists": False,
+        "defaultMode": None,
+        "modeCount": len(asset_mode_ids),
+        "modeIds": asset_mode_ids,
+        "requiredDenyListCount": 0,
+        "nonDestructiveDefault": None,
+        "productionMutationRequiresProtectedApproval": None,
+        "crossModeTokenReuseAllowed": None,
+        "smokeEvidenceLinked": isinstance(matrix_asset.get("smokeEvidenceIndex"), str) and bool(
+            matrix_asset["smokeEvidenceIndex"]
         ),
-        "crossModeTokenReuseAllowed": manifest.get("governance", {}).get("crossModeTokenReuseAllowed"),
-        "smokeEvidenceLinked": smoke_linked,
     }
 
 

@@ -36,6 +36,14 @@ REQUIRED_BASELINE_DENY = {
     "bypass-protected-approval",
 }
 REQUIRED_EVIDENCE_FIELDS = {"correlationId", "evidenceLinks"}
+EXPECTED_HEALTH_ENDPOINTS = {
+    "local-windows": "http://127.0.0.1:5080/health/ready",
+    "local-docker": "http://127.0.0.1:5081/health/ready",
+    "hybrid-windows-docker-fleet": [
+        "http://127.0.0.1:5080/health/ready",
+        "http://127.0.0.1:5081/health/ready",
+    ],
+}
 
 
 def _append(errors: list[str], condition: bool, message: str) -> None:
@@ -241,11 +249,24 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
                 isinstance(endpoints, list) and len(endpoints) == 2 and all(isinstance(endpoint, str) for endpoint in endpoints),
                 f"{mode_id}: healthContract.endpoints must define exactly two endpoint URLs",
             )
+            if isinstance(endpoints, list) and len(endpoints) == 2 and all(isinstance(endpoint, str) for endpoint in endpoints):
+                expected_hybrid_endpoints = EXPECTED_HEALTH_ENDPOINTS["hybrid-windows-docker-fleet"]
+                _append(
+                    errors,
+                    endpoints == expected_hybrid_endpoints,
+                    f"{mode_id}: healthContract.endpoints must be exactly {expected_hybrid_endpoints}",
+                )
+                _append(
+                    errors,
+                    len(set(endpoints)) == 2,
+                    f"{mode_id}: healthContract.endpoints must contain two distinct loopback endpoints",
+                )
         else:
+            expected_endpoint = EXPECTED_HEALTH_ENDPOINTS.get(mode_id)
             _append(
                 errors,
-                isinstance(health.get("endpoint"), str) and bool(health["endpoint"]),
-                f"{mode_id}: healthContract.endpoint must be a non-empty string",
+                isinstance(health.get("endpoint"), str) and health.get("endpoint") == expected_endpoint,
+                f"{mode_id}: healthContract.endpoint must be exactly {expected_endpoint}",
             )
 
     artifact = mode.get("artifactPinning")

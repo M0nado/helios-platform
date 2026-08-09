@@ -2,6 +2,7 @@ import importlib.util
 import io
 import json
 import os
+import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
@@ -171,6 +172,22 @@ class HeliosCliTests(unittest.TestCase):
             {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
         )
         self.assertFalse(matrix["crossModeTokenReuseAllowed"])
+        self.assertTrue(matrix["smokeEvidenceLinked"])
+
+    def test_runtime_matrix_contract_falls_back_to_bundled_asset_when_manifest_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fake_root = Path(temp_dir) / "plugins" / "helios-control-fabric" / "scripts"
+            fake_root.mkdir(parents=True, exist_ok=True)
+            with patch.object(HELIOS, "ROOT", fake_root):
+                matrix = HELIOS.runtime_matrix_contract()
+
+        self.assertEqual(matrix["contract"], "xcore9-runtime-matrix")
+        self.assertFalse(matrix["manifestExists"])
+        self.assertEqual(matrix["defaultExecutionMode"], "validation-first")
+        self.assertEqual(
+            set(matrix["modeIds"]),
+            {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
+        )
         self.assertTrue(matrix["smokeEvidenceLinked"])
 
     def test_all_assets_are_json(self) -> None:

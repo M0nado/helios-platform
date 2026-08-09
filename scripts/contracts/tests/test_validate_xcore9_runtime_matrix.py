@@ -61,6 +61,20 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("HELIOS_EXECUTION_MODE must be dry-run" in error for error in errors))
 
+    def test_mode_fails_when_loopback_endpoint_is_modified(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        local["healthContract"]["endpoint"] = "http://127.0.0.1:5999/health/ready"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("healthContract.endpoint must be exactly" in error for error in errors))
+
+    def test_hybrid_mode_fails_when_endpoint_order_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        hybrid = next(mode for mode in candidate["modes"] if mode["id"] == "hybrid-windows-docker-fleet")
+        hybrid["healthContract"]["endpoints"] = list(reversed(hybrid["healthContract"]["endpoints"]))
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("healthContract.endpoints must be exactly" in error for error in errors))
+
     def test_mode_fails_when_startup_timeout_is_boolean(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")

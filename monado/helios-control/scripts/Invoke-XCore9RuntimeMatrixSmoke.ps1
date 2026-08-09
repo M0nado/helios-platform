@@ -142,31 +142,49 @@ function Start-DockerRuntime {
     }
 
     $containerName = 'helios-connect-xcore9-smoke-' + ([Guid]::NewGuid().ToString('N').Substring(0, 10))
-    $dockerRunArgsWithoutLimits = @('run', '--detach', '--rm', '--name', $containerName, '--publish', '127.0.0.1:5081:8080')
-    $dockerRunArgs = @($dockerRunArgsWithoutLimits)
-    $resourceArgsApplied = $false
+    $dockerRunArgs = @('run', '--detach', '--rm', '--name', $containerName, '--publish', '127.0.0.1:5081:8080')
     if ($null -ne $ResourceEnvelope -and $null -ne $ResourceEnvelope.PSObject) {
         if ($ResourceEnvelope.PSObject.Properties.Name -contains 'maxCpuCores') {
-            $dockerRunArgs += @('--cpus', [string] $ResourceEnvelope.maxCpuCores)
-            $resourceArgsApplied = $true
+            $requestedCpu = [double] $ResourceEnvelope.maxCpuCores
+            $hostCpu = [double] [Environment]::ProcessorCount
+            $effectiveCpu = if ($hostCpu -gt 0) { [Math]::Min($requestedCpu, $hostCpu) } else { $requestedCpu }
+            if ($effectiveCpu -lt 1) {
+                $effectiveCpu = 1
+            }
+            $dockerRunArgs += @('--cpus', ("{0:0.##}" -f $effectiveCpu))
         }
         if ($ResourceEnvelope.PSObject.Properties.Name -contains 'maxMemoryGb') {
-            $dockerRunArgs += @('--memory', ("{0}g" -f [string] $ResourceEnvelope.maxMemoryGb))
-            $resourceArgsApplied = $true
+            $requestedMemoryGb = [int] $ResourceEnvelope.maxMemoryGb
+            $hostMemoryGb = 0
+            if (Test-Path -LiteralPath '/proc/meminfo') {
+                $memTotalLine = (Get-Content -LiteralPath '/proc/meminfo' -ErrorAction SilentlyContinue | Select-String -Pattern '^MemTotal:\s+(\d+)\s+kB$' | Select-Object -First 1)
+                if ($null -ne $memTotalLine) {
+                    $hostMemoryKb = [double] $memTotalLine.Matches[0].Groups[1].Value
+                    $hostMemoryGb = [int] [Math]::Floor($hostMemoryKb / 1048576.0)
+                }
+            }
+            elseif ($IsWindows) {
+                try {
+                    $hostMemoryBytes = [double] (Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop).TotalPhysicalMemory
+                    $hostMemoryGb = [int] [Math]::Floor($hostMemoryBytes / 1GB)
+                }
+                catch {
+                    $hostMemoryGb = 0
+                }
+            }
+            $effectiveMemoryGb = if ($hostMemoryGb -gt 0) { [Math]::Min($requestedMemoryGb, $hostMemoryGb) } else { $requestedMemoryGb }
+            if ($effectiveMemoryGb -lt 1) {
+                $effectiveMemoryGb = 1
+            }
+            $dockerRunArgs += @('--memory', ("{0}g" -f $effectiveMemoryGb))
         }
     }
     foreach ($property in $EnvironmentVariables.PSObject.Properties) {
         $dockerRunArgs += '--env'
         $dockerRunArgs += ("{0}={1}" -f $property.Name, [string] $property.Value)
-        $dockerRunArgsWithoutLimits += '--env'
-        $dockerRunArgsWithoutLimits += ("{0}={1}" -f $property.Name, [string] $property.Value)
     }
     $dockerRunArgs += $imageTag
-    $dockerRunArgsWithoutLimits += $imageTag
     $dockerRunOutput = & docker @dockerRunArgs 2>&1
-    if ($LASTEXITCODE -ne 0 -and $resourceArgsApplied) {
-        $dockerRunOutput = & docker @dockerRunArgsWithoutLimits 2>&1
-    }
     if ($LASTEXITCODE -ne 0) {
         $joinedOutput = ($dockerRunOutput | ForEach-Object { [string] $_.ToString().Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ' | '
         if ([string]::IsNullOrWhiteSpace($joinedOutput)) {
