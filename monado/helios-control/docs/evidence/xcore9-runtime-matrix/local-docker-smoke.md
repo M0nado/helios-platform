@@ -1,8 +1,8 @@
 # Runtime smoke summary: local-docker
 
 - Status: passed
-- Correlation ID: 914914db-6a78-4404-8b6e-b52ebe0f351f
-- Generated (UTC): 2026-08-07T00:25:51.2796919+00:00
+- Correlation ID: a47676c3-dcfb-427b-bf47-bae95ae6c64d
+- Generated (UTC): 2026-08-09T05:28:02.2597093+00:00
 
 | Check | Status | Detail |
 | --- | --- | --- |

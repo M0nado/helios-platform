@@ -165,11 +165,12 @@
         }
       },
       "startupContract": {
-        "command": "docker build --file monado/helios-control/src/Helios.Connect.Api/Dockerfile --tag helios-connect:xcore9-local monado/helios-control && docker run --detach --rm --name helios-connect-xcore9-local --publish 5081:8080 --env HELIOS_EXECUTION_MODE=dry-run --env HELIOS_CLOUD_RUNTIME_ONLY=true helios-connect:xcore9-local",
+        "command": "docker build --file monado/helios-control/src/Helios.Connect.Api/Dockerfile --tag helios-connect:xcore9-local monado/helios-control && docker run --detach --rm --name helios-connect-xcore9-local --publish 5081:8080 --env HELIOS_EXECUTION_MODE=dry-run --env HELIOS_CLOUD_RUNTIME_ONLY=false --env HELIOS_LOCAL_RUNTIME_ALLOWED=true helios-connect:xcore9-local",
         "workingDirectory": ".",
         "requiredEnvironment": {
           "HELIOS_EXECUTION_MODE": "dry-run",
-          "HELIOS_CLOUD_RUNTIME_ONLY": "true"
+          "HELIOS_CLOUD_RUNTIME_ONLY": "false",
+          "HELIOS_LOCAL_RUNTIME_ALLOWED": "true"
         },
         "startupTimeoutSeconds": 240
       },

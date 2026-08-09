@@ -54,6 +54,8 @@ function Wait-ForHealthEndpoint {
         }
         catch [System.Net.Http.HttpRequestException] {
         }
+        catch [System.Management.Automation.RuntimeException] {
+        }
 
         Start-Sleep -Seconds 2
     }
@@ -98,7 +100,8 @@ function Start-LocalRuntime {
 
 function Start-DockerRuntime {
     param(
-        [Parameter(Mandatory = $true)] [string] $RepositoryRoot
+        [Parameter(Mandatory = $true)] [string] $RepositoryRoot,
+        [Parameter(Mandatory = $true)] [object] $EnvironmentVariables
     )
 
     & docker info --format '{{json .ServerVersion}}' *> $null
@@ -119,7 +122,13 @@ function Start-DockerRuntime {
     }
 
     $containerName = 'helios-connect-xcore9-smoke-' + ([Guid]::NewGuid().ToString('N').Substring(0, 10))
-    & docker run --detach --rm --name $containerName --publish 5081:8080 --env HELIOS_EXECUTION_MODE=dry-run --env HELIOS_CLOUD_RUNTIME_ONLY=true $imageTag *> $null
+    $dockerRunArgs = @('run', '--detach', '--rm', '--name', $containerName, '--publish', '5081:8080')
+    foreach ($property in $EnvironmentVariables.PSObject.Properties) {
+        $dockerRunArgs += '--env'
+        $dockerRunArgs += ("{0}={1}" -f $property.Name, [string] $property.Value)
+    }
+    $dockerRunArgs += $imageTag
+    & docker @dockerRunArgs *> $null
     if ($LASTEXITCODE -ne 0) {
         throw 'Docker run failed.'
     }
@@ -234,7 +243,7 @@ try {
         }
     }
     elseif ($Mode -eq 'local-docker') {
-        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot
+        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment
         $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
         if ($healthy) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) returned HTTP 200."
@@ -247,7 +256,7 @@ try {
         $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot
         $localRuntimeStdout = $localRuntime.stdoutPath
         $localRuntimeStderr = $localRuntime.stderrPath
-        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot
+        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment
 
         $endpoints = [string[]] $modeConfig.healthContract.endpoints
         $healthyWindows = Wait-ForHealthEndpoint -Endpoint $endpoints[0] -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
