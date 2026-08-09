@@ -10,6 +10,10 @@ inventory, runs the Edge one-button Diagnose → Plan → Save → Sync flow, st
 run/idempotency state in Cosmos DB through managed identity, and emits signed
 connector-relay receipts. Service Bus scale-out, provider-native workers, and
 dead-letter replay remain target architecture.
+The control-run lifecycle, approvals, concurrency, incident suppression, and
+rollback constraints are codified in `config/agent-core-policy.json` plus
+`config/agent-core-policy.schema.json`; runtime activation is gated on those
+policy checks and failure-injection tests.
 Secrets never live in source control: local secrets come from environment
 variables or .NET user-secrets; approved Azure secrets will come from Key Vault
 through managed identity after their separate administrator gate.

@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/monado-enterprise/v3/libraries.contract.v3.schema.json",
+  "title": "Monadoblade reusable libraries contract v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "libraries",
+    "invariants"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "3.0.0"
+    },
+    "contractId": {
+      "const": "monadoblade-delivery-fabric-libraries-v3"
+    },
+    "libraries": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "$ref": "#/$defs/library"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "surface"
+            ],
+            "properties": {
+              "surface": {
+                "const": "policy"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "surface"
+            ],
+            "properties": {
+              "surface": {
+                "const": "evidence"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "surface"
+            ],
+            "properties": {
+              "surface": {
+                "const": "control-client"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "surface"
+            ],
+            "properties": {
+              "surface": {
+                "const": "shellkit"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "surface"
+            ],
+            "properties": {
+              "surface": {
+                "const": "renderer"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "surface"
+            ],
+            "properties": {
+              "surface": {
+                "const": "chroma"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "surface"
+            ],
+            "properties": {
+              "surface": {
+                "const": "wyvern"
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": [
+              "surface"
+            ],
+            "properties": {
+              "surface": {
+                "const": "usb-device-broker-requests"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "invariants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allSurfacesVersioned",
+        "allSurfacesReusable",
+        "executorSurfaceExcluded"
+      ],
+      "properties": {
+        "allSurfacesVersioned": {
+          "const": true
+        },
+        "allSurfacesReusable": {
+          "const": true
+        },
+        "executorSurfaceExcluded": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "library": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "surface",
+        "language",
+        "path",
+        "purpose",
+        "stability"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface": {
+          "enum": [
+            "policy",
+            "evidence",
+            "control-client",
+            "shellkit",
+            "renderer",
+            "chroma",
+            "wyvern",
+            "usb-device-broker-requests"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stability": {
+          "const": "versioned"
+        }
+      }
+    }
+  }
+}

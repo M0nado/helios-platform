@@ -1,0 +1,108 @@
+{
+  "$schema": "../../../schemas/monado-enterprise/v3/storage.contract.v3.schema.json",
+  "schemaVersion": "3.0.0",
+  "contractId": "monadoblade-storage-contract-v3",
+  "executionPolicy": {
+    "mode": "proposal-only",
+    "destructiveApplyDefault": false,
+    "requireWhatIf": true,
+    "requireApproval": true,
+    "requireRollbackPlan": true,
+    "requireImmutableEvidence": true
+  },
+  "disks": [
+    {
+      "id": "disk0",
+      "role": "windows-core",
+      "volumes": [
+        {
+          "id": "windows-core",
+          "preferredLetter": "C",
+          "label": "MONADO_WINDOWS_CORE",
+          "fileSystem": "NTFS"
+        },
+        {
+          "id": "recovery",
+          "preferredLetter": "R",
+          "label": "MONADO_RECOVERY",
+          "fileSystem": "NTFS"
+        },
+        {
+          "id": "core-cross",
+          "preferredLetter": "X",
+          "label": "CORE_CROSS",
+          "fileSystem": "NTFS",
+          "physicalVolume": true
+        }
+      ]
+    },
+    {
+      "id": "disk1",
+      "role": "domains-and-vhdx-host",
+      "domainsVolume": {
+        "preferredLetter": "E",
+        "label": "MONADO_DOMAINS",
+        "fileSystem": "NTFS"
+      },
+      "virtualDisks": [
+        {
+          "id": "dev-drive-vhdx",
+          "preferredLetter": "D",
+          "label": "MONADO_DEVDRIVE",
+          "type": "VHDX",
+          "allocation": "dynamic",
+          "fileSystem": "ReFS",
+          "autoMount": true
+        },
+        {
+          "id": "vault-vhdx",
+          "preferredLetter": "V",
+          "label": "MONADO_VAULT",
+          "type": "VHDX",
+          "allocation": "dynamic",
+          "fileSystem": "NTFS",
+          "bitLocker": "required",
+          "autoMount": false
+        }
+      ]
+    }
+  ],
+  "usbWizardRoutes": {
+    "inventory": {
+      "method": "GET",
+      "path": "/usb-wizard/inventory",
+      "mode": "dry-run",
+      "writesEnabled": false,
+      "requireDeviceEnumeration": true
+    },
+    "requestStoragePlan": {
+      "method": "POST",
+      "path": "/usb-wizard/request-storage-plan",
+      "mode": "proposal-only",
+      "writesEnabled": false,
+      "requiresApproval": true,
+      "requireDeviceIdentity": true,
+      "emitsEvidenceLink": true
+    },
+    "applyRouteEnabled": false
+  },
+  "workflowOwnership": {
+    "recovery": "sysadmin",
+    "quarantine": "sysadmin"
+  },
+  "guardrails": {
+    "denyBlindDiskClear": true,
+    "denyUnreviewedFormat": true,
+    "denyAutoMountVault": true,
+    "denyPhysicalUsbWritesFromWizard": true,
+    "requirePhysicalApprovalForApply": true,
+    "requireCorrelationId": true,
+    "requireRollbackEvidenceLink": true
+  },
+  "forbiddenRuntimeActions": [
+    "physical-usb-write",
+    "vhdx-apply-from-runtime-disk",
+    "sysadmin-activation-without-local-two-factor",
+    "tenant-authorization-change-without-approval"
+  ]
+}

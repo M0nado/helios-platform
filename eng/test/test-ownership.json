@@ -2,6 +2,11 @@
   "schemaVersion": 1,
   "tests": [
     {
+      "path": "monado/helios-control/tests/Helios.Connect.Tests/AgentCorePolicyTests.cs",
+      "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
+      "layer": "integration"
+    },
+    {
       "path": "monado/helios-control/tests/Helios.Connect.Tests/AzureInventoryServiceTests.cs",
       "project": "monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj",
       "layer": "integration"
@@ -503,6 +508,11 @@
     },
     {
       "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/GlobalUsings.cs",
+      "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
+      "layer": "windows"
+    },
+    {
+      "path": "tests/contracts/HELIOS.Platform.Contracts.Tests/MonadoBladeSixProfileDeliveryFabricV3ContractsTests.cs",
       "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "windows"
     },
