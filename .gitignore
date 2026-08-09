@@ -149,3 +149,7 @@ status-site/wiki-export/**
 
 # Local saved AIHub run bundles
 .run/
+
+# Generated XCore9 smoke evidence (uploaded as CI artifacts)
+monado/helios-control/docs/evidence/xcore9-runtime-matrix/*
+!monado/helios-control/docs/evidence/xcore9-runtime-matrix/README.md

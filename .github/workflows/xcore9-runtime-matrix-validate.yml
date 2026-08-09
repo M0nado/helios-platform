@@ -42,12 +42,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Parse runtime matrix and evidence JSON
+      - name: Parse runtime matrix JSON
         run: |
           python -m json.tool monado/helios-control/config/xcore9-runtime-matrix.v1.json > /dev/null
-          python -m json.tool monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.json > /dev/null
-          python -m json.tool monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-docker-smoke.json > /dev/null
-          python -m json.tool monado/helios-control/docs/evidence/xcore9-runtime-matrix/hybrid-windows-docker-fleet-smoke.json > /dev/null
       - name: Validate matrix contract shape and deny-list enforcement
         run: |
           python scripts/contracts/validate_xcore9_runtime_matrix.py
@@ -97,7 +94,7 @@ jobs:
 
   smoke-hybrid:
     needs: validate-contract
-    runs-on: ubuntu-latest
+    runs-on: windows-2025
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

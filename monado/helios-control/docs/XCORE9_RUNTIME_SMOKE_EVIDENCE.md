@@ -1,6 +1,7 @@
 # XCore9 runtime smoke evidence index
 
-This index links the runtime smoke evidence artifacts for all required matrix modes.
+This index defines the runtime smoke evidence artifact paths for all required matrix modes.
+The evidence files are generated per run and uploaded by CI; they are not committed to Git.
 
 ## Evidence artifacts
 

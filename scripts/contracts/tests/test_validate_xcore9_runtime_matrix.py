@@ -11,11 +11,13 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "scripts" / "contracts"))
 
 from validate_xcore9_runtime_matrix import (  # noqa: E402
     EXPECTED_APPROVAL_BOUNDARY,
+    EXPECTED_ARTIFACT_PINNING,
     EXPECTED_MODES,
     REQUIRED_BASELINE_DENY,
     EXPECTED_OWNER_REPOSITORY,
     EXPECTED_SMOKE_EVIDENCE_PATHS,
     EXPECTED_STARTUP_COMMANDS,
+    REQUIRED_STARTUP_TOOLS,
     REQUIRED_STARTUP_ENVIRONMENT,
     load_manifest,
     validate_manifest,
@@ -46,12 +48,26 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("boundaries must include" in error for error in errors))
 
+    def test_mode_fails_when_required_startup_tool_is_removed(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        docker_mode = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        docker_mode["boundaries"]["toolAccess"]["allowedTools"] = ["pwsh", "dotnet"]
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("allowedTools missing startup tools" in error for error in errors))
+
     def test_mode_fails_when_required_deny_item_is_removed(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         local = next(mode for mode in candidate["modes"] if mode["id"] == "local-windows")
         local["disallowedOperations"].remove("automatic-merge")
         errors = validate_manifest(candidate)
         self.assertTrue(any("missing required deny items" in error for error in errors))
+
+    def test_mode_fails_when_artifact_pinning_subject_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-windows")
+        local["artifactPinning"]["subject"] = "Changed.Subject.dll"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("artifactPinning.subject must be exactly" in error for error in errors))
 
     def test_manifest_fails_when_baseline_deny_item_is_removed(self) -> None:
         candidate = copy.deepcopy(self.manifest)
@@ -219,6 +235,38 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
                 "HELIOS_EXECUTION_MODE": "dry-run",
                 "HELIOS_CLOUD_RUNTIME_ONLY": "false",
                 "HELIOS_LOCAL_RUNTIME_ALLOWED": "true",
+            },
+        )
+
+    def test_expected_startup_tools_are_stable(self) -> None:
+        self.assertDictEqual(
+            REQUIRED_STARTUP_TOOLS,
+            {
+                "local-windows": {"pwsh", "dotnet"},
+                "local-docker": {"pwsh", "docker"},
+                "hybrid-windows-docker-fleet": {"pwsh", "dotnet", "docker"},
+            },
+        )
+
+    def test_expected_artifact_pinning_is_stable(self) -> None:
+        self.assertDictEqual(
+            EXPECTED_ARTIFACT_PINNING,
+            {
+                "local-windows": {
+                    "type": "binary-hash",
+                    "subject": "Helios.Connect.Api.dll",
+                    "referenceSource": "dotnet-publish-output",
+                },
+                "local-docker": {
+                    "type": "image-digest",
+                    "subject": "helios-connect:xcore9-local",
+                    "referenceSource": "docker-image-inspect",
+                },
+                "hybrid-windows-docker-fleet": {
+                    "type": "binary-hash-and-image-digest",
+                    "subject": "Helios.Connect.Api.dll + helios-connect:xcore9-local",
+                    "referenceSource": "dotnet-publish-output-and-docker-image-inspect",
+                },
             },
         )
 

@@ -61,6 +61,28 @@ EXPECTED_STARTUP_COMMANDS = {
     ),
     "hybrid-windows-docker-fleet": "pwsh ./monado/helios-control/scripts/Start-HeliosHybridRuntime.ps1",
 }
+EXPECTED_ARTIFACT_PINNING = {
+    "local-windows": {
+        "type": "binary-hash",
+        "subject": "Helios.Connect.Api.dll",
+        "referenceSource": "dotnet-publish-output",
+    },
+    "local-docker": {
+        "type": "image-digest",
+        "subject": "helios-connect:xcore9-local",
+        "referenceSource": "docker-image-inspect",
+    },
+    "hybrid-windows-docker-fleet": {
+        "type": "binary-hash-and-image-digest",
+        "subject": "Helios.Connect.Api.dll + helios-connect:xcore9-local",
+        "referenceSource": "dotnet-publish-output-and-docker-image-inspect",
+    },
+}
+REQUIRED_STARTUP_TOOLS = {
+    "local-windows": {"pwsh", "dotnet"},
+    "local-docker": {"pwsh", "docker"},
+    "hybrid-windows-docker-fleet": {"pwsh", "dotnet", "docker"},
+}
 EXPECTED_SMOKE_EVIDENCE_PATHS = {
     "local-windows": {
         "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.md",
@@ -212,6 +234,20 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
 
         tool_access = boundaries.get("toolAccess", {})
         if isinstance(tool_access, dict):
+            allowed_tools = tool_access.get("allowedTools")
+            _append(
+                errors,
+                isinstance(allowed_tools, list),
+                f"{mode_id}: boundaries.toolAccess.allowedTools must be a list",
+            )
+            if isinstance(allowed_tools, list):
+                tool_set = {tool for tool in allowed_tools if isinstance(tool, str)}
+                missing_startup_tools = sorted(REQUIRED_STARTUP_TOOLS[mode_id] - tool_set)
+                _append(
+                    errors,
+                    not missing_startup_tools,
+                    f"{mode_id}: boundaries.toolAccess.allowedTools missing startup tools: {missing_startup_tools}",
+                )
             _append(
                 errors,
                 tool_access.get("localMcpReadOnlyRequired") is True,
@@ -326,6 +362,22 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
     artifact = mode.get("artifactPinning")
     _append(errors, isinstance(artifact, dict), f"{mode_id}: artifactPinning must be an object")
     if isinstance(artifact, dict):
+        expected_artifact = EXPECTED_ARTIFACT_PINNING.get(mode_id, {})
+        _append(
+            errors,
+            artifact.get("type") == expected_artifact.get("type"),
+            f"{mode_id}: artifactPinning.type must be exactly {expected_artifact.get('type')}",
+        )
+        _append(
+            errors,
+            artifact.get("subject") == expected_artifact.get("subject"),
+            f"{mode_id}: artifactPinning.subject must be exactly {expected_artifact.get('subject')}",
+        )
+        _append(
+            errors,
+            artifact.get("referenceSource") == expected_artifact.get("referenceSource"),
+            f"{mode_id}: artifactPinning.referenceSource must be exactly {expected_artifact.get('referenceSource')}",
+        )
         _append(errors, artifact.get("algorithm") == "sha256", f"{mode_id}: artifactPinning.algorithm must be sha256")
         _append(
             errors,
