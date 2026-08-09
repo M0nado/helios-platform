@@ -83,6 +83,16 @@ REQUIRED_STARTUP_TOOLS = {
     "local-docker": {"pwsh", "docker"},
     "hybrid-windows-docker-fleet": {"pwsh", "dotnet", "docker"},
 }
+EXPECTED_MODE_ENABLED_BY_DEFAULT = {
+    "local-windows": True,
+    "local-docker": False,
+    "hybrid-windows-docker-fleet": False,
+}
+EXPECTED_RESOURCE_LIMITS = {
+    "local-windows": {"maxCpuCores": 8, "maxMemoryGb": 16},
+    "local-docker": {"maxCpuCores": 6, "maxMemoryGb": 12},
+    "hybrid-windows-docker-fleet": {"maxCpuCores": 12, "maxMemoryGb": 24},
+}
 EXPECTED_SMOKE_EVIDENCE_PATHS = {
     "local-windows": {
         "summary": "monado/helios-control/docs/evidence/xcore9-runtime-matrix/local-windows-smoke.md",
@@ -193,6 +203,13 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
         return ["mode.id must be a non-empty string"]
 
     _append(errors, mode_id in EXPECTED_MODES, f"{mode_id}: unexpected runtime mode id")
+    if mode_id in EXPECTED_MODE_ENABLED_BY_DEFAULT:
+        expected_enabled_by_default = EXPECTED_MODE_ENABLED_BY_DEFAULT[mode_id]
+        _append(
+            errors,
+            mode.get("enabledByDefault") is expected_enabled_by_default,
+            f"{mode_id}: enabledByDefault must be {str(expected_enabled_by_default).lower()}",
+        )
 
     boundaries = mode.get("boundaries")
     _append(errors, isinstance(boundaries, dict), f"{mode_id}: boundaries must be an object")
@@ -408,6 +425,14 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
                 _is_positive_int(resource.get(key)),
                 f"{mode_id}: resourceEnvelope.{key} must be a positive integer",
             )
+        expected_resource_limits = EXPECTED_RESOURCE_LIMITS.get(mode_id)
+        if expected_resource_limits is not None:
+            for limit_key, expected_limit_value in expected_resource_limits.items():
+                _append(
+                    errors,
+                    resource.get(limit_key) == expected_limit_value,
+                    f"{mode_id}: resourceEnvelope.{limit_key} must be exactly {expected_limit_value}",
+                )
         if _is_positive_int(resource.get("maxConcurrentDeepLearningJobs")) and _is_positive_int(resource.get("maxConcurrentAgentRuns")):
             _append(
                 errors,

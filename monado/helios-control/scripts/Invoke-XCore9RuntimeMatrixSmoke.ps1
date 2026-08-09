@@ -38,14 +38,40 @@ function Add-SmokeCheck {
 function Wait-ForHealthEndpoint {
     param(
         [Parameter(Mandatory = $true)] [string] $Endpoint,
-        [Parameter(Mandatory = $true)] [int] $TimeoutSeconds,
-        [Parameter(Mandatory = $true)] [int] $ProbeTimeoutSeconds
+        [int] $TimeoutSeconds = 0,
+        [Parameter(Mandatory = $true)] [int] $ProbeTimeoutSeconds,
+        [datetime] $DeadlineUtc = [datetime]::MinValue,
+        [string] $CorrelationId = ''
     )
 
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    if ($DeadlineUtc -gt [datetime]::MinValue) {
+        $deadline = $DeadlineUtc
+    }
+    else {
+        if ($TimeoutSeconds -le 0) {
+            throw 'TimeoutSeconds must be a positive integer when DeadlineUtc is not provided.'
+        }
+        $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    }
+
+    $headers = @{}
+    if (-not [string]::IsNullOrWhiteSpace($CorrelationId)) {
+        $headers['x-correlation-id'] = $CorrelationId
+    }
+
     while ((Get-Date) -lt $deadline) {
+        $remainingSeconds = [int] [Math]::Ceiling(($deadline - (Get-Date)).TotalSeconds)
+        if ($remainingSeconds -le 0) {
+            break
+        }
+        $effectiveProbeTimeout = [int] [Math]::Max(1, [Math]::Min($ProbeTimeoutSeconds, $remainingSeconds))
         try {
-            $response = Invoke-WebRequest -Uri $Endpoint -Method GET -TimeoutSec $ProbeTimeoutSeconds
+            if ($headers.Count -gt 0) {
+                $response = Invoke-WebRequest -Uri $Endpoint -Method GET -TimeoutSec $effectiveProbeTimeout -Headers $headers
+            }
+            else {
+                $response = Invoke-WebRequest -Uri $Endpoint -Method GET -TimeoutSec $effectiveProbeTimeout
+            }
             if ($response.StatusCode -eq 200) {
                 return $true
             }
@@ -57,7 +83,7 @@ function Wait-ForHealthEndpoint {
         catch [System.Management.Automation.RuntimeException] {
         }
 
-        Start-Sleep -Seconds 2
+        Start-Sleep -Seconds ([int] [Math]::Max(1, [Math]::Min(2, $remainingSeconds)))
     }
 
     return $false
@@ -130,7 +156,8 @@ function Get-LocalRuntimeResourceEnvironment {
 function Start-LocalRuntime {
     param(
         [Parameter(Mandatory = $true)] [string] $RepositoryRoot,
-        [Parameter(Mandatory = $true)] [object] $ResourceEnvelope
+        [Parameter(Mandatory = $true)] [object] $ResourceEnvelope,
+        [Parameter(Mandatory = $true)] [object] $EnvironmentVariables
     )
 
     $startScript = Join-Path $RepositoryRoot 'monado/helios-control/scripts/Start-HeliosLocal.ps1'
@@ -141,6 +168,9 @@ function Start-LocalRuntime {
     $stdoutPath = Join-Path ([System.IO.Path]::GetTempPath()) ("xcore9-local-runtime-{0}.out.log" -f ([Guid]::NewGuid().ToString('N')))
     $stderrPath = Join-Path ([System.IO.Path]::GetTempPath()) ("xcore9-local-runtime-{0}.err.log" -f ([Guid]::NewGuid().ToString('N')))
     $resourceEnvironment = Get-LocalRuntimeResourceEnvironment -ResourceEnvelope $ResourceEnvelope
+    foreach ($property in $EnvironmentVariables.PSObject.Properties) {
+        $resourceEnvironment[$property.Name] = [string] $property.Value
+    }
 
     $startProcessParameters = @{
         FilePath = 'pwsh'
@@ -198,6 +228,23 @@ function Add-LocalRuntimeResourceCheck {
 
     $resourceDetail = ($ResourceEnvironment.GetEnumerator() | Sort-Object Name | ForEach-Object { "{0}={1}" -f $_.Key, $_.Value }) -join ', '
     Add-SmokeCheck -Checks $Checks -Name 'local-resource-envelope' -Status 'passed' -Detail ("Applied local runtime resource envelope via process environment: $resourceDetail")
+}
+
+function Add-CorrelationEnvironment {
+    param(
+        [Parameter(Mandatory = $true)] [object] $EnvironmentVariables,
+        [Parameter(Mandatory = $true)] [string] $CorrelationId
+    )
+
+    $result = [ordered]@{}
+    foreach ($property in $EnvironmentVariables.PSObject.Properties) {
+        $result[$property.Name] = [string] $property.Value
+    }
+    if (-not [string]::IsNullOrWhiteSpace($CorrelationId)) {
+        $result['HELIOS_CORRELATION_ID'] = $CorrelationId
+    }
+
+    return [pscustomobject] $result
 }
 
 function Split-HybridResourceEnvelope {
@@ -423,17 +470,18 @@ $localRuntime = $null
 $localRuntimeStdout = $null
 $localRuntimeStderr = $null
 $containerName = ''
+$startupEnvironment = Add-CorrelationEnvironment -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment -CorrelationId $correlationId
 
 try {
     if ($SkipRuntimeStart) {
         Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'skipped' -Detail 'Runtime startup checks were skipped by request.'
     }
     elseif ($Mode -eq 'local-windows') {
-        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot -ResourceEnvelope $modeConfig.resourceEnvelope
+        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot -ResourceEnvelope $modeConfig.resourceEnvelope -EnvironmentVariables $startupEnvironment
         $localRuntimeStdout = $localRuntime.stdoutPath
         $localRuntimeStderr = $localRuntime.stderrPath
         Add-LocalRuntimeResourceCheck -Checks $checks -ResourceEnvironment $localRuntime.resourceEnvironment
-        $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
+        $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId
         if ($healthy) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) returned HTTP 200."
         }
@@ -442,8 +490,8 @@ try {
         }
     }
     elseif ($Mode -eq 'local-docker') {
-        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment -ResourceEnvelope $modeConfig.resourceEnvelope
-        $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
+        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $startupEnvironment -ResourceEnvelope $modeConfig.resourceEnvelope
+        $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId
         if ($healthy) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) returned HTTP 200."
         }
@@ -455,15 +503,16 @@ try {
         $hybridEnvelope = Split-HybridResourceEnvelope -ResourceEnvelope $modeConfig.resourceEnvelope
         Add-SmokeCheck -Checks $checks -Name 'hybrid-resource-envelope' -Status 'passed' -Detail ("Split hybrid envelope across runtimes: $($hybridEnvelope.summary)")
 
-        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot -ResourceEnvelope $hybridEnvelope.local
+        $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot -ResourceEnvelope $hybridEnvelope.local -EnvironmentVariables $startupEnvironment
         $localRuntimeStdout = $localRuntime.stdoutPath
         $localRuntimeStderr = $localRuntime.stderrPath
         Add-LocalRuntimeResourceCheck -Checks $checks -ResourceEnvironment $localRuntime.resourceEnvironment
-        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment -ResourceEnvelope $hybridEnvelope.docker
+        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $startupEnvironment -ResourceEnvelope $hybridEnvelope.docker
 
         $endpoints = [string[]] $modeConfig.healthContract.endpoints
-        $healthyWindows = Wait-ForHealthEndpoint -Endpoint $endpoints[0] -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
-        $healthyDocker = Wait-ForHealthEndpoint -Endpoint $endpoints[1] -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
+        $sharedDeadline = (Get-Date).AddSeconds([int] $modeConfig.healthContract.maxStartupSeconds)
+        $healthyWindows = Wait-ForHealthEndpoint -Endpoint $endpoints[0] -DeadlineUtc $sharedDeadline -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId
+        $healthyDocker = Wait-ForHealthEndpoint -Endpoint $endpoints[1] -DeadlineUtc $sharedDeadline -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds) -CorrelationId $correlationId
 
         if ($healthyWindows -and $healthyDocker) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail 'Both hybrid runtime endpoints returned HTTP 200.'

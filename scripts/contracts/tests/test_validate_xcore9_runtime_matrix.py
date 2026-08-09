@@ -12,7 +12,9 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "scripts" / "contracts"))
 from validate_xcore9_runtime_matrix import (  # noqa: E402
     EXPECTED_APPROVAL_BOUNDARY,
     EXPECTED_ARTIFACT_PINNING,
+    EXPECTED_MODE_ENABLED_BY_DEFAULT,
     EXPECTED_MODES,
+    EXPECTED_RESOURCE_LIMITS,
     REQUIRED_BASELINE_DENY,
     EXPECTED_OWNER_REPOSITORY,
     EXPECTED_SMOKE_EVIDENCE_PATHS,
@@ -46,6 +48,13 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         candidate["defaultMode"] = "local-docker"
         errors = validate_manifest(candidate)
         self.assertTrue(any("defaultMode must be local-windows" in error for error in errors))
+
+    def test_mode_fails_when_enabled_by_default_is_changed(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        docker_mode = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        docker_mode["enabledByDefault"] = True
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("local-docker: enabledByDefault must be false" in error for error in errors))
 
     def test_mode_fails_when_boundary_is_missing(self) -> None:
         candidate = copy.deepcopy(self.manifest)
@@ -161,6 +170,15 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         self.assertTrue(any("maxCpuCores must be >= 2 to split limits across runtimes" in error for error in errors))
         self.assertTrue(any("maxMemoryGb must be >= 2 to split limits across runtimes" in error for error in errors))
 
+    def test_mode_fails_when_resource_limits_do_not_match_expected_startup_limits(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        docker_mode = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        docker_mode["resourceEnvelope"]["maxCpuCores"] = 1
+        docker_mode["resourceEnvelope"]["maxMemoryGb"] = 1
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("local-docker: resourceEnvelope.maxCpuCores must be exactly 6" in error for error in errors))
+        self.assertTrue(any("local-docker: resourceEnvelope.maxMemoryGb must be exactly 12" in error for error in errors))
+
     def test_manifest_fails_when_secret_scope_is_reused(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         docker = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
@@ -259,6 +277,26 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
                 "local-windows": {"pwsh", "dotnet"},
                 "local-docker": {"pwsh", "docker"},
                 "hybrid-windows-docker-fleet": {"pwsh", "dotnet", "docker"},
+            },
+        )
+
+    def test_expected_enabled_by_default_values_are_stable(self) -> None:
+        self.assertDictEqual(
+            EXPECTED_MODE_ENABLED_BY_DEFAULT,
+            {
+                "local-windows": True,
+                "local-docker": False,
+                "hybrid-windows-docker-fleet": False,
+            },
+        )
+
+    def test_expected_resource_limits_are_stable(self) -> None:
+        self.assertDictEqual(
+            EXPECTED_RESOURCE_LIMITS,
+            {
+                "local-windows": {"maxCpuCores": 8, "maxMemoryGb": 16},
+                "local-docker": {"maxCpuCores": 6, "maxMemoryGb": 12},
+                "hybrid-windows-docker-fleet": {"maxCpuCores": 12, "maxMemoryGb": 24},
             },
         )
 
