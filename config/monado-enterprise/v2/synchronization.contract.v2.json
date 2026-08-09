@@ -121,7 +121,8 @@
     "tenant-consent-without-approval",
     "azure-apply-without-protected-environment",
     "physical-usb-write-from-runtime",
-    "vhdx-apply-from-runtime-disk",
+    "physical_disk_apply_from_runtime",
+    "vhdx-apply-from-runtime",
     "secret-material-in-payload"
   ]
 }

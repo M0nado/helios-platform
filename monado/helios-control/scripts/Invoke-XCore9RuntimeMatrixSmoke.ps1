@@ -101,7 +101,8 @@ function Start-LocalRuntime {
 function Start-DockerRuntime {
     param(
         [Parameter(Mandatory = $true)] [string] $RepositoryRoot,
-        [Parameter(Mandatory = $true)] [object] $EnvironmentVariables
+        [Parameter(Mandatory = $true)] [object] $EnvironmentVariables,
+        [Parameter(Mandatory = $true)] [object] $ResourceEnvelope
     )
 
     & docker info --format '{{json .ServerVersion}}' *> $null
@@ -122,7 +123,15 @@ function Start-DockerRuntime {
     }
 
     $containerName = 'helios-connect-xcore9-smoke-' + ([Guid]::NewGuid().ToString('N').Substring(0, 10))
-    $dockerRunArgs = @('run', '--detach', '--rm', '--name', $containerName, '--publish', '5081:8080')
+    $dockerRunArgs = @('run', '--detach', '--rm', '--name', $containerName, '--publish', '127.0.0.1:5081:8080')
+    if ($null -ne $ResourceEnvelope -and $null -ne $ResourceEnvelope.PSObject) {
+        if ($ResourceEnvelope.PSObject.Properties.Name -contains 'maxCpuCores') {
+            $dockerRunArgs += @('--cpus', [string] $ResourceEnvelope.maxCpuCores)
+        }
+        if ($ResourceEnvelope.PSObject.Properties.Name -contains 'maxMemoryGb') {
+            $dockerRunArgs += @('--memory', ("{0}g" -f [string] $ResourceEnvelope.maxMemoryGb))
+        }
+    }
     foreach ($property in $EnvironmentVariables.PSObject.Properties) {
         $dockerRunArgs += '--env'
         $dockerRunArgs += ("{0}={1}" -f $property.Name, [string] $property.Value)
@@ -253,7 +262,7 @@ try {
         }
     }
     elseif ($Mode -eq 'local-docker') {
-        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment
+        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment -ResourceEnvelope $modeConfig.resourceEnvelope
         $healthy = Wait-ForHealthEndpoint -Endpoint ([string] $modeConfig.healthContract.endpoint) -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
         if ($healthy) {
             Add-SmokeCheck -Checks $checks -Name 'runtime-start' -Status 'passed' -Detail "Endpoint $($modeConfig.healthContract.endpoint) returned HTTP 200."
@@ -266,7 +275,7 @@ try {
         $localRuntime = Start-LocalRuntime -RepositoryRoot $repositoryRoot
         $localRuntimeStdout = $localRuntime.stdoutPath
         $localRuntimeStderr = $localRuntime.stderrPath
-        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment
+        $containerName = Start-DockerRuntime -RepositoryRoot $repositoryRoot -EnvironmentVariables $modeConfig.startupContract.requiredEnvironment -ResourceEnvelope $modeConfig.resourceEnvelope
 
         $endpoints = [string[]] $modeConfig.healthContract.endpoints
         $healthyWindows = Wait-ForHealthEndpoint -Endpoint $endpoints[0] -TimeoutSeconds ([int] $modeConfig.healthContract.maxStartupSeconds) -ProbeTimeoutSeconds ([int] $modeConfig.healthContract.probeTimeoutSeconds)
@@ -310,7 +319,17 @@ finally {
 }
 
 $failedChecks = @($checks | Where-Object { $_.status -eq 'failed' })
-$status = if ($failedChecks.Count -eq 0) { 'passed' } else { 'failed' }
+$runtimeChecks = @($checks | Where-Object { $_.name -eq 'runtime-start' })
+$skippedRuntimeChecks = @($runtimeChecks | Where-Object { $_.status -eq 'skipped' })
+$status = if ($failedChecks.Count -gt 0) {
+    'failed'
+}
+elseif ($runtimeChecks.Count -gt 0 -and $skippedRuntimeChecks.Count -eq $runtimeChecks.Count) {
+    'skipped'
+}
+else {
+    'passed'
+}
 $result = [ordered]@{
     schemaVersion = 1
     mode = $Mode
@@ -338,4 +357,4 @@ $result | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $resolvedOutputPat
 Write-SmokeSummary -Result $result -SummaryPath $resolvedSummaryPath
 
 Write-Output ($result | ConvertTo-Json -Depth 10)
-if ($status -ne 'passed') { exit 1 }
+if ($status -eq 'failed') { exit 1 }

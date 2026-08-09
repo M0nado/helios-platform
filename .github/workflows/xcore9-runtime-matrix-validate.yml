@@ -7,7 +7,9 @@ on:
       - 'monado/helios-control/docs/XCORE9_RUNTIME_MATRIX_V1.md'
       - 'monado/helios-control/docs/XCORE9_RUNTIME_SMOKE_EVIDENCE.md'
       - 'monado/helios-control/docs/evidence/xcore9-runtime-matrix/**'
+      - 'monado/helios-control/scripts/Start-HeliosLocal.ps1'
       - 'monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1'
+      - 'monado/helios-control/src/Helios.Connect.Api/**'
       - 'scripts/contracts/validate_xcore9_runtime_matrix.py'
       - 'scripts/contracts/tests/test_validate_xcore9_runtime_matrix.py'
       - '.github/workflows/xcore9-runtime-matrix-validate.yml'
@@ -18,7 +20,9 @@ on:
       - 'monado/helios-control/docs/XCORE9_RUNTIME_MATRIX_V1.md'
       - 'monado/helios-control/docs/XCORE9_RUNTIME_SMOKE_EVIDENCE.md'
       - 'monado/helios-control/docs/evidence/xcore9-runtime-matrix/**'
+      - 'monado/helios-control/scripts/Start-HeliosLocal.ps1'
       - 'monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1'
+      - 'monado/helios-control/src/Helios.Connect.Api/**'
       - 'scripts/contracts/validate_xcore9_runtime_matrix.py'
       - 'scripts/contracts/tests/test_validate_xcore9_runtime_matrix.py'
       - '.github/workflows/xcore9-runtime-matrix-validate.yml'
@@ -60,6 +64,7 @@ jobs:
         run: |
           pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode local-windows
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: xcore9-local-windows-smoke
           path: |
@@ -79,6 +84,7 @@ jobs:
         run: |
           pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode local-docker
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: xcore9-local-docker-smoke
           path: |
@@ -98,6 +104,7 @@ jobs:
         run: |
           pwsh ./monado/helios-control/scripts/Invoke-XCore9RuntimeMatrixSmoke.ps1 -Mode hybrid-windows-docker-fleet
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: xcore9-hybrid-smoke
           path: |
