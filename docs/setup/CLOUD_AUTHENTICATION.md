@@ -27,6 +27,30 @@ Use `scripts/setup/helios-auth --status` for a sanitized readiness report or
 developers can run `pwsh -File scripts/setup/Configure-HeliosCloudAuth.ps1 -Mode Interactive`.
 Neither helper accepts, creates, prints, or persists access tokens.
 
+Check whether a live GitHub pull request can be published with:
+
+```bash
+scripts/setup/helios-auth github status
+```
+
+The check fails closed unless `gh` has a provider-owned session, `origin` points
+to `M0nado/helios-platform`, the checkout is on a clean feature branch, and the
+repository is ready. After explicitly pushing the branch, create a review-gated
+draft PR linked to a scoped issue:
+
+```bash
+scripts/setup/helios-auth github create-pr \
+  --issue 123 \
+  --title "Scoped change" \
+  --body-file /path/to/pr-body.md \
+  --publish
+```
+
+`--publish` is mandatory because PR creation mutates provider state. The helper
+does not create credentials, add remotes, push branches, bypass branch
+protection, approve the PR, merge it, or claim that recorded PR metadata is a
+live GitHub pull request.
+
 Azure DevOps configuration is available through:
 
 ```bash

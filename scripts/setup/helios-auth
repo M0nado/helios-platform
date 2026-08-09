@@ -8,6 +8,8 @@ usage() {
   cat <<'EOF'
 Usage:
   helios-auth [--status|--interactive] [--repo OWNER/REPO] [--subscription ID]
+  helios-auth github status
+  helios-auth github create-pr --issue ID --title TITLE --body-file FILE --publish
   helios-auth azure-devops status
   helios-auth azure-devops configure [--organization URL] [--project NAME]
   helios-auth azure-devops create-pr --repository NAME --work-item ID [--source-branch BRANCH] [--target-branch BRANCH]
@@ -29,6 +31,55 @@ PY
 }
 
 print_state() { printf '%-27s %s\n' "$1" "$2"; }
+
+github_status() {
+  local failures=0 expected_repo remote_url branch
+  expected_repo="$(json_value github.repository)"
+  branch="$(git -C "$root" branch --show-current)"
+  remote_url="$(git -C "$root" remote get-url origin 2>/dev/null || true)"
+
+  if command -v gh >/dev/null 2>&1; then print_state "GitHub CLI" "installed"; else print_state "GitHub CLI" "missing"; failures=1; fi
+  if gh auth status --hostname github.com >/dev/null 2>&1; then print_state "GitHub session" "provider-authenticated"; else print_state "GitHub session" "run helios-auth --interactive"; failures=1; fi
+  if [[ "$remote_url" =~ ^(https://github.com/|git@github.com:)${expected_repo}(\.git)?$ ]]; then
+    print_state "Canonical origin" "$expected_repo"
+  else
+    print_state "Canonical origin" "missing or mismatched"
+    failures=1
+  fi
+  if [[ -n "$branch" && "$branch" != "main" && "$branch" != "master" ]]; then print_state "Feature branch" "$branch"; else print_state "Feature branch" "required"; failures=1; fi
+  if [[ -z "$(git -C "$root" status --porcelain=v1)" ]]; then print_state "Working tree" "clean"; else print_state "Working tree" "dirty"; failures=1; fi
+  return "$failures"
+}
+
+github_create_pr() {
+  local issue="" title="" body_file="" publish=false expected_repo branch linked_body
+  while (($#)); do
+    case "$1" in
+      --issue) issue="${2:?--issue requires an ID}"; shift 2 ;;
+      --title) title="${2:?--title requires text}"; shift 2 ;;
+      --body-file) body_file="${2:?--body-file requires a path}"; shift 2 ;;
+      --publish) publish=true; shift ;;
+      *) echo "Unknown GitHub create-pr option: $1" >&2; exit 2 ;;
+    esac
+  done
+  [[ "$issue" =~ ^[0-9]+$ ]] || { echo "--issue must be a numeric scoped GitHub issue." >&2; exit 2; }
+  [[ -n "$title" && -f "$body_file" ]] || { echo "--title and an existing --body-file are required." >&2; exit 2; }
+  [[ "$publish" == true ]] || { echo "Refusing provider mutation without explicit --publish." >&2; exit 2; }
+  github_status >/dev/null || { echo "GitHub PR preflight failed; run 'helios-auth github status'." >&2; exit 1; }
+
+  expected_repo="$(json_value github.repository)"
+  branch="$(git -C "$root" branch --show-current)"
+  git -C "$root" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1 || {
+    echo "Branch '$branch' is not published to the canonical origin; push it explicitly before creating the PR." >&2
+    exit 1
+  }
+  linked_body="$(mktemp "${TMPDIR:-/tmp}/helios-pr-body.XXXXXX")"
+  trap 'rm -f "$linked_body"' RETURN
+  cat "$body_file" > "$linked_body"
+  printf '\n\nCloses #%s\n' "$issue" >> "$linked_body"
+  gh pr create --repo "$expected_repo" --base main --head "$branch" --draft \
+    --title "$title" --body-file "$linked_body"
+}
 
 azdo_status() {
   local failures=0 org="${HELIOS_AZDO_ORGANIZATION:-}" project="${HELIOS_AZDO_PROJECT:-}"
@@ -74,7 +125,15 @@ azdo_create_pr() {
     --description "Review-gated HELIOS change linked to work item $work_item."
 }
 
-if [[ "${1:-}" == "azure-devops" ]]; then
+if [[ "${1:-}" == "github" ]]; then
+  shift
+  case "${1:-status}" in
+    status) shift || true; github_status ;;
+    create-pr) shift; github_create_pr "$@" ;;
+    *) usage >&2; exit 2 ;;
+  esac
+  exit
+elif [[ "${1:-}" == "azure-devops" ]]; then
   shift
   case "${1:-status}" in
     status) shift || true; azdo_status ;;
