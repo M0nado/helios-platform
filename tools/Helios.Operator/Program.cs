@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Json.Schema;
@@ -27,7 +26,8 @@ public static class Program
             return 2;
         }
 
-        var diagnostics = Validate(manifest, plan);
+        var validation = ValidateAndLoad(manifest, plan, command);
+        var diagnostics = validation.Diagnostics;
         if (diagnostics.Count != 0)
         {
             foreach (var diagnostic in diagnostics)
@@ -44,29 +44,37 @@ public static class Program
         }
 
         // All persistent output is deliberately below the complete validation gate.
-        var document = plan is null ? File.ReadAllText(manifest) : File.ReadAllText(plan);
+        var document = plan is null ? validation.Manifest!.Bytes : validation.Plan!.Bytes;
         if (output is null)
-            Console.Out.Write(document);
+            Console.OpenStandardOutput().Write(document);
         else
             AtomicWrite(output, document);
         return 0;
     }
 
     public static IReadOnlyList<PolicyDiagnostic> Validate(string manifestPath, string? planPath = null)
+        => ValidateAndLoad(manifestPath, planPath, "validate").Diagnostics;
+
+    private static ValidationResult ValidateAndLoad(string manifestPath, string? planPath, string command)
     {
         var diagnostics = new List<PolicyDiagnostic>();
         JsonNodeDocument? manifest = LoadAndValidate(manifestPath, SchemaPath("environment-manifest.schema.json"), "manifest", diagnostics);
         JsonNodeDocument? plan = planPath is null ? null : LoadAndValidate(planPath, SchemaPath("operator-plan.v1.schema.json"), "plan", diagnostics);
         if (manifest is not null && plan is not null)
+        {
             diagnostics.AddRange(OperatorPolicyValidator.Validate(manifest.Root, plan.Root));
-        return diagnostics;
+            if (command == "approve")
+                diagnostics.AddRange(OperatorPolicyValidator.ValidateApproval(plan.Root));
+        }
+        return new(diagnostics, manifest, plan);
     }
 
     private static JsonNodeDocument? LoadAndValidate(string path, string schemaPath, string label, List<PolicyDiagnostic> diagnostics)
     {
         try
         {
-            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            var bytes = File.ReadAllBytes(path);
+            using var document = JsonDocument.Parse(bytes);
             var root = document.RootElement.Clone();
             var schema = JsonSchema.FromText(File.ReadAllText(schemaPath));
             var result = schema.Evaluate(root, new EvaluationOptions
@@ -86,7 +94,7 @@ public static class Program
                 }
                 return null;
             }
-            return new(root);
+            return new(root, bytes);
         }
         catch (JsonException ex) { diagnostics.Add(new(label, $"invalid JSON: {ex.Message}")); }
         catch (IOException ex) { diagnostics.Add(new(label, ex.Message)); }
@@ -104,16 +112,17 @@ public static class Program
         return candidates.First(File.Exists);
     }
 
-    private static void AtomicWrite(string path, string value)
+    private static void AtomicWrite(string path, byte[] value)
     {
         var fullPath = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         var temporary = fullPath + ".tmp-" + Guid.NewGuid().ToString("N");
-        File.WriteAllText(temporary, value, new UTF8Encoding(false));
+        File.WriteAllBytes(temporary, value);
         File.Move(temporary, fullPath, true);
     }
 
-    private sealed record JsonNodeDocument(JsonElement Root);
+    private sealed record JsonNodeDocument(JsonElement Root, byte[] Bytes);
+    private sealed record ValidationResult(IReadOnlyList<PolicyDiagnostic> Diagnostics, JsonNodeDocument? Manifest, JsonNodeDocument? Plan);
 }
 
 public sealed record PolicyDiagnostic(string Path, string Message);
@@ -129,6 +138,11 @@ public static partial class OperatorPolicyValidator
         var declaredApps = Strings(manifest, "githubApps");
         var declaredSecrets = Strings(manifest, "secretReads");
         var declaredOidcSubjects = Strings(manifest, "oidcSubjects");
+        var manifestEnvironment = Text(manifest, "environment");
+        var planEnvironment = Text(plan, "environment");
+
+        if (!Equal(planEnvironment, manifestEnvironment))
+            Add(errors, "plan/environment", "plan environment must match the governing manifest environment");
 
         if (ReusesProductionIdentity(plan))
             Add(errors, "plan/identities", "development and production must not reuse an identity");
@@ -139,6 +153,9 @@ public static partial class OperatorPolicyValidator
         {
             var path = $"plan/actions/{index++}";
             var type = Text(action, "type")?.ToLowerInvariant() ?? "";
+            var actionEnvironment = Text(action, "environment");
+            if (actionEnvironment is not null && !Equal(actionEnvironment, manifestEnvironment))
+                Add(errors, path + "/environment", "action environment must match the governing manifest environment");
             var target = Text(action, "target");
             var principalId = Text(action, "principalId");
             var reviewer = Text(action, "reviewer");
@@ -171,6 +188,32 @@ public static partial class OperatorPolicyValidator
             if (type.Contains("approv") && Equal(Text(action, "approver") ?? target, actorId, actorLogin, actorPrincipal))
                 Add(errors, path + "/approver", "agents cannot approve their own changes");
         }
+        return errors;
+    }
+
+    public static IReadOnlyList<PolicyDiagnostic> ValidateApproval(JsonElement plan)
+    {
+        var errors = new List<PolicyDiagnostic>();
+        var actorId = Text(plan, "actor", "id");
+        var actorLogin = Text(plan, "actor", "githubLogin");
+        var actorPrincipal = Text(plan, "actor", "azurePrincipalId");
+        var privileged = plan.GetProperty("actions").EnumerateArray().Any(action =>
+        {
+            var type = Text(action, "type")?.ToLowerInvariant() ?? "";
+            var principal = Text(action, "principalId") ?? Text(action, "target");
+            var environment = Text(action, "environment") ?? Text(plan, "environment");
+            return (type.Contains("rbac") && !Equal(principal, actorId, actorLogin, actorPrincipal)) ||
+                   (type.Contains("deploy") && string.Equals(environment, "production", StringComparison.OrdinalIgnoreCase));
+        });
+        if (!privileged)
+            return errors;
+
+        if (!plan.TryGetProperty("approvalEvidence", out var approval))
+            Add(errors, "plan/approvalEvidence", "privileged approval requires independent approval evidence");
+        else if (Equal(Text(approval, "approverId"), actorId, actorLogin, actorPrincipal))
+            Add(errors, "plan/approvalEvidence/approverId", "approval evidence must come from an independent approver");
+        if (!plan.TryGetProperty("rollbackEvidence", out _))
+            Add(errors, "plan/rollbackEvidence", "privileged approval requires rollback evidence");
         return errors;
     }
 

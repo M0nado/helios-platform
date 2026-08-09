@@ -95,6 +95,65 @@ public sealed class OperatorPolicyValidatorTests
         Assert.Contains(errors, error => error.Path == "plan/identities" && error.Message.Contains("must not reuse", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void RejectsPlanEnvironmentThatDoesNotMatchManifest()
+    {
+        using var manifest = JsonDocument.Parse(Manifest);
+        using var plan = JsonDocument.Parse(Plan("{\"type\":\"noop\",\"environment\":\"development\"}", environment: "development"));
+
+        var errors = OperatorPolicyValidator.Validate(manifest.RootElement, plan.RootElement);
+
+        Assert.Contains(errors, error => error.Path == "plan/environment");
+        Assert.Contains(errors, error => error.Path == "plan/actions/0/environment");
+    }
+
+    [Fact]
+    public void RejectsActionEnvironmentThatDoesNotMatchManifest()
+    {
+        var errors = Validate("{\"type\":\"container.deploy\",\"environment\":\"development\"}");
+
+        Assert.Contains(errors, error => error.Path == "plan/actions/0/environment");
+    }
+
+    [Fact]
+    public void ApproveRejectsPrivilegedPlanWithoutApprovalAndRollbackEvidence()
+    {
+        var result = RunOperator("approve", "{\"type\":\"azure.rbac.assign\",\"principalId\":\"22222222-2222-2222-2222-222222222222\"}");
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("approvalEvidence", result.Error);
+        Assert.Contains("rollbackEvidence", result.Error);
+        Assert.False(File.Exists(result.OutputPath));
+    }
+
+    [Fact]
+    public void ApproveAcceptsPrivilegedPlanWithIndependentApprovalAndRollbackEvidence()
+    {
+        const string evidence = "\"approvalEvidence\":{\"approverId\":\"human-reviewer\",\"approvedAt\":\"2026-08-09T00:00:00Z\",\"evidenceLinks\":[\"https://example.test/approval\"]},\"rollbackEvidence\":{\"procedure\":\"Revert the assignment\",\"evidenceLinks\":[\"https://example.test/rollback\"]},";
+        var result = RunOperator("approve", "{\"type\":\"azure.rbac.assign\",\"principalId\":\"22222222-2222-2222-2222-222222222222\"}", evidence);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(File.Exists(result.OutputPath));
+    }
+
+    [Fact]
+    public void ExportWritesTheExactValidatedPlanBytes()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var manifestPath = Path.Combine(directory, "manifest.json");
+        var planPath = Path.Combine(directory, "plan.json");
+        var outputPath = Path.Combine(directory, "output.json");
+        var planBytes = System.Text.Encoding.UTF8.GetBytes(Plan("{\"type\":\"noop\"}") + "\r\n");
+        File.WriteAllText(manifestPath, Manifest);
+        File.WriteAllBytes(planPath, planBytes);
+
+        var exitCode = Program.Main(["export", manifestPath, planPath, "--output", outputPath]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(planBytes, File.ReadAllBytes(outputPath));
+    }
+
     [Theory]
     [InlineData("{\"source\":\"\",\"correlationId\":\"not-a-uuid\",\"evidenceLinks\":[]}", "0.8")]
     [InlineData("{\"source\":\"test\",\"correlationId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"evidenceLinks\":[\"https://example.test/evidence\"]}", "1.1")]
@@ -122,10 +181,34 @@ public sealed class OperatorPolicyValidatorTests
         return OperatorPolicyValidator.Validate(manifest.RootElement, plan.RootElement);
     }
 
-    private static string Plan(string action, string? provenance = null, string confidence = "0.8", string? identities = null) => $$"""
+    private static (int ExitCode, string Error, string OutputPath) RunOperator(string command, string action, string extra = "")
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var manifestPath = Path.Combine(directory, "manifest.json");
+        var planPath = Path.Combine(directory, "plan.json");
+        var outputPath = Path.Combine(directory, "output.json");
+        File.WriteAllText(manifestPath, Manifest);
+        File.WriteAllText(planPath, Plan(action, extra: extra));
+        var previousError = Console.Error;
+        using var error = new StringWriter();
+        Console.SetError(error);
+        try
+        {
+            return (Program.Main([command, manifestPath, planPath, "--output", outputPath]), error.ToString(), outputPath);
+        }
+        finally
+        {
+            Console.SetError(previousError);
+        }
+    }
+
+    private static string Plan(string action, string? provenance = null, string confidence = "0.8", string? identities = null, string environment = "production", string extra = "") => $$"""
       {
         "schemaVersion":"1.0",
+        "environment":"{{environment}}",
         "actor":{"id":"agent-1","githubLogin":"helios-agent","azurePrincipalId":"11111111-1111-1111-1111-111111111111"},
+        {{extra}}
         {{(identities is null ? "" : $"\"identities\":{identities},")}}
         "actions":[{{action}}],
         "provenance":{{provenance ?? "{\"source\":\"test\",\"correlationId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\",\"evidenceLinks\":[\"https://example.test/evidence\"]}"}},
