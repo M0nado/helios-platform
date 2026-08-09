@@ -37,6 +37,7 @@ REQUIRED_BASELINE_DENY = {
 }
 EXPECTED_OWNER_REPOSITORY = "M0nado/helios-platform"
 EXPECTED_APPROVAL_BOUNDARY = "github-protected-environment"
+EXPECTED_MANIFEST_STATUS = "governed"
 REQUIRED_EVIDENCE_FIELDS = {"correlationId", "evidenceLinks"}
 REQUIRED_STARTUP_ENVIRONMENT = {
     "HELIOS_EXECUTION_MODE": "dry-run",
@@ -60,6 +61,11 @@ EXPECTED_STARTUP_COMMANDS = {
         "--env HELIOS_CLOUD_RUNTIME_ONLY=false --env HELIOS_LOCAL_RUNTIME_ALLOWED=true helios-connect:xcore9-local"
     ),
     "hybrid-windows-docker-fleet": "pwsh ./monado/helios-control/scripts/Start-HeliosHybridRuntime.ps1",
+}
+EXPECTED_STARTUP_WORKING_DIRECTORIES = {
+    "local-windows": ".",
+    "local-docker": ".",
+    "hybrid-windows-docker-fleet": ".",
 }
 EXPECTED_ARTIFACT_PINNING = {
     "local-windows": {
@@ -128,6 +134,7 @@ def validate_top_level(manifest: dict) -> list[str]:
     _append(errors, manifest.get("schemaVersion") == 1, "schemaVersion must be 1")
     _append(errors, manifest.get("contractId") == "xcore9-runtime-matrix", "contractId must be xcore9-runtime-matrix")
     _append(errors, isinstance(manifest.get("version"), str) and bool(manifest["version"]), "version must be a non-empty string")
+    _append(errors, manifest.get("status") == EXPECTED_MANIFEST_STATUS, f"status must be exactly {EXPECTED_MANIFEST_STATUS}")
     _append(
         errors,
         manifest.get("ownerRepository") == EXPECTED_OWNER_REPOSITORY,
@@ -170,11 +177,10 @@ def validate_top_level(manifest: dict) -> list[str]:
     )
     if isinstance(required_evidence_fields, list):
         evidence_field_set = {field for field in required_evidence_fields if isinstance(field, str)}
-        missing_evidence_fields = sorted(REQUIRED_EVIDENCE_FIELDS - evidence_field_set)
         _append(
             errors,
-            not missing_evidence_fields,
-            f"governance.requiredEvidenceFields missing mandatory fields: {missing_evidence_fields}",
+            evidence_field_set == REQUIRED_EVIDENCE_FIELDS,
+            f"governance.requiredEvidenceFields must be exactly {sorted(REQUIRED_EVIDENCE_FIELDS)}",
         )
 
     required_deny = manifest.get("requiredDenyList")
@@ -302,6 +308,12 @@ def validate_mode(mode: dict, required_deny: set[str], mode_ids: set[str]) -> li
             errors,
             isinstance(startup.get("command"), str) and startup.get("command") == expected_command,
             f"{mode_id}: startupContract.command must be exactly {expected_command}",
+        )
+        expected_working_directory = EXPECTED_STARTUP_WORKING_DIRECTORIES.get(mode_id)
+        _append(
+            errors,
+            startup.get("workingDirectory") == expected_working_directory,
+            f"{mode_id}: startupContract.workingDirectory must be exactly {expected_working_directory}",
         )
         _append(
             errors,

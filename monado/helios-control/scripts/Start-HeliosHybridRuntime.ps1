@@ -67,7 +67,8 @@ function Wait-ForHealthEndpoint {
         [Parameter(Mandatory = $true)] [string] $Endpoint,
         [Parameter(Mandatory = $true)] [datetime] $DeadlineUtc,
         [Parameter(Mandatory = $true)] [int] $ProbeTimeoutSeconds,
-        [string] $CorrelationId = ''
+        [string] $CorrelationId = '',
+        [string] $ExpectedRuntimeCorrelationId = ''
     )
 
     $headers = @{}
@@ -90,6 +91,27 @@ function Wait-ForHealthEndpoint {
                 $response = Invoke-WebRequest -Uri $Endpoint -Method GET -TimeoutSec $effectiveProbeTimeout
             }
             if ($response.StatusCode -eq 200) {
+                if (-not [string]::IsNullOrWhiteSpace($ExpectedRuntimeCorrelationId)) {
+                    $matchesRuntimeCorrelation = $false
+                    try {
+                        $responseContent = [string] $response.Content
+                        if (-not [string]::IsNullOrWhiteSpace($responseContent)) {
+                            $payload = $responseContent | ConvertFrom-Json -ErrorAction Stop
+                            if ($null -ne $payload -and $payload.PSObject.Properties.Name -contains 'runtimeCorrelationId') {
+                                $matchesRuntimeCorrelation = ([string] $payload.runtimeCorrelationId -eq $ExpectedRuntimeCorrelationId)
+                            }
+                        }
+                    }
+                    catch [System.Management.Automation.RuntimeException] {
+                        $matchesRuntimeCorrelation = $false
+                    }
+
+                    if (-not $matchesRuntimeCorrelation) {
+                        Start-Sleep -Seconds ([int] [Math]::Max(1, [Math]::Min(2, $remainingSeconds)))
+                        continue
+                    }
+                }
+
                 return $true
             }
         }
@@ -145,7 +167,7 @@ function Get-ProcessTreeIds {
     }
 
     Add-TreeNode -ProcessId $RootProcessId -Visited $visited
-    return @($visited.ToArray() | Sort-Object)
+    return @($visited | Sort-Object)
 }
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
@@ -242,8 +264,8 @@ try {
         throw "Container '$containerName' is not running after startup."
     }
 
-    $windowsReady = Wait-ForHealthEndpoint -Endpoint $windowsHealthEndpoint -DeadlineUtc $startupDeadline -ProbeTimeoutSeconds $healthProbeTimeoutSeconds -CorrelationId $correlationId
-    $dockerReady = Wait-ForHealthEndpoint -Endpoint $dockerHealthEndpoint -DeadlineUtc $startupDeadline -ProbeTimeoutSeconds $healthProbeTimeoutSeconds -CorrelationId $correlationId
+    $windowsReady = Wait-ForHealthEndpoint -Endpoint $windowsHealthEndpoint -DeadlineUtc $startupDeadline -ProbeTimeoutSeconds $healthProbeTimeoutSeconds -CorrelationId $correlationId -ExpectedRuntimeCorrelationId $correlationId
+    $dockerReady = Wait-ForHealthEndpoint -Endpoint $dockerHealthEndpoint -DeadlineUtc $startupDeadline -ProbeTimeoutSeconds $healthProbeTimeoutSeconds -CorrelationId $correlationId -ExpectedRuntimeCorrelationId $correlationId
 
     $localProcess.Refresh()
     $runningContainerId = Get-RunningContainerId -ContainerName $containerName

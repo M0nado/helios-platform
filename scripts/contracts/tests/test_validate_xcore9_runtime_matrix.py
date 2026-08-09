@@ -12,11 +12,14 @@ sys.path.insert(0, str(REPOSITORY_ROOT / "scripts" / "contracts"))
 from validate_xcore9_runtime_matrix import (  # noqa: E402
     EXPECTED_APPROVAL_BOUNDARY,
     EXPECTED_ARTIFACT_PINNING,
+    EXPECTED_MANIFEST_STATUS,
     EXPECTED_MODE_ENABLED_BY_DEFAULT,
     EXPECTED_MODES,
     EXPECTED_RESOURCE_LIMITS,
+    EXPECTED_STARTUP_WORKING_DIRECTORIES,
     REQUIRED_BASELINE_DENY,
     EXPECTED_OWNER_REPOSITORY,
+    REQUIRED_EVIDENCE_FIELDS,
     EXPECTED_SMOKE_EVIDENCE_PATHS,
     EXPECTED_STARTUP_COMMANDS,
     REQUIRED_STARTUP_TOOLS,
@@ -48,6 +51,12 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         candidate["defaultMode"] = "local-docker"
         errors = validate_manifest(candidate)
         self.assertTrue(any("defaultMode must be local-windows" in error for error in errors))
+
+    def test_manifest_fails_when_status_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        candidate["status"] = "draft"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("status must be exactly governed" in error for error in errors))
 
     def test_mode_fails_when_enabled_by_default_is_changed(self) -> None:
         candidate = copy.deepcopy(self.manifest)
@@ -103,6 +112,13 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         local["startupContract"]["requiredEnvironment"]["HELIOS_CLOUD_RUNTIME_ONLY"] = "true"
         errors = validate_manifest(candidate)
         self.assertTrue(any("requiredEnvironment must be exactly" in error for error in errors))
+
+    def test_mode_fails_when_working_directory_changes(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        local = next(mode for mode in candidate["modes"] if mode["id"] == "local-docker")
+        local["startupContract"]["workingDirectory"] = "monado/helios-control"
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("startupContract.workingDirectory must be exactly ." in error for error in errors))
 
     def test_mode_fails_when_startup_command_changes(self) -> None:
         candidate = copy.deepcopy(self.manifest)
@@ -193,6 +209,12 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
         errors = validate_manifest(candidate)
         self.assertTrue(any("productionMutationRequiresProtectedApproval must be true" in error for error in errors))
 
+    def test_manifest_fails_when_required_evidence_fields_include_unsupported_field(self) -> None:
+        candidate = copy.deepcopy(self.manifest)
+        candidate["governance"]["requiredEvidenceFields"].append("artifactDigest")
+        errors = validate_manifest(candidate)
+        self.assertTrue(any("requiredEvidenceFields must be exactly" in error for error in errors))
+
     def test_manifest_fails_when_approval_boundary_changes(self) -> None:
         candidate = copy.deepcopy(self.manifest)
         candidate["governance"]["approvalBoundary"] = "none"
@@ -244,6 +266,7 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
     def test_expected_owner_and_boundary_are_stable(self) -> None:
         self.assertEqual(EXPECTED_OWNER_REPOSITORY, "M0nado/helios-platform")
         self.assertEqual(EXPECTED_APPROVAL_BOUNDARY, "github-protected-environment")
+        self.assertEqual(EXPECTED_MANIFEST_STATUS, "governed")
 
     def test_expected_startup_commands_are_stable(self) -> None:
         self.assertDictEqual(
@@ -270,6 +293,12 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
             },
         )
 
+    def test_required_evidence_fields_are_stable(self) -> None:
+        self.assertSetEqual(
+            REQUIRED_EVIDENCE_FIELDS,
+            {"correlationId", "evidenceLinks"},
+        )
+
     def test_expected_startup_tools_are_stable(self) -> None:
         self.assertDictEqual(
             REQUIRED_STARTUP_TOOLS,
@@ -277,6 +306,16 @@ class XCore9RuntimeMatrixValidationTests(unittest.TestCase):
                 "local-windows": {"pwsh", "dotnet"},
                 "local-docker": {"pwsh", "docker"},
                 "hybrid-windows-docker-fleet": {"pwsh", "dotnet", "docker"},
+            },
+        )
+
+    def test_expected_startup_working_directories_are_stable(self) -> None:
+        self.assertDictEqual(
+            EXPECTED_STARTUP_WORKING_DIRECTORIES,
+            {
+                "local-windows": ".",
+                "local-docker": ".",
+                "hybrid-windows-docker-fleet": ".",
             },
         )
 
