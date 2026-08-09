@@ -142,23 +142,37 @@ function Start-DockerRuntime {
     }
 
     $containerName = 'helios-connect-xcore9-smoke-' + ([Guid]::NewGuid().ToString('N').Substring(0, 10))
-    $dockerRunArgs = @('run', '--detach', '--rm', '--name', $containerName, '--publish', '127.0.0.1:5081:8080')
+    $dockerRunArgsWithoutLimits = @('run', '--detach', '--rm', '--name', $containerName, '--publish', '127.0.0.1:5081:8080')
+    $dockerRunArgs = @($dockerRunArgsWithoutLimits)
+    $resourceArgsApplied = $false
     if ($null -ne $ResourceEnvelope -and $null -ne $ResourceEnvelope.PSObject) {
         if ($ResourceEnvelope.PSObject.Properties.Name -contains 'maxCpuCores') {
             $dockerRunArgs += @('--cpus', [string] $ResourceEnvelope.maxCpuCores)
+            $resourceArgsApplied = $true
         }
         if ($ResourceEnvelope.PSObject.Properties.Name -contains 'maxMemoryGb') {
             $dockerRunArgs += @('--memory', ("{0}g" -f [string] $ResourceEnvelope.maxMemoryGb))
+            $resourceArgsApplied = $true
         }
     }
     foreach ($property in $EnvironmentVariables.PSObject.Properties) {
         $dockerRunArgs += '--env'
         $dockerRunArgs += ("{0}={1}" -f $property.Name, [string] $property.Value)
+        $dockerRunArgsWithoutLimits += '--env'
+        $dockerRunArgsWithoutLimits += ("{0}={1}" -f $property.Name, [string] $property.Value)
     }
     $dockerRunArgs += $imageTag
-    & docker @dockerRunArgs *> $null
+    $dockerRunArgsWithoutLimits += $imageTag
+    $dockerRunOutput = & docker @dockerRunArgs 2>&1
+    if ($LASTEXITCODE -ne 0 -and $resourceArgsApplied) {
+        $dockerRunOutput = & docker @dockerRunArgsWithoutLimits 2>&1
+    }
     if ($LASTEXITCODE -ne 0) {
-        throw 'Docker run failed.'
+        $joinedOutput = ($dockerRunOutput | ForEach-Object { [string] $_.ToString().Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ' | '
+        if ([string]::IsNullOrWhiteSpace($joinedOutput)) {
+            throw 'Docker run failed.'
+        }
+        throw ("Docker run failed: " + $joinedOutput)
     }
 
     return $containerName
