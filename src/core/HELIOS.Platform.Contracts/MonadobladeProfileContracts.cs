@@ -59,6 +59,21 @@ public sealed record ProfileActivationPolicy(
         RemoteActivationDenied: false,
         CloudActivationDenied: false,
         AiActivationDenied: false);
+
+    public void ValidateLocalAdministratorFactors()
+    {
+        var distinctFactors = (AllowedFactors ?? Array.Empty<string>())
+            .Where(factor => !string.IsNullOrWhiteSpace(factor))
+            .Select(factor => factor.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+
+        if (MinimumFactors < 2 || distinctFactors < MinimumFactors)
+        {
+            throw new InvalidOperationException(
+                $"Local administrator activation requires at least {MinimumFactors} distinct, nonblank factors; {distinctFactors} were configured.");
+        }
+    }
 }
 
 /// <summary>
@@ -101,6 +116,8 @@ public sealed record MonadobladeProfileDefinition(
 
         if (Id == MonadobladeProfileId.SysAdmin)
         {
+            ActivationPolicy.ValidateLocalAdministratorFactors();
+
             if (!IsAdministrator || !Hidden || EnabledByDefault)
             {
                 throw new InvalidOperationException("SysAdmin must be the only hidden, disabled-by-default administrator profile.");

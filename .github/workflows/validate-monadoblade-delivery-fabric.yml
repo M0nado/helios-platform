@@ -13,6 +13,8 @@ on:
       - 'src/core/HELIOS.Platform.Contracts/MonadobladeDeliveryFabricContracts.cs'
       - 'src/native/HELIOS.Native.Performance/**'
       - 'tests/native/monadoblade_environment_smoke.cpp'
+      - 'tests/scripts/test_monadoblade_delivery_fabric_validator.py'
+      - 'tests/HELIOS.Platform.Contracts.Smoke/**'
       - 'scripts/validation/validate_monadoblade_delivery_fabric.py'
       - 'docs/architecture/MONADOBLADE_DELIVERY_FABRIC_V2.md'
       - '.github/workflows/validate-monadoblade-delivery-fabric.yml'
@@ -29,6 +31,8 @@ on:
       - 'src/core/HELIOS.Platform.Contracts/MonadobladeDeliveryFabricContracts.cs'
       - 'src/native/HELIOS.Native.Performance/**'
       - 'tests/native/monadoblade_environment_smoke.cpp'
+      - 'tests/scripts/test_monadoblade_delivery_fabric_validator.py'
+      - 'tests/HELIOS.Platform.Contracts.Smoke/**'
       - 'scripts/validation/validate_monadoblade_delivery_fabric.py'
       - '.github/workflows/validate-monadoblade-delivery-fabric.yml'
   workflow_dispatch:
@@ -55,6 +59,9 @@ jobs:
 
       - name: Validate delivery fabric
         run: python scripts/validation/validate_monadoblade_delivery_fabric.py
+
+      - name: Run validator regression tests
+        run: python -m unittest tests/scripts/test_monadoblade_delivery_fabric_validator.py
 
       - name: Compile Python validator
         run: python -m py_compile scripts/validation/validate_monadoblade_delivery_fabric.py
@@ -97,6 +104,9 @@ jobs:
 
       - name: Build platform contracts
         run: dotnet build src/core/HELIOS.Platform.Contracts/HELIOS.Platform.Contracts.csproj --configuration Release --warnaserror
+
+      - name: Run typed contract smoke
+        run: dotnet run --project tests/HELIOS.Platform.Contracts.Smoke/HELIOS.Platform.Contracts.Smoke.csproj --configuration Release
 
   native-environment:
     name: C++ environment smoke

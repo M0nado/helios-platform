@@ -58,8 +58,20 @@ struct IdentityTuning {
   double energyGain{};
 };
 
+// Suspension is a presentation state, not a quality tier transition. Keep the
+// last visible tier so minimize/occlusion cannot bypass hysteresis on resume.
+struct QualityGovernorState {
+  QualityTier lastActive{QualityTier::Cinematic};
+};
+
+struct QualityDecision {
+  QualityTier renderTier{};
+  QualityGovernorState nextState{};
+};
+
 struct ScenePlan {
   QualityTier quality{};
+  QualityGovernorState qualityState{};
   SceneBudget budget{};
   double daylight{};
   double weatherIntensity{};
@@ -128,22 +140,40 @@ struct ScenePlan {
   return QualityTier::Cinematic;
 }
 
-[[nodiscard]] constexpr QualityTier choose_quality(
+[[nodiscard]] constexpr QualityTier choose_active_quality(
     const RuntimeSignals& signals,
-    const QualityTier previousQuality) noexcept {
-  if (signals.minimized || signals.occluded) {
-    return QualityTier::Suspended;
-  }
+    const QualityTier previousActiveQuality) noexcept {
   if (requires_minimal_quality(signals)) {
     return QualityTier::Minimal;
   }
-  if (previousQuality == QualityTier::Minimal && !can_leave_minimal_quality(signals)) {
+  if (previousActiveQuality == QualityTier::Minimal && !can_leave_minimal_quality(signals)) {
     return QualityTier::Minimal;
   }
-  if (previousQuality == QualityTier::Balanced && !can_enter_cinematic_quality(signals)) {
+  if (previousActiveQuality == QualityTier::Balanced && !can_enter_cinematic_quality(signals)) {
     return QualityTier::Balanced;
   }
   return has_balanced_pressure(signals) ? QualityTier::Balanced : QualityTier::Cinematic;
+}
+
+[[nodiscard]] constexpr QualityDecision update_quality(
+    const RuntimeSignals& signals,
+    const QualityGovernorState previousState = {}) noexcept {
+  const auto previousActive = previousState.lastActive == QualityTier::Suspended
+                                  ? QualityTier::Cinematic
+                                  : previousState.lastActive;
+
+  if (signals.minimized || signals.occluded) {
+    return QualityDecision{
+        .renderTier = QualityTier::Suspended,
+        .nextState = QualityGovernorState{.lastActive = previousActive},
+    };
+  }
+
+  const auto activeQuality = choose_active_quality(signals, previousActive);
+  return QualityDecision{
+      .renderTier = activeQuality,
+      .nextState = QualityGovernorState{.lastActive = activeQuality},
+  };
 }
 
 [[nodiscard]] constexpr QualityTier choose_quality(const RuntimeSignals& signals) noexcept {
@@ -210,8 +240,9 @@ struct ScenePlan {
     const Identity identity,
     const RuntimeSignals& runtime,
     const EnvironmentSignals& environment,
-    const QualityTier previousQuality = QualityTier::Cinematic) noexcept {
-  const auto quality = choose_quality(runtime, previousQuality);
+    const QualityGovernorState previousQuality = {}) noexcept {
+  const auto qualityDecision = update_quality(runtime, previousQuality);
+  const auto quality = qualityDecision.renderTier;
   const auto budget = budget_for(quality);
   const auto tuning = tuning_for(identity);
   const auto qualityGain = quality == QualityTier::Cinematic ? 1.0 :
@@ -220,6 +251,7 @@ struct ScenePlan {
 
   return ScenePlan{
       .quality = quality,
+      .qualityState = qualityDecision.nextState,
       .budget = budget,
       .daylight = daylight_for_hour(environment.localHour),
       .weatherIntensity = clamp01(environment.weatherIntensity),

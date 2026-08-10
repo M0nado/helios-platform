@@ -114,6 +114,8 @@ public sealed record MonadobladeIdentityDefinition(
 
         if (Id == MonadobladeIdentityId.SysAdmin)
         {
+            ActivationPolicy.ValidateLocalAdministratorFactors();
+
             if (!IsAdministrator || !Hidden || EnabledByDefault)
             {
                 throw new InvalidOperationException("SysAdmin must be hidden, disabled by default, and the only administrator identity.");
@@ -237,15 +239,15 @@ public sealed record AlvisToolPolicy(
 /// </summary>
 public static class MonadobladeDeliveryFabricCatalog
 {
-    private static (string Kanji, string Color) CanonicalEnergyFor(MonadobladeIdentityId identity) =>
+    private static (string Kanji, string Color, string AudioCue) CanonicalEnergyFor(MonadobladeIdentityId identity) =>
         identity switch
         {
-            MonadobladeIdentityId.Core => ("核", "#53F6FF"),
-            MonadobladeIdentityId.Developer => ("創", "#2F86FF"),
-            MonadobladeIdentityId.Studio => ("響", "#D64DFF"),
-            MonadobladeIdentityId.Gamer => ("迅", "#62FF4A"),
-            MonadobladeIdentityId.AiServer => ("智", "#7A6BFF"),
-            MonadobladeIdentityId.SysAdmin => ("統", "#FFB000"),
+            MonadobladeIdentityId.Core => ("核", "#53F6FF", "wyvern-core-harmonic"),
+            MonadobladeIdentityId.Developer => ("創", "#2F86FF", "wyvern-developer-code-rise"),
+            MonadobladeIdentityId.Studio => ("響", "#D64DFF", "wyvern-studio-harmonic-bloom"),
+            MonadobladeIdentityId.Gamer => ("迅", "#62FF4A", "wyvern-gamer-velocity-lock"),
+            MonadobladeIdentityId.AiServer => ("智", "#7A6BFF", "wyvern-ai-topology-pulse"),
+            MonadobladeIdentityId.SysAdmin => ("統", "#FFB000", "wyvern-sysadmin-mechanical-lock"),
             _ => throw new ArgumentOutOfRangeException(nameof(identity), identity, "Unknown Monadoblade identity.")
         };
 
@@ -260,10 +262,11 @@ public static class MonadobladeDeliveryFabricCatalog
             identity.Validate();
             var canonical = CanonicalEnergyFor(identity.Id);
             if (!string.Equals(identity.Energy.Kanji, canonical.Kanji, StringComparison.Ordinal) ||
-                !string.Equals(identity.Energy.Color, canonical.Color, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(identity.Energy.Color, canonical.Color, StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(identity.Energy.AudioCue, canonical.AudioCue, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Identity {identity.Id} requires canonical energy {canonical.Kanji}/{canonical.Color}.");
+                    $"Identity {identity.Id} requires canonical energy {canonical.Kanji}/{canonical.Color}/{canonical.AudioCue}.");
             }
         }
 

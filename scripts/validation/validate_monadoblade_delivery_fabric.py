@@ -32,6 +32,12 @@ CONTRACT_VERSIONS = {
     "config/storage/monadoblade-storage-plan-template.v2.json": "2.0.0",
     "config/integrations/monadoblade-delivery-fabric.v1.json": "1.0.0",
 }
+QUALITY_TIERS = {
+    "suspended": {"particles": 0, "horizonCards": 0, "grassInstances": 0, "updatesPerSecond": 0, "fogScale": 0.0},
+    "minimal": {"particles": 384, "horizonCards": 2, "grassInstances": 96, "updatesPerSecond": 15, "fogScale": 0.25},
+    "balanced": {"particles": 3072, "horizonCards": 4, "grassInstances": 1024, "updatesPerSecond": 30, "fogScale": 0.5},
+    "cinematic": {"particles": 8192, "horizonCards": 4, "grassInstances": 4096, "updatesPerSecond": 60, "fogScale": 0.67},
+}
 
 
 class ContractError(RuntimeError):
@@ -92,6 +98,17 @@ def validate_identities(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     require(sysadmin.get("networkMode") == "offline-local-only", "Sysadmin must be offline/local only")
     require(activation.get("physicalPresenceRequired") is True, "Sysadmin requires physical presence")
     require(activation.get("minimumFactors", 0) >= 2, "Sysadmin requires at least two local factors")
+    allowed_factors = activation.get("allowedFactors")
+    require(isinstance(allowed_factors, list), "Sysadmin allowedFactors must be a list")
+    normalized_factors = {
+        factor.strip().casefold()
+        for factor in allowed_factors
+        if isinstance(factor, str) and factor.strip()
+    }
+    require(
+        len(normalized_factors) >= activation["minimumFactors"],
+        "Sysadmin requires enough distinct, nonblank local activation factors",
+    )
     for key in ("remoteActivationDenied", "cloudActivationDenied", "aiActivationDenied"):
         require(activation.get(key) is True, f"Sysadmin activation boundary missing {key}")
 
@@ -166,8 +183,7 @@ def validate_environment(data: dict[str, Any]) -> None:
     require(weather.get("neverBlocksShell") is True, "weather adapter cannot block the shell")
 
     tiers = data.get("performance", {}).get("qualityTiers", {})
-    require(tiers.get("suspended", {}).get("particles") == 0, "suspended tier must spend zero particles")
-    require(tiers.get("cinematic", {}).get("particles", 0) <= 8192, "cinematic particle pool exceeds cap")
+    require(tiers == QUALITY_TIERS, "quality-tier budgets must exactly match the native renderer contract")
     require(data.get("performance", {}).get("rendererFailureMode") == "static-background", "renderer requires a static fallback")
 
 
@@ -229,7 +245,12 @@ def validate_engine_registry(data: dict[str, Any]) -> None:
     for engine in engines:
         require(engine.get("ownerLanguage") in allowed_languages, f"unknown engine language: {engine.get('id')}")
         require(engine.get("status") not in denied_statuses, f"engine is prematurely active: {engine.get('id')}")
-        require(not denied_effects.intersection(engine.get("effects", [])), f"engine has a denied effect: {engine.get('id')}")
+        effects = engine.get("effects")
+        require(
+            isinstance(effects, list) and all(isinstance(effect, str) for effect in effects),
+            f"engine effects must be a list of strings: {engine.get('id')}",
+        )
+        require(not denied_effects.intersection(effects), f"engine has a denied effect: {engine.get('id')}")
         require(set(engine.get("identities", [])).issubset(set(IDENTITIES)), f"engine has an unknown identity: {engine.get('id')}")
 
     alvis = data.get("alvis", {})
@@ -242,6 +263,7 @@ def validate_storage(data: dict[str, Any]) -> None:
     require(data.get("mode") == "plan-only", "storage contract must remain plan-only")
     apply = data.get("apply", {})
     require(apply.get("enabled") is False, "storage apply must be disabled")
+    require(apply.get("availableFromGui") is False, "GUI cannot apply storage changes")
     require(apply.get("availableFromAlvis") is False, "ALVIS cannot apply storage changes")
     require(apply.get("availableFromConversationalRequest") is False, "conversation cannot apply storage changes")
     selection = data.get("deviceSelection", {})
