@@ -22,6 +22,9 @@ Validate locally with:
 ```bash
 python3 scripts/integrations/validate_capability_profiles.py
 python3 -m unittest scripts.integrations.tests.test_validate_capability_profiles
+python3 -m unittest scripts.integrations.tests.test_capability_profiles_schema
 ```
+
+The last command is the authoritative Draft 2020-12 validation and requires the CI-pinned `jsonschema==4.23.0`; the first two commands remain dependency-free for runtime and bootstrap environments. Broad Microsoft grants are deliberately split by operation: directory users, groups, selected sites, Teams channels/messages, Entra roles, applications, and Conditional Access each require a distinct exact profile ID. Retired aggregate IDs such as `graph.read`, `graph.write`, and `entra.tenant-administration` are unknown and therefore denied.
 
 The schema caps any operation at 120 minutes. Production deployment, tenant administration, protected ACR push, evidence publication, and governed Microsoft operations require explicit approvals and defined cleanup. No profile grants secret access, tag deletion, pull-request merge, branch-protection bypass, tenant-wide SharePoint access, or unrestricted resources.
