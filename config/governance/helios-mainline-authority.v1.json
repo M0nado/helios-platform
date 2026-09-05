@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "name": "HELIOS Mainline Authority",
+  "canonicalRepository": "M0nado/helios-platform",
+  "targetBranch": "main",
+  "mergePolicy": {
+    "directPushToMain": false,
+    "draftPullRequestFirst": true,
+    "requireExactHead": true,
+    "requireConfiguredChecks": true,
+    "requireAllConfiguredChecksSuccess": true,
+    "requireApprovedReview": true,
+    "requireWindowsPowerShellAst": true,
+    "conflictsDefault": "deny",
+    "approvedConflictBackupLocation": ".git/helios-mainline-final-v1/backups"
+  },
+  "desktop": {
+    "framework": "WinUI 3",
+    "language": "C#",
+    "xamlNamespace": "Microsoft.UI.Xaml",
+    "wpfAllowedInActiveProduct": false,
+    "wpfAllowedUnderInertLegacyReference": true
+  },
+  "profiles": [
+    { "id": "core", "glyph": "核", "privileged": false },
+    { "id": "developer", "glyph": "創", "privileged": false },
+    { "id": "studio", "glyph": "響", "privileged": false },
+    { "id": "gamer", "glyph": "迅", "privileged": false },
+    { "id": "ai-server", "glyph": "智", "privileged": false },
+    { "id": "sysadmin", "glyph": "統", "privileged": true, "localOfflineOnly": true }
+  ],
+  "nonIdentitySecurityWorkflows": [
+    "recovery",
+    "quarantine"
+  ],
+  "aihub": {
+    "defaultBind": "127.0.0.1",
+    "nonHealthAuthenticationRequired": true,
+    "requestSizeBounded": true,
+    "rateLimited": true,
+    "atomicStateWrites": true,
+    "secretReadbackAllowed": false,
+    "administrativeExecutionDefault": "proposal-only"
+  },
+  "azure": {
+    "applyEnabled": false,
+    "productionEnabled": false,
+    "liveStateRequiresExternalEvidence": true,
+    "requiredSequence": [
+      "resolve-live-oidc-subject",
+      "protect-github-environments",
+      "establish-environment-bound-federation",
+      "grant-scoped-rbac",
+      "bind-managed-identity",
+      "publish-immutable-image",
+      "run-exact-development-what-if",
+      "review-plan-and-hash",
+      "request-separate-deployment-approval",
+      "authorize-tenant-connectors"
+    ]
+  },
+  "secrets": {
+    "repositoryStorageAllowed": false,
+    "collaborationSurfaceStorageAllowed": false,
+    "readbackAllowed": false,
+    "previouslyExposedOpenAIKeyStatus": "must-remain-revoked"
+  },
+  "sourcePackage": {
+    "name": "HELIOS_FINAL_MAINLINE_MERGE_OPERATOR_v1.zip",
+    "sha256": "4fd2e3dc194a07c3ab919794e510cabb8c7e3705e98e24ce9072ac3bc317d482",
+    "generatedOverlayFiles": 145,
+    "localPythonTestsPassed": 18,
+    "hostedValidationStillRequired": true
+  }
+}
