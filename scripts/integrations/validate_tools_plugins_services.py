@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "integrations"
+REVIEWED_MCP_SDK_VERSION = "1.30.0"
 
 
 def load_json(path: Path) -> dict:
@@ -78,11 +79,43 @@ def validate_plugins(document: dict) -> list[dict]:
     return plugins
 
 
+def validate_mcp_lock() -> None:
+    package_path = ROOT / "plugins/openai/helios-mcp/package.json"
+    lock_path = ROOT / "plugins/openai/helios-mcp/package-lock.json"
+    package = load_json(package_path)
+    lock = load_json(lock_path)
+
+    sdk_version = package.get("dependencies", {}).get("@modelcontextprotocol/sdk")
+    require(
+        sdk_version == REVIEWED_MCP_SDK_VERSION,
+        f"MCP SDK must remain explicitly pinned to reviewed v{REVIEWED_MCP_SDK_VERSION}",
+    )
+
+    packages = lock.get("packages")
+    require(isinstance(packages, dict), "MCP package-lock.json must contain a packages object")
+    root_package = packages.get("") if isinstance(packages, dict) else None
+    sdk_package = packages.get("node_modules/@modelcontextprotocol/sdk") if isinstance(packages, dict) else None
+    require(isinstance(root_package, dict), "MCP lockfile is missing the root package entry")
+    require(isinstance(sdk_package, dict), "MCP lockfile is missing the SDK package entry")
+
+    locked_root_version = root_package.get("dependencies", {}).get("@modelcontextprotocol/sdk")
+    locked_sdk_version = sdk_package.get("version")
+    require(
+        locked_root_version == REVIEWED_MCP_SDK_VERSION,
+        "MCP lockfile root dependency must exactly match the reviewed SDK version",
+    )
+    require(
+        locked_sdk_version == REVIEWED_MCP_SDK_VERSION,
+        "MCP lockfile resolved SDK version must exactly match the reviewed SDK version",
+    )
+
+
 def validate_paths() -> None:
     required = [
         ROOT / "src/services/HELIOS.IntegrationBroker/HELIOS.IntegrationBroker.csproj",
         ROOT / "src/services/HELIOS.IntegrationBroker/Program.cs",
         ROOT / "plugins/openai/helios-mcp/package.json",
+        ROOT / "plugins/openai/helios-mcp/package-lock.json",
         ROOT / "plugins/openai/helios-mcp/src/server.mjs",
         ROOT / "plugins/openai/helios-mcp/src/http.mjs",
         ROOT / "plugins/copilot-studio/helios-openapi.yaml",
@@ -91,9 +124,7 @@ def validate_paths() -> None:
     for path in required:
         require(path.exists(), f"Required implementation path is missing: {path.relative_to(ROOT)}")
 
-    package = load_json(ROOT / "plugins/openai/helios-mcp/package.json")
-    sdk_version = package.get("dependencies", {}).get("@modelcontextprotocol/sdk")
-    require(sdk_version == "1.29.0", "MCP SDK must remain explicitly pinned to reviewed v1.29.0")
+    validate_mcp_lock()
 
     openapi = (ROOT / "plugins/copilot-studio/helios-openapi.yaml").read_text(encoding="utf-8")
     for operation in ("getHeliosStatus", "listHeliosTools", "previewHeliosAction", "requestHeliosAction"):
@@ -106,7 +137,10 @@ def main() -> None:
     services = validate_services(load_json(CONFIG / "service-catalog.json"))
     plugins = validate_plugins(load_json(CONFIG / "plugin-catalog.json"))
     validate_paths()
-    print(f"validated {len(tools)} tools, {len(services)} services, and {len(plugins)} plugins")
+    print(
+        f"validated {len(tools)} tools, {len(services)} services, and {len(plugins)} plugins; "
+        f"MCP SDK lock={REVIEWED_MCP_SDK_VERSION}"
+    )
 
 
 if __name__ == "__main__":
