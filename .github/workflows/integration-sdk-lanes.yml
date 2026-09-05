@@ -42,7 +42,7 @@ jobs:
           python eng/automation/validate_delivery.py
           python eng/integration-lanes/validate_lanes.py --contracts
           python -m unittest discover tests/integration -p 'test_*.py'
-      - uses: actions/setup-dotnet@b2d7bde49078d7e2b34cc93653c2d4b2678d7a99 # v4.3.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
       - name: Verify locked release restores
@@ -98,7 +98,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
-      - uses: actions/setup-dotnet@b2d7bde49078d7e2b34cc93653c2d4b2678d7a99 # v4.3.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 11.0.100-preview.6.26359.118
       - name: Compile isolated C# and F# probes
