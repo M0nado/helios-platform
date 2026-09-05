@@ -1,0 +1,40 @@
+name: Capability profile contracts
+
+on:
+  pull_request:
+    paths:
+      - "config/integrations/capability-profiles*.json"
+      - "scripts/integrations/validate_capability_profiles.py"
+      - "scripts/integrations/tests/test_*capability_profiles*.py"
+      - "docs/security/CAPABILITY_PROFILES.md"
+      - ".github/workflows/capability-profile-validate.yml"
+  push:
+    branches: [main]
+    paths:
+      - "config/integrations/capability-profiles*.json"
+      - "scripts/integrations/validate_capability_profiles.py"
+      - "scripts/integrations/tests/test_*capability_profiles*.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pinned schema validator
+        run: python -m pip install --disable-pip-version-check jsonschema==4.23.0
+      - name: Validate fail-closed runtime contract
+        run: |
+          python scripts/integrations/validate_capability_profiles.py
+          test "$(python scripts/integrations/validate_capability_profiles.py --resolve unknown.superuser)" = deny
+          python -m unittest scripts.integrations.tests.test_validate_capability_profiles -v
+      - name: Validate Draft 2020-12 contract
+        run: python -m unittest scripts.integrations.tests.test_capability_profiles_schema -v
