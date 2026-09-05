@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.helios.local/governance/helios-mainline-authority.v1.schema.json",
+  "title": "HELIOS Mainline Authority V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "name",
+    "canonicalRepository",
+    "targetBranch",
+    "mergePolicy",
+    "desktop",
+    "profiles",
+    "nonIdentitySecurityWorkflows",
+    "aihub",
+    "azure",
+    "secrets",
+    "sourcePackage"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "name": { "const": "HELIOS Mainline Authority" },
+    "canonicalRepository": { "const": "M0nado/helios-platform" },
+    "targetBranch": { "const": "main" },
+    "mergePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directPushToMain",
+        "draftPullRequestFirst",
+        "requireExactHead",
+        "requireConfiguredChecks",
+        "requireAllConfiguredChecksSuccess",
+        "requireApprovedReview",
+        "requireWindowsPowerShellAst",
+        "conflictsDefault",
+        "approvedConflictBackupLocation"
+      ],
+      "properties": {
+        "directPushToMain": { "const": false },
+        "draftPullRequestFirst": { "const": true },
+        "requireExactHead": { "const": true },
+        "requireConfiguredChecks": { "const": true },
+        "requireAllConfiguredChecksSuccess": { "const": true },
+        "requireApprovedReview": { "const": true },
+        "requireWindowsPowerShellAst": { "const": true },
+        "conflictsDefault": { "const": "deny" },
+        "approvedConflictBackupLocation": {
+          "const": ".git/helios-mainline-final-v1/backups"
+        }
+      }
+    },
+    "desktop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "framework",
+        "language",
+        "xamlNamespace",
+        "wpfAllowedInActiveProduct",
+        "wpfAllowedUnderInertLegacyReference"
+      ],
+      "properties": {
+        "framework": { "const": "WinUI 3" },
+        "language": { "const": "C#" },
+        "xamlNamespace": { "const": "Microsoft.UI.Xaml" },
+        "wpfAllowedInActiveProduct": { "const": false },
+        "wpfAllowedUnderInertLegacyReference": { "const": true }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {
+          "type": "object",
+          "required": ["id", "glyph", "privileged"],
+          "properties": {
+            "id": { "const": "core" },
+            "glyph": { "const": "核" },
+            "privileged": { "const": false }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "glyph", "privileged"],
+          "properties": {
+            "id": { "const": "developer" },
+            "glyph": { "const": "創" },
+            "privileged": { "const": false }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "glyph", "privileged"],
+          "properties": {
+            "id": { "const": "studio" },
+            "glyph": { "const": "響" },
+            "privileged": { "const": false }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "glyph", "privileged"],
+          "properties": {
+            "id": { "const": "gamer" },
+            "glyph": { "const": "迅" },
+            "privileged": { "const": false }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "glyph", "privileged"],
+          "properties": {
+            "id": { "const": "ai-server" },
+            "glyph": { "const": "智" },
+            "privileged": { "const": false }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["id", "glyph", "privileged", "localOfflineOnly"],
+          "properties": {
+            "id": { "const": "sysadmin" },
+            "glyph": { "const": "統" },
+            "privileged": { "const": true },
+            "localOfflineOnly": { "const": true }
+          },
+          "additionalProperties": false
+        }
+      ],
+      "items": false
+    },
+    "nonIdentitySecurityWorkflows": {
+      "const": ["recovery", "quarantine"]
+    },
+    "aihub": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "defaultBind",
+        "nonHealthAuthenticationRequired",
+        "requestSizeBounded",
+        "rateLimited",
+        "atomicStateWrites",
+        "secretReadbackAllowed",
+        "administrativeExecutionDefault"
+      ],
+      "properties": {
+        "defaultBind": { "const": "127.0.0.1" },
+        "nonHealthAuthenticationRequired": { "const": true },
+        "requestSizeBounded": { "const": true },
+        "rateLimited": { "const": true },
+        "atomicStateWrites": { "const": true },
+        "secretReadbackAllowed": { "const": false },
+        "administrativeExecutionDefault": { "const": "proposal-only" }
+      }
+    },
+    "azure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "applyEnabled",
+        "productionEnabled",
+        "liveStateRequiresExternalEvidence",
+        "requiredSequence"
+      ],
+      "properties": {
+        "applyEnabled": { "const": false },
+        "productionEnabled": { "const": false },
+        "liveStateRequiresExternalEvidence": { "const": true },
+        "requiredSequence": {
+          "const": [
+            "resolve-live-oidc-subject",
+            "protect-github-environments",
+            "establish-environment-bound-federation",
+            "grant-scoped-rbac",
+            "bind-managed-identity",
+            "publish-immutable-image",
+            "run-exact-development-what-if",
+            "review-plan-and-hash",
+            "request-separate-deployment-approval",
+            "authorize-tenant-connectors"
+          ]
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repositoryStorageAllowed",
+        "collaborationSurfaceStorageAllowed",
+        "readbackAllowed",
+        "previouslyExposedOpenAIKeyStatus"
+      ],
+      "properties": {
+        "repositoryStorageAllowed": { "const": false },
+        "collaborationSurfaceStorageAllowed": { "const": false },
+        "readbackAllowed": { "const": false },
+        "previouslyExposedOpenAIKeyStatus": { "const": "must-remain-revoked" }
+      }
+    },
+    "sourcePackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "sha256",
+        "generatedOverlayFiles",
+        "localPythonTestsPassed",
+        "hostedValidationStillRequired"
+      ],
+      "properties": {
+        "name": { "const": "HELIOS_FINAL_MAINLINE_MERGE_OPERATOR_v1.zip" },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "generatedOverlayFiles": { "const": 145 },
+        "localPythonTestsPassed": { "const": 18 },
+        "hostedValidationStillRequired": { "const": true }
+      }
+    }
+  }
+}
