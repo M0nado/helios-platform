@@ -37,7 +37,7 @@ jobs:
           python -m json.tool .agents/plugins/marketplace.json >/dev/null
           python -m json.tool plugins/helios-control-fabric/.codex-plugin/plugin.json >/dev/null
           python -m json.tool plugins/helios-control-fabric/.mcp.json >/dev/null
-          for contract in connections oidc devops-sync runner-topology edge-runtime; do
+          for contract in connections oidc devops-sync runner-topology edge-runtime xcore9-runtime-matrix; do
             python -m json.tool "plugins/helios-control-fabric/assets/${contract}.json" >/dev/null
           done
           python -m json.tool plugins/helios-control-fabric/assets/microsoft-mcp.template.json >/dev/null
@@ -57,6 +57,7 @@ jobs:
           python plugins/helios-control-fabric/scripts/helios.py devops-sync --json > /tmp/helios-devops.json
           python plugins/helios-control-fabric/scripts/helios.py runners --json > /tmp/helios-runners.json
           python plugins/helios-control-fabric/scripts/helios.py edge --environment azure-dev --json > /tmp/helios-edge.json
+          python plugins/helios-control-fabric/scripts/helios.py runtime-matrix --json > /tmp/helios-runtime-matrix.json
           python - <<'PY'
           import json
           import os
@@ -65,6 +66,7 @@ jobs:
           devops=json.load(open("/tmp/helios-devops.json"))
           runners=json.load(open("/tmp/helios-runners.json"))
           edge=json.load(open("/tmp/helios-edge.json"))
+          runtime=json.load(open("/tmp/helios-runtime-matrix.json"))
           assert plan["executionMode"] == "plan-only"
           assert "Azure deployment approval" in plan["administratorGates"]
           assert "federationSubject" not in plan
@@ -87,6 +89,17 @@ jobs:
           assert runners["selfHosted"]["enabled"] is False
           assert edge["targetEdge"]["connectivity"] == "Private Link"
           assert edge["automaticApply"] is False
+          assert runtime["contract"] == "xcore9-runtime-matrix"
+          assert runtime["defaultExecutionMode"] == "validation-first"
+          assert runtime["nonDestructiveDefault"] is True
+          assert runtime["productionMutationRequiresProtectedApproval"] is True
+          assert runtime["crossModeTokenReuseAllowed"] is False
+          assert sorted(runtime["modeIds"]) == [
+            "hybrid-windows-docker-fleet",
+            "local-docker",
+            "local-windows"
+          ]
+          assert runtime["smokeEvidenceLinked"] is True
           PY
       - name: Enforce safe MCP widget contract
         run: |
@@ -109,7 +122,7 @@ jobs:
           assert "redirect_domains" in program
           assert "/access_as_user" in program
           assert "user_impersonation" not in program
-          assert "api://${{PUBLIC_HOSTNAME}}/${{ENTRA_APP_ID}}" in manifest
+          assert "api://$" + "{{PUBLIC_HOSTNAME}}/$" + "{{ENTRA_APP_ID}}" in manifest
           PY
 
   mcp-contract:

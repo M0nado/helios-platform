@@ -55,6 +55,14 @@ class MonadobladeDeliveryFabricV3ValidationTests(unittest.TestCase):
         errors = validate_storage_contract(candidate)
         self.assertTrue(any("usb apply route must be disabled" in error for error in errors))
 
+    def test_storage_fails_when_physical_disk_apply_is_not_forbidden(self) -> None:
+        candidate = copy.deepcopy(self.bundle["storage"])
+        candidate["forbiddenRuntimeActions"] = [
+            action for action in candidate["forbiddenRuntimeActions"] if action != "physical_disk_apply_from_runtime"
+        ]
+        errors = validate_storage_contract(candidate)
+        self.assertTrue(any("physical_disk_apply_from_runtime" in error for error in errors))
+
     def test_projection_fails_when_trigger_execution_is_enabled(self) -> None:
         candidate = copy.deepcopy(self.bundle["integrationProjection"])
         candidate["executionTriggersAllowed"] = True

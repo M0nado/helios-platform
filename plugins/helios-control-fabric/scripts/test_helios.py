@@ -2,6 +2,7 @@ import importlib.util
 import io
 import json
 import os
+import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
@@ -162,6 +163,57 @@ class HeliosCliTests(unittest.TestCase):
         self.assertFalse(plan["automaticApply"])
         self.assertEqual(plan["workflow"]["apply"], "separate protected-environment approval")
 
+    def test_runtime_matrix_contract_is_governed(self) -> None:
+        matrix = HELIOS.runtime_matrix_contract()
+        self.assertEqual(matrix["contract"], "xcore9-runtime-matrix")
+        self.assertEqual(matrix["defaultExecutionMode"], "validation-first")
+        self.assertEqual(
+            set(matrix["modeIds"]),
+            {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
+        )
+        self.assertFalse(matrix["crossModeTokenReuseAllowed"])
+        self.assertTrue(matrix["smokeEvidenceLinked"])
+
+    def test_runtime_matrix_contract_falls_back_to_bundled_asset_when_manifest_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fake_root = Path(temp_dir) / "plugins" / "helios-control-fabric" / "scripts"
+            fake_root.mkdir(parents=True, exist_ok=True)
+            with patch.object(HELIOS, "ROOT", fake_root):
+                matrix = HELIOS.runtime_matrix_contract()
+
+        self.assertEqual(matrix["contract"], "xcore9-runtime-matrix")
+        self.assertFalse(matrix["manifestExists"])
+        self.assertEqual(matrix["defaultExecutionMode"], "validation-first")
+        self.assertEqual(matrix["defaultMode"], "local-windows")
+        self.assertEqual(matrix["requiredDenyListCount"], 9)
+        self.assertTrue(matrix["nonDestructiveDefault"])
+        self.assertTrue(matrix["productionMutationRequiresProtectedApproval"])
+        self.assertFalse(matrix["crossModeTokenReuseAllowed"])
+        self.assertEqual(
+            set(matrix["modeIds"]),
+            {"local-windows", "local-docker", "hybrid-windows-docker-fleet"},
+        )
+        self.assertFalse(matrix["smokeEvidenceLinked"])
+
+    def test_runtime_matrix_contract_reports_bundled_evidence_when_index_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fake_root = Path(temp_dir) / "plugins" / "helios-control-fabric" / "scripts"
+            fake_root.mkdir(parents=True, exist_ok=True)
+            evidence_file = (
+                fake_root.parents[1]
+                / "monado"
+                / "helios-control"
+                / "docs"
+                / "XCORE9_RUNTIME_SMOKE_EVIDENCE.md"
+            )
+            evidence_file.parent.mkdir(parents=True, exist_ok=True)
+            evidence_file.write_text("# bundled smoke evidence index\n", encoding="utf-8")
+            with patch.object(HELIOS, "ROOT", fake_root):
+                matrix = HELIOS.runtime_matrix_contract()
+
+        self.assertFalse(matrix["manifestExists"])
+        self.assertTrue(matrix["smokeEvidenceLinked"])
+
     def test_all_assets_are_json(self) -> None:
         for name in (
             "connections.json",
@@ -169,6 +221,7 @@ class HeliosCliTests(unittest.TestCase):
             "devops-sync.json",
             "runner-topology.json",
             "edge-runtime.json",
+            "xcore9-runtime-matrix.json",
             "microsoft-mcp.template.json",
         ):
             json.loads((HELIOS.ASSETS / name).read_text(encoding="utf-8"))
