@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "service_name": "HELIOS Secure AIHub",
+  "host": "127.0.0.1",
+  "port": 8787,
+  "token_environment_variable": "AIHUB_API_TOKEN",
+  "state_directory": "artifacts/aihub/secure-runtime",
+  "max_request_bytes": 65536,
+  "requests_per_minute": 60,
+  "executionPolicy": {
+    "taskCreation": "queue-only",
+    "legacyTrainingRoute": "proposal-only",
+    "administrativeRequests": "proposal-only",
+    "secretReadback": "deny",
+    "cloudDeployment": "deny"
+  },
+  "cloudIngress": {
+    "supportedByThisRuntime": false,
+    "requiredBoundary": "governed-csharp-integration-broker"
+  }
+}
