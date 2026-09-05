@@ -7,12 +7,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "eng/test/test-ownership.json"
 LAYERS = {"portable", "windows", "privileged", "integration", "performance", "end-to-end"}
+NON_TEST_SUPPORT_FILES = {"GlobalUsings.cs", "AssemblyInfo.cs"}
 
 def sources():
     roots = [ROOT / "tests", ROOT / "src/tests", ROOT / "monado/helios-control/tests"]
-    found = {p.relative_to(ROOT).as_posix() for root in roots for ext in ("*.cs", "*.fs") for p in root.rglob(ext)}
+    found = {
+        p.relative_to(ROOT).as_posix()
+        for root in roots
+        for ext in ("*.cs", "*.fs")
+        for p in root.rglob(ext)
+        if p.name not in NON_TEST_SUPPORT_FILES
+    }
     core = ROOT / "src/core/HELIOS.Platform"
-    found |= {p.relative_to(ROOT).as_posix() for p in core.rglob("*.cs") if "Tests" in p.parts or p.name.endswith("Tests.cs")}
+    found |= {
+        p.relative_to(ROOT).as_posix()
+        for p in core.rglob("*.cs")
+        if ("Tests" in p.parts or p.name.endswith("Tests.cs"))
+        and p.name not in NON_TEST_SUPPORT_FILES
+    }
     return sorted(found)
 
 def owner(path):
@@ -47,6 +59,8 @@ def main():
     errors=[]
     paths=[x.get("path") for x in actual.get("tests", [])]
     if len(paths) != len(set(paths)): errors.append("a test file is mapped more than once")
+    if any(Path(path).name in NON_TEST_SUPPORT_FILES for path in paths if isinstance(path, str)):
+        errors.append("support-only files must not appear in the test ownership manifest")
     if actual != expected: errors.append("manifest is stale; run: python3 eng/test/validate_test_ownership.py --write")
     for item in actual.get("tests", []):
         if item.get("layer") not in LAYERS: errors.append(f"invalid layer: {item}")
