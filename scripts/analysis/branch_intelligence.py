@@ -24,6 +24,49 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MANIFEST = ROOT / "docs" / "integration" / "remote-manifest.json"
 DEFAULT_OUT = ROOT / "reports" / "branch-intelligence"
 
+UMBRELLAS = {
+    "csharp-winui-control-center": {
+        "title": "C#/WinUI 3 control center",
+        "integrationBranch": "integration/train-csharp-winui-control-center",
+        "owners": ["MonadoBlade.GUI", "HELIOS.Platform presentation"],
+    },
+    "cpp-native-performance-security": {
+        "title": "C++ native performance and security",
+        "integrationBranch": "integration/train-cpp-native-performance-security",
+        "owners": ["HELIOS.Native", "HELIOS.Security"],
+    },
+    "fsharp-analytics-prediction": {
+        "title": "F# analytics and prediction",
+        "integrationBranch": "integration/train-fsharp-analytics-prediction",
+        "owners": ["HELIOS.Analytics.FSharp"],
+    },
+    "python-aihub-integration": {
+        "title": "Python AIHub integration",
+        "integrationBranch": "integration/train-python-aihub-integration",
+        "owners": ["HELIOS.AIHub"],
+    },
+    "hermes-xcore-fleet": {
+        "title": "Hermes/XCore fleet",
+        "integrationBranch": "integration/train-hermes-xcore-fleet",
+        "owners": ["HELIOS.Hermes", "XCore"],
+    },
+    "github-enterprise-automation-dashboard": {
+        "title": "GitHub enterprise automation and dashboard",
+        "integrationBranch": "integration/train-github-enterprise-automation-dashboard",
+        "owners": ["Developer experience", "GitHub automation"],
+    },
+    "azure-bicep-cloud-shell": {
+        "title": "Azure/Bicep/Cloud Shell deployment",
+        "integrationBranch": "integration/train-azure-bicep-cloud-shell",
+        "owners": ["HELIOS.Azure", "Cloud engineering"],
+    },
+    "shared-architecture-contracts": {
+        "title": "Shared architecture and contracts",
+        "integrationBranch": "integration/train-shared-architecture-contracts",
+        "owners": ["Platform architecture"],
+    },
+}
+
 
 def run(cmd: list[str], check: bool = False) -> tuple[int, str, str]:
     proc = subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True)
@@ -77,7 +120,9 @@ def fetch_remotes(apply: bool) -> dict[str, Any]:
 
 def branch_refs() -> list[dict[str, Any]]:
     fmt = "%(refname:short)|%(objectname:short)|%(committerdate:iso8601)|%(authorname)|%(subject)"
-    code, out, _ = run(["git", "for-each-ref", f"--format={fmt}", "refs/heads", "refs/remotes"])
+    # Integration inventory is based on fetched remote branches. Excluding local
+    # working branches keeps committed exports reproducible after their own commit.
+    code, out, _ = run(["git", "for-each-ref", f"--format={fmt}", "refs/remotes"])
     if code != 0 or not out:
         return []
     refs = []
@@ -100,6 +145,65 @@ def changed_files_for_ref(ref: str, target: str) -> list[str]:
     if code != 0 or not out:
         return []
     return sorted({line.strip() for line in out.splitlines() if line.strip()})
+
+
+def branch_delta(ref: str, target: str) -> dict[str, Any]:
+    """Return auditable commit and merge metadata without changing refs."""
+    if ref == target:
+        return {"uniqueCommits": [], "patchEquivalentCommits": [], "conflicts": [], "mergeable": True}
+    code, out, _ = run(["git", "cherry", "-v", target, ref])
+    _, commit_out, _ = run(["git", "log", "--format=%H%x00%an <%ae>%x00%s", ref, "--not", target])
+    reachable = {}
+    for line in commit_out.splitlines():
+        parts = line.split("\0", 2)
+        if len(parts) == 3:
+            reachable[parts[0]] = {"commit": parts[0], "author": parts[1], "subject": parts[2]}
+    equivalent: list[dict[str, str]] = []
+    equivalent_ids: set[str] = set()
+    if code == 0:
+        for line in out.splitlines():
+            marker, sha, subject = (line.split(" ", 2) + [""])[:3]
+            if marker == "-":
+                equivalent_ids.add(sha)
+                equivalent.append(reachable.get(sha, {"commit": sha, "subject": subject, "author": "unknown"}))
+    # git cherry intentionally omits merge commits, so derive the complete unique
+    # source manifest from reachability and subtract only known patch equivalents.
+    unique = [record for sha, record in reachable.items() if sha not in equivalent_ids]
+    merge_code, _, merge_err = run(["git", "merge-tree", "--write-tree", target, ref])
+    conflicts = []
+    if merge_code != 0:
+        conflicts = sorted({line.strip() for line in merge_err.splitlines() if "CONFLICT" in line})
+        if not conflicts:
+            conflicts = ["merge-tree reported an unresolved merge; inspect before integration"]
+    return {
+        "uniqueCommits": unique,
+        "patchEquivalentCommits": equivalent,
+        "conflicts": conflicts,
+        "mergeable": merge_code == 0,
+    }
+
+
+def umbrella_for(files: list[str], branch: str) -> str:
+    text = " ".join([branch, *files]).lower()
+    rules = [
+        ("cpp-native-performance-security", ["src/native", ".cpp", ".hpp", "xcore", "security"]),
+        ("fsharp-analytics-prediction", [".fs", "fsharp", "analytics", "prediction"]),
+        ("python-aihub-integration", [".py", "aihub", "ai-hub", "ai_hub"]),
+        ("hermes-xcore-fleet", ["hermes", "fleet", "xcore9", "xcore-9"]),
+        ("csharp-winui-control-center", ["winui", "control-center", "monadoblade.gui", "src/gui"]),
+        ("azure-bicep-cloud-shell", [".bicep", "azure", "cloud-shell", "cloudshell"]),
+        ("github-enterprise-automation-dashboard", [".github/", "dashboard", "github"]),
+    ]
+    scores = [(sum(text.count(term) for term in terms), key) for key, terms in rules]
+    score, key = max(scores)
+    return key if score else "shared-architecture-contracts"
+
+
+def security_impact(files: list[str]) -> dict[str, Any]:
+    sensitive = ("security", "auth", "credential", "secret", "keyvault", "rbac", "entra", "firewall", "bitlocker", "wdac", "deploy", "bicep")
+    matches = [path for path in files if any(word in path.lower() for word in sensitive)]
+    level = "high" if len(matches) >= 5 else "medium" if matches else "low"
+    return {"level": level, "files": matches, "requiresApprovalGate": level != "low"}
 
 
 def module_for(path: str, weights: dict[str, int]) -> str:
@@ -179,7 +283,29 @@ def rank_branches(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     ranked = []
     for ref in branch_refs():
         files = changed_files_for_ref(ref["name"], target)
-        ranked.append(score_branch(ref, files, manifest))
+        scored = score_branch(ref, files, manifest)
+        delta = branch_delta(ref["name"], target)
+        umbrella = umbrella_for(files, ref["name"])
+        security = security_impact(files)
+        if ref["name"] == target:
+            disposition = "baseline"
+        elif not delta["uniqueCommits"]:
+            disposition = "close-as-patch-equivalent-or-merged"
+        elif not delta["mergeable"] or security["level"] == "high":
+            disposition = "manual-review-and-selective-extraction"
+        else:
+            disposition = "review-for-integration-train"
+        ranked.append({
+            **scored,
+            **delta,
+            "files": files,
+            "umbrellaIssue": umbrella,
+            "umbrellaTitle": UMBRELLAS[umbrella]["title"],
+            "integrationBranch": UMBRELLAS[umbrella]["integrationBranch"],
+            "moduleOwner": UMBRELLAS[umbrella]["owners"],
+            "securityImpact": security,
+            "disposition": disposition,
+        })
     return sorted(ranked, key=lambda item: item["score"], reverse=True)
 
 
@@ -393,15 +519,63 @@ def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[
     save_json(out_dir / "analytics-metrics.json", analytics_metrics(ranked, idea_summary))
     save_json(out_dir / "connectivity.json", conn)
     save_json(out_dir / "remote-actions.json", {"remoteActions": remote_actions, "fetch": fetch_result})
+    umbrella_report = []
+    for key, definition in UMBRELLAS.items():
+        branches = [b["name"] for b in ranked if b["umbrellaIssue"] == key and b["disposition"] != "baseline"]
+        umbrella_report.append({
+            "key": key,
+            **definition,
+            "branches": branches,
+            "issueState": "ready-to-create",
+            "acceptanceGates": [
+                "review source-commit manifest and preserve authorship",
+                "squash accepted work into goal-oriented commits",
+                "build and test affected projects and validate contracts",
+                "merge through this train's reviewed pull request",
+                "create rollback tag before deleting any historical branch",
+                "verify accepted commits are reachable from protected main and PRs are closed",
+            ],
+        })
+    save_json(out_dir / "umbrella-issues.json", umbrella_report)
 
-    branch_rows = [[b["name"], b["score"], b["recommendedAction"], b["fileCount"], ", ".join(list(b["modules"].keys())[:6])] for b in ranked]
+    branch_rows = [[b["name"], b["umbrellaTitle"], b["score"], len(b["uniqueCommits"]), len(b["patchEquivalentCommits"]), b["securityImpact"]["level"], "yes" if b["conflicts"] else "no", b["disposition"]] for b in ranked]
     idea_rows = [[i["category"], i["module"], i.get("dedupeKey", ""), i.get("occurrences", 1), i["recommendedAction"], i["bonusImpact"]] for i in idea_summary[:50]]
     queue_rows = [[q["taskType"], q["branch"], q["module"], q["priorityScore"], q["expectedOutput"]] for q in agent_queue[:30]]
     conn_rows = [[c["name"], c["available"], c["authenticated"], c["detail"]] for c in conn["checks"]]
     remote_rows = [[r["name"], r["enabled"], r["urlConfigured"], r["action"], r["result"]] for r in remote_actions]
 
     full_idea_rows = [[i["category"], i["module"], f"{i['path']}:{i['line']}", i["recommendedAction"], i["bonusImpact"]] for i in ideas[:50]]
-    write_text(out_dir / "branch-ranking.md", "# Branch Ranking\n\n" + markdown_table(["Branch", "Score", "Action", "Files", "Modules"], branch_rows) + "\n")
+    write_text(out_dir / "branch-ranking.md", "# Branch Ranking and Disposition\n\nTarget: `origin/main`\n\n" + markdown_table(["Branch", "Primary umbrella", "Score", "Unique", "Patch-equivalent", "Security", "Conflicts", "Disposition"], branch_rows) + "\n")
+    detail_sections = ["# Branch source-commit manifest", "", "Baseline: `origin/main`. Every diverged ref has exactly one primary umbrella assignment.", ""]
+    for branch in ranked:
+        detail_sections.extend([
+            f"## {branch['name']}", "",
+            f"- **Primary umbrella:** {branch['umbrellaTitle']} (`{branch['umbrellaIssue']}`)",
+            f"- **Temporary integration branch:** `{branch['integrationBranch']}`",
+            f"- **Module owner:** {', '.join(branch['moduleOwner'])}",
+            f"- **Security impact:** {branch['securityImpact']['level']}",
+            f"- **Merge-tree conflicts:** {'; '.join(branch['conflicts']) if branch['conflicts'] else 'none'}",
+            f"- **Disposition:** {branch['disposition']}", "",
+            "### Unique commits",
+            *([f"- `{c['commit']}` — {c['subject']} — {c['author']}" for c in branch["uniqueCommits"]] or ["- None"]), "",
+            "### Patch-equivalent commits",
+            *([f"- `{c['commit']}` — {c['subject']} — {c['author']}" for c in branch["patchEquivalentCommits"]] or ["- None"]), "",
+            "### Files",
+            *([f"- `{path}`" for path in branch["files"]] or ["- None"]), "",
+        ])
+    write_text(out_dir / "branch-source-manifest.md", "\n".join(detail_sections))
+    issue_sections = ["# Umbrella issue plan", "", "These issue records are generated from the committed analyzer. Create them in GitHub before starting an integration train.", ""]
+    for issue in umbrella_report:
+        issue_sections.extend([
+            f"## {issue['title']}", "",
+            f"- **Key:** `{issue['key']}`",
+            f"- **Temporary integration branch:** `{issue['integrationBranch']}`",
+            f"- **Module owners:** {', '.join(issue['owners'])}",
+            f"- **Assigned diverged branches:** {len(issue['branches'])}", "",
+            "### Branches", *([f"- `{name}`" for name in issue["branches"]] or ["- None"]), "",
+            "### Acceptance gates", *[f"- [ ] {gate}" for gate in issue["acceptanceGates"]], "",
+        ])
+    write_text(out_dir / "umbrella-issues.md", "\n".join(issue_sections))
     write_text(out_dir / "idea-impact.md", "# Idea Impact\n\n" + markdown_table(["Category", "Module", "Source", "Action", "How it affects us"], full_idea_rows) + "\n")
     write_text(out_dir / "idea-impact-summary.md", "# Idea Impact Summary\n\n" + markdown_table(["Category", "Module", "Key", "Occurrences", "Action", "How it affects us"], idea_rows) + "\n")
     write_text(out_dir / "agent-work-queue.md", "# Agent Work Queue\n\n" + markdown_table(["Task", "Branch", "Module", "Priority", "Expected output"], queue_rows) + "\n")
@@ -415,7 +589,7 @@ def write_reports(out_dir: Path, ranked: list[dict[str, Any]], ideas: list[dict[
         markdown_table(["Remote", "Enabled", "URL configured", "Action", "Result"], remote_rows),
         "",
         "## Branch ranking",
-        markdown_table(["Branch", "Score", "Action", "Files", "Modules"], branch_rows[:20]),
+        markdown_table(["Branch", "Primary umbrella", "Score", "Unique", "Patch-equivalent", "Security", "Conflicts", "Disposition"], branch_rows[:20]),
         "",
         "## Idea impact",
         markdown_table(["Category", "Module", "Key", "Occurrences", "Action", "How it affects us"], idea_rows[:20]),
@@ -459,7 +633,8 @@ def main() -> int:
     agent_queue = build_agent_queue(ranked, idea_summary)
     conn = connectivity()
     write_reports(args.out, ranked, ideas, idea_summary, agent_queue, conn, remote_actions, fetch_result)
-    print(f"Wrote branch intelligence reports to {args.out.relative_to(ROOT)}")
+    out_display = args.out.resolve().relative_to(ROOT)
+    print(f"Wrote branch intelligence reports to {out_display}")
     return 0
 
 
