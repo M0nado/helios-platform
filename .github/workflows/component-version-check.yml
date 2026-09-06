@@ -49,9 +49,9 @@ jobs:
         run: |
           set -euo pipefail
           echo "Discovering components..."
-          COMPONENTS=$(find . -type f \( -name "package.json" -o -name "manifest.json" -o -name "version.json" \) \
-            -not -path '*/node_modules/*' -not -path '*/.git/*' -print \
-            | sed 's#^./##' | sort -u | jq -R 'select(length > 0)' | jq -cs .)
+          # Validate components owned by this repository, not submodules or evidence inventories.
+          COMPONENTS=$(git ls-files -- 'package.json' '**/package.json' 'manifest.json' '**/manifest.json' 'version.json' '**/version.json' \
+            ':!:docs/evidence/**' | sort -u | jq -R 'select(length > 0)' | jq -cs .)
           COMPONENT_COUNT=$(jq 'length' <<<"${COMPONENTS}")
           echo "components=${COMPONENTS}" >> "${GITHUB_OUTPUT}"
           echo "count=${COMPONENT_COUNT}" >> "${GITHUB_OUTPUT}"
