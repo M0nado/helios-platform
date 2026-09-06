@@ -1,0 +1,39 @@
+name: HELIOS workspace readiness panel
+on:
+  pull_request:
+    paths:
+      - 'plugins/helios-control-fabric/scripts/workspace-readiness.mjs'
+      - 'plugins/helios-control-fabric/scripts/lib/workspace-report.mjs'
+      - 'plugins/helios-control-fabric/skills/workspace-setup/**'
+      - 'plugins/helios-control-fabric/.codex-plugin/plugin.json'
+      - 'plugins/helios-control-fabric/tests/workspace-readiness.test.mjs'
+      - 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/**'
+      - 'docs/evidence/workspace-2026-09-05/**'
+      - '.github/workflows/workspace-readiness-panel.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Test shared panel and CLI projection
+        run: node --test plugins/helios-control-fabric/tests/workspace-readiness.test.mjs
+      - name: Verify imported evidence bytes
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, zipfile
+          root = pathlib.Path('docs/evidence/workspace-2026-09-05')
+          manifest = json.loads((root / 'manifest.json').read_text())
+          for item in manifest['files']:
+              path = root / item['name']
+              assert len(path.read_bytes()) == item['bytes']
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == item['sha256']
+          with zipfile.ZipFile(root / 'HELIOS_READINESS_EVIDENCE_2026-09-05.zip') as archive:
+              assert archive.testzip() is None
+              assert len(archive.infolist()) == 8
+          PY

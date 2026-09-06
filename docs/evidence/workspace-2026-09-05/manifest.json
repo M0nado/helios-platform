@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "status": "historical-supplied-evidence-not-current-readiness",
+  "sourceRepository": "Yolkster64/helios-platform",
+  "sourceCommit": "cd4958cfddd5c205377226bcb3d5b3f6f06fbdbb",
+  "claimScope": "Preserved attachment bytes; historical claims are not rerun or promoted to current live proof.",
+  "files": [
+    {
+      "name": "HELIOS_WORKSPACE_READY_2026-09-05.md",
+      "bytes": 7792,
+      "sha256": "9917091a76aca3b43a671125f5e89c6109d5a53472b4c90b7e5b87e65889fdbe"
+    },
+    {
+      "name": "HELIOS_WORKSPACE_READY_2026-09-05.sha256",
+      "bytes": 103,
+      "sha256": "3c29a25952a1086aab58e4119e558787bbd68cf7633b9624c061146cc4632b12"
+    },
+    {
+      "name": "HELIOS_READINESS_EVIDENCE_2026-09-05.zip",
+      "bytes": 13999,
+      "sha256": "4cbb95721cc213faaa4501b27e20858ff67a61f649f0fd4d6ff8f3889a0891b7"
+    }
+  ]
+}
