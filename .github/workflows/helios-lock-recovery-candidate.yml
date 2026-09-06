@@ -1,0 +1,122 @@
+name: HELIOS lock recovery candidate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/helios-lock-recovery-candidate.yml'
+      - 'eng/integration-lanes/repair-locks/**'
+      - 'plugins/openai/helios-mcp/package-lock.json'
+      - 'eng/integration-lanes/preview/dotnet/FSharpProbe/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 293
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 11.0.100-preview.6.26359.118
+      - name: Repair and verify candidate locks without changing provider state
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/helios-lock-recovery"
+          git rev-parse HEAD > "$RUNNER_TEMP/helios-lock-recovery/source-sha.txt"
+          cd plugins/openai/helios-mcp
+          npm update fast-uri qs --package-lock-only --ignore-scripts
+          node --input-type=module -e 'import fs from "node:fs"; const p=JSON.parse(fs.readFileSync("package.json")); const l=JSON.parse(fs.readFileSync("package-lock.json")); if(p.dependencies["@modelcontextprotocol/sdk"]!=="1.30.0" || l.packages["node_modules/@modelcontextprotocol/sdk"].version!=="1.30.0") process.exit(1);'
+          npm ci --ignore-scripts
+          npm audit --audit-level=moderate
+          npm run check
+          cd ../../..
+          cd eng/integration-lanes/preview/dotnet
+          test "$(dotnet --version)" = '11.0.100-preview.6.26359.118'
+          dotnet restore FSharpProbe/FSharpProbe.fsproj --force-evaluate -p:RestoreLockedMode=false -p:RestorePackagesWithLockFile=true
+          dotnet restore FSharpProbe/FSharpProbe.fsproj --locked-mode
+          dotnet build FSharpProbe/FSharpProbe.fsproj --configuration Release --no-restore
+          cd ../../../..
+          git diff --exit-code -- plugins/openai/helios-mcp/package.json
+          python3 - <<'PY'
+          import subprocess
+          allowed = {
+              'plugins/openai/helios-mcp/package-lock.json',
+              'eng/integration-lanes/preview/dotnet/FSharpProbe/packages.lock.json',
+          }
+          changed = set(subprocess.check_output(['git','diff','--name-only'], text=True).splitlines())
+          if not changed <= allowed:
+              raise SystemExit('Unexpected tracked changes: ' + repr(sorted(changed - allowed)))
+          PY
+          git diff --binary -- plugins/openai/helios-mcp/package-lock.json eng/integration-lanes/preview/dotnet/FSharpProbe/packages.lock.json > "$RUNNER_TEMP/helios-lock-recovery/lock-repair.patch"
+          cp plugins/openai/helios-mcp/package-lock.json "$RUNNER_TEMP/helios-lock-recovery/npm-package-lock.json"
+          cp eng/integration-lanes/preview/dotnet/FSharpProbe/packages.lock.json "$RUNNER_TEMP/helios-lock-recovery/fsharp-packages.lock.json"
+          (cd "$RUNNER_TEMP/helios-lock-recovery" && sha256sum source-sha.txt lock-repair.patch npm-package-lock.json fsharp-packages.lock.json > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helios-lock-repair-${{ github.run_id }}
+          path: ${{ runner.temp }}/helios-lock-recovery/
+          if-no-files-found: error
+          retention-days: 7
+
+  preview-lock-parity:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.number == 293
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 11.0.100-preview.6.26359.118
+      - name: Record and compare preview package sources and locks
+        shell: pwsh
+        working-directory: eng/integration-lanes/preview/dotnet
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:NUGET_PACKAGES = Join-Path $env:RUNNER_TEMP 'helios-preview-isolated-packages'
+          $out = Join-Path $env:RUNNER_TEMP 'helios-preview-lock-proof'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          git rev-parse HEAD | Set-Content (Join-Path $out 'source-sha.txt')
+          if ((dotnet --version) -ne '11.0.100-preview.6.26359.118') { throw 'Unexpected preview SDK' }
+          Copy-Item FSharpProbe/packages.lock.json (Join-Path $out 'original.lock.json')
+          dotnet restore FSharpProbe/FSharpProbe.fsproj --force-evaluate -p:RestoreLockedMode=false -p:RestorePackagesWithLockFile=true --no-http-cache
+          if ($LASTEXITCODE -ne 0) { throw 'Preview regeneration failed' }
+          Copy-Item FSharpProbe/packages.lock.json (Join-Path $out 'generated.lock.json')
+          dotnet restore FSharpProbe/FSharpProbe.fsproj --locked-mode --no-http-cache
+          if ($LASTEXITCODE -ne 0) { throw 'Regenerated locked restore failed' }
+          dotnet build FSharpProbe/FSharpProbe.fsproj --configuration Release --no-restore
+          if ($LASTEXITCODE -ne 0) { throw 'Preview build failed' }
+          $package = Join-Path $env:NUGET_PACKAGES 'fsharp.core/11.0.101-preview7.26359.118'
+          Get-ChildItem $package -Filter '*.nupkg' | Get-FileHash -Algorithm SHA512 | ForEach-Object { [ordered]@{ name = Split-Path $_.Path -Leaf; sha512 = $_.Hash } } | ConvertTo-Json | Set-Content (Join-Path $out 'package-hashes.json')
+          if (Test-Path (Join-Path $package '.nupkg.metadata')) {
+            $metadata = Get-Content (Join-Path $package '.nupkg.metadata') -Raw | ConvertFrom-Json
+            $sourceUri = $null
+            $sourceKind = 'local-sdk-or-cache'
+            if ([Uri]::TryCreate([string]$metadata.source, [UriKind]::Absolute, [ref]$sourceUri) -and $sourceUri.Scheme -eq 'https') { $sourceKind = $sourceUri.DnsSafeHost }
+            [ordered]@{ contentHash = $metadata.contentHash; sourceKind = $sourceKind } | ConvertTo-Json | Set-Content (Join-Path $out 'package-source.json')
+          }
+          git -C ../../../.. diff -- eng/integration-lanes/preview/dotnet/FSharpProbe/packages.lock.json | Set-Content (Join-Path $out 'candidate.patch')
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: helios-preview-lock-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/helios-preview-lock-proof/
+          if-no-files-found: error
+          retention-days: 7

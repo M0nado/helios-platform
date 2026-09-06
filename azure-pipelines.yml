@@ -1,22 +1,74 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
   branches:
-    include:
-    - main
-    - copilot/*
+    include: [main]
 
 pr:
   branches:
-    include:
-    - main
+    include: [main]
 
-pool:
-  vmImage: ubuntu-latest
+variables:
+  templateFile: integration/azure-dev-live-connect/infra/main.bicep
 
-steps:
-- checkout: self
-  clean: true
+stages:
+  - stage: Validate
+    displayName: Credential-free validation
+    jobs:
+      - job: Contracts
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            persistCredentials: false
+          - bash: python3 eng/automation/validate_delivery.py
+            displayName: Validate delivery contracts
+          - bash: python3 eng/integration-lanes/validate_lanes.py --contracts
+            displayName: Validate integration lanes
+          - bash: az bicep build --file "$(templateFile)"
+            displayName: Compile Bicep
+
+  - stage: WhatIf
+    displayName: Federated development what-if
+    dependsOn: Validate
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DevelopmentWhatIf
+        environment: azure-dev
+        pool:
+          vmImage: ubuntu-latest
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  persistCredentials: false
+                - task: AzureCLI@2
+                  displayName: Run protected Bicep what-if
+                  inputs:
+                    azureSubscription: $(HELIOS_AZDO_SERVICE_CONNECTION)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      mkdir -p "$(Build.ArtifactStagingDirectory)/what-if"
+                      az deployment group what-if \
+                        --resource-group "$(AZURE_RESOURCE_GROUP)" \
+                        --name helios-azure-pipelines-dev \
+                        --template-file "$(templateFile)" \
+                        --parameters environmentName=dev \
+                        --no-prompt true \
+                        --output json > "$(Build.ArtifactStagingDirectory)/what-if/evidence.json"
+                - publish: $(Build.ArtifactStagingDirectory)/what-if
+                  artifact: azure-development-what-if
+
+  - stage: DeployDevelopment
+    displayName: Approved development deployment
+    dependsOn: WhatIf
+    condition: and(succeeded(), eq(variables['HELIOS_ENABLE_DEV_DEPLOY'], 'true'))
+    jobs:
+      - job: ApprovalGate
+        pool: server
+        steps:
+          - task: ManualValidation@0
+            inputs:
+              instructions: Review the what-if artifact, rollback plan, and correlation evidence before deployment.
+              onTimeout: reject

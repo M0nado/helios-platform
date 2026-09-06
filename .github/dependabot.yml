@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    labels: [dependencies, automation]
+    commit-message: { prefix: "chore(actions)" }
+  - package-ecosystem: nuget
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    labels: [dependencies, dotnet]
+    commit-message: { prefix: "chore(nuget)" }
+  - package-ecosystem: npm
+    directory: /plugins/openai/helios-mcp
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    labels: [dependencies, node]
+    commit-message: { prefix: "chore(npm)" }

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0",
+  "requiredChecks": [
+    "integration-stable-compatibility",
+    "integration-contracts",
+    "delivery-contracts"
+  ],
+  "automation": {
+    "githubToken": "workflow-scoped",
+    "crossRepositoryIdentity": "github-app-installation-token",
+    "dependencyUpdates": "review-required",
+    "autoMerge": false
+  },
+  "evidence": {
+    "preserveCorrelationId": true,
+    "dashboardSource": "check-and-artifact-metadata",
+    "retentionDays": 14
+  },
+  "merge": {
+    "protectedBranchRequired": true,
+    "approvalsRequired": true,
+    "previewArtifactsAllowed": false,
+    "credentialsAllowed": false
+  },
+  "deployment": {
+    "failClosed": true,
+    "unblockSequence": [
+      "exact-sha-build-and-tests",
+      "reviewed-current-infrastructure-plan",
+      "inspected-and-attested-immutable-artifact",
+      "protected-least-privilege-identity",
+      "independent-exact-sha-approval",
+      "protected-merge",
+      "immediate-preflight-revalidation",
+      "digest-bound-deployment",
+      "provider-observed-verification",
+      "proven-rollback",
+      "revocation-and-cleanup",
+      "zero-blocker-terminal-proof"
+    ],
+    "invalidateOnChange": [
+      "source-sha",
+      "infrastructure-plan",
+      "artifact-digest",
+      "identity",
+      "approval",
+      "target-environment",
+      "policy",
+      "capability",
+      "rollback-state"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+# Merge this example into a trusted project's .codex/config.toml only after review.
+# Client authorization is separate from OpenAI API credentials.
+# Replace the non-secret HTTPS origin before enabling the server.
+
+[mcp_servers.helios]
+url = "https://REPLACE-WITH-APPROVED-HELIOS-ORIGIN/mcp"
+enabled = false
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+# Confirm actual tools/list on the approved hosted endpoint before setting an allowlist.
+# Do not copy Azure, GitHub, Anthropic, or OpenAI credential values into this file.
+
+# Azure DevOps remote MCP currently has a client-specific Entra compatibility
+# boundary. Do not copy the VS Code remote profile into Codex and call it working.
+# Use Microsoft's local Azure DevOps MCP server after reviewing its exact pinned
+# package and provider-owned interactive authentication, or use a separately
+# authorized HELIOS read-only broker adapter. Neither is activated by this file.

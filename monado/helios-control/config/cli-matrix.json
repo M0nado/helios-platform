@@ -4,7 +4,9 @@
   "tools": [
     { "id": "azure-cli", "command": "az", "arguments": ["version"], "required": true, "networkRequired": false },
     { "id": "azure-developer-cli", "command": "azd", "arguments": ["version"], "required": true, "networkRequired": false },
+    { "id": "azure-devops-cli", "command": "az", "arguments": ["extension", "show", "--name", "azure-devops", "--query", "version", "--output", "tsv"], "required": false, "networkRequired": false },
     { "id": "github-cli", "command": "gh", "arguments": ["--version"], "required": true, "networkRequired": false },
+    { "id": "codex", "command": "codex", "arguments": ["--version"], "required": false, "networkRequired": false },
     { "id": "dotnet", "command": "dotnet", "arguments": ["--version"], "required": true, "networkRequired": false },
     { "id": "powershell", "command": "pwsh", "arguments": ["--version"], "required": true, "networkRequired": false },
     { "id": "docker", "command": "docker", "arguments": ["--version"], "required": true, "networkRequired": false },
@@ -21,6 +23,7 @@
   "authenticationChecks": [
     { "id": "azure-cli", "command": "az", "arguments": ["account", "show", "--output", "none"] },
     { "id": "azure-developer-cli", "command": "azd", "arguments": ["auth", "login", "--check-status"] },
-    { "id": "github-cli", "command": "gh", "arguments": ["auth", "status"] }
+    { "id": "github-cli", "command": "gh", "arguments": ["auth", "status"] },
+    { "id": "codex", "command": "codex", "arguments": ["login", "status"] }
   ]
 }

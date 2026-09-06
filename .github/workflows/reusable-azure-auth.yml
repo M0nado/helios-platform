@@ -1,0 +1,90 @@
+name: Reusable Azure authentication and evidence
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: Protected GitHub environment containing non-secret Azure identity variables
+        required: true
+        type: string
+      operation:
+        description: Validation operation
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  azure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      TEMPLATE_FILE: integration/azure-dev-live-connect/infra/main.bicep
+    steps:
+      - name: Reject unsupported operation
+        shell: bash
+        run: |
+          case '${{ inputs.operation }}' in
+            validate|what-if) ;;
+            *) echo 'operation must be validate or what-if' >&2; exit 2 ;;
+          esac
+
+      - name: Check out reviewed source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Verify workload identity inputs
+        shell: bash
+        run: scripts/setup/configure-cloud-auth.sh --ci-check
+
+      - name: Authenticate with Azure workload identity
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Validate Bicep
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/azure-auth
+          az bicep build --file "$TEMPLATE_FILE"
+          az deployment group validate \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "helios-${{ inputs.environment }}-validate" \
+            --template-file "$TEMPLATE_FILE" \
+            --parameters environmentName=dev \
+            --validation-level ProviderNoRbac \
+            --output json > artifacts/azure-auth/validation.json
+
+      - name: Capture what-if evidence
+        if: inputs.operation == 'what-if'
+        shell: bash
+        run: |
+          az deployment group what-if \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "helios-${{ inputs.environment }}-what-if" \
+            --template-file "$TEMPLATE_FILE" \
+            --parameters environmentName=dev \
+            --no-prompt true \
+            --result-format FullResourcePayloads \
+            --output json > artifacts/azure-auth/what-if.json
+
+      - name: Upload non-secret evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: azure-${{ inputs.environment }}-${{ inputs.operation }}
+          path: artifacts/azure-auth
+          if-no-files-found: error
+          retention-days: 14
