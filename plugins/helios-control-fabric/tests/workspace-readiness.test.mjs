@@ -107,6 +107,51 @@ test('CLI rejects apply-like flags', () => {
   const p = spawnSync(process.execPath, [cli, '--apply'], { encoding: 'utf8', timeout: 10000 });
   assert.equal(p.status, 1); assert.equal(p.stdout, '');
 });
+test('browser and CLI reject malformed UTF-8 even in discarded fields', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'helios-readiness-'));
+  const previousDocument = globalThis.document;
+  const elements = new Map();
+  globalThis.document = {
+    getElementById(id) {
+      if (!elements.has(id)) elements.set(id, {
+        value: '', textContent: '', children: [], listeners: {},
+        addEventListener(type, listener) { this.listeners[type] = listener; },
+        replaceChildren() { this.children = []; },
+        append(child) { this.children.push(child); }
+      });
+      return elements.get(id);
+    },
+    createElement: () => ({ textContent: '' }),
+    querySelectorAll: () => []
+  };
+  try {
+    await import('../../../monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/setup/panel.mjs');
+    elements.get('repository').value = options.repository;
+    elements.get('sourceSha').value = options.sourceSha;
+    const r = report(); r.generatedUtc = new Date().toISOString(); r.unknown = 'SENSITIVE_FIXTURE';
+    const valid = Buffer.from(JSON.stringify(r));
+    const malformed = Buffer.from(valid); malformed[malformed.indexOf('SENSITIVE_FIXTURE')] = 0xff;
+    const path = join(root, 'report.json');
+    const cli = fileURLToPath(new URL('../scripts/workspace-readiness.mjs', import.meta.url));
+    for (const [bytes, accepted] of [[valid, true], [Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), valid]), true], [malformed, false]]) {
+      const target = { files: [new Blob([bytes])], value: 'report.json' };
+      await elements.get('report').listeners.change({ target });
+      assert.equal(target.value, '');
+      assert.match(elements.get('status').textContent, accepted ? /^Imported workspace checks passed/ : /^Report rejected/);
+      assert.equal(elements.get('steps').children.length, accepted ? 5 : 0);
+      if (!accepted) assert.equal(elements.get('details').textContent, '');
+      await writeFile(path, bytes);
+      const p = spawnSync(process.execPath, [cli, '--report', path, '--source-sha', options.sourceSha], { encoding: 'utf8', timeout: 10000 });
+      assert.equal(p.status, accepted ? 0 : 1, p.stderr);
+      if (!accepted) assert.equal(p.stdout, '');
+    }
+  } finally {
+    elements.get('forget')?.listeners.click?.();
+    if (previousDocument === undefined) delete globalThis.document;
+    else globalThis.document = previousDocument;
+    await rm(root, { recursive: true, force: true });
+  }
+});
 test('browser projection is byte-identical to the plugin source', async () => {
   const { readFile } = await import('node:fs/promises');
   const source = await readFile(new URL('../scripts/lib/workspace-report.mjs', import.meta.url));
