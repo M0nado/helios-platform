@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "2.0",
+  "platform": "HELIOS",
+  "mode": "plan-first",
+  "disk0": {
+    "description": "Trusted low-latency system, development, cross-runtime, recovery and vault host disk",
+    "nominalCapacityTB": 2.0,
+    "targetAllocatedGB": 960,
+    "partitions": [
+      {
+        "id": "core",
+        "letter": "C",
+        "label": "HELIOS_CORE",
+        "sizeGB": 320,
+        "fileSystem": "NTFS",
+        "roles": ["windows", "applications", "drivers", "firmware", "security", "control-center"]
+      },
+      {
+        "id": "devdrive",
+        "letter": "P",
+        "label": "HELIOS_DEV",
+        "sizeGB": 500,
+        "fileSystem": "ReFS",
+        "devDrive": true,
+        "vhdx": false,
+        "roles": ["repos", "builds", "package-caches", "environments", "containers", "wsl"]
+      },
+      {
+        "id": "cross",
+        "letter": "X",
+        "label": "HELIOS_CROSS",
+        "sizeGB": 140,
+        "fileSystem": "NTFS",
+        "roles": ["shared-platform", "compute-runtime", "security-control", "recovery-control", "service-control"]
+      }
+    ],
+    "containers": [
+      {
+        "id": "vault",
+        "type": "dynamic-vhdx",
+        "hostPath": "X:\\Security\\Vaults\\HELIOS-Vault.vhdx",
+        "mountLetter": "V",
+        "maximumSizeGB": 96,
+        "bitLockerRequired": true,
+        "autoMount": false,
+        "authPolicy": "sysadmin-strong-local-or-fido2",
+        "executableContentAllowed": false
+      }
+    ],
+    "reservePolicy": {
+      "leaveUnallocated": true,
+      "purpose": ["ssd-headroom", "future-expansion", "recovery-flexibility"]
+    }
+  },
+  "disk1": {
+    "description": "Flexible large data and workload domain disk",
+    "nominalCapacityTB": 2.0,
+    "targetUsableTB": 1.9,
+    "partitions": [
+      {
+        "id": "domains",
+        "letter": "D",
+        "label": "HELIOS_DOMAINS",
+        "fileSystem": "NTFS",
+        "useRemainingCapacity": true,
+        "roots": [
+          "Games",
+          "MusicStudio",
+          "Personal",
+          "OneDrive",
+          "Work",
+          "Media",
+          "AIData",
+          "ServerNode",
+          "Sandbox",
+          "Quarantine",
+          "Backups",
+          "Archives"
+        ]
+      }
+    ],
+    "containers": [
+      {
+        "id": "quarantine-base",
+        "type": "fixed-readonly-vhdx",
+        "hostPath": "D:\\Quarantine\\Containers\\HELIOS-Quarantine-Base.vhdx",
+        "mountLetter": null,
+        "maximumSizeGB": 24,
+        "readOnly": true
+      },
+      {
+        "id": "quarantine-session",
+        "type": "differencing-vhdx",
+        "parent": "quarantine-base",
+        "hostPathPattern": "D:\\Quarantine\\Containers\\Sessions\\{sessionId}.avhdx",
+        "mountLetter": "Q",
+        "maximumSizeGB": 96,
+        "autoMount": false,
+        "noExecutePolicy": true,
+        "networkDefault": "blocked"
+      }
+    ]
+  },
+  "guardrails": {
+    "neverAutoFormat": true,
+    "requireExactDiskIdentity": true,
+    "requireBackupEvidence": true,
+    "requireBitLockerRecoveryEvidence": true,
+    "requireSysAdmin": true,
+    "requirePhysicalConfirmation": true,
+    "requireWhatIfPlan": true
+  }
+}

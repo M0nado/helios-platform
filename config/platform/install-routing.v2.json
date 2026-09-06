@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "2.0",
+  "defaultRoute": {
+    "destination": "D:\\Quarantine\\Incoming",
+    "executionAllowed": false,
+    "requiresClassification": true,
+    "requiresDefenderScan": true,
+    "requiresMalwarebytesScan": true,
+    "requiresSha256": true
+  },
+  "routes": [
+    {
+      "id": "windows-core",
+      "classifiers": ["windows-component", "signed-driver", "signed-firmware", "security-product", "core-device-software"],
+      "destinations": ["C:\\Program Files", "C:\\ProgramData\\HELIOS", "X:\\Recovery\\Drivers"],
+      "requiresSysAdmin": true,
+      "requiresSignature": true,
+      "requiresHardwareMatch": true
+    },
+    {
+      "id": "developer",
+      "classifiers": ["repository", "sdk", "compiler", "package-cache", "build-tool", "development-environment"],
+      "destinations": ["P:\\Repos", "P:\\Tools", "P:\\Caches", "P:\\Environments"],
+      "requiresSysAdmin": false,
+      "requiresQuarantineForDownloadedExecutables": true
+    },
+    {
+      "id": "cross-compute",
+      "classifiers": ["cuda-runtime", "onnx-runtime", "directml-runtime", "tensorrt-runtime", "openvino-runtime", "shared-container-runtime"],
+      "destinations": ["X:\\Compute", "X:\\Services"],
+      "requiresSysAdmin": true,
+      "requiresSignature": true
+    },
+    {
+      "id": "games",
+      "classifiers": ["game", "game-launcher", "game-capture", "shader-cache"],
+      "destinations": ["D:\\Games"],
+      "requiresSysAdmin": false,
+      "modsRequireQuarantine": true
+    },
+    {
+      "id": "studio",
+      "classifiers": ["daw-project", "sample-library", "audio-plugin", "preset", "recording", "master", "studio-asset"],
+      "destinations": ["D:\\MusicStudio"],
+      "requiresSysAdmin": false,
+      "pluginsRequireQuarantine": true
+    },
+    {
+      "id": "personal-work",
+      "classifiers": ["personal-document", "office-document", "work-document", "photo", "video", "onedrive-content"],
+      "destinations": ["D:\\Personal", "D:\\Work", "D:\\OneDrive", "D:\\Media"],
+      "requiresSysAdmin": false,
+      "controlledFolderAccess": true
+    },
+    {
+      "id": "ai-data",
+      "classifiers": ["model-weight", "embedding", "vector-store", "dataset", "training-artifact", "evaluation-artifact"],
+      "destinations": ["D:\\AIData"],
+      "requiresSysAdmin": false,
+      "untrustedModelsRequireQuarantine": true,
+      "untrustedDatasetsRequireQuarantine": true
+    },
+    {
+      "id": "server",
+      "classifiers": ["server-state", "database", "queue", "service-log", "deployment-artifact", "agent-state"],
+      "destinations": ["D:\\ServerNode", "X:\\Services"],
+      "requiresSysAdmin": true,
+      "serviceIdentityRequired": true
+    },
+    {
+      "id": "sandbox",
+      "classifiers": ["vm", "vhdx", "wsl-export", "docker-scratch", "disposable-build", "unknown-repo-test"],
+      "destinations": ["D:\\Sandbox"],
+      "requiresSysAdmin": false,
+      "networkDefault": "restricted"
+    },
+    {
+      "id": "vault",
+      "classifiers": ["certificate", "ssh-key", "signing-key", "recovery-reference", "secret-reference", "identity-evidence"],
+      "destinations": ["V:\\"],
+      "requiresSysAdmin": true,
+      "requiresMountedVault": true,
+      "executionAllowed": false,
+      "azureKeyVaultReferenceMapping": true
+    }
+  ],
+  "quarantineRelease": {
+    "requiredChecks": [
+      "sha256-recorded",
+      "signature-checked",
+      "defender-clean",
+      "malwarebytes-clean",
+      "classification-complete",
+      "destination-approved"
+    ],
+    "conditionalChecks": [
+      "sandbox-execution",
+      "sbom-generated",
+      "dependency-audit",
+      "driver-reputation-check",
+      "archive-bomb-check"
+    ],
+    "releaseReceiptPath": "X:\\Platform\\Manifests\\Releases\\{sha256}.json",
+    "approvalProfile": "sysops-or-sysadmin",
+    "elevatedReleaseRequiresSysAdmin": true
+  }
+}
