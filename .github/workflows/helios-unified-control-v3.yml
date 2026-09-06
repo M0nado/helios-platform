@@ -1,0 +1,135 @@
+name: HELIOS Unified Control v3
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'control/**'
+      - 'config/control/**'
+      - 'automation/control-plane/**'
+      - 'automation/openai/helios-control-tools.v3.json'
+      - 'scripts/control/unified_control.py'
+      - 'scripts/control/validate_unified_control.py'
+      - 'tests/control/test_unified_control.py'
+      - 'monado/helios-control/config/unified-control-v3.json'
+      - 'monado/helios-control/docs/UNIFIED_CONTROL_V3.md'
+      - 'docs/architecture/HELIOS_UNIFIED_CONTROL_FABRIC_V3.md'
+      - 'docs/operations/SINGLE_CONTROL_WORKFLOW.md'
+      - 'docs/operations/REDUCED_CHAT_PROTOCOL.md'
+      - 'status-site/unified-control/**'
+      - '.github/workflows/helios-unified-control-v3.yml'
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Bounded plan/read operation
+        required: true
+        default: validate
+        type: choice
+        options:
+          - status
+          - validate
+          - plan-sync
+          - emit-event
+          - connector-readiness
+          - azure-plan-request
+
+permissions:
+  contents: read
+
+env:
+  HELIOS_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: helios-unified-control-v3-${{ github.ref }}-${{ inputs.operation || 'validate' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/control/validate_unified_control.py
+      - run: python -m unittest discover -s tests/control -p 'test_unified_control.py' -v
+      - run: python scripts/control/unified_control.py validate
+      - name: Verify existing HELIOS runtime contracts
+        run: |
+          test -f monado/helios-control/config/agent-core-policy.json
+          test -f monado/helios-control/config/integrations.json
+          test -f monado/helios-control/Helios.Connect.sln
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helios-unified-control-validation
+          path: artifacts/control
+          if-no-files-found: error
+
+  current-record:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/control/unified_control.py status
+      - run: python scripts/control/unified_control.py emit-event
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helios-unified-current-record
+          path: |
+            control/CURRENT.md
+            control/current.json
+            artifacts/control/relay-envelope.json
+
+  sync-plan:
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.operation == 'plan-sync' || inputs.operation == 'connector-readiness') }}
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/control/unified_control.py ${{ inputs.operation }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helios-unified-sync-plan
+          path: artifacts/control/sync-plan.json
+
+  azure-plan-request:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'azure-plan-request' }}
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/control/unified_control.py azure-plan-request
+      - name: Assert this workflow cannot deploy
+        run: |
+          ! grep -R -E 'az deployment (group|sub|mg|tenant) create' .github/workflows/helios-unified-control-v3.yml
+          test -f .github/workflows/helios-cloud-deploy.yml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: helios-azure-plan-request
+          path: artifacts/control/azure-plan-request.json
+
+  required:
+    if: always()
+    needs: [validate, current-record]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          test '${{ needs.validate.result }}' = 'success'
+          test '${{ needs.current-record.result }}' = 'success'

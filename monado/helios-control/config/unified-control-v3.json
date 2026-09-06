@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "3.0",
+  "status": "review-only",
+  "source": {
+    "record": "../../../control/current.json",
+    "markdown": "../../../control/CURRENT.md",
+    "events": "../../../control/events.jsonl"
+  },
+  "runtime": {
+    "controlPlane": "Helios.Connect",
+    "lifecyclePolicy": "agent-core-policy.json",
+    "integrationRegistry": "integrations.json",
+    "dispatcher": "cosmos-leased-control-runs-with-inline-signed-relay-dispatcher",
+    "eventType": "helios.control.current.updated"
+  },
+  "delivery": {
+    "mode": "dry-run",
+    "destinations": ["github", "linear", "slack", "sharepoint", "azure-devops", "openai-alvis"],
+    "directProviderCredentials": false,
+    "signedRelayRequired": true,
+    "idempotencyRequired": true,
+    "durableReceiptRequired": true
+  },
+  "deployment": {
+    "authority": "github-protected-environment",
+    "azureWorkflow": ".github/workflows/helios-cloud-deploy.yml",
+    "whatIfOnlyFromUnifiedWorkflow": true,
+    "applyAllowed": false
+  }
+}

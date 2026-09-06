@@ -101,7 +101,7 @@
   },
   "forbiddenRuntimeActions": [
     "physical-usb-write",
-    "disk-or-vhdx-apply-from-runtime",
+    "storage-volume-apply-from-runtime",
     "sysadmin-activation-without-local-two-factor",
     "tenant-authorization-change-without-approval"
   ]
