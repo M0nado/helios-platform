@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 3,
+  "name": "Monadoblade canonical profile wheel",
+  "desktopFramework": "WinUI3",
+  "profiles": [
+    {
+      "id": "core",
+      "displayName": "Core",
+      "glyph": "核",
+      "administrator": false,
+      "networkMode": "standard",
+      "purpose": "Daily system shell and shared safe services"
+    },
+    {
+      "id": "developer",
+      "displayName": "Developer",
+      "glyph": "創",
+      "administrator": false,
+      "networkMode": "development",
+      "purpose": "Source, build, test, GitHub, Codex, containers, and SDK workflows"
+    },
+    {
+      "id": "studio",
+      "displayName": "Studio",
+      "glyph": "響",
+      "administrator": false,
+      "networkMode": "studio-restricted",
+      "purpose": "Low-latency audio, music, visual, render, and media production"
+    },
+    {
+      "id": "gamer",
+      "displayName": "Gamer",
+      "glyph": "迅",
+      "administrator": false,
+      "networkMode": "gaming-low-latency",
+      "purpose": "Game performance, capture, overlays, and profile-specific lighting"
+    },
+    {
+      "id": "ai-server",
+      "displayName": "AI / Server",
+      "glyph": "智",
+      "administrator": false,
+      "networkMode": "service-allowlist",
+      "purpose": "AIHub, Hermes, XCore, model workers, services, and background automation"
+    },
+    {
+      "id": "sysadmin",
+      "displayName": "Sysadmin",
+      "glyph": "統",
+      "administrator": true,
+      "localOnly": true,
+      "offlinePreferred": true,
+      "hiddenWhenIdle": true,
+      "requiresPhysicalApproval": true,
+      "purpose": "Rare, explicitly approved machine-level administration"
+    }
+  ],
+  "nonIdentityWorkflows": [
+    {
+      "id": "recovery",
+      "purpose": "WinRE, offline scanning, rollback, and system-image recovery"
+    },
+    {
+      "id": "quarantine",
+      "purpose": "Untrusted file, driver, script, model, archive, and network-evidence handling"
+    }
+  ],
+  "rules": {
+    "normalProfilesAreStandardUsers": true,
+    "sysadminIsOnlyFullLocalAdministrator": true,
+    "destructiveActionsRequireTwoConditions": true,
+    "recoveryAndQuarantineAreNotLoginProfiles": true,
+    "wpfAllowedInActiveProduct": false,
+    "winui3RequiredInActiveControlCenter": true
+  }
+}
