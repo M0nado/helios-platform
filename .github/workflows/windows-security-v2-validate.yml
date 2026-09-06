@@ -1,0 +1,136 @@
+name: Windows Security V2 Validation
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/windows/Repair-HeliosEnvironment.ps1'
+      - 'scripts/windows/security/**'
+      - 'config/security/windows-boot-security.v2.json'
+      - 'docs/security/WINDOWS_BOOT_SECURITY_AND_ROOTKIT_RECOVERY_V2.md'
+      - '.github/workflows/windows-security-v2-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-windows-security:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse PowerShell with native AST
+        shell: pwsh
+        run: |
+          $paths = @(
+            'scripts/windows/Repair-HeliosEnvironment.ps1',
+            'scripts/windows/security/Get-HeliosBootSecurityPosture.ps1',
+            'scripts/windows/security/Set-HeliosWindowsSecurityBaseline.ps1',
+            'scripts/windows/security/Invoke-HeliosRootkitRecovery.ps1',
+            'scripts/windows/security/Install-HeliosBootSecurityTasks.ps1'
+          )
+          $failed = $false
+          foreach ($path in $paths) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path),
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if ($errors.Count -gt 0) {
+              $failed = $true
+              Write-Error "Parser errors in ${path}:`n$($errors | Out-String)"
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - name: Validate policy contract
+        shell: pwsh
+        run: |
+          $policy = Get-Content 'config/security/windows-boot-security.v2.json' -Raw | ConvertFrom-Json
+          if ($policy.defaultMode -ne 'audit') { throw 'Default mode must remain audit.' }
+          if ($policy.startup.automaticRemediation) { throw 'Automatic remediation is prohibited.' }
+          if ($policy.startup.automaticOfflineScan) { throw 'Automatic offline scanning is prohibited.' }
+          if ($policy.scheduledScans.weeklyFullScanDefault) { throw 'Weekly full scanning must be opt-in.' }
+          if (-not $policy.scheduledScans.fullScanRequiresExplicitOptIn) { throw 'Full scan opt-in guard is required.' }
+          if (-not $policy.rootkitRecovery.requiresKnownBitLockerState) { throw 'Known BitLocker state is mandatory.' }
+          if (-not $policy.rootkitRecovery.requiresRecoveryEvidenceWhenProtected) { throw 'Recovery evidence is mandatory.' }
+          if ($policy.rootkitRecovery.automaticRebootLoop) { throw 'Automatic reboot loops are prohibited.' }
+          if ($policy.rootkitRecovery.confirmationPhrase -ne 'RUN HELIOS OFFLINE ROOTKIT SCAN') {
+            throw 'Offline-scan confirmation phrase changed.'
+          }
+          if ($policy.attackSurfaceReduction.rules.Count -ne 11) {
+            throw 'ASR manifest and implementation must contain exactly 11 governed rules.'
+          }
+
+      - name: Validate implementation-policy alignment
+        shell: pwsh
+        run: |
+          $policy = Get-Content 'config/security/windows-boot-security.v2.json' -Raw | ConvertFrom-Json
+          $baseline = Get-Content 'scripts/windows/security/Set-HeliosWindowsSecurityBaseline.ps1' -Raw
+          foreach ($rule in $policy.attackSurfaceReduction.rules) {
+            if ($baseline -notmatch [regex]::Escape($rule.id)) {
+              throw "ASR rule missing from implementation: $($rule.id)"
+            }
+          }
+
+          $rootkit = Get-Content 'scripts/windows/security/Invoke-HeliosRootkitRecovery.ps1' -Raw
+          foreach ($required in @(
+            'RUN HELIOS OFFLINE ROOTKIT SCAN',
+            'Start-MpWDOScan',
+            'BitLocker state could not be determined',
+            'RecoveryEvidencePath',
+            'RebootCount 1',
+            'AutomaticRecurringTaskCreated = $false'
+          )) {
+            if ($rootkit -notmatch [regex]::Escape($required)) {
+              throw "Rootkit recovery guard missing: $required"
+            }
+          }
+
+          $tasks = Get-Content 'scripts/windows/security/Install-HeliosBootSecurityTasks.ps1' -Raw
+          if ($tasks -match 'Mode OfflineScan') { throw 'Offline scan must never be scheduled.' }
+          if ($tasks -notmatch 'InstallWeeklyFullScan') { throw 'Weekly full scan must remain explicit opt-in.' }
+
+          $repair = Get-Content 'scripts/windows/Repair-HeliosEnvironment.ps1' -Raw
+          if ($repair -notmatch [regex]::Escape("Wbem\\winmgmt.exe")) {
+            throw 'winmgmt.exe must be checked at System32\Wbem.'
+          }
+
+      - name: Enforce destructive-action guardrails
+        shell: pwsh
+        run: |
+          $all = @(
+            Get-Content 'scripts/windows/Repair-HeliosEnvironment.ps1' -Raw
+            Get-Content 'scripts/windows/security/Get-HeliosBootSecurityPosture.ps1' -Raw
+            Get-Content 'scripts/windows/security/Set-HeliosWindowsSecurityBaseline.ps1' -Raw
+            Get-Content 'scripts/windows/security/Invoke-HeliosRootkitRecovery.ps1' -Raw
+            Get-Content 'scripts/windows/security/Install-HeliosBootSecurityTasks.ps1' -Raw
+          ) -join "`n"
+
+          $forbidden = @(
+            'Clear-Disk',
+            'Initialize-Disk',
+            'Format-Volume',
+            'Clear-Tpm',
+            'DisableRealtimeMonitoring $true',
+            'manage-bde -off',
+            'Set-MpPreference -ExclusionPath'
+          )
+          foreach ($term in $forbidden) {
+            if ($all -match [regex]::Escape($term)) {
+              throw "Forbidden Windows mutation found: $term"
+            }
+          }
+
+      - name: Verify reports do not export BitLocker recovery passwords
+        shell: pwsh
+        run: |
+          $posture = Get-Content 'scripts/windows/security/Get-HeliosBootSecurityPosture.ps1' -Raw
+          if ($posture -notmatch 'RecoveryPasswordsExported = $false') {
+            throw 'Posture report must explicitly deny recovery-password export.'
+          }
+          if ($posture -match 'RecoveryPassword\s*=') {
+            throw 'Recovery-password values must not be serialized.'
+          }

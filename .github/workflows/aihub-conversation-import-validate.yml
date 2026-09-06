@@ -1,0 +1,92 @@
+name: AIHub Conversation Import Validation
+
+on:
+  pull_request:
+    paths:
+      - 'python/aihub/conversation_import.py'
+      - 'tests/python/test_aihub_conversation_import.py'
+      - '.github/workflows/aihub-conversation-import-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-conversation-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile importer
+        run: python -m py_compile python/aihub/conversation_import.py
+
+      - name: Run importer tests
+        run: python -m unittest -v tests.python.test_aihub_conversation_import
+
+      - name: Enforce redaction and provenance boundaries
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          source = Path('python/aihub/conversation_import.py').read_text(encoding='utf-8')
+          required = [
+              'privateReasoningImported',
+              'sourceConversationObjectsMerged',
+              'user-supplied-or-exported-transcript-text-only',
+              '[REDACTED_SECRET]',
+              'sha256',
+          ]
+          for token in required:
+              if token not in source:
+                  raise SystemExit(f'Missing importer invariant: {token}')
+
+          forbidden = [
+              r'subprocess\.',
+              r'os\.system\(',
+              r'shell\s*=\s*True',
+              r'http[s]?://',
+              r'sk-proj-[A-Za-z0-9_-]{20,}',
+              r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',
+          ]
+          for pattern in forbidden:
+              if re.search(pattern, source):
+                  raise SystemExit(f'Forbidden importer behavior/content: {pattern}')
+
+      - name: Run two-source smoke conversion
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          cat > "$tmp/a.txt" <<'EOF'
+          You said
+          Consolidate the HELIOS GitHub and Azure control record.
+          Assistant said
+          Prepared a redacted review artifact.
+          EOF
+          cat > "$tmp/b.txt" <<'EOF'
+          User said
+          Preserve Slack, Linear, and SharePoint checkpoints.
+          Copilot said
+          Added collaboration evidence without credentials.
+          EOF
+          python -m python.aihub.conversation_import \
+            --source "$tmp/a.txt" \
+            --source "$tmp/b.txt" \
+            --output "$tmp/merged.json"
+          python - "$tmp/merged.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          data = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+          assert data['summary']['sourceCount'] == 2
+          assert data['summary']['turnCount'] == 4
+          assert data['summary']['secretRedactions'] == 0
+          assert data['privateReasoningImported'] is False
+          assert data['sourceConversationObjectsMerged'] is False
+          PY

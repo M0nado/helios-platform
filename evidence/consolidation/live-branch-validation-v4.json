@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 4,
+  "repository": "M0nado/helios-platform",
+  "branch": "codex/final-mainline-consolidation-v1",
+  "validationEnvironment": "fresh public clone",
+  "pythonCompilation": "passed",
+  "pythonTestModules": 4,
+  "pythonTestsPassed": 28,
+  "testSuites": {
+    "secureRuntime": "passed",
+    "canonicalCatalogAndArtifacts": "passed",
+    "protectedCatalogApi": "passed",
+    "conversationImport": "passed"
+  },
+  "canonicalArtifactIntegrity": "passed",
+  "profileContract": "passed",
+  "windowsSecurityPolicyStatic": "passed",
+  "conversationImport": {
+    "redaction": "passed",
+    "deterministicMerge": "passed",
+    "sourceHashing": "passed",
+    "privateReasoningImported": false,
+    "sourceConversationObjectsMerged": false
+  },
+  "secretPatternFindings": 0,
+  "nativePowerShellAst": "pending-windows-latest",
+  "azureApplyEnabled": false,
+  "productionEnabled": false,
+  "externalMutationPerformedByValidation": false
+}

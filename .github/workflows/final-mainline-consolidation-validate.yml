@@ -1,0 +1,111 @@
+name: Final Mainline Consolidation Validation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/consolidation/HELIOS_FINAL_MAINLINE_CONSOLIDATION_STATUS_V1.md'
+      - 'config/consolidation/final-mainline-lock.v1.json'
+      - '.github/workflows/final-mainline-consolidation-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate consolidation lock
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path = Path('config/consolidation/final-mainline-lock.v1.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+
+          assert data['canonicalRepository'] == 'M0nado/helios-platform'
+          assert data['targetBranch'] == 'main'
+          assert data['desktopFramework'] == 'WinUI3'
+          assert [p['id'] for p in data['profiles']] == [
+              'core', 'developer', 'studio', 'gamer', 'ai-server', 'sysadmin'
+          ]
+          assert data['nonIdentityWorkflows'] == ['recovery', 'quarantine']
+          assert data['mergePolicy']['directToMain'] is False
+          assert data['mergePolicy']['windowsPowerShellAstRequired'] is True
+          assert data['mergePolicy']['requiredChecksMustPass'] is True
+          assert data['mergePolicy']['approvedReviewRequired'] is True
+          assert data['mergePolicy']['exactHeadRequired'] is True
+          assert data['azure']['applyEnabled'] is False
+          assert data['azure']['productionEnabled'] is False
+          assert data['azure']['sourceMergeMayDeploy'] is False
+          assert data['validation']['secretPatternFindings'] == 0
+          assert data['validation']['pythonTestsPassed'] == 18
+          assert data['validation']['overlayFilesGenerated'] == 145
+
+      - name: Reject active WPF drift and secret material
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          files = [
+              Path('docs/consolidation/HELIOS_FINAL_MAINLINE_CONSOLIDATION_STATUS_V1.md'),
+              Path('config/consolidation/final-mainline-lock.v1.json'),
+          ]
+          text = '\n'.join(p.read_text(encoding='utf-8') for p in files)
+          forbidden = [
+              r'<UseWPF>true</UseWPF>',
+              r'PresentationFramework',
+              r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',
+              r'sk-proj-[A-Za-z0-9_-]{20,}',
+              r'gh[pousr]_[A-Za-z0-9]{20,}',
+              r'xox[baprs]-[A-Za-z0-9-]{20,}',
+          ]
+          for pattern in forbidden:
+              if re.search(pattern, text):
+                  raise SystemExit(f'Forbidden consolidation content found: {pattern}')
+
+      - name: Verify immutable artifact identities
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('config/consolidation/final-mainline-lock.v1.json').read_text())
+          for name, artifact in data['artifacts'].items():
+              digest = artifact['sha256']
+              if len(digest) != 64 or any(ch not in '0123456789abcdef' for ch in digest):
+                  raise SystemExit(f'Invalid SHA-256 for {name}')
+
+  windows-powershell-ast-gate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse active PowerShell sources
+        shell: pwsh
+        run: |
+          $errorsFound = $false
+          $roots = @('scripts', 'tools') | Where-Object { Test-Path $_ }
+          foreach ($root in $roots) {
+            Get-ChildItem $root -Filter *.ps1 -File -Recurse | ForEach-Object {
+              if ($_.FullName -match '[\\/]legacy[\\/]' -or $_.Name -like '*.disabled.ps1') {
+                return
+              }
+              $tokens = $null
+              $errors = $null
+              [void][System.Management.Automation.Language.Parser]::ParseFile(
+                $_.FullName,
+                [ref]$tokens,
+                [ref]$errors
+              )
+              if ($errors.Count -gt 0) {
+                $errorsFound = $true
+                Write-Error "Parser errors in $($_.FullName):`n$($errors | Out-String)"
+              }
+            }
+          }
+          if ($errorsFound) { exit 1 }

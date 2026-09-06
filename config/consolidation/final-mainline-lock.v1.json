@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "name": "HELIOS final mainline consolidation",
+  "canonicalRepository": "M0nado/helios-platform",
+  "targetBranch": "main",
+  "desktopFramework": "WinUI3",
+  "profiles": [
+    { "id": "core", "glyph": "核", "administrator": false },
+    { "id": "developer", "glyph": "創", "administrator": false },
+    { "id": "studio", "glyph": "響", "administrator": false },
+    { "id": "gamer", "glyph": "迅", "administrator": false },
+    { "id": "ai-server", "glyph": "智", "administrator": false },
+    { "id": "sysadmin", "glyph": "統", "administrator": true, "localOnly": true, "offlinePreferred": true }
+  ],
+  "nonIdentityWorkflows": ["recovery", "quarantine"],
+  "retainedPullRequests": [182, 186, 188, 190, 193],
+  "supersededPullRequests": [163, 166, 177, 189],
+  "artifacts": {
+    "mainlineOperator": {
+      "file": "HELIOS_FINAL_MAINLINE_MERGE_OPERATOR_v1.zip",
+      "sha256": "4fd2e3dc194a07c3ab919794e510cabb8c7e3705e98e24ce9072ac3bc317d482"
+    },
+    "syncPacket": {
+      "file": "HELIOS_MAINLINE_SYNC_PACKET_v1.zip",
+      "sha256": "2d9d2393d770fbfeb83dda71a9d2990bc2a8753631eaf81f4119b3536d20b7d5"
+    }
+  },
+  "validation": {
+    "lockedSourceArchives": 4,
+    "lockedSourceArchivesVerified": 4,
+    "pythonTestsPassed": 18,
+    "userModeTestsPassed": 12,
+    "securityProfileUiTestsPassed": 6,
+    "secretPatternFindings": 0,
+    "overlayFilesGenerated": 145,
+    "sourceZipIntegrity": "passed",
+    "pythonCompilation": "passed",
+    "activeSourceSafety": "passed",
+    "profileWheelContract": "passed",
+    "winui3OnlyContract": "passed"
+  },
+  "mergePolicy": {
+    "directToMain": false,
+    "draftPullRequestFirst": true,
+    "fileLevelSha256PlanRequired": true,
+    "reviewedConflictsOnly": true,
+    "windowsPowerShellAstRequired": true,
+    "requiredChecksMustPass": true,
+    "approvedReviewRequired": true,
+    "exactHeadRequired": true,
+    "mergeMethod": "squash"
+  },
+  "runtimePolicy": {
+    "loopbackFirst": true,
+    "authenticationRequired": true,
+    "boundedRequests": true,
+    "rateLimitsRequired": true,
+    "atomicStateWrites": true,
+    "externalActionsRequireApproval": true
+  },
+  "azure": {
+    "applyEnabled": false,
+    "productionEnabled": false,
+    "sourceMergeMayDeploy": false,
+    "whatIfExecutedByThisChange": false,
+    "rbacMutationByThisChange": false,
+    "keyVaultWriteByThisChange": false,
+    "tenantConsentByThisChange": false
+  }
+}
