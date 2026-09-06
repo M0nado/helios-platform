@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios-platform.dev/schemas/major-capabilities-v1.json",
+  "title": "HELIOS governed major-capability backlog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "purpose", "policy", "defaults", "capabilities"],
+  "properties": {
+    "schemaVersion": { "const": "1.1" },
+    "purpose": { "type": "string", "minLength": 20 },
+    "policy": {
+      "type": "object",
+      "required": ["defaultStatus", "execution"],
+      "additionalProperties": false,
+      "properties": {
+        "defaultStatus": { "const": "proposed" },
+        "execution": { "type": "string", "minLength": 20 }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "required": ["checks", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "checks": { "$ref": "#/$defs/nonEmptyStrings" },
+        "evidence": { "$ref": "#/$defs/nonEmptyStrings" }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 50,
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/capability" }
+    }
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "slug", "category", "owner", "priority", "gate", "outcome", "acceptanceCriteria", "dependencies", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^CAP-[0-9]{4}$" },
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+        "category": { "type": "string", "minLength": 2 },
+        "owner": { "enum": ["csharp", "cpp", "fsharp", "python", "platform"] },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "gate": { "enum": ["standard", "approval", "what-if-and-approval"] },
+        "outcome": { "type": "string", "minLength": 20 },
+        "acceptanceCriteria": { "$ref": "#/$defs/nonEmptyStrings" },
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^CAP-[0-9]{4}$" }
+        },
+        "status": { "enum": ["proposed", "ready", "in-progress", "blocked", "done"] }
+      }
+    }
+  }
+}
