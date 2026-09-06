@@ -6,6 +6,9 @@
   <Folder Name="/src/core/HELIOS.Platform.Minimal/">
     <Project Path="src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj" />
   </Folder>
+  <Folder Name="/tests/HELIOS.Platform.Launcher.Tests/">
+    <Project Path="tests/HELIOS.Platform.Launcher.Tests/HELIOS.Platform.Launcher.Tests.csproj" />
+  </Folder>
   <Folder Name="/src/core/HELIOS.Platform/" />
   <Folder Name="/src/core/HELIOS.Platform/Phase10/" />
   <Folder Name="/src/core/HELIOS.Platform/Phase10/Users/">
