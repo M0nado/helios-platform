@@ -1,0 +1,54 @@
+name: HELIOS promote reviewed SHA
+
+'on':
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      target_repository:
+        required: true
+        type: choice
+        options:
+          - M0nado/Helios-Control-Center
+          - M0nado/helios-platform
+          - Heli0s-Dynamics/helios-platform
+      evidence_sha256:
+        required: true
+        type: string
+      confirmation:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: ${{ inputs.confirmation == 'PROMOTE REVIEWED HELIOS SHA' }}
+    runs-on: ubuntu-latest
+    environment: helios-stage
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+      - run: test "$(git rev-parse HEAD)" = '${{ inputs.source_sha }}'
+      - name: Build immutable promotion bundle
+        run: |
+          mkdir promotion
+          git archive --format=tar.gz --output=promotion/source.tar.gz HEAD
+          sha256sum promotion/source.tar.gz > promotion/source.tar.gz.sha256
+          cat > promotion/promotion.json <<JSON
+          {"sourceRepository":"${{ github.repository }}","sourceSha":"${{ inputs.source_sha }}","targetRepository":"${{ inputs.target_repository }}","evidenceSha256":"${{ inputs.evidence_sha256 }}","azureAuthorized":false}
+          JSON
+      - uses: actions/upload-artifact@v7
+        with:
+          name: promotion-${{ inputs.source_sha }}
+          path: promotion
+          if-no-files-found: error
+          retention-days: 90
+      - name: Stop at reviewed PR boundary
+        run: |
+          echo 'Bundle created. A target-repository GitHub App or authorized promotion workflow must open the downstream PR.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No direct push or Azure deployment was performed.' >> "$GITHUB_STEP_SUMMARY"

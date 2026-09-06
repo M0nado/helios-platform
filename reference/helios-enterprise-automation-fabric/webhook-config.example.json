@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "url": "https://REPLACE_WITH_BROKER_HOST/hooks/linear",
+  "resourceTypes": [
+    "Issue",
+    "Comment",
+    "Project",
+    "ProjectUpdate",
+    "Cycle"
+  ],
+  "teamScope": "REPLACE_TEAM_ID_OR_ALL_PUBLIC_TEAMS",
+  "verify": {
+    "header": "Linear-Signature",
+    "algorithm": "HMAC-SHA256",
+    "rawBody": true,
+    "timestampField": "webhookTimestamp",
+    "maximumSkewSeconds": 60
+  },
+  "responseDeadlineMilliseconds": 5000,
+  "expectedSuccessCode": 200
+}

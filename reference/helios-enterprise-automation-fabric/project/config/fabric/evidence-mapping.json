@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "mappings": [
+    {
+      "eventPattern": "deployment.plan.*",
+      "library": "Deployment Evidence",
+      "contentType": "HELIOS Deployment Evidence",
+      "fileName": "plan-{correlationId}.json"
+    },
+    {
+      "eventPattern": "deployment.*",
+      "library": "Deployment Evidence",
+      "contentType": "HELIOS Deployment Evidence",
+      "fileName": "deployment-{eventType}-{correlationId}.json"
+    },
+    {
+      "eventPattern": "incident.*",
+      "library": "Incident Evidence",
+      "contentType": "HELIOS Incident Evidence",
+      "fileName": "incident-{correlationId}.json"
+    },
+    {
+      "eventPattern": "github.release.*",
+      "library": "Release Evidence",
+      "contentType": "HELIOS Release Evidence",
+      "fileName": "release-{tag}-{correlationId}.json"
+    },
+    {
+      "eventPattern": "artifact.*",
+      "library": "Release Evidence",
+      "contentType": "HELIOS Release Evidence",
+      "fileName": "artifact-{correlationId}.json"
+    },
+    {
+      "eventPattern": "connector.health.*",
+      "library": "Health Evidence",
+      "contentType": "HELIOS Health Evidence",
+      "fileName": "health-{occurredAtDate}-{correlationId}.json"
+    },
+    {
+      "eventPattern": "architecture.*",
+      "library": "Governance",
+      "contentType": "HELIOS Architecture Decision",
+      "fileName": "adr-{correlationId}.md"
+    }
+  ],
+  "smallUploadMaxBytes": 4194304,
+  "largeUploadChunkBytes": 10485760,
+  "conflictBehavior": "replace-if-same-correlation-id-otherwise-rename",
+  "hashMetadataColumn": "HeliosEvidenceSha256"
+}

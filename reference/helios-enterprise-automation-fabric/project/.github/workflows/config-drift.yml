@@ -1,0 +1,97 @@
+name: HELIOS Azure configuration drift
+
+'on':
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options: [dev, stage, prod]
+  schedule:
+    - cron: '11 7 * * 1'
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    environment: helios-${{ inputs.environment || 'dev' }}
+    env:
+      TARGET_ENVIRONMENT: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: What-if current desired state
+        shell: bash
+        run: |
+          set -euo pipefail
+          az deployment sub what-if \
+            --location '${{ vars.HELIOS_AZURE_LOCATION }}' \
+            --template-file infra/bicep/main.bicep \
+            --parameters "infra/bicep/parameters/${TARGET_ENVIRONMENT}.bicepparam" \
+            --result-format ResourceIdOnly \
+            --output json > drift.json
+      - name: Classify drift
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(Path('drift.json').read_text(encoding='utf-8'))
+          changes = data.get('changes', [])
+          significant = [
+              change for change in changes
+              if change.get('changeType') not in ('NoChange', 'Ignore')
+          ]
+          lines = [
+              '## HELIOS drift report',
+              '',
+              f"Environment: **{os.environ['TARGET_ENVIRONMENT']}**",
+              f"Significant changes: **{len(significant)}**",
+              '',
+          ]
+          for change in significant[:100]:
+              lines.append(f"- `{change.get('changeType', 'Unknown')}` `{change.get('resourceId', 'unknown')}`")
+          Path('drift-summary.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              output.write(f"count={len(significant)}\n")
+          PY
+      - name: Open or update drift issue
+        if: ${{ steps.classify.outputs.count != '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="[HELIOS Drift] ${TARGET_ENVIRONMENT} desired state differs"
+          existing=$(gh issue list \
+            --label helios:connector \
+            --search "$title in:title" \
+            --json number \
+            --jq '.[0].number // empty')
+          if [[ -n "$existing" ]]; then
+            gh issue comment "$existing" --body-file drift-summary.md
+          else
+            gh issue create --title "$title" --body-file drift-summary.md --label helios:connector
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: drift-${{ inputs.environment || 'dev' }}
+          path: |
+            drift.json
+            drift-summary.md
+          if-no-files-found: error
+          retention-days: 30

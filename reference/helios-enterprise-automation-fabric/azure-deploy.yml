@@ -1,0 +1,187 @@
+name: HELIOS Azure deploy
+
+'on':
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options: [dev, stage, prod]
+      source_sha:
+        description: Exact reviewed 40-character source SHA
+        required: true
+        type: string
+      plan_run_id:
+        description: Workflow run ID that produced the approved plan artifact
+        required: true
+        type: string
+      plan_sha256:
+        description: Approved canonical what-if SHA-256
+        required: true
+        type: string
+      apply:
+        description: Apply deployment after all gates
+        required: true
+        type: boolean
+        default: false
+      confirmation:
+        description: Type DEPLOY REVIEWED HELIOS PLAN
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+  issues: read
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: azure-deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ inputs.apply && inputs.confirmation == 'DEPLOY REVIEWED HELIOS PLAN' }}
+    runs-on: ubuntu-latest
+    environment: helios-${{ inputs.environment }}
+    env:
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+      EXPECTED_PLAN_SHA: ${{ inputs.plan_sha256 }}
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - name: Validate immutable inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ "$PLAN_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_PLAN_SHA" =~ ^[0-9a-fA-F]{64}$ ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+      - name: Enforce exact source SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - uses: actions/download-artifact@v8
+        with:
+          name: azure-plan-${{ inputs.environment }}-${{ inputs.source_sha }}
+          path: approved-plan
+          run-id: ${{ inputs.plan_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify approved plan identity and recover approved parameters
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('approved-plan/what-if.canonical.json')
+          provenance = json.loads(Path('approved-plan/plan-provenance.json').read_text(encoding='utf-8'))
+          actual = hashlib.sha256(path.read_bytes()).hexdigest()
+          assert actual == os.environ['EXPECTED_PLAN_SHA'].lower(), (actual, os.environ['EXPECTED_PLAN_SHA'])
+          assert provenance['sourceSha'].lower() == os.environ['SOURCE_SHA'].lower()
+          assert provenance['environment'] == os.environ['TARGET_ENVIRONMENT']
+          assert str(provenance['workflowRunId']) == os.environ['PLAN_RUN_ID']
+          deploy_workloads = bool(provenance.get('deployWorkloads', False))
+          broker_image = str(provenance.get('brokerImage', ''))
+          worker_image = str(provenance.get('workerImage', ''))
+          if deploy_workloads and os.environ['TARGET_ENVIRONMENT'] == 'prod':
+              assert '@sha256:' in broker_image, 'Production broker image is not digest-pinned.'
+              assert '@sha256:' in worker_image, 'Production worker image is not digest-pinned.'
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env:
+              env.write(f"DEPLOY_WORKLOADS={'true' if deploy_workloads else 'false'}\n")
+              env.write(f"BROKER_IMAGE={broker_image}\n")
+              env.write(f"WORKER_IMAGE={worker_image}\n")
+          print('Approved plan, environment, source SHA, and workload parameters match.')
+          PY
+      - name: Verify blocker issue is closed for production
+        if: ${{ inputs.environment == 'prod' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BLOCKER_ISSUE: ${{ vars.HELIOS_BLOCKER_ISSUE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BLOCKER_ISSUE" =~ ^[0-9]+$ ]]
+          state=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${BLOCKER_ISSUE}" --jq .state)
+          test "$state" = closed
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Re-run what-if and enforce unchanged plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --name "helios-fabric-recheck-${GITHUB_RUN_ID}" \
+            --resource-group "rg-helios-fabric-${TARGET_ENVIRONMENT}" \
+            --template-file infra/bicep/main.bicep \
+            --parameters "infra/bicep/parameters/${TARGET_ENVIRONMENT}.bicepparam" \
+            --parameters deployWorkloads="$DEPLOY_WORKLOADS" brokerImage="$BROKER_IMAGE" workerImage="$WORKER_IMAGE" \
+            --result-format FullResourcePayloads \
+            --output json > recheck.raw.json
+          python scripts/github/canonicalize_plan.py \
+            --input recheck.raw.json \
+            --output recheck.canonical.json
+          actual=$(sha256sum recheck.canonical.json | cut -d' ' -f1)
+          test "$actual" = "$EXPECTED_PLAN_SHA"
+      - name: Deploy reviewed Bicep
+        shell: bash
+        run: |
+          set -euo pipefail
+          az deployment group create \
+            --name "helios-fabric-${TARGET_ENVIRONMENT}-${GITHUB_RUN_ID}" \
+            --resource-group "rg-helios-fabric-${TARGET_ENVIRONMENT}" \
+            --template-file infra/bicep/main.bicep \
+            --parameters "infra/bicep/parameters/${TARGET_ENVIRONMENT}.bicepparam" \
+            --parameters deployWorkloads="$DEPLOY_WORKLOADS" brokerImage="$BROKER_IMAGE" workerImage="$WORKER_IMAGE" \
+            --only-show-errors \
+            --output json > deployment-result.json
+      - name: Build hash-linked deployment evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          cp approved-plan/plan-provenance.json approved-plan/plan-metadata.json approved-plan/what-if.canonical.json evidence/
+          cp recheck.canonical.json deployment-result.json evidence/
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          evidence = {
+              'specVersion': '1.0',
+              'generatedAt': datetime.now(timezone.utc).isoformat(),
+              'repository': os.environ['GITHUB_REPOSITORY'],
+              'runId': os.environ['GITHUB_RUN_ID'],
+              'actor': os.environ['GITHUB_ACTOR'],
+              'environment': os.environ['TARGET_ENVIRONMENT'],
+              'sourceSha': os.environ['SOURCE_SHA'],
+              'planSha256': os.environ['EXPECTED_PLAN_SHA'],
+              'deployWorkloads': os.environ['DEPLOY_WORKLOADS'] == 'true',
+          }
+          Path('evidence/deployment-provenance.json').write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          sha256sum evidence/* > evidence/SHA256SUMS
+      - uses: actions/attest@v4
+        with:
+          subject-path: evidence/what-if.canonical.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deployment-evidence-${{ inputs.environment }}-${{ inputs.source_sha }}
+          path: evidence
+          if-no-files-found: error
+          retention-days: 90

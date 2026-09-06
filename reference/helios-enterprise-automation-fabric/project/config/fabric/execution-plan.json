@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "defaultMode": "plan",
+  "phases": [
+    {"id": 0, "name": "local-validation", "writes": [], "command": "fabricctl validate --root ."},
+    {"id": 1, "name": "repository-overlay", "writes": ["local git branch"], "approval": "APPLY HELIOS AUTOMATION FABRIC"},
+    {"id": 2, "name": "github-control-plane", "writes": ["labels", "variables", "environments", "optional ruleset"], "approval": "CONFIGURE HELIOS GITHUB"},
+    {"id": 3, "name": "azure-oidc", "writes": ["managed identity", "federated credential", "GitHub environment identifiers"], "approval": "CREATE HELIOS AZURE OIDC"},
+    {"id": 4, "name": "azure-what-if", "writes": ["workflow artifact only"], "approval": "GitHub environment"},
+    {"id": 5, "name": "azure-foundation", "writes": ["Azure resources"], "approval": "protected GitHub environment plus plan hash"},
+    {"id": 6, "name": "secret-staging", "writes": ["Key Vault secret versions"], "approval": "STAGE HELIOS CONNECTOR SECRETS"},
+    {"id": 7, "name": "sharepoint-evidence", "writes": ["site-scoped libraries and lists"], "approval": "PROVISION HELIOS SHAREPOINT"},
+    {"id": 8, "name": "power-platform-teams", "writes": ["custom connector", "Teams Workflow URL in Key Vault"], "approval": "CREATE HELIOS POWER CONNECTOR"},
+    {"id": 9, "name": "slack-linear", "writes": ["Slack channels", "Linear webhook"], "approval": "connector-specific confirmation"},
+    {"id": 10, "name": "connector-activation", "writes": ["connector registry PR"], "approval": "connector-enable-v1"},
+    {"id": 11, "name": "production", "writes": ["approval-gated deployment"], "approval": "prod-deploy-v1"}
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "helios-azure-cli",
+  "version": "0.1.0",
+  "description": "Safe Azure CLI setup, OIDC planning, and Bicep what-if workflows for HELIOS.",
+  "author": {
+    "name": "HELIOS"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "HELIOS Azure CLI",
+    "shortDescription": "Plan and validate HELIOS Azure setup safely.",
+    "longDescription": "A guarded Azure CLI wizard for HELIOS. It checks local prerequisites, signs in interactively, validates canonical GitHub OIDC settings, previews Bicep deployments with Azure what-if, and blocks cloud mutations unless the protected rollout gates and explicit confirmation are present.",
+    "developerName": "HELIOS",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Check my HELIOS Azure setup and show the safest next action without deploying anything."
+  }
+}

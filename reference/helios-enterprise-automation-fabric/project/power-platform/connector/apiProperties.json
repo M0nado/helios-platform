@@ -1,0 +1,22 @@
+{
+  "properties": {
+    "connectionParameters": {
+      "api_key": {
+        "type": "securestring",
+        "uiDefinition": {
+          "displayName": "HELIOS connector key",
+          "description": "A connector-scoped key stored by Power Platform; never a GitHub, Azure, or OpenAI administrator credential.",
+          "tooltip": "HELIOS connector key",
+          "constraints": {
+            "required": "true",
+            "tabIndex": 2
+          }
+        }
+      }
+    },
+    "iconBrandColor": "#111827",
+    "capabilities": [],
+    "publisher": "HELIOS",
+    "stackOwner": "HELIOS"
+  }
+}

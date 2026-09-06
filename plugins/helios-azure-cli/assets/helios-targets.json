@@ -1,0 +1,51 @@
+{
+  "github": {
+    "repository": "M0nado/helios-platform",
+    "controlAppPullRequest": 177,
+    "requiredMergedPullRequests": [174, 176],
+    "url": "https://github.com/M0nado/helios-platform"
+  },
+  "linear": {
+    "projectId": "89a5cdf8-f7a2-409f-b275-49ae37e39d6d",
+    "projectName": "Helios Integration Fabric",
+    "projectUrl": "https://linear.app/641974/project/helios-integration-fabric-40e1dd9caa39",
+    "implementationIssue": "JOH-35",
+    "implementationIssueUrl": "https://linear.app/641974/issue/JOH-35/land-shared-helios-mcp-app-for-chatgpt-and-microsoft-copilot"
+  },
+  "slack": {
+    "workspaceId": "T0B8Z1H0MV1",
+    "controlPlane": {
+      "channelId": "C0BHWDBHG1W",
+      "name": "helios-control-plane",
+      "role": "engineering-authority",
+      "url": "https://helios-xk97943.slack.com/archives/C0BHWDBHG1W"
+    },
+    "operations": {
+      "channelId": "C0BH4FBB0RX",
+      "name": "helios-ops",
+      "role": "private-operations",
+      "url": "https://helios-xk97943.slack.com/archives/C0BH4FBB0RX"
+    },
+    "announcements": {
+      "channelId": "C0B8PU2RGLF",
+      "name": "all-helios",
+      "role": "announcements-only",
+      "url": "https://helios-xk97943.slack.com/archives/C0B8PU2RGLF"
+    }
+  },
+  "azure": {
+    "environment": "azure-dev",
+    "defaultLocation": "centralus",
+    "defaultResourceGroup": "rg-helios-dev",
+    "appDisplayName": "helios-github-azure-dev",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "audience": "api://AzureADTokenExchange",
+    "federationSubject": "repo:M0nado/helios-platform:environment:azure-dev",
+    "requiredVariables": [
+      "AZURE_CLIENT_ID",
+      "AZURE_TENANT_ID",
+      "AZURE_SUBSCRIPTION_ID",
+      "AZURE_RESOURCE_GROUP"
+    ]
+  }
+}

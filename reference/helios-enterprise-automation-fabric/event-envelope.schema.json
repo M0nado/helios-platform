@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helios.local/schemas/event-envelope.schema.json",
+  "title": "HELIOS Canonical Event Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "specVersion",
+    "eventId",
+    "correlationId",
+    "eventType",
+    "source",
+    "subject",
+    "occurredAt",
+    "environment",
+    "severity",
+    "sensitivity",
+    "summary",
+    "provenance",
+    "payload",
+    "requestedActions",
+    "links"
+  ],
+  "properties": {
+    "specVersion": {
+      "const": "1.0"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "correlationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{2,127}$"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "github",
+        "azure",
+        "slack",
+        "linear",
+        "sharepoint",
+        "teams",
+        "helios",
+        "operator"
+      ]
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "local",
+        "dev",
+        "test",
+        "stage",
+        "prod",
+        "global"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "debug",
+        "info",
+        "notice",
+        "warning",
+        "error",
+        "critical"
+      ]
+    },
+    "sensitivity": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "commitSha",
+        "ref",
+        "workflow",
+        "workflowRunId",
+        "actor",
+        "idempotencyKey",
+        "contentSha256"
+      ],
+      "properties": {
+        "repository": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "commitSha": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40,64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "workflow": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "workflowRunId": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 256
+        },
+        "contentSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "maxProperties": 128
+    },
+    "requestedActions": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 16,
+      "items": {
+        "type": "string",
+        "enum": [
+          "notify",
+          "track",
+          "archive",
+          "approve",
+          "deploy",
+          "quarantine",
+          "rollback",
+          "none"
+        ]
+      }
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "url"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
+          }
+        }
+      }
+    },
+    "approval": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "policyId",
+        "required",
+        "state",
+        "records"
+      ],
+      "properties": {
+        "policyId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "required": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "not-required",
+            "pending",
+            "approved",
+            "rejected",
+            "expired"
+          ]
+        },
+        "records": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "channel",
+              "actor",
+              "decision",
+              "recordedAt"
+            ],
+            "properties": {
+              "channel": {
+                "type": "string",
+                "enum": [
+                  "github",
+                  "slack",
+                  "teams",
+                  "linear",
+                  "operator"
+                ]
+              },
+              "actor": {
+                "type": "string"
+              },
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject",
+                  "acknowledge"
+                ]
+              },
+              "recordedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

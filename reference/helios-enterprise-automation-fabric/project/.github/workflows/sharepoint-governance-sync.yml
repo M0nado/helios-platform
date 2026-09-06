@@ -1,0 +1,109 @@
+name: HELIOS SharePoint governance sync
+
+'on':
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Azure identity / SharePoint publication environment
+        required: true
+        type: choice
+        options: [stage, prod]
+      source_sha:
+        description: Exact reviewed 40-character source SHA
+        required: true
+        type: string
+      apply:
+        description: Upload after plan and protected-environment approval
+        required: true
+        type: boolean
+        default: false
+      confirmation:
+        description: Type PUBLISH HELIOS SHAREPOINT GOVERNANCE
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: sharepoint-governance-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: helios-${{ inputs.environment }}
+    env:
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      SITE_ID: ${{ vars.HELIOS_SHAREPOINT_SITE_ID }}
+      DRIVE_ID: ${{ vars.HELIOS_SHAREPOINT_DRIVE_ID }}
+    steps:
+      - name: Validate immutable inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+          if [[ '${{ inputs.apply }}' == 'true' ]]; then
+            test '${{ inputs.confirmation }}' = 'PUBLISH HELIOS SHAREPOINT GOVERNANCE'
+          fi
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Enforce exact source SHA
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Build deterministic publication plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/connectors/sharepoint_sync.py \
+            --root . \
+            --site-id "$SITE_ID" \
+            --drive-id "$DRIVE_ID"
+      - uses: azure/login@v3
+        if: ${{ inputs.apply }}
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Publish through Microsoft Graph with ephemeral token
+        if: ${{ inputs.apply }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SITE_ID"
+          test -n "$DRIVE_ID"
+          GRAPH_ACCESS_TOKEN=$(az account get-access-token \
+            --resource https://graph.microsoft.com/ \
+            --query accessToken \
+            --output tsv)
+          export GRAPH_ACCESS_TOKEN
+          python scripts/connectors/sharepoint_sync.py \
+            --root . \
+            --site-id "$SITE_ID" \
+            --drive-id "$DRIVE_ID" \
+            --apply \
+            --confirmation 'PUBLISH HELIOS SHAREPOINT GOVERNANCE'
+          unset GRAPH_ACCESS_TOKEN
+      - name: Hash publication evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          find artifacts -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > artifacts/SHAREPOINT_SHA256SUMS
+      - uses: actions/attest@v4
+        with:
+          subject-path: artifacts/sharepoint-sync-manifest.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sharepoint-governance-${{ inputs.environment }}-${{ inputs.source_sha }}
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 90

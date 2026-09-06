@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "authoritativeApprovalSystem": "github-protected-environments",
+  "workflows": [
+    {
+      "id": "deployment-approval",
+      "trigger": "broker-event:deployment.plan.created",
+      "targetChannel": "helios-ops",
+      "template": "config/slack/blocks/deployment-approval.json",
+      "actions": [
+        {
+          "id": "helios_plan_ack",
+          "meaning": "acknowledge",
+          "effect": "record-evidence-only"
+        },
+        {
+          "id": "helios_plan_reject",
+          "meaning": "reject",
+          "effect": "record-rejection-and-block"
+        },
+        {
+          "id": "helios_open_evidence",
+          "meaning": "open-link",
+          "effect": "none"
+        }
+      ],
+      "notes": "Acknowledgement never substitutes for the GitHub protected-environment approval."
+    },
+    {
+      "id": "incident-escalation",
+      "trigger": "broker-event:incident.*",
+      "targetChannel": "helios-control-plane",
+      "template": "config/slack/blocks/incident-critical.json",
+      "actions": [
+        {
+          "id": "helios_incident_ack",
+          "meaning": "acknowledge",
+          "effect": "update-linear-and-evidence"
+        },
+        {
+          "id": "helios_connector_quarantine_request",
+          "meaning": "request-quarantine",
+          "effect": "open-github-dispatch-awaiting-environment-approval"
+        }
+      ]
+    },
+    {
+      "id": "release-evidence",
+      "trigger": "broker-event:github.release.published",
+      "targetChannel": "helios-ops",
+      "template": "config/slack/blocks/release-evidence.json",
+      "actions": [
+        {
+          "id": "helios_open_evidence",
+          "meaning": "open-link",
+          "effect": "none"
+        }
+      ]
+    },
+    {
+      "id": "daily-health",
+      "trigger": "schedule:daily",
+      "targetChannel": "helios-control-plane",
+      "template": "config/slack/blocks/health-digest.json",
+      "actions": []
+    }
+  ],
+  "security": {
+    "verifySlackSignature": true,
+    "maximumTimestampSkewSeconds": 300,
+    "dedupeBy": "X-Slack-Request-Timestamp+X-Slack-Signature",
+    "allowlistedActionPrefixes": [
+      "helios_"
+    ]
+  }
+}

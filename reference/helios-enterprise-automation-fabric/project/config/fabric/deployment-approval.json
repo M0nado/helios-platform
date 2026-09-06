@@ -1,0 +1,64 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "msteams": {
+    "width": "Full"
+  },
+  "body": [
+    {
+      "type": "TextBlock",
+      "size": "Large",
+      "weight": "Bolder",
+      "text": "HELIOS production plan ready"
+    },
+    {
+      "type": "TextBlock",
+      "wrap": true,
+      "text": "${summary}"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Environment",
+          "value": "${environment}"
+        },
+        {
+          "title": "Source SHA",
+          "value": "${sourceSha}"
+        },
+        {
+          "title": "Plan SHA-256",
+          "value": "${planSha256}"
+        },
+        {
+          "title": "Correlation",
+          "value": "${correlationId}"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "wrap": true,
+      "isSubtle": true,
+      "text": "Teams acknowledgement is advisory. Final authorization occurs in the protected GitHub environment."
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "Review in GitHub",
+      "url": "${githubApprovalUrl}"
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Acknowledge",
+      "data": {
+        "action": "acknowledge",
+        "eventId": "${eventId}",
+        "correlationId": "${correlationId}"
+      }
+    }
+  ]
+}

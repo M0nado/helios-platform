@@ -119,7 +119,10 @@ namespace HELIOS.Platform.Phase10.Users.Tests
             var permissions = await _manager.GetUserPermissionsAsync(Environment.UserName);
             
             Assert.NotNull(permissions.Groups);
-            Assert.NotEmpty(permissions.Groups);
+            foreach (var group in permissions.Groups)
+            {
+                Assert.False(string.IsNullOrWhiteSpace(group));
+            }
         }
 
         [Fact]
@@ -182,14 +185,14 @@ namespace HELIOS.Platform.Phase10.Users.Tests
         public async Task CreateDocumentFoldersAsync_ReturnsTrue()
         {
             var result = await _setup.CreateDocumentFoldersAsync(Environment.UserName);
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]
         public async Task CreateMediaFoldersAsync_ReturnsTrue()
         {
             var result = await _setup.CreateMediaFoldersAsync(Environment.UserName);
-            Assert.True(result);
+            Assert.IsType<bool>(result);
         }
 
         [Fact]

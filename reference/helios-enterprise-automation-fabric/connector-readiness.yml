@@ -1,0 +1,97 @@
+name: HELIOS connector readiness
+
+'on':
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options: [dev, stage, prod]
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    environment: helios-${{ inputs.environment || 'dev' }}
+    env:
+      TARGET_ENVIRONMENT: ${{ inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e .
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Check Key Vault secret metadata without reading values
+        env:
+          KEY_VAULT: ${{ vars.HELIOS_KEY_VAULT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$KEY_VAULT"
+          python - <<'PY' > required-secrets.txt
+          import json
+          from pathlib import Path
+
+          registry = json.loads(Path('config/fabric/connector-registry.json').read_text(encoding='utf-8'))
+          names = sorted({
+              name.lower().replace('_', '-')
+              for connector in registry['connectors']
+              for name in connector['secretReferences']
+          })
+          print('\n'.join(names))
+          PY
+          : > secret-readiness.tsv
+          while IFS= read -r name; do
+            [[ -z "$name" ]] && continue
+            if az keyvault secret show \
+              --vault-name "$KEY_VAULT" \
+              --name "$name" \
+              --query id \
+              --output tsv >/dev/null 2>&1; then
+              printf '%s\tpresent\n' "$name" >> secret-readiness.tsv
+            else
+              printf '%s\tmissing\n' "$name" >> secret-readiness.tsv
+            fi
+          done < required-secrets.txt
+      - name: Produce safe readiness report
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          rows = []
+          for line in Path('secret-readiness.tsv').read_text(encoding='utf-8').splitlines():
+              name, state = line.split('\t', 1)
+              rows.append({'name': name, 'state': state})
+          report = {
+              'environment': os.environ['TARGET_ENVIRONMENT'],
+              'secretMetadata': rows,
+              'valuesRead': False,
+              'ready': all(row['state'] == 'present' for row in rows),
+          }
+          Path('connector-readiness.json').write_text(
+              json.dumps(report, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+      - uses: actions/upload-artifact@v7
+        with:
+          name: connector-readiness-${{ inputs.environment || 'dev' }}
+          path: connector-readiness.json
+          if-no-files-found: error
+          retention-days: 30

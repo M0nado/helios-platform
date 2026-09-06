@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "siteAlias": "HeliosGovernance",
+  "libraries": [
+    {
+      "name": "Automation Evidence",
+      "template": "documentLibrary",
+      "folders": [
+        "Plans",
+        "Deployments",
+        "Incidents",
+        "Releases",
+        "ConnectorHealth",
+        "Rollbacks"
+      ],
+      "columns": [
+        {
+          "name": "CorrelationId",
+          "type": "text",
+          "required": true,
+          "indexed": true
+        },
+        {
+          "name": "SourceSha",
+          "type": "text",
+          "required": false,
+          "indexed": true
+        },
+        {
+          "name": "EvidenceSha256",
+          "type": "text",
+          "required": true,
+          "indexed": true
+        },
+        {
+          "name": "Environment",
+          "type": "choice",
+          "choices": [
+            "dev",
+            "test",
+            "stage",
+            "prod",
+            "global"
+          ]
+        },
+        {
+          "name": "EventType",
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "Sensitivity",
+          "type": "choice",
+          "choices": [
+            "internal",
+            "confidential",
+            "restricted"
+          ]
+        },
+        {
+          "name": "GitHubRunUrl",
+          "type": "hyperlink"
+        },
+        {
+          "name": "LinearIssueUrl",
+          "type": "hyperlink"
+        }
+      ]
+    }
+  ],
+  "lists": [
+    {
+      "name": "Connector Registry",
+      "template": "genericList",
+      "columns": [
+        "ConnectorId",
+        "Owner",
+        "Mode",
+        "Health",
+        "LastCheckedUtc",
+        "ApprovalIssueUrl"
+      ]
+    },
+    {
+      "name": "Automation Approvals",
+      "template": "genericList",
+      "columns": [
+        "CorrelationId",
+        "PolicyId",
+        "AdvisoryChannel",
+        "Actor",
+        "Decision",
+        "RecordedUtc",
+        "GitHubApprovalUrl"
+      ]
+    }
+  ],
+  "retention": {
+    "label": "HELIOS Automation Evidence",
+    "years": 7,
+    "requiresPurviewAdmin": true
+  }
+}

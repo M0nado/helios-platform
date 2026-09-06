@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "channels": [
+    {
+      "purpose": "control-plane",
+      "name": "helios-control-plane",
+      "required": true,
+      "allowEventTypes": [
+        "deployment.*",
+        "github.workflow.*",
+        "connector.health.*"
+      ],
+      "minimumSeverity": "info"
+    },
+    {
+      "purpose": "operations",
+      "name": "helios-ops",
+      "required": true,
+      "allowEventTypes": [
+        "incident.*",
+        "deployment.*",
+        "release.*",
+        "evidence.*"
+      ],
+      "minimumSeverity": "notice"
+    },
+    {
+      "purpose": "security",
+      "name": "helios-security",
+      "required": false,
+      "allowEventTypes": [
+        "security.*",
+        "incident.security.*"
+      ],
+      "minimumSeverity": "warning"
+    }
+  ],
+  "denyDirectMessagesForAutomation": true,
+  "threadByCorrelationId": true
+}

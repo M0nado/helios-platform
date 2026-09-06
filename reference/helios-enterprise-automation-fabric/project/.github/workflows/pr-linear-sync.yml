@@ -1,0 +1,65 @@
+name: HELIOS PR lifecycle event
+
+'on':
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, closed, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  emit:
+    if: ${{ vars.HELIOS_FABRIC_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      # pull_request_target intentionally checks out only the trusted default branch.
+      # No code from the pull request is executed while repository secrets are available.
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Build metadata-only event
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_ACTION: ${{ github.event.action }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = {
+              'number': int(os.environ['PR_NUMBER']),
+              'action': os.environ['PR_ACTION'],
+              'title': os.environ['PR_TITLE'],
+              'url': os.environ['PR_URL'],
+              'author': os.environ['PR_AUTHOR'],
+              'merged': os.environ['PR_MERGED'].lower() == 'true',
+              'headSha': os.environ['PR_HEAD_SHA'],
+          }
+          Path('payload.json').write_text(json.dumps(payload), encoding='utf-8')
+          summary = f"PR #{payload['number']}: {payload['title']}"
+          Path('summary.txt').write_text(summary, encoding='utf-8')
+          PY
+          python scripts/github/build_event.py \
+            --event-type "github.pull-request.${PR_ACTION}" \
+            --summary "$(cat summary.txt)" \
+            --environment dev \
+            --severity info \
+            --actions track \
+            --payload @payload.json \
+            --output event.json
+      - name: Publish replay-bounded signed event
+        env:
+          HELIOS_FABRIC_INGRESS_URL: ${{ vars.HELIOS_FABRIC_INGRESS_URL }}
+          HELIOS_FABRIC_INGRESS_HMAC: ${{ secrets.HELIOS_FABRIC_INGRESS_HMAC }}
+        shell: bash
+        run: python scripts/github/publish_event.py --event event.json --apply

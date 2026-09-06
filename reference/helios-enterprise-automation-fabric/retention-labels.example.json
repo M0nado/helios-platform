@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "labels": [
+    {
+      "name": "Helios-Governance-7Y",
+      "durationDays": 2555,
+      "dispositionReview": true,
+      "record": false
+    },
+    {
+      "name": "Helios-Deployment-7Y",
+      "durationDays": 2555,
+      "dispositionReview": true,
+      "record": false
+    },
+    {
+      "name": "Helios-Incident-7Y",
+      "durationDays": 2555,
+      "dispositionReview": true,
+      "record": false
+    },
+    {
+      "name": "Helios-Release-7Y",
+      "durationDays": 2555,
+      "dispositionReview": true,
+      "record": false
+    },
+    {
+      "name": "Helios-Operations-1Y",
+      "durationDays": 365,
+      "dispositionReview": false,
+      "record": false
+    }
+  ],
+  "note": "Examples only. Purview administrators must map labels to organizational policy and legal requirements."
+}

@@ -182,6 +182,8 @@
     <Compile Remove="**/bin/**/*.cs" />
     <Compile Remove="**/Tests/**/*.cs" />
     <Compile Remove="**/*Tests.cs" />
+    <Compile Remove="**/obj/**/*.cs" />
+    <Compile Remove="**/bin/**/*.cs" />
   </ItemGroup>
 
 </Project>
