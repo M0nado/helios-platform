@@ -152,6 +152,11 @@
       "layer": "windows"
     },
     {
+      "path": "tests/HELIOS.Platform.Launcher.Tests/LauncherTests.cs",
+      "project": "tests/HELIOS.Platform.Launcher.Tests/HELIOS.Platform.Launcher.Tests.csproj",
+      "layer": "windows"
+    },
+    {
       "path": "tests/HELIOS.Platform.Tests/AI/Phase8_Stream6_AIHubTests.cs",
       "project": "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj",
       "layer": "windows"

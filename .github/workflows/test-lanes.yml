@@ -20,6 +20,7 @@ jobs:
           global-json-file: global.json
       - run: python3 eng/test/validate_test_ownership.py
       - run: dotnet test tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --configuration Release
+      - run: dotnet test tests/HELIOS.Platform.Launcher.Tests/HELIOS.Platform.Launcher.Tests.csproj --configuration Release
 
   windows:
     name: Tests / Windows
@@ -33,6 +34,8 @@ jobs:
         run: dotnet test tests/SecurityValidationTests.csproj --configuration Release
       - shell: pwsh
         run: dotnet test monado/helios-control/tests/Helios.Connect.Tests/Helios.Connect.Tests.csproj --configuration Release
+      - shell: pwsh
+        run: ./tests/scripts/Test-Python3Shim.ps1
 
   privileged:
     name: Tests / Privileged

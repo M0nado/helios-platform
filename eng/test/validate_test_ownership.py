@@ -20,6 +20,7 @@ def owner(path):
     if path.startswith("src/core/HELIOS.Platform/Phase10/Users/Tests/"): return "src/core/HELIOS.Platform/Phase10/Users/Tests/HELIOS.Platform.Phase10.Users.Tests.csproj"
     if path.startswith("src/tests/"): return "src/tests/HELIOS.Platform.Tests.csproj"
     if path.startswith("tests/analytics/"): return "tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj"
+    if path.startswith("tests/HELIOS.Platform.Launcher.Tests/"): return "tests/HELIOS.Platform.Launcher.Tests/HELIOS.Platform.Launcher.Tests.csproj"
     if path == "tests/SecurityValidationTests.cs": return "tests/SecurityValidationTests.csproj"
     if path.startswith("tests/HELIOS.Platform.Tests/Phase10/Quarantine/"): return "tests/HELIOS.Platform.Tests/Phase10/Quarantine/HELIOS.Platform.Tests.Phase10.Quarantine.csproj"
     return "tests/HELIOS.Platform.Tests/HELIOS.Platform.Tests.csproj"

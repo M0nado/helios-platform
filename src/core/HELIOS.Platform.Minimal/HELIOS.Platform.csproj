@@ -6,13 +6,15 @@
     <AssemblyName>HELIOS.Platform</AssemblyName>
     <RootNamespace>HELIOS.Platform</RootNamespace>
     <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <UseAppHost>true</UseAppHost>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
 </Project>
