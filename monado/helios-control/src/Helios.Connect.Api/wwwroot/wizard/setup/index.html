@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>HELIOS — Workspace setup</title>
+  <link rel="stylesheet" href="/wizard/wizard.css">
+  <link rel="stylesheet" href="./setup.css">
+</head>
+<body><main>
+  <header><div><span class="eyebrow">HELIOS CONTROL FABRIC · WORKSPACE</span>
+  <h1>One setup path. Clear evidence.</h1>
+  <p>Use the existing .NET workspace, Codex and Claude operator tools. Imported checks stay separate from account authorization and cloud activation.</p></div></header>
+  <nav aria-label="Setup navigation"><a href="/wizard/index.html">Azure control wizard</a><a href="https://github.com/codespaces" target="_blank" rel="noopener noreferrer">Open Codespaces</a><a href="https://github.com/Yolkster64/helios-platform/pull/135" target="_blank" rel="noopener noreferrer">Setup PR #135</a><a href="https://github.com/M0nado/helios-platform" target="_blank" rel="noopener noreferrer">Canonical fabric</a></nav>
+  <section class="setup-section"><span class="kicker">1 · PREPARE THE REVIEWED WORKSPACE</span><h2>Build and diagnose</h2>
+    <p>In the trusted Yolkster64 checkout, use PR #135 until it is reviewed and merged. These are commands to copy, not a remote execution surface.</p>
+    <pre id="checks">dotnet build HELIOS.sln -c Release
+pwsh scripts/setup/setup-all.ps1
+New-Item -ItemType Directory -Force .helios/setup | Out-Null
+pwsh scripts/bootstrap/setup-everything.ps1 -RequireReady -Json | Set-Content -Encoding utf8 .helios/setup/readiness.json
+git rev-parse HEAD</pre><button data-copy="checks">Copy PowerShell setup check</button>
+    <p>The report command requires PR #135. Exit 2 means attention is needed. Review the inventory before separately running <code>setup-all.ps1 -Fix</code> to install missing AI CLIs.</p>
+  </section>
+  <section class="setup-section"><span class="kicker">2 · VIEW YOUR REPORT WITHOUT UPLOADING IT</span><h2>Workspace readiness</h2>
+    <div class="grid"><label>Workspace repository<select id="repository"><option>Yolkster64/helios-platform</option><option>M0nado/helios-platform</option></select></label><label>Workspace commit from git rev-parse HEAD<input id="sourceSha" autocomplete="off" maxlength="40" placeholder="40-character commit SHA"></label></div>
+    <label>Choose .helios/setup/readiness.json<input type="file" id="report" accept="application/json,.json"></label>
+    <button id="forget">Forget imported report</button>
+    <p id="status" role="status" aria-live="polite">No machine report loaded</p><p id="details"></p><ul id="steps"></ul>
+    <p><strong>Imported, unattested evidence only.</strong> Reports expire after 30 minutes. The page ignores free-form summaries, credentials and commands. Nothing is uploaded or saved in browser storage.</p>
+  </section>
+  <section class="setup-section"><span class="kicker">3 · USE THE SAME HELIOS TOOLS</span><h2>Codex + Claude</h2>
+    <pre id="clients">codex login status
+codex mcp list
+claude --plugin-dir ./plugins/helios-operator</pre><button data-copy="clients">Copy client checks</button>
+    <p>In Claude, use <code>/mcp</code> and <code>/helios-operator:operate-helios</code>. Keep one HELIOS MCP registration per client. Use separate worktrees for concurrent coding.</p>
+    <p><a href="https://github.com/Yolkster64/helios-platform/pull/145" target="_blank" rel="noopener noreferrer">MCP verification #145</a> · <a href="https://github.com/Yolkster64/helios-platform/pull/113" target="_blank" rel="noopener noreferrer">Authentication #113</a> · <a href="https://github.com/Yolkster64/helios-platform/blob/codex/setup-readiness-evidence/docs/CANONICAL_DECISIONS.md" target="_blank" rel="noopener noreferrer">Full setup guide</a></p>
+  </section>
+  <section class="setup-section"><span class="kicker">4 · AUTHORIZE EACH CONNECTION</span><h2>Configuration is not activation</h2>
+    <table><thead><tr><th>Lane</th><th>Next evidence</th></tr></thead><tbody>
+      <tr><td>GitHub · Codex · Claude · GitHub Copilot</td><td>Intended account, one MCP status call; no paid inference is implied.</td></tr>
+      <tr><td>Slack · Linear</td><td><a href="https://github.com/Yolkster64/helios-platform/pull/136" target="_blank" rel="noopener noreferrer">Review connector repair #136 after #135</a>; separate OAuth and one approved delivery receipt.</td></tr>
+      <tr><td>SharePoint · OneDrive</td><td>Use existing owner-scoped Helios/Governance; tenant site and runtime worker permission are separate.</td></tr>
+      <tr><td>Teams · Microsoft 365 Copilot · Agent 365</td><td>Approved host package, precise callback/scopes, user/tenant authorization.</td></tr>
+      <tr><td>Azure · azd · Foundry · Cloud Shell · Azure DevOps</td><td>Explicit tenant/subscription/project, repository-specific OIDC, reviewed development what-if.</td></tr>
+      <tr><td>Hermes · XCore · AIHub</td><td>Bounded runtime status; Hermes remains candidate-only and XCore evaluation-only until separately approved.</td></tr>
+    </tbody></table>
+    <p><strong>Live connections: not verified by this page. Deployment authority: unchanged.</strong> ChatGPT app access is not transferred to machine CLI sessions. The existing protected Azure workflow remains the deployment path.</p>
+  </section>
+  <footer>Developer workbench: Yolkster64/helios-platform · Canonical execution: M0nado/helios-platform. No browser shell, key capture, automatic installation, consent, messaging or deployment is added.</footer>
+</main><script type="module" src="./panel.mjs"></script></body></html>

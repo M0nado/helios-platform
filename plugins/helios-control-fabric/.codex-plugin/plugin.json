@@ -1,6 +1,6 @@
 {
   "name": "helios-control-fabric",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Governed HELIOS MCP Apps control plane for Azure Edge, GitHub OIDC, DevOps sync, Microsoft Copilot, and collaboration systems.",
   "author": {
     "name": "HELIOS Platform",

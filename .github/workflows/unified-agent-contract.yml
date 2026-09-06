@@ -8,9 +8,7 @@ on:
       - ".github/copilot-instructions.md"
       - "config/integrations/**"
       - ".gitmodules"
-      - "modules/**"Because the new validator accepts any .gitmodules path whose URL is approved, an approved submodule can be moved to vendor/... and still pass; after that, gitlink-only PRs under that declared path do not match this modules/** filter (nor the matching push filter), so the repository-integrity gate will not run for the pin changes it is supposed to validate. Either reject declared paths outside modules/<repo> or watch all accepted gitlink paths.
-
-Useful? React with 👍 / 👎.
+      - "modules/**"
       - "scripts/integrations/validate_repository_integrity.py"
       - "docs/architecture/UNIFIED_AGENT_COMMUNICATION.md"
       - ".github/workflows/unified-agent-contract.yml"
@@ -31,8 +29,10 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
       - name: Validate JSON and canonical ownership
@@ -76,7 +76,7 @@ jobs:
           test -s docs/architecture/UNIFIED_AGENT_COMMUNICATION.md
       - name: Validate repository integrity
         run: python scripts/integrations/validate_repository_integrity.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: helios-unified-agent-contract
           path: |

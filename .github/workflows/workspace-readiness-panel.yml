@@ -1,0 +1,47 @@
+name: HELIOS workspace readiness panel
+on:
+  pull_request:
+    paths:
+      - 'plugins/helios-control-fabric/scripts/workspace-readiness.mjs'
+      - 'plugins/helios-control-fabric/scripts/lib/workspace-report.mjs'
+      - 'plugins/helios-control-fabric/skills/workspace-setup/**'
+      - 'plugins/helios-control-fabric/.codex-plugin/plugin.json'
+      - 'plugins/helios-control-fabric/tests/workspace-readiness.test.mjs'
+      - 'monado/helios-control/src/Helios.Connect.Api/wwwroot/wizard/**'
+      - 'docs/evidence/workspace-2026-09-05/**'
+      - '.github/workflows/workspace-readiness-panel.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+      - name: Set up pinned Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Test shared panel and CLI projection
+        run: node --test plugins/helios-control-fabric/tests/workspace-readiness.test.mjs
+      - name: Verify imported evidence bytes
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, zipfile
+          root = pathlib.Path('docs/evidence/workspace-2026-09-05')
+          manifest = json.loads((root / 'manifest.json').read_text())
+          for item in manifest['files']:
+              path = root / item['name']
+              assert len(path.read_bytes()) == item['bytes']
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == item['sha256']
+          with zipfile.ZipFile(root / 'HELIOS_READINESS_EVIDENCE_2026-09-05.zip') as archive:
+              assert archive.testzip() is None
+              assert len(archive.infolist()) == 8
+          PY
