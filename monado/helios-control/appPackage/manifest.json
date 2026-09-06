@@ -39,7 +39,7 @@
   ],
   "webApplicationInfo": {
     "id": "${{ENTRA_APP_ID}}",
-    "resource": "api://${{PUBLIC_HOSTNAME}}/${{ENTRA_APP_ID}}"
+    "resource": "api://${{ENTRA_APP_ID}}"
   },
   "authorization": {
     "permissions": {

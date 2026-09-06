@@ -109,7 +109,7 @@ jobs:
           assert "redirect_domains" in program
           assert "/access_as_user" in program
           assert "user_impersonation" not in program
-          assert "api://${{PUBLIC_HOSTNAME}}/${{ENTRA_APP_ID}}" in manifest
+          assert "api://${{ENTRA_APP_ID}}" in manifest
           PY
 
   mcp-contract:

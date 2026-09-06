@@ -16,15 +16,17 @@ permissions, never credential values.
    targets and do not exist in the current deployment definition.
 5. Microsoft 365 user actions use OAuth on-behalf-of so the agent cannot exceed the person’s access.
 6. The OpenAI provider can read `OPENAI_API_KEY` only in an explicitly configured
-   development process. The Azure deployment does not set that variable, grant
-   Key Vault secret access, or create a Key Vault reference, so online OpenAI
-   fails closed until an administrator implements and reviews that binding.
+   deployment. The Azure deployment keeps this binding disabled by default and
+   exposes an explicit `enableOpenAiApiKeyBinding` gate. Automation does not
+   write secret values, so online OpenAI still fails closed until an
+   administrator provisions `helios-openai-api-key`, enables the binding, and
+   completes governed Key Vault RBAC readiness.
 
 ## Secret references
 
 | Reference | Destination | Purpose |
 | --- | --- | --- |
-| `helios-openai-api-key` | Planned Azure Key Vault binding | OpenAI Responses provider; not created or granted by current automation |
+| `helios-openai-api-key` | Azure Key Vault secret reference wired to Container Apps `OPENAI_API_KEY` | OpenAI Responses provider; secret value must be provisioned by an administrator |
 | `helios-github-webhook-secret` | Planned Azure Key Vault binding | GitHub signature verification; not created or granted by current automation |
 | `helios-linear-webhook-secret` | Planned Azure Key Vault binding | Linear signature verification; not created or granted by current automation |
 | `helios-slack-signing-secret` | Planned Azure Key Vault binding | Slack signature and replay verification; not created or granted by current automation |
@@ -35,8 +37,10 @@ or private deployment parameters—not the public repository.
 
 No automation creates tenant-wide consent, Conditional Access policy, production
 credentials, or organization-wide Copilot publication without explicit approval.
-The current Bicep creates only the empty RBAC-enabled vault. An administrator must
-choose the secret-ingestion path, grant the workload identity the narrow Key Vault
-data-plane role, approve the Container Apps secret reference, and run a protected
-what-if/deployment. Plaintext secrets must never be supplied as Bicep, CLI, GitHub,
-or checked-in environment-file values.
+The current Bicep creates the RBAC-enabled vault and supports reviewed Container
+Apps secret references behind explicit parameter gating. An administrator must
+choose the secret-ingestion path, complete Key Vault RBAC readiness for the
+runtime identity, and populate secret values before live provider calls can
+succeed. Plaintext
+secrets must never be supplied as Bicep, CLI, GitHub, or checked-in environment-file
+values.

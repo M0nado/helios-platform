@@ -6,7 +6,8 @@ Performs read-only verification of a deployed Helios Azure connector.
 
 .DESCRIPTION
 Checks the anonymous health surface and verifies that the connector and MCP
-routes reject unauthenticated requests. With -InteractiveAuth, the script uses
+routing surface preserves public discovery while challenging unauthenticated
+tool execution requests. With -InteractiveAuth, the script uses
 Azure CLI to obtain a user access token in memory and verifies the read-only
 connector context, managed-identity resource inventory, OAuth metadata, and the
 MCP initialize/initialized/tools lifecycle. Tokens and request headers are never
@@ -255,8 +256,8 @@ try {
                 $scopeValid = $resourceValid -and $advertisedScopes.Count -eq 1 -and
                     [uri]::TryCreate([string]$advertisedScopes[0], [UriKind]::Absolute, [ref]$scopeUri) -and
                     $scopeUri.Scheme -eq 'api' -and
-                    [string]::Equals($scopeUri.DnsSafeHost, $resourceUri.DnsSafeHost, [StringComparison]::OrdinalIgnoreCase) -and
-                    $scopeUri.AbsolutePath.EndsWith("/$EntraClientId/access_as_user", [StringComparison]::OrdinalIgnoreCase)
+                    [string]::Equals($scopeUri.DnsSafeHost, $EntraClientId.ToString(), [StringComparison]::OrdinalIgnoreCase) -and
+                    [string]::Equals($scopeUri.AbsolutePath, '/access_as_user', [StringComparison]::OrdinalIgnoreCase)
                 $authorizationServers = @($metadata.authorization_servers)
                 $validMetadata =
                     $resourceValid -and $scopeValid -and
@@ -270,7 +271,7 @@ try {
             catch { $validMetadata = $false }
         }
         $passed = $response.StatusCode -eq 200 -and $validMetadata
-        Add-TestResult -Name 'oauth.protected-resource-metadata' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'RFC 9728 metadata advertises the exact MCP resource, Entra issuer, and access_as_user scope.' } else { 'Expected public RFC 9728 metadata for the exact connector MCP URL and origin-bound access_as_user scope.' })
+        Add-TestResult -Name 'oauth.protected-resource-metadata' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'RFC 9728 metadata advertises the exact MCP resource, Entra issuer, and api://<client-id>/access_as_user scope.' } else { 'Expected public RFC 9728 metadata for the exact connector MCP URL and api://<client-id>/access_as_user scope.' })
     }
     catch {
         Add-TestResult -Name 'oauth.protected-resource-metadata' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
@@ -289,10 +290,12 @@ try {
         if ([string]::IsNullOrWhiteSpace($script:applicationIdUri)) {
             throw 'The protected-resource metadata did not provide a validated Application ID URI.'
         }
+        $forgedAudience = $EntraClientId.ToString()
         $forgedPrincipalJson = @{
             claims = @(
-                @{ typ = 'aud'; val = $script:applicationIdUri },
-                @{ typ = 'scp'; val = 'access_as_user' }
+                @{ typ = 'aud'; val = $forgedAudience },
+                @{ typ = 'scp'; val = 'access_as_user' },
+                @{ typ = 'azp'; val = '04b07795-8ddb-461a-bbee-02f9e1bf7b46' }
             )
         } | ConvertTo-Json -Compress -Depth 10
         $forgedPrincipal = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($forgedPrincipalJson))
@@ -302,24 +305,71 @@ try {
         }
         $response = Invoke-ConnectorRequest -Method ([System.Net.Http.HttpMethod]::Get) -Path '/connector/context' -Body $null -BearerToken $null -Headers $forgedHeaders
         $passed = $response.StatusCode -eq 401
-        Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'The Azure ingress stripped a forged Easy Auth identity containing the otherwise valid audience and scope.' } else { 'Expected HTTP 401; client-supplied Easy Auth identity and claim headers must never cross the platform trust boundary.' })
+        Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'The Azure ingress stripped a forged Easy Auth identity containing otherwise valid aud/scope/azp claims.' } else { 'Expected HTTP 401; client-supplied Easy Auth identity and claim headers must never cross the platform trust boundary.' })
     }
     catch {
         Add-TestResult -Name 'anonymous.forged-easy-auth-header-denied' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
     }
 
     try {
-        $anonymousMcpBody = @{ jsonrpc = '2.0'; id = 900; method = 'tools/list'; params = @{} } | ConvertTo-Json -Compress -Depth 10
-        $response = Invoke-ConnectorRequest -Method ([System.Net.Http.HttpMethod]::Post) -Path '/mcp' -Body $anonymousMcpBody -BearerToken $null -Accept @('application/json', 'text/event-stream')
-        $challenge = if ($response.Headers.ContainsKey('WWW-Authenticate')) { [string]$response.Headers['WWW-Authenticate'] } else { '' }
-        $passed = $response.StatusCode -eq 401 -and
+        $anonymousToolsBody = @{ jsonrpc = '2.0'; id = 900; method = 'tools/list'; params = @{} } | ConvertTo-Json -Compress -Depth 10
+        $response = Invoke-ConnectorRequest -Method ([System.Net.Http.HttpMethod]::Post) -Path '/mcp' -Body $anonymousToolsBody -BearerToken $null -Accept @('application/json', 'text/event-stream')
+        $message = if ($response.StatusCode -eq 200) { ConvertFrom-McpResponse -Body $response.Body -ExpectedId 900 } else { $null }
+        $tools = if ($null -ne $message -and $message.ContainsKey('result') -and $message.result.ContainsKey('tools')) { @($message.result.tools) } else { @() }
+        $toolNames = @($tools | ForEach-Object { [string]$_.name } | Sort-Object -Unique)
+        $expectedAnonymousToolNames = @(
+            'search',
+            'fetch',
+            'helios_get_control_plane_status',
+            'helios_render_control_center',
+            'azure_get_context',
+            'azure_list_resources',
+            'azure_list_foundry_resources',
+            'helios_plan_automation',
+            'helios_propose_upgrade',
+            'helios_get_run',
+            'helios_list_connectors'
+        )
+        $toolDifference = @(Compare-Object -ReferenceObject $expectedAnonymousToolNames -DifferenceObject $toolNames)
+        $passed = $response.StatusCode -eq 200 -and $null -ne $message -and -not $message.ContainsKey('error') -and $toolDifference.Count -eq 0
+        Add-TestResult -Name 'anonymous.mcp-tools-list-public' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'Anonymous MCP tools/list returns the approved discovery inventory.' } else { 'Expected anonymous MCP tools/list to return exactly the approved discovery inventory.' })
+    }
+    catch {
+        Add-TestResult -Name 'anonymous.mcp-tools-list-public' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
+    }
+
+    try {
+        $anonymousToolCallBody = @{
+            jsonrpc = '2.0'
+            id = 901
+            method = 'tools/call'
+            params = @{
+                name = 'azure_get_context'
+                arguments = @{}
+            }
+        } | ConvertTo-Json -Compress -Depth 20
+        $response = Invoke-ConnectorRequest -Method ([System.Net.Http.HttpMethod]::Post) -Path '/mcp' -Body $anonymousToolCallBody -BearerToken $null -Accept @('application/json', 'text/event-stream')
+        $message = if ($response.StatusCode -eq 200) { ConvertFrom-McpResponse -Body $response.Body -ExpectedId 901 } else { $null }
+        $challengeMetadata = @()
+        if ($null -ne $message -and $message.ContainsKey('result') -and $message.result.ContainsKey('_meta')) {
+            $meta = $message.result._meta
+            if ($meta.ContainsKey('mcp/www_authenticate')) {
+                $challengeMetadata = @($meta['mcp/www_authenticate'])
+            }
+        }
+        $challenge = if ($challengeMetadata.Count -ge 1) { [string]$challengeMetadata[0] } else { '' }
+        $passed = $response.StatusCode -eq 200 -and
+            $null -ne $message -and
+            -not $message.ContainsKey('error') -and
+            $message.result.ContainsKey('isError') -and
+            [bool]$message.result.isError -and
             $challenge -match 'resource_metadata=' -and
             $challenge -match 'error="invalid_token"' -and
             $challenge.Contains("scope=`"$script:delegatedScope`"", [StringComparison]::Ordinal)
-        Add-TestResult -Name 'anonymous.mcp-denied' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'Protected MCP rejects anonymous requests with exact OAuth metadata, invalid_token, and delegated-scope guidance.' } else { 'Expected HTTP 401 with exact RFC 9728 resource_metadata, invalid_token, and access_as_user challenge parameters.' })
+        Add-TestResult -Name 'anonymous.mcp-tools-call-challenged' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'Anonymous MCP tools/call returns an OAuth challenge tool result with delegated scope guidance.' } else { 'Expected anonymous MCP tools/call to return an isError challenge result with exact delegated scope guidance.' })
     }
     catch {
-        Add-TestResult -Name 'anonymous.mcp-denied' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
+        Add-TestResult -Name 'anonymous.mcp-tools-call-challenged' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)
     }
 
     if ($InteractiveAuth) {
@@ -449,6 +499,10 @@ try {
                     $tools = if ($null -ne $message -and $message.ContainsKey('result') -and $message.result.ContainsKey('tools')) { @($message.result.tools) } else { @() }
                     $toolNames = @($tools | ForEach-Object { [string]$_.name })
                     $expectedToolNames = @(
+                        'search',
+                        'fetch',
+                        'helios_get_control_plane_status',
+                        'helios_render_control_center',
                         'azure_get_context',
                         'azure_list_resources',
                         'azure_list_foundry_resources',
@@ -459,7 +513,7 @@ try {
                     )
                     $toolDifference = @(Compare-Object -ReferenceObject $expectedToolNames -DifferenceObject $toolNames)
                     $passed = $response.StatusCode -eq 200 -and $null -ne $message -and $message.jsonrpc -eq '2.0' -and -not $message.ContainsKey('error') -and $toolDifference.Count -eq 0
-                    Add-TestResult -Name 'authenticated.mcp-tools-list' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP exposes exactly the seven approved read-only and plan-only tools.' } else { 'MCP tool inventory differs from the approved read-only and plan-only set.' })
+                    Add-TestResult -Name 'authenticated.mcp-tools-list' -Status $(if ($passed) { 'passed' } else { 'failed' }) -StatusCode $response.StatusCode -Detail $(if ($passed) { 'MCP exposes exactly the eleven approved discovery, read-only, and plan-only tools.' } else { 'MCP tool inventory differs from the approved discovery, read-only, and plan-only set.' })
                 }
                 catch {
                     Add-TestResult -Name 'authenticated.mcp-tools-list' -Status failed -StatusCode $null -Detail (Get-SafeErrorDetail $_)

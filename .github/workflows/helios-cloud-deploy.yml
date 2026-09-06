@@ -27,13 +27,27 @@ on:
         options:
           - what-if
           - deploy
+      reviewedRunId:
+        description: Workflow run ID from a completed what-if run for the same commit/environment (required for deploy mode)
+        required: false
+        type: string
+        default: ""
       confirmDeployment:
         description: Enter DEPLOY when mode is deploy; ignored for what-if
         required: false
         type: string
         default: ""
+      enableOpenAiSecretBinding:
+        description: Set true only after a governed Key Vault secret + RBAC readiness review
+        required: false
+        type: choice
+        default: "false"
+        options:
+          - "false"
+          - "true"
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -96,12 +110,22 @@ jobs:
         shell: bash
         env:
           DEPLOYMENT_MODE: ${{ inputs.mode || 'what-if' }}
+          REVIEWED_RUN_ID: ${{ inputs.reviewedRunId || '' }}
           DEPLOYMENT_CONFIRMATION: ${{ inputs.confirmDeployment || '' }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
         run: |
           set -euo pipefail
+          if [[ "${ENABLE_OPENAI_SECRET_BINDING}" != "false" && "${ENABLE_OPENAI_SECRET_BINDING}" != "true" ]]; then
+            echo "enableOpenAiSecretBinding must be true or false." >&2
+            exit 1
+          fi
           if [[ "${DEPLOYMENT_MODE}" == "deploy" ]]; then
             if [[ "${DEPLOYMENT_CONFIRMATION}" != "DEPLOY" ]]; then
               echo "A deploy run requires confirmDeployment=DEPLOY." >&2
+              exit 1
+            fi
+            if [[ ! "${REVIEWED_RUN_ID}" =~ ^[0-9]+$ ]]; then
+              echo "A deploy run requires reviewedRunId to be the numeric workflow run ID from a completed what-if run." >&2
               exit 1
             fi
           fi
@@ -129,7 +153,7 @@ jobs:
 
   preview:
     name: Reviewed Azure what-if (${{ inputs.targetEnvironment }})
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.mode || 'what-if') == 'what-if' }}
     needs: validate
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -158,6 +182,7 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_CLIENT_IDS: ${{ vars.HELIOS_ALLOWED_CLIENT_IDS }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
         run: |
@@ -168,6 +193,7 @@ jobs:
             AZURE_SUBSCRIPTION_ID
             AZURE_RESOURCE_GROUP
             HELIOS_ENTRA_CLIENT_ID
+            HELIOS_ALLOWED_CLIENT_IDS
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID
             HELIOS_CONTAINER_REGISTRY_NAME
           )
@@ -181,7 +207,19 @@ jobs:
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
             exit 1
           fi
-
+          mapfile -t allowed_clients < <(
+            tr ',; \t\r\n' '\n' <<<"${HELIOS_ALLOWED_CLIENT_IDS}" | sed '/^$/d'
+          )
+          if [[ "${#allowed_clients[@]}" -eq 0 ]]; then
+            echo "HELIOS_ALLOWED_CLIENT_IDS must include at least one GUID client ID." >&2
+            exit 1
+          fi
+          for client_id in "${allowed_clients[@]}"; do
+            if [[ ! "${client_id}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+              echo "HELIOS_ALLOWED_CLIENT_IDS contains invalid GUID value: ${client_id}" >&2
+              exit 1
+            fi
+          done
       - name: Azure login with GitHub OIDC
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
         with:
@@ -337,6 +375,20 @@ jobs:
             echo "ACR did not return an immutable digest for GITHUB_SHA ${GITHUB_SHA}." >&2
             exit 1
           fi
+          az acr repository update \
+            --name "${REGISTRY_NAME}" \
+            --image "${repository}@${digest}" \
+            --write-enabled false \
+            --delete-enabled false \
+            --output none
+          locked_manifest_json="$(az acr repository show \
+            --name "${REGISTRY_NAME}" \
+            --image "${repository}@${digest}" \
+            --output json)"
+          if ! jq --exit-status '.changeableAttributes.writeEnabled == false and .changeableAttributes.deleteEnabled == false' <<<"${locked_manifest_json}" > /dev/null; then
+            echo "The reviewed digest could not be locked (writeEnabled/deleteEnabled must both be false)." >&2
+            exit 1
+          fi
           immutable_reference="${REGISTRY_SERVER}/${repository}@${digest}"
           if [[ ! "${immutable_reference}" =~ ^[a-z0-9]{5,50}\.azurecr\.io/helios-connect@sha256:[0-9a-f]{64}$ ]]; then
             echo "The workflow produced an invalid immutable ACR reference." >&2
@@ -352,6 +404,7 @@ jobs:
         env:
           PROJECT_DIRECTORY: ${{ needs.validate.outputs.project-directory }}
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
           IMAGE_REFERENCE: ${{ steps.image.outputs.image_reference }}
           CONTAINER_REGISTRY_NAME: ${{ steps.registry.outputs.registry_name }}
           RESOURCE_GROUP_LOCATION: ${{ steps.registry.outputs.resource_group_location }}
@@ -362,6 +415,7 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_CLIENT_IDS: ${{ vars.HELIOS_ALLOWED_CLIENT_IDS }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
           COMMON_TAGS_SHA256: ${{ needs.validate.outputs.common_tags_sha256 }}
@@ -385,6 +439,8 @@ jobs:
               allowPreviewPlaceholder=false \
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
+              allowedClientIds="${HELIOS_ALLOWED_CLIENT_IDS}" \
+              enableOpenAiApiKeyBinding="${ENABLE_OPENAI_SECRET_BINDING}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \
@@ -414,6 +470,10 @@ jobs:
             )
           ' "${raw_what_if}" > "${artifact_dir}/what-if.json"
           review_sha256="$(sha256sum "${artifact_dir}/what-if.json" | cut -d' ' -f1)"
+          enable_openai_secret_binding=false
+          if [[ "${ENABLE_OPENAI_SECRET_BINDING}" == "true" ]]; then
+            enable_openai_secret_binding=true
+          fi
           jq --null-input \
             --arg runId "${GITHUB_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
@@ -428,12 +488,14 @@ jobs:
             --arg registryName "${CONTAINER_REGISTRY_NAME}" \
             --arg entraClientId "${HELIOS_ENTRA_CLIENT_ID}" \
             --arg entraTenantId "${AZURE_TENANT_ID}" \
+            --arg allowedClientIds "${HELIOS_ALLOWED_CLIENT_IDS}" \
+            --argjson enableOpenAiApiKeyBinding "${enable_openai_secret_binding}" \
             --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
             --arg whatIfSha256 "${what_if_sha256}" \
             --arg reviewSha256 "${review_sha256}" \
-            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
+            '{schemaVersion: 2, runId: $runId, sourceSha: $sourceSha, targetEnvironment: $targetEnvironment, subscriptionId: $subscriptionId, resourceGroup: $resourceGroup, template: {sha256: $templateSha256}, commonTagsSha256: $commonTagsSha256, parameters: {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedClientIds: $allowedClientIds, enableOpenAiApiKeyBinding: $enableOpenAiApiKeyBinding, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha}, whatIfSha256: $whatIfSha256, reviewSha256: $reviewSha256}' \
             > "${artifact_dir}/request.json"
 
           echo "what_if_sha256=${what_if_sha256}" >> "${GITHUB_OUTPUT}"
@@ -442,9 +504,12 @@ jobs:
             echo ""
             echo "- Environment: \`${TARGET_ENVIRONMENT}\`"
             echo "- Image: \`${IMAGE_REFERENCE}\`"
+            echo "- Reviewed what-if run ID: \`${GITHUB_RUN_ID}\`"
             echo "- Compiled template SHA-256: \`${TEMPLATE_SHA256}\`"
             echo "- Full canonical what-if SHA-256: \`${what_if_sha256}\`"
             echo "- Review-safe artifact content SHA-256: \`${review_sha256}\`"
+            echo "- OpenAI Key Vault binding enabled: \`${ENABLE_OPENAI_SECRET_BINDING}\`"
+            echo "- Deploy inputs after approval: \`mode=deploy\`, \`reviewedRunId=${GITHUB_RUN_ID}\`, \`confirmDeployment=DEPLOY\`"
             echo "- A deploy request now requires a second protected-environment approval."
           } >> "${GITHUB_STEP_SUMMARY}"
 
@@ -474,13 +539,13 @@ jobs:
     if: ${{ inputs.mode == 'deploy' && inputs.confirmDeployment == 'DEPLOY' }}
     needs:
       - validate
-      - preview
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     # A second environment deployment creates a distinct approval gate after
     # the immutable what-if artifact is available to reviewers.
     environment: ${{ inputs.targetEnvironment }}
     permissions:
+      actions: read
       contents: read
       id-token: write
     steps:
@@ -495,6 +560,7 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_CLIENT_IDS: ${{ vars.HELIOS_ALLOWED_CLIENT_IDS }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
         run: |
@@ -505,6 +571,7 @@ jobs:
             AZURE_SUBSCRIPTION_ID
             AZURE_RESOURCE_GROUP
             HELIOS_ENTRA_CLIENT_ID
+            HELIOS_ALLOWED_CLIENT_IDS
             HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID
             HELIOS_CONTAINER_REGISTRY_NAME
           )
@@ -518,6 +585,19 @@ jobs:
             echo "HELIOS_CONTAINER_REGISTRY_NAME must be a lowercase Azure Container Registry resource name." >&2
             exit 1
           fi
+          mapfile -t allowed_clients < <(
+            tr ',; \t\r\n' '\n' <<<"${HELIOS_ALLOWED_CLIENT_IDS}" | sed '/^$/d'
+          )
+          if [[ "${#allowed_clients[@]}" -eq 0 ]]; then
+            echo "HELIOS_ALLOWED_CLIENT_IDS must include at least one GUID client ID." >&2
+            exit 1
+          fi
+          for client_id in "${allowed_clients[@]}"; do
+            if [[ ! "${client_id}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+              echo "HELIOS_ALLOWED_CLIENT_IDS contains invalid GUID value: ${client_id}" >&2
+              exit 1
+            fi
+          done
 
       - name: Azure login with GitHub OIDC after second approval
         uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
@@ -563,27 +643,57 @@ jobs:
           echo "template_path=${canonical_template}" >> "${GITHUB_OUTPUT}"
           echo "template_sha256=${template_sha256}" >> "${GITHUB_OUTPUT}"
 
+      - name: Validate reviewed what-if run metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEWED_RUN_ID: ${{ inputs.reviewedRunId }}
+          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+        run: |
+          set -euo pipefail
+          run_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${REVIEWED_RUN_ID}")"
+          run_status="$(jq -r '.status' <<<"${run_json}")"
+          run_conclusion="$(jq -r '.conclusion' <<<"${run_json}")"
+          run_event="$(jq -r '.event' <<<"${run_json}")"
+          run_workflow_path="$(jq -r '.path // ""' <<<"${run_json}")"
+          run_head_sha="$(jq -r '.head_sha' <<<"${run_json}")"
+
+          if [[ "${run_status}" != "completed" || "${run_conclusion}" != "success" ]]; then
+            echo "The reviewed run must be a completed successful what-if run." >&2
+            exit 1
+          fi
+          if [[ "${run_event}" != "workflow_dispatch" || "${run_workflow_path}" != ".github/workflows/helios-cloud-deploy.yml" ]]; then
+            echo "reviewedRunId must reference a workflow_dispatch run of .github/workflows/helios-cloud-deploy.yml." >&2
+            exit 1
+          fi
+          if [[ "${run_head_sha}" != "${GITHUB_SHA}" ]]; then
+            echo "The reviewed run commit does not match this deploy run commit." >&2
+            exit 1
+          fi
+          echo "- Reviewed what-if run: \`${REVIEWED_RUN_ID}\` (\`${run_head_sha}\`, \`${TARGET_ENVIRONMENT}\`)" >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Download reviewed what-if evidence
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: helios-what-if-${{ github.run_id }}-${{ inputs.targetEnvironment }}
+          name: helios-what-if-${{ inputs.reviewedRunId }}-${{ inputs.targetEnvironment }}
           path: ${{ runner.temp }}/approved-what-if
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.reviewedRunId }}
 
       - name: Verify reviewed what-if evidence
+        id: evidence
         shell: bash
         env:
-          EXPECTED_WHAT_IF_SHA256: ${{ needs.preview.outputs.what_if_sha256 }}
-          EXPECTED_IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
-          EXPECTED_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
-          EXPECTED_RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
-          EXPECTED_TEMPLATE_SHA256: ${{ needs.preview.outputs.template_sha256 }}
+          REVIEWED_RUN_ID: ${{ inputs.reviewedRunId }}
           ACTUAL_TEMPLATE_SHA256: ${{ steps.template.outputs.template_sha256 }}
-          SERVICE_NAME: helios-connector
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_CLIENT_IDS: ${{ vars.HELIOS_ALLOWED_CLIENT_IDS }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
@@ -591,52 +701,87 @@ jobs:
         run: |
           set -euo pipefail
           evidence_dir="${RUNNER_TEMP}/approved-what-if"
+          request_path="${evidence_dir}/request.json"
+          review_path="${evidence_dir}/what-if.json"
           environment_name="${TARGET_ENVIRONMENT#azure-}"
-          actual_review_sha256="$(sha256sum "${evidence_dir}/what-if.json" | cut -d' ' -f1)"
-          expected_review_sha256="$(jq --raw-output '.reviewSha256' "${evidence_dir}/request.json")"
+
+          for required_file in "${request_path}" "${review_path}"; do
+            if [[ ! -f "${required_file}" ]]; then
+              echo "Reviewed what-if artifact is missing ${required_file##*/}." >&2
+              exit 1
+            fi
+          done
+
+          actual_review_sha256="$(sha256sum "${review_path}" | cut -d' ' -f1)"
+          expected_review_sha256="$(jq --raw-output '.reviewSha256' "${request_path}")"
+          expected_full_what_if_sha256="$(jq --raw-output '.whatIfSha256' "${request_path}")"
           if [[ "${actual_review_sha256}" != "${expected_review_sha256}" ]]; then
             echo "Downloaded review-safe what-if evidence does not match its recorded digest." >&2
             exit 1
           fi
-          if [[ "${EXPECTED_REGISTRY_NAME}" != "${HELIOS_CONTAINER_REGISTRY_NAME}" ]]; then
-            echo "The protected registry binding changed after preview; start a new workflow run." >&2
+          if [[ ! "${expected_full_what_if_sha256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "Reviewed request metadata does not contain a valid canonical what-if digest." >&2
             exit 1
           fi
-          if [[ "${EXPECTED_TEMPLATE_SHA256}" != "${ACTUAL_TEMPLATE_SHA256}" ]]; then
-            echo "The compiled deployment template changed after preview; start a new workflow run." >&2
+
+          image_reference="$(jq --raw-output '.parameters.containerImage' "${request_path}")"
+          registry_name="$(jq --raw-output '.parameters.containerRegistryName' "${request_path}")"
+          resource_group_location="$(jq --raw-output '.parameters.location' "${request_path}")"
+          service_name="$(jq --raw-output '.parameters.serviceName' "${request_path}")"
+          if [[ ! "${image_reference}" =~ ^[a-z0-9]{5,50}\.azurecr\.io/helios-connect@sha256:[0-9a-f]{64}$ ]]; then
+            echo "Reviewed evidence does not contain a valid immutable Helios image reference." >&2
             exit 1
+          fi
+
+          if [[ "${registry_name}" != "${HELIOS_CONTAINER_REGISTRY_NAME}" ]]; then
+            echo "The protected registry binding changed after the reviewed what-if run; start a new workflow run." >&2
+            exit 1
+          fi
+
+          enable_openai_secret_binding=false
+          if [[ "${ENABLE_OPENAI_SECRET_BINDING}" == "true" ]]; then
+            enable_openai_secret_binding=true
           fi
           jq --exit-status \
-            --arg runId "${GITHUB_RUN_ID}" \
+            --arg runId "${REVIEWED_RUN_ID}" \
             --arg sourceSha "${GITHUB_SHA}" \
             --argjson commonTags "${COMMON_TAGS_JSON}" \
             --arg commonTagsSha256 "${COMMON_TAGS_SHA256}" \
             --arg targetEnvironment "${TARGET_ENVIRONMENT}" \
             --arg templateSha256 "${ACTUAL_TEMPLATE_SHA256}" \
-            --arg location "${EXPECTED_RESOURCE_GROUP_LOCATION}" \
+            --arg location "${resource_group_location}" \
             --arg environmentName "${environment_name}" \
-            --arg serviceName "${SERVICE_NAME}" \
-            --arg imageReference "${EXPECTED_IMAGE_REFERENCE}" \
-            --arg registryName "${EXPECTED_REGISTRY_NAME}" \
+            --arg serviceName "${service_name}" \
+            --arg imageReference "${image_reference}" \
+            --arg registryName "${registry_name}" \
             --arg entraClientId "${HELIOS_ENTRA_CLIENT_ID}" \
             --arg entraTenantId "${AZURE_TENANT_ID}" \
+            --arg allowedClientIds "${HELIOS_ALLOWED_CLIENT_IDS}" \
+            --argjson enableOpenAiApiKeyBinding "${enable_openai_secret_binding}" \
             --arg allowedPrincipalObjectId "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
             --arg subscriptionId "${AZURE_SUBSCRIPTION_ID}" \
             --arg resourceGroup "${AZURE_RESOURCE_GROUP}" \
-            --arg whatIfSha256 "${EXPECTED_WHAT_IF_SHA256}" \
+            --arg whatIfSha256 "${expected_full_what_if_sha256}" \
             --arg reviewSha256 "${actual_review_sha256}" \
-            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
-            "${evidence_dir}/request.json" > /dev/null
+            '.schemaVersion == 2 and .runId == $runId and .sourceSha == $sourceSha and .targetEnvironment == $targetEnvironment and .subscriptionId == $subscriptionId and .resourceGroup == $resourceGroup and .template == {sha256: $templateSha256} and .commonTagsSha256 == $commonTagsSha256 and .parameters == {location: $location, environmentName: $environmentName, serviceName: $serviceName, containerImage: $imageReference, containerRegistryName: $registryName, commonTags: $commonTags, allowPreviewPlaceholder: false, entraClientId: $entraClientId, entraTenantId: $entraTenantId, allowedClientIds: $allowedClientIds, enableOpenAiApiKeyBinding: $enableOpenAiApiKeyBinding, allowedPrincipalObjectId: $allowedPrincipalObjectId, sourceCommitSha: $sourceSha} and .whatIfSha256 == $whatIfSha256 and .reviewSha256 == $reviewSha256' \
+            "${request_path}" > /dev/null
+
+          echo "image_reference=${image_reference}" >> "${GITHUB_OUTPUT}"
+          echo "registry_name=${registry_name}" >> "${GITHUB_OUTPUT}"
+          echo "resource_group_location=${resource_group_location}" >> "${GITHUB_OUTPUT}"
+          echo "environment_name=${environment_name}" >> "${GITHUB_OUTPUT}"
+          echo "service_name=${service_name}" >> "${GITHUB_OUTPUT}"
+          echo "what_if_sha256=${expected_full_what_if_sha256}" >> "${GITHUB_OUTPUT}"
 
       - name: Re-verify configured registry and published digest
         id: registry
         shell: bash
         env:
-          IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
+          IMAGE_REFERENCE: ${{ steps.evidence.outputs.image_reference }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           HELIOS_CONTAINER_REGISTRY_NAME: ${{ vars.HELIOS_CONTAINER_REGISTRY_NAME }}
-          EXPECTED_RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
+          EXPECTED_RESOURCE_GROUP_LOCATION: ${{ steps.evidence.outputs.resource_group_location }}
         run: |
           set -euo pipefail
           if [[ ! "${IMAGE_REFERENCE}" =~ ^[a-z0-9]{5,50}\.azurecr\.io/helios-connect@sha256:[0-9a-f]{64}$ ]]; then
@@ -681,16 +826,20 @@ jobs:
           az account get-access-token \
             --scope 'https://containerregistry.azure.net/.default' \
             --output none
-          if ! manifest_digest="$(az acr repository show \
+          if ! manifest_json="$(az acr repository show \
             --name "${HELIOS_CONTAINER_REGISTRY_NAME}" \
             --image "${repository}@${digest}" \
-            --query digest \
-            --output tsv)"; then
+            --output json)"; then
             echo "The immutable digest could not be read. The operator must grant the GitHub OIDC identity AcrPull (RBAC-only registry) or Container Registry Repository Reader (ABAC registry)." >&2
             exit 1
           fi
+          manifest_digest="$(jq -r '.digest // ""' <<<"${manifest_json}")"
           if [[ "${manifest_digest,,}" != "${digest,,}" ]]; then
             echo "The reviewed immutable digest is no longer available in the configured registry." >&2
+            exit 1
+          fi
+          if ! jq --exit-status '.changeableAttributes.writeEnabled == false and .changeableAttributes.deleteEnabled == false' <<<"${manifest_json}" > /dev/null; then
+            echo "The reviewed immutable digest is still mutable (writeEnabled/deleteEnabled must both be false)." >&2
             exit 1
           fi
           echo "registry_name=${HELIOS_CONTAINER_REGISTRY_NAME}" >> "${GITHUB_OUTPUT}"
@@ -699,15 +848,17 @@ jobs:
         shell: bash
         env:
           TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
-          IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
-          CONTAINER_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
-          RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
-          SERVICE_NAME: helios-connector
+          IMAGE_REFERENCE: ${{ steps.evidence.outputs.image_reference }}
+          CONTAINER_REGISTRY_NAME: ${{ steps.evidence.outputs.registry_name }}
+          RESOURCE_GROUP_LOCATION: ${{ steps.evidence.outputs.resource_group_location }}
+          SERVICE_NAME: ${{ steps.evidence.outputs.service_name }}
           TEMPLATE_PATH: ${{ steps.template.outputs.template_path }}
-          EXPECTED_WHAT_IF_SHA256: ${{ needs.preview.outputs.what_if_sha256 }}
+          EXPECTED_WHAT_IF_SHA256: ${{ steps.evidence.outputs.what_if_sha256 }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_CLIENT_IDS: ${{ vars.HELIOS_ALLOWED_CLIENT_IDS }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
         run: |
@@ -728,6 +879,8 @@ jobs:
               allowPreviewPlaceholder=false \
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
+              allowedClientIds="${HELIOS_ALLOWED_CLIENT_IDS}" \
+              enableOpenAiApiKeyBinding="${ENABLE_OPENAI_SECRET_BINDING}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \
@@ -743,33 +896,36 @@ jobs:
         id: deploy
         shell: bash
         env:
-          TARGET_ENVIRONMENT: ${{ inputs.targetEnvironment }}
-          IMAGE_REFERENCE: ${{ needs.preview.outputs.image_reference }}
-          CONTAINER_REGISTRY_NAME: ${{ needs.preview.outputs.registry_name }}
-          RESOURCE_GROUP_LOCATION: ${{ needs.preview.outputs.resource_group_location }}
-          SERVICE_NAME: helios-connector
+          IMAGE_REFERENCE: ${{ steps.evidence.outputs.image_reference }}
+          CONTAINER_REGISTRY_NAME: ${{ steps.evidence.outputs.registry_name }}
+          RESOURCE_GROUP_LOCATION: ${{ steps.evidence.outputs.resource_group_location }}
+          ENVIRONMENT_NAME: ${{ steps.evidence.outputs.environment_name }}
+          SERVICE_NAME: ${{ steps.evidence.outputs.service_name }}
           TEMPLATE_PATH: ${{ steps.template.outputs.template_path }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           HELIOS_ENTRA_CLIENT_ID: ${{ vars.HELIOS_ENTRA_CLIENT_ID }}
+          HELIOS_ALLOWED_CLIENT_IDS: ${{ vars.HELIOS_ALLOWED_CLIENT_IDS }}
+          ENABLE_OPENAI_SECRET_BINDING: ${{ inputs.enableOpenAiSecretBinding || 'false' }}
           HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID: ${{ vars.HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID }}
           COMMON_TAGS_JSON: ${{ needs.validate.outputs.common_tags_json }}
         run: |
           set -euo pipefail
-          environment_name="${TARGET_ENVIRONMENT#azure-}"
           deployment_json="$(az deployment group create \
-            --name "helios-cloud-${environment_name}-${GITHUB_RUN_ID}" \
+            --name "helios-cloud-${ENVIRONMENT_NAME}-${GITHUB_RUN_ID}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
             --template-file "${TEMPLATE_PATH}" \
             --parameters \
               location="${RESOURCE_GROUP_LOCATION}" \
-              environmentName="${environment_name}" \
+              environmentName="${ENVIRONMENT_NAME}" \
               serviceName="${SERVICE_NAME}" \
               containerImage="${IMAGE_REFERENCE}" \
               containerRegistryName="${CONTAINER_REGISTRY_NAME}" \
               allowPreviewPlaceholder=false \
               entraClientId="${HELIOS_ENTRA_CLIENT_ID}" \
               entraTenantId="${AZURE_TENANT_ID}" \
+              allowedClientIds="${HELIOS_ALLOWED_CLIENT_IDS}" \
+              enableOpenAiApiKeyBinding="${ENABLE_OPENAI_SECRET_BINDING}" \
               allowedPrincipalObjectId="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}" \
               sourceCommitSha="${GITHUB_SHA}" \
               commonTags="${COMMON_TAGS_JSON}" \
@@ -780,8 +936,8 @@ jobs:
             echo "Azure deployment did not return a valid HTTPS connector URL." >&2
             exit 1
           fi
-          if [[ ! "${connector_application_id_uri}" =~ ^api://[^/]+/[0-9a-fA-F-]{36}$ ]]; then
-            echo "Azure deployment did not return a valid origin-bound Entra Application ID URI." >&2
+          if [[ ! "${connector_application_id_uri}" =~ ^api://[0-9a-fA-F-]{36}$ ]]; then
+            echo "Azure deployment did not return a valid Entra Application ID URI." >&2
             exit 1
           fi
           echo "connector_url=${connector_url}" >> "${GITHUB_OUTPUT}"
@@ -812,9 +968,15 @@ jobs:
             exit 1
           fi
           application_id_uri="${CONNECTOR_SCOPE%/access_as_user}"
+          if [[ ! "${application_id_uri}" =~ ^api://[0-9a-fA-F-]{36}$ ]]; then
+            echo "The deployment did not return a valid Application ID URI for delegated scope validation." >&2
+            exit 1
+          fi
+          audience_client_id="${application_id_uri#api://}"
           forged_principal="$(jq -cn \
-            --arg audience "${application_id_uri}" \
-            '{claims: [{typ: "aud", val: $audience}, {typ: "scp", val: "access_as_user"}]}' |
+            --arg audience "${audience_client_id}" \
+            --arg azp '04b07795-8ddb-461a-bbee-02f9e1bf7b46' \
+            '{claims: [{typ: "aud", val: $audience}, {typ: "scp", val: "access_as_user"}, {typ: "azp", val: $azp}]}' |
             base64 --wrap=0)"
           forged_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
             --header 'X-MS-CLIENT-PRINCIPAL-ID: forged-untrusted-principal' \
@@ -830,16 +992,45 @@ jobs:
             --arg scope "${CONNECTOR_SCOPE}" \
             '.resource == $resource and (.authorization_servers | length) >= 1 and .scopes_supported == [$scope]' \
             <<<"${metadata}" > /dev/null
-          mcp_headers="$(mktemp)"
-          mcp_status="$(curl --silent --output /dev/null --dump-header "${mcp_headers}" --write-out '%{http_code}' \
+
+          anonymous_tools_list_body="$(mktemp)"
+          anonymous_tools_list_status="$(curl --silent --output "${anonymous_tools_list_body}" --write-out '%{http_code}' \
             --header 'Accept: application/json, text/event-stream' \
             --header 'Content-Type: application/json' \
             --data '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
             "${CONNECTOR_URL}/mcp")"
-          if [[ "${mcp_status}" != 401 ]] ||
-             ! grep -Fqi 'resource_metadata=' "${mcp_headers}" ||
-             ! grep -Fqi 'error="invalid_token"' "${mcp_headers}" ||
-             ! grep -Fqi "scope=\"${CONNECTOR_SCOPE}\"" "${mcp_headers}"; then
-            echo 'The anonymous MCP boundary did not return the exact RFC 9728 invalid_token and delegated-scope challenge.' >&2
+          expected_tools='["search","fetch","helios_get_control_plane_status","helios_render_control_center","azure_get_context","azure_list_resources","azure_list_foundry_resources","helios_plan_automation","helios_propose_upgrade","helios_get_run","helios_list_connectors"]'
+          if [[ "${anonymous_tools_list_status}" != 200 ]] ||
+             ! jq --exit-status --argjson expectedTools "${expected_tools}" '
+               .jsonrpc == "2.0" and
+               .id == 1 and
+               (.error | not) and
+               (.result.tools | type == "array") and
+               ((.result.tools | map(.name) | sort) == ($expectedTools | sort))
+             ' "${anonymous_tools_list_body}" > /dev/null; then
+            echo 'Anonymous MCP tools/list did not return the approved discovery tool inventory.' >&2
             exit 1
           fi
+
+          anonymous_tools_call_body="$(mktemp)"
+          anonymous_tools_call_status="$(curl --silent --output "${anonymous_tools_call_body}" --write-out '%{http_code}' \
+            --header 'Accept: application/json, text/event-stream' \
+            --header 'Content-Type: application/json' \
+            --data '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"azure_get_context","arguments":{}}}' \
+            "${CONNECTOR_URL}/mcp")"
+          if [[ "${anonymous_tools_call_status}" != 200 ]] ||
+             ! jq --exit-status --arg scope "${CONNECTOR_SCOPE}" '
+               .jsonrpc == "2.0" and
+               .id == 2 and
+               (.error | not) and
+               .result.isError == true and
+               (.result._meta["mcp/www_authenticate"] | type == "array") and
+               (.result._meta["mcp/www_authenticate"] | length >= 1) and
+               (.result._meta["mcp/www_authenticate"][0] | contains("resource_metadata=")) and
+               (.result._meta["mcp/www_authenticate"][0] | contains("error=\"invalid_token\"")) and
+               (.result._meta["mcp/www_authenticate"][0] | contains("scope=\"" + $scope + "\""))
+             ' "${anonymous_tools_call_body}" > /dev/null; then
+            echo 'Anonymous MCP tools/call did not return the expected RFC 9728 invalid_token delegated-scope challenge result.' >&2
+            exit 1
+          fi
+          rm -f "${anonymous_tools_list_body}" "${anonymous_tools_call_body}"

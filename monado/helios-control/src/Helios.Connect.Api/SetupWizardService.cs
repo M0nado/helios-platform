@@ -59,6 +59,7 @@ public sealed partial class SetupWizardService : ISetupWizardService
             "$containerImage = if ($env:HELIOS_CONTAINER_IMAGE) { $env:HELIOS_CONTAINER_IMAGE } else { Read-Host 'Enter the immutable ACR image reference ending in @sha256:<digest>' }",
             "$registryName = if ($env:HELIOS_CONTAINER_REGISTRY_NAME) { $env:HELIOS_CONTAINER_REGISTRY_NAME } else { Read-Host 'Enter the Azure Container Registry resource name' }",
             "$entraClientId = if ($env:HELIOS_ENTRA_CLIENT_ID) { $env:HELIOS_ENTRA_CLIENT_ID } else { Read-Host 'Enter the HELIOS Entra application client ID' }",
+            "$allowedClientIds = if ($env:HELIOS_ALLOWED_CLIENT_IDS) { $env:HELIOS_ALLOWED_CLIENT_IDS } else { '04b07795-8ddb-461a-bbee-02f9e1bf7b46' }",
             "$allowedPrincipalObjectId = if ($env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID) { $env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID } else { Read-Host 'Enter the allowed principal object ID' }",
             "git clone --filter=blob:none --no-checkout https://github.com/M0nado/helios-platform.git",
             "git -C ./helios-platform fetch --depth 1 origin $sourceSha",
@@ -67,7 +68,7 @@ public sealed partial class SetupWizardService : ISetupWizardService
             "Set-Location ./helios-platform/monado/helios-control",
             "$evidence = Join-Path $HOME 'clouddrive/helios-evidence'",
             "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Diagnose -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -EvidenceDirectory $evidence",
-            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -ContainerImage $containerImage -ContainerRegistryName $registryName -EntraClientId $entraClientId -AllowedPrincipalObjectId $allowedPrincipalObjectId -SourceCommitSha $sourceSha -EvidenceDirectory $evidence",
+            "./scripts/Invoke-HeliosEdgeAutomation.ps1 -Mode Plan -TenantId $tenantId -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup -EnvironmentName $environmentName -ContainerImage $containerImage -ContainerRegistryName $registryName -EntraClientId $entraClientId -AllowedClientIds $allowedClientIds -AllowedPrincipalObjectId $allowedPrincipalObjectId -SourceCommitSha $sourceSha -EvidenceDirectory $evidence",
             "Write-Host 'STOP: review the what-if file and SHA-256. This bootstrap never applies.'"
         });
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(script))).ToLowerInvariant();

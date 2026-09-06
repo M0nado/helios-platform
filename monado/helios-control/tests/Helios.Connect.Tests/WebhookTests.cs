@@ -13,6 +13,7 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     private const string GitHubWebhookSecret = "helios-test-webhook-secret";
     private const string LinearWebhookSecret = "helios-test-linear-secret";
     private const string SlackSigningSecret = "helios-test-slack-secret";
+    private const string AllowedOAuthClientId = "04b07795-8ddb-461a-bbee-02f9e1bf7b46";
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
     private readonly string? _originalGitHubWebhookSecret;
@@ -399,13 +400,14 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task Azure_mcp_exposes_host_compatible_approved_tool_contracts()
+    public async Task Azure_mcp_exposes_client_id_scope_approved_tool_contracts()
     {
-        const string applicationIdUri = "api://helios.example.test/11111111-1111-1111-1111-111111111111";
+        const string applicationIdUri = "api://11111111-1111-1111-1111-111111111111";
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
             builder.UseSetting("HELIOS_ENTRA_CLIENT_ID", "11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_ALLOWED_CLIENT_IDS", AllowedOAuthClientId);
             builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", applicationIdUri);
             builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test");
         });
@@ -526,13 +528,14 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
-    public async Task OAuth_metadata_and_tool_challenge_use_the_origin_bound_access_scope()
+    public async Task OAuth_metadata_and_tool_challenge_use_client_id_access_scope()
     {
-        const string applicationIdUri = "api://helios.example.test/11111111-1111-1111-1111-111111111111";
+        const string applicationIdUri = "api://11111111-1111-1111-1111-111111111111";
         await using var securedFactory = _factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("HELIOS_REQUIRE_ENTRA_AUTH", "true");
             builder.UseSetting("HELIOS_ENTRA_CLIENT_ID", "11111111-1111-1111-1111-111111111111");
+            builder.UseSetting("HELIOS_ALLOWED_CLIENT_IDS", AllowedOAuthClientId);
             builder.UseSetting("HELIOS_ENTRA_APPLICATION_ID_URI", applicationIdUri);
             builder.UseSetting("HELIOS_PUBLIC_BASE_URL", "https://helios.example.test");
         });
@@ -580,11 +583,23 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         using (var wrongAudienceRequest = CreateMcpRequest(
             toolCall,
             "access_as_user",
-            "api://wrong.example.test/11111111-1111-1111-1111-111111111111"))
+            "22222222-2222-2222-2222-222222222222"))
         using (var wrongAudienceResponse = await client.SendAsync(wrongAudienceRequest))
         {
             Assert.Equal(HttpStatusCode.OK, wrongAudienceResponse.StatusCode);
             using var challengeDocument = JsonDocument.Parse(await wrongAudienceResponse.Content.ReadAsStringAsync());
+            Assert.True(challengeDocument.RootElement.GetProperty("result").GetProperty("isError").GetBoolean());
+        }
+
+        using (var wrongClientRequest = CreateMcpRequest(
+            toolCall,
+            "access_as_user",
+            "11111111-1111-1111-1111-111111111111",
+            "33333333-3333-3333-3333-333333333333"))
+        using (var wrongClientResponse = await client.SendAsync(wrongClientRequest))
+        {
+            Assert.Equal(HttpStatusCode.OK, wrongClientResponse.StatusCode);
+            using var challengeDocument = JsonDocument.Parse(await wrongClientResponse.Content.ReadAsStringAsync());
             Assert.True(challengeDocument.RootElement.GetProperty("result").GetProperty("isError").GetBoolean());
         }
 
@@ -703,7 +718,8 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
     private static HttpRequestMessage CreateMcpRequest(
         string body,
         string? scopes = null,
-        string audience = "api://helios.example.test/11111111-1111-1111-1111-111111111111")
+        string audience = "11111111-1111-1111-1111-111111111111",
+        string authorizedParty = AllowedOAuthClientId)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
         {
@@ -712,21 +728,23 @@ public sealed class WebhookTests : IClassFixture<WebApplicationFactory<Program>>
         if (scopes is not null)
         {
             request.Headers.Add("X-MS-CLIENT-PRINCIPAL-ID", "test-principal");
-            request.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal(scopes, audience));
+            request.Headers.Add("X-MS-CLIENT-PRINCIPAL", CreateEasyAuthPrincipal(scopes, audience, authorizedParty));
         }
         return request;
     }
 
     private static string CreateEasyAuthPrincipal(
         string scopes,
-        string audience = "api://helios.example.test/11111111-1111-1111-1111-111111111111")
+        string audience = "11111111-1111-1111-1111-111111111111",
+        string authorizedParty = AllowedOAuthClientId)
     {
         var principal = JsonSerializer.Serialize(new
         {
             claims = new[]
             {
                 new { typ = "aud", val = audience },
-                new { typ = "scp", val = scopes }
+                new { typ = "scp", val = scopes },
+                new { typ = "azp", val = authorizedParty }
             }
         });
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(principal));

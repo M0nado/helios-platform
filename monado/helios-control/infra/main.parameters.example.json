@@ -24,11 +24,17 @@
     "allowPreviewPlaceholder": {
       "value": true
     },
+    "enableOpenAiApiKeyBinding": {
+      "value": false
+    },
     "entraClientId": {
       "value": "00000000-0000-0000-0000-000000000000"
     },
     "entraTenantId": {
       "value": "00000000-0000-0000-0000-000000000000"
+    },
+    "allowedClientIds": {
+      "value": "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
     },
     "allowedPrincipalObjectId": {
       "value": "00000000-0000-0000-0000-000000000000"

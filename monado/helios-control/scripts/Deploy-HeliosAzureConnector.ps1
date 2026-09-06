@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory)] [string] $EntraClientId,
     [Parameter(Mandatory)] [string] $EntraTenantId,
     [Parameter(Mandatory)] [string] $AllowedPrincipalObjectId,
+    [string] $AllowedClientIds = $env:HELIOS_ALLOWED_CLIENT_IDS,
     [string] $ImageReference = 'heliosplaceholderacr.azurecr.io/helios-connect@sha256:0000000000000000000000000000000000000000000000000000000000000000',
     [ValidateSet('dev', 'test', 'prod')] [string] $EnvironmentName = 'dev',
     [switch] $Apply
@@ -26,6 +27,22 @@ if ($ImageReference -notmatch '^(?<registry>[a-zA-Z0-9][a-zA-Z0-9-]{4,49})\.azur
 }
 $containerRegistryName = $Matches.registry
 
+if ([string]::IsNullOrWhiteSpace($AllowedClientIds)) {
+    throw 'AllowedClientIds is required and must contain one or more GUID values.'
+}
+$allowedClientIdSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($candidate in $AllowedClientIds.Split([char[]] @(',', ';', ' ', "`t", "`r", "`n"), [StringSplitOptions]::RemoveEmptyEntries)) {
+    $parsed = [guid]::Empty
+    if (-not [guid]::TryParse($candidate, [ref] $parsed)) {
+        throw "AllowedClientIds contains an invalid GUID value '$candidate'."
+    }
+    [void] $allowedClientIdSet.Add($parsed.ToString().ToLowerInvariant())
+}
+if ($allowedClientIdSet.Count -eq 0) {
+    throw 'AllowedClientIds is required and must contain one or more GUID values.'
+}
+$resolvedAllowedClientIds = [string]::Join(',', (@($allowedClientIdSet) | Sort-Object))
+
 az account show --output none
 az account set --subscription $SubscriptionId
 $exists = az group exists --name $ResourceGroup
@@ -42,6 +59,7 @@ $parameters = @(
     "allowPreviewPlaceholder=$($ImageReference.EndsWith('@sha256:' + ('0' * 64), [StringComparison]::OrdinalIgnoreCase).ToString().ToLowerInvariant())",
     "entraClientId=$EntraClientId",
     "entraTenantId=$EntraTenantId",
+    "allowedClientIds=$resolvedAllowedClientIds",
     "allowedPrincipalObjectId=$AllowedPrincipalObjectId"
 )
 

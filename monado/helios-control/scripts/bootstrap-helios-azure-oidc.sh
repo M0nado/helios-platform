@@ -40,6 +40,7 @@ az account show --output none 2>/dev/null || {
 az account set --subscription "$AZ_SUBSCRIPTION_ID"
 AZ_TENANT_ID="$(az account show --query tenantId --output tsv)"
 SIGNED_IN_OBJECT_ID="${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID:-$(az ad signed-in-user show --query id --output tsv)}"
+ALLOWED_CLIENT_IDS="${HELIOS_ALLOWED_CLIENT_IDS:-04b07795-8ddb-461a-bbee-02f9e1bf7b46}"
 RG_SCOPE="/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMPLATE="${ROOT_DIR}/infra/connector.bicep"
@@ -64,6 +65,7 @@ if [[ "$APPLY" != true ]]; then
         allowPreviewPlaceholder=true \
         entraClientId="$HELIOS_ENTRA_CLIENT_ID" \
         entraTenantId="$AZ_TENANT_ID" \
+        allowedClientIds="$ALLOWED_CLIENT_IDS" \
         allowedPrincipalObjectId="$SIGNED_IN_OBJECT_ID"
   else
     echo 'Preview only: create/select the resource group and set HELIOS_ENTRA_CLIENT_ID to run ARM what-if.'

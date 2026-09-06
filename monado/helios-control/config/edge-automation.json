@@ -69,6 +69,10 @@
   },
   "mcp": {
     "exposedTools": [
+      "search",
+      "fetch",
+      "helios_get_control_plane_status",
+      "helios_render_control_center",
       "azure_get_context",
       "azure_list_resources",
       "azure_list_foundry_resources",

@@ -25,6 +25,8 @@ param(
     [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
     [string] $EntraTenantId,
 
+    [string] $AllowedClientIds = $env:HELIOS_ALLOWED_CLIENT_IDS,
+
     [Parameter(Mandatory)]
     [ValidatePattern('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')]
     [string] $AllowedPrincipalObjectId
@@ -53,6 +55,22 @@ if (-not $digestMatch.Success) {
 $allowPreviewPlaceholder = $digestMatch.Groups[1].Value -eq $previewDigest
 $allowPreviewPlaceholderValue = if ($allowPreviewPlaceholder) { 'true' } else { 'false' }
 
+if ([string]::IsNullOrWhiteSpace($AllowedClientIds)) {
+    throw 'AllowedClientIds is required and must contain one or more GUID values.'
+}
+$allowedClientIdSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+foreach ($candidate in $AllowedClientIds.Split([char[]] @(',', ';', ' ', "`t", "`r", "`n"), [StringSplitOptions]::RemoveEmptyEntries)) {
+    $parsed = [guid]::Empty
+    if (-not [guid]::TryParse($candidate, [ref] $parsed)) {
+        throw "AllowedClientIds contains an invalid GUID value '$candidate'."
+    }
+    [void] $allowedClientIdSet.Add($parsed.ToString().ToLowerInvariant())
+}
+if ($allowedClientIdSet.Count -eq 0) {
+    throw 'AllowedClientIds is required and must contain one or more GUID values.'
+}
+$resolvedAllowedClientIds = [string]::Join(',', (@($allowedClientIdSet) | Sort-Object))
+
 az account show --output none
 if ($LASTEXITCODE -ne 0) { throw 'Azure CLI is not authenticated.' }
 
@@ -67,6 +85,7 @@ $deploymentParameters = @(
     "allowPreviewPlaceholder=$allowPreviewPlaceholderValue"
     "entraClientId=$EntraClientId"
     "entraTenantId=$EntraTenantId"
+    "allowedClientIds=$resolvedAllowedClientIds"
     "allowedPrincipalObjectId=$AllowedPrincipalObjectId"
 )
 

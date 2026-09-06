@@ -25,6 +25,7 @@ param(
     [string] $ContainerImage = $env:HELIOS_CONTAINER_IMAGE,
     [string] $ContainerRegistryName = $env:HELIOS_CONTAINER_REGISTRY_NAME,
     [string] $EntraClientId = $env:HELIOS_ENTRA_CLIENT_ID,
+    [string] $AllowedClientIds = $env:HELIOS_ALLOWED_CLIENT_IDS,
     [string] $AllowedPrincipalObjectId = $env:HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID,
     [string] $SourceCommitSha = $env:HELIOS_SOURCE_SHA,
     [string] $EvidenceDirectory = (Join-Path (Get-Location) 'evidence/helios-edge')
@@ -100,6 +101,28 @@ function Get-FileSha256 {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+function Resolve-AllowedClientIds {
+    param([AllowEmptyString()] [string] $Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw 'AllowedClientIds is required and must contain one or more GUID values.'
+    }
+
+    $allowed = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($candidate in $Value.Split([char[]] @(',', ';', ' ', "`t", "`r", "`n"), [StringSplitOptions]::RemoveEmptyEntries)) {
+        $parsed = [guid]::Empty
+        if (-not [guid]::TryParse($candidate, [ref] $parsed)) {
+            throw "AllowedClientIds contains an invalid GUID value '$candidate'."
+        }
+        [void] $allowed.Add($parsed.ToString().ToLowerInvariant())
+    }
+
+    if ($allowed.Count -eq 0) {
+        throw 'AllowedClientIds is required and must contain one or more GUID values.'
+    }
+
+    return [string]::Join(',', (@($allowed) | Sort-Object))
+}
+
 function Assert-AzureContext {
     $account = Invoke-AzJson -Arguments @('account', 'show') -Operation 'Reading Azure account context'
     if ([string] $account.tenantId -ne $TenantId) { throw 'Azure CLI tenant does not match -TenantId.' }
@@ -130,6 +153,7 @@ function Assert-DeploymentInputs {
         $parsed = [guid]::Empty
         if (-not [guid]::TryParse([string] $binding.Value, [ref] $parsed)) { throw "$($binding.Name) must be a GUID." }
     }
+    $script:ResolvedAllowedClientIds = Resolve-AllowedClientIds -Value $AllowedClientIds
     if ($SourceCommitSha -notmatch '^[0-9a-fA-F]{40}$') { throw 'SourceCommitSha must be the exact 40-character Git commit built into the image.' }
     $script:ResolvedDeploymentParameters = @(
         '--parameters',
@@ -140,6 +164,7 @@ function Assert-DeploymentInputs {
         'allowPreviewPlaceholder=false',
         "entraClientId=$EntraClientId",
         "entraTenantId=$TenantId",
+        "allowedClientIds=$script:ResolvedAllowedClientIds",
         "allowedPrincipalObjectId=$AllowedPrincipalObjectId",
         "sourceCommitSha=$($SourceCommitSha.ToLowerInvariant())"
     )
@@ -205,6 +230,7 @@ $request = [ordered]@{
         allowPreviewPlaceholder = $false
         entraClientId = $EntraClientId
         entraTenantId = $TenantId
+        allowedClientIds = $script:ResolvedAllowedClientIds
         allowedPrincipalObjectId = $AllowedPrincipalObjectId
         sourceCommitSha = $SourceCommitSha.ToLowerInvariant()
     }

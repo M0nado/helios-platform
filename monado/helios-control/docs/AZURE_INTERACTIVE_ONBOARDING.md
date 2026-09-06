@@ -52,6 +52,7 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -EnvironmentName dev `
   -ResourceGroup rg-helios-dev `
   -ContainerRegistryName '<globally-unique-acr-name>' `
+  -AllowedClientIds '<approved-host-client-guid[,approved-host-client-guid]>' `
   -RequiredReviewerId '<github-user-id>' `
   -GitHubDeploymentBranch main
 ```
@@ -60,11 +61,8 @@ This phase runs what-if with an all-zero preview placeholder when no image
 exists. It does not deploy an application. The connector API is single-tenant,
 uses v2 access tokens, exposes exactly `access_as_user`, and preauthorizes
 the Microsoft Azure CLI public client for that scope so the verifier can obtain
-a token without storing a secret. Before the first deployment its identifier is
-the provisional `api://<client-id>`. After deployment, re-run Configure once:
-the wizard discovers the Container App FQDN and adds the Teams-required
-`api://<public-hostname>/<client-id>` Application ID URI. Install the Teams
-package only after that origin-bound URI is verified.
+a token without storing a secret. The Entra Application ID URI stays
+`api://<client-id>`; do not rebind it to hostnames.
 
 ## 3. Prepare and dispatch the protected cloud build
 
@@ -87,7 +85,9 @@ pwsh -NoProfile -File ./scripts/Connect-HeliosAzureInteractive.ps1 `
   -Mode Publish `
   -EnvironmentName dev `
   -ResourceGroup rg-helios-dev `
-  -ContainerRegistryName '<globally-unique-acr-name>'
+  -ContainerRegistryName '<globally-unique-acr-name>' `
+  -AllowedClientIds '<approved-host-client-guid[,approved-host-client-guid]>' `
+  -RequiredReviewerId '<github-user-id>'
 ```
 
 The operator script emits no user-supplied image reference. The protected run
@@ -96,30 +96,28 @@ records the immutable image reference and source SHA in its what-if evidence.
 ## 4. Deploy the reviewed revision online
 
 The recommended deployment surface is the `helios-cloud-deploy` GitHub Actions
-workflow. Its preview job produces a hashed plan artifact. A separate deploy job
-inside the same deploy-mode workflow waits for a second protected-environment
-approval, verifies the artifact and its SHA-256, rechecks drift, and uses the
-same immutable image digest. This keeps application execution and deployment
-online and makes review evidence durable.
+workflow. A `mode=what-if` run produces one immutable evidence artifact for the
+approved commit/environment. A later `mode=deploy` run requires
+`reviewedRunId=<what-if-run-id>` plus `confirmDeployment=DEPLOY`, waits for a
+second protected-environment approval, downloads that exact artifact, verifies
+its hashes, rechecks drift, and applies the same immutable image digest.
 
 The evidence contract contains the exact source SHA, canonical compiled-template
 SHA-256, deployment scope, and every resolved Bicep parameter. ARM what-if uses
 `FullResourcePayloads`, so property-level changes are reviewable and participate
-in the drift hash. Only a redacted copy is uploaded; the full canonical payload
-is hashed on the ephemeral runner and is never published as an artifact.
+in the drift hash. The artifact keeps the review-safe redacted payload plus the
+canonical hash metadata; the unredacted payload is not published.
 
-The operator wizard has no direct deployment mode. After reviewing the initial
-what-if run, dispatch the root `helios-cloud-deploy` workflow on the approved
-branch with `mode=deploy` and `confirmDeployment=DEPLOY`. The workflow first
-waits at the preview environment, builds the exact selected commit and records
-its registry digest, produces and hashes canonical ARM what-if evidence, then
-waits at the separate deploy approval before rechecking drift and applying that
-same revision.
+The operator wizard has no direct deployment mode. Run the protected workflow
+in two stages on the approved branch:
 
-After the deployment returns the connector hostname, re-run `-Mode Configure`
-with the same reviewed inputs and confirmation. This idempotent pass discovers
-the deployed FQDN and finalizes the domain-qualified Teams SSO Application ID
-URI; it does not deploy the application.
+1. `mode=what-if` to produce the reviewed evidence artifact.
+2. `mode=deploy`, `reviewedRunId=<what-if-run-id>`, and
+   `confirmDeployment=DEPLOY` to consume that exact reviewed artifact.
+
+Re-running `-Mode Configure` remains idempotent for policy revalidation and
+GitHub/Azure binding checks, but it does not change the Entra Application ID
+URI convention.
 
 Use GitHub Actions → `helios-cloud-deploy` → **Run workflow**. Direct local
 `az deployment group create`, `azd provision`, and `azd deploy` are not Helios
@@ -134,10 +132,11 @@ Agent 365 publication, or Copilot Studio publication.
 
 First verify the anonymous health and fail-closed boundary. Add
 `-InteractiveAuth` to acquire an Entra token through Azure CLI in memory and
-verify connector context plus MCP initialization and its exact three-tool
-read-only allowlist. The verifier also sends the initialized notification and
-executes a real read-only ARM inventory call, so broken managed identity/RBAC
-fails verification rather than appearing ready.
+verify connector context plus MCP initialization and its exact eleven-tool
+discovery/read-only/plan-only inventory. The verifier confirms anonymous
+`tools/list` discovery stays public, anonymous `tools/call` returns the OAuth
+challenge tool result, and authenticated read-only calls complete through
+managed identity/RBAC.
 
 ```powershell
 pwsh -NoProfile -File ./scripts/Test-HeliosCloudConnection.ps1 `

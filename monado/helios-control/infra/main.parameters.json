@@ -21,11 +21,17 @@
     "allowPreviewPlaceholder": {
       "value": false
     },
+    "enableOpenAiApiKeyBinding": {
+      "value": false
+    },
     "entraClientId": {
       "value": "${HELIOS_ENTRA_CLIENT_ID}"
     },
     "entraTenantId": {
       "value": "${AZURE_TENANT_ID}"
+    },
+    "allowedClientIds": {
+      "value": "${HELIOS_ALLOWED_CLIENT_IDS}"
     },
     "allowedPrincipalObjectId": {
       "value": "${HELIOS_ALLOWED_PRINCIPAL_OBJECT_ID}"
