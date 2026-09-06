@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "3.0",
+  "tools": [
+    {"name": "helios_get_current_record", "description": "Read the current HELIOS authority record.", "readOnlyHint": true, "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}},
+    {"name": "helios_get_workflow_status", "description": "Read validation, connector readiness, and approval state.", "readOnlyHint": true, "inputSchema": {"type": "object", "properties": {}, "required": [], "additionalProperties": false}},
+    {"name": "helios_plan_sync", "description": "Produce a non-executing cross-surface synchronization plan.", "readOnlyHint": true, "inputSchema": {"type": "object", "properties": {"surfaces": {"type": "array", "items": {"type": "string"}}}, "required": ["surfaces"], "additionalProperties": false}},
+    {"name": "helios_search_evidence", "description": "Search redacted HELIOS evidence by query and bounded limit.", "readOnlyHint": true, "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 20}}, "required": ["query", "limit"], "additionalProperties": false}}
+  ],
+  "denied": ["shell", "arbitrary-http", "secret-readback", "admin-activation", "disk-mutation", "driver-write", "security-write", "azure-deploy", "tenant-consent", "github-merge"]
+}

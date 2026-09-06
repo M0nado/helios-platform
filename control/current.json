@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "3.0",
+  "correlationId": "8d418f74-18ac-4684-9b26-6b95ae7aff49",
+  "runId": "366f916a-cd18-46ef-acd8-a5e520b4d2a0",
+  "sourceSha": "8c03184b7b25373b66eabc660b99223718d9a5c8",
+  "stage": "integration-review",
+  "status": "draft",
+  "approvalState": "none",
+  "productionEnabled": false,
+  "summary": "HELIOS Unified Control v3 is staged as one authority record and one canonical event for the existing Helios.Connect control plane and Fabric.",
+  "nextAction": "Run complete GitHub CI on the review branch, then bind one existing permanent object per external surface.",
+  "links": {
+    "repository": "https://github.com/M0nado/helios-platform",
+    "controlPlane": "monado/helios-control",
+    "workflow": ".github/workflows/helios-unified-control-v3.yml"
+  },
+  "updatedUtc": "2026-09-06T01:23:30.097681+00:00"
+}

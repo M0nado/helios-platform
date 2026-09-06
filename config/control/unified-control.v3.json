@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "3.0",
+  "name": "HELIOS Unified Control Workflow",
+  "canonicalRepository": "M0nado/helios-platform",
+  "existingRuntime": "monado/helios-control",
+  "existingPolicy": "monado/helios-control/config/agent-core-policy.json",
+  "existingIntegrationRegistry": "monado/helios-control/config/integrations.json",
+  "authority": {
+    "sourceAndRelease": "GitHub",
+    "deployment": "GitHub protected environments",
+    "planning": "Linear",
+    "operationsConversation": "one Slack #helios-control-plane root thread",
+    "governanceEvidence": "one SharePoint HELIOS_CONTROL_PLANE_CURRENT.md plus immutable evidence",
+    "validationMirror": "Azure DevOps",
+    "assistantDigest": "OpenAI / ALVIS through bounded read-and-plan tools"
+  },
+  "masterRecord": {
+    "json": "control/current.json",
+    "markdown": "control/CURRENT.md",
+    "events": "control/events.jsonl",
+    "decisions": "control/decisions.jsonl",
+    "artifactRoot": "artifacts/control"
+  },
+  "operations": [
+    "status",
+    "validate",
+    "plan-sync",
+    "emit-event",
+    "connector-readiness",
+    "design-review",
+    "azure-plan-request",
+    "release-candidate",
+    "incident"
+  ],
+  "defaultMode": "plan-only",
+  "relay": {
+    "mode": "existing-helios-connect-signed-relay",
+    "eventType": "helios.control.current.updated",
+    "directProviderTokensAllowed": false,
+    "providerWritesFromWorkflowAllowed": false,
+    "configuration": "monado/helios-control/config/unified-control-v3.json"
+  },
+  "hardRules": [
+    "Every cross-system update carries correlationId, runId, sourceSha, stage, status, approvalState, nextAction, and evidence links.",
+    "A connector updates one configured permanent object and may not create a duplicate master record.",
+    "The unified workflow emits one canonical event into the existing HELIOS Fabric rather than calling every provider directly.",
+    "GitHub protected environments are the only deployment authority.",
+    "No secret value is written to source, logs, chat, Slack, Linear, SharePoint, or Azure DevOps.",
+    "Tenant activation and machine activation are separate approvals.",
+    "Production remains disabled until an approved exact-SHA what-if and a separate deployment approval succeed."
+  ]
+}

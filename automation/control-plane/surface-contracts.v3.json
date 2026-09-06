@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "3.0",
+  "surfaces": [
+    {"id": "github", "role": "source-pr-ci-release-deployment-authority", "permanentObject": "one master control issue", "writePath": "existing HELIOS Fabric relay", "deploymentAuthority": true},
+    {"id": "slack", "role": "operations-conversation-and-incidents", "permanentObject": "one #helios-control-plane root thread", "writePath": "signed relay worker", "deploymentAuthority": false},
+    {"id": "linear", "role": "work-graph-and-dependencies", "permanentObject": "one master issue/project", "writePath": "signed relay worker", "deploymentAuthority": false},
+    {"id": "sharepoint", "role": "durable-governance-and-evidence", "permanentObject": "one current-authority document", "writePath": "Graph-scoped relay worker", "deploymentAuthority": false},
+    {"id": "azure-devops", "role": "validation-and-evidence-mirror", "permanentObject": "one epic/work item", "writePath": "approved service connection", "deploymentAuthority": false},
+    {"id": "openai-alvis", "role": "bounded-search-plan-and-digest", "permanentObject": "one HELIOS Control Record conversation", "writePath": "governed MCP/provider", "deploymentAuthority": false}
+  ],
+  "deduplication": "correlationId-plus-idempotencyKey",
+  "redaction": "required-before-delivery",
+  "liveActivation": "one-connector-per-reviewed-registry-change"
+}

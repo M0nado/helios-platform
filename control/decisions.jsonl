@@ -1,0 +1,1 @@
+{"schemaVersion":"3.0","decisionId":"unified-control-v3-authority","decision":"Extend the existing HELIOS control plane and Fabric; do not create a second broker or direct provider-token mesh.","status":"accepted-for-review","sourceSha":"8c03184b7b25373b66eabc660b99223718d9a5c8"}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "3.0",
+  "note": "Identifiers only. Never store tokens, webhook secrets, client secrets, certificates, or API keys here.",
+  "github": {"enabled": false, "repository": "M0nado/helios-platform", "masterIssueNumber": null},
+  "slack": {"enabled": false, "workspaceId": null, "channelId": null, "threadTs": null},
+  "linear": {"enabled": false, "projectId": null, "masterIssueId": null},
+  "sharePoint": {"enabled": false, "siteId": null, "driveId": null, "path": "Helios/Governance/Architecture/Integration-Fabric/HELIOS_CONTROL_PLANE_CURRENT.md"},
+  "azureDevOps": {"enabled": false, "organizationUrl": null, "project": null, "masterWorkItemId": null},
+  "openAI": {"enabled": false, "projectReference": null, "controlConversationName": "HELIOS Control Record"}
+}

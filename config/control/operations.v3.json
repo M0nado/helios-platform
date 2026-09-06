@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "3.0",
+  "operations": {
+    "status": {"externalWrite": false, "approval": "none"},
+    "validate": {"externalWrite": false, "approval": "none"},
+    "plan-sync": {"externalWrite": false, "approval": "none"},
+    "emit-event": {"externalWrite": false, "approval": "none"},
+    "connector-readiness": {"externalWrite": false, "approval": "none"},
+    "design-review": {"externalWrite": true, "approval": "helios-design-review"},
+    "azure-plan-request": {"externalWrite": true, "approval": "azure-dev", "deployment": false},
+    "release-candidate": {"externalWrite": true, "approval": "helios-release-candidate"},
+    "incident": {"externalWrite": true, "approval": "helios-incident-operator"}
+  },
+  "exactConfirmations": {
+    "design-review": "PUBLISH HELIOS DESIGN REVIEW",
+    "azure-plan-request": "REQUEST HELIOS AZURE DEV WHATIF",
+    "release-candidate": "PUBLISH HELIOS RELEASE CANDIDATE"
+  }
+}
