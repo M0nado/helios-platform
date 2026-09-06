@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {"id":"ORG-001","priority":1,"lane":"integration/operations","title":"Inventory and safely absorb all non-default branches","acceptance":"Every branch has an owner and unique-delta evidence; merged branches are archived or deleted only after approval."},
+    {"id":"ORG-002","priority":2,"lane":"integration/operations","title":"Apply the five-lane branch ruleset","acceptance":"Main and five integration lanes are protected; short-lived branches squash-merge and auto-delete."},
+    {"id":"ORG-003","priority":3,"lane":"integration/operations","title":"Consolidate GitHub Actions into one required CI entry point","acceptance":"Duplicate triggers are removed and one required workflow fans out by changed path."},
+    {"id":"ORG-004","priority":4,"lane":"integration/platform","title":"Establish one canonical solution and build graph","acceptance":"All supported C#, F#, C++, Python, and WinUI projects are mapped, buildable, and owned."},
+    {"id":"ORG-005","priority":5,"lane":"integration/operations","title":"Quarantine generated and historical repository clutter","acceptance":"Root completion reports and binaries have a reviewed keep, archive, or remove decision and generated output is ignored."},
+    {"id":"ORG-006","priority":6,"lane":"integration/security","title":"Run secret, binary, dependency, and privileged-action audit","acceptance":"Findings are triaged without exposing secrets and dangerous automation defaults to dry-run with rollback gates."},
+    {"id":"ORG-007","priority":7,"lane":"integration/operations","title":"Make polyglot CI deterministic","acceptance":"Pinned toolchains build and test C#, F#, C++, Python, and WinUI in appropriate Linux and Windows lanes."},
+    {"id":"ORG-008","priority":8,"lane":"integration/intelligence","title":"Unify Hermes, XCore, and AIHub contracts","acceptance":"One versioned event envelope preserves correlation IDs, evidence links, evaluation, and pruning decisions."},
+    {"id":"ORG-009","priority":9,"lane":"integration/platform","title":"Reconcile helios-control with the canonical platform","acceptance":"Overlapping control modules are replaced by explicit packages, adapters, or tracked migrations."},
+    {"id":"ORG-010","priority":10,"lane":"integration/intelligence","title":"Audit hermes-fleet-production integration boundaries","acceptance":"Fleet ownership, APIs, events, version compatibility, and failure isolation are documented and contract-tested."},
+    {"id":"ORG-011","priority":11,"lane":"integration/security","title":"Complete workload-identity Azure bootstrap","acceptance":"Azure CLI setup uses OIDC, Key Vault, least privilege, protected environments, and Bicep what-if; no credentials are committed."},
+    {"id":"ORG-012","priority":12,"lane":"integration/product","title":"Select and validate the canonical WinUI 3 shell","acceptance":"Duplicate UI prototypes are retired after accessibility, packaging, startup, and smoke-test comparison."},
+    {"id":"ORG-013","priority":13,"lane":"integration/platform","title":"Create measured native performance boundaries","acceptance":"C++ is used only behind benchmarked, memory-safe interop boundaries with C# fallback and regression budgets."},
+    {"id":"ORG-014","priority":14,"lane":"integration/intelligence","title":"Validate F# analytics and Python prediction pipelines","acceptance":"Typed schemas, reproducible datasets, deterministic tests, and model-quality thresholds cover both runtimes."},
+    {"id":"ORG-015","priority":15,"lane":"integration/operations","title":"Automate backlog, release, and repository hygiene","acceptance":"Idempotent automation labels work, closes stale duplicates safely, generates releases, and reports drift without direct production mutation."}
+  ]
+}

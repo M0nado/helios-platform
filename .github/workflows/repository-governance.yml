@@ -1,0 +1,65 @@
+name: Repository governance
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  push:
+    paths:
+      - config/repository-backlog.json
+      - config/repository-governance.json
+      - scripts/github/sync_repository_backlog.py
+      - .github/ISSUE_TEMPLATE/**
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/workflows/repository-governance.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-governance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON and backlog invariants
+        run: |
+          python -m json.tool config/repository-governance.json >/dev/null
+          python -m json.tool config/repository-backlog.json >/dev/null
+          python scripts/github/sync_repository_backlog.py
+      - name: Enforce pull request routing
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          python - <<'PY'
+          import json, os, re, sys
+          head, base, body = os.environ['HEAD'], os.environ['BASE'], os.environ.get('BODY', '')
+          governance = json.load(open('config/repository-governance.json', encoding='utf-8'))
+          default_branch = governance.get('defaultBranch', 'main')
+          integration_branches = set(governance.get('integrationBranches', {}).keys())
+          short_lived_prefixes = tuple(governance.get('shortLivedPrefixes', []))
+
+          if not head.startswith(short_lived_prefixes) and head not in integration_branches:
+              sys.exit(f"Unsupported branch name: {head}")
+
+          allowed_bases = integration_branches | {default_branch}
+          if base not in allowed_bases:
+              sys.exit(f"Unsupported target branch: {base}")
+
+          if base == default_branch:
+              if head.startswith('hotfix/'):
+                  pass
+              elif head not in integration_branches:
+                  sys.exit('Only integration lanes and approved hotfixes may target main')
+          elif head in integration_branches:
+              sys.exit('Integration lanes may only target main')
+
+          body = re.sub(r'<!--.*?-->', '', body, flags=re.DOTALL)
+          if not re.search(r'(?i)(close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#\d+', body):
+              sys.exit('PR body must close one scoped issue')
+          PY

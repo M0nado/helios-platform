@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "defaultBranch": "main",
+  "integrationBranches": {
+    "integration/product": ["WinUI 3", "C# UX", "installer", "accessibility"],
+    "integration/platform": ["C# services", "C++ performance", "storage", "runtime"],
+    "integration/intelligence": ["F# analytics", "Python AIHub", "Hermes", "XCore"],
+    "integration/security": ["security", "identity", "policy", "Guardian"],
+    "integration/operations": ["CI", "Azure", "release", "repository maintenance"]
+  },
+  "shortLivedPrefixes": ["feature/", "fix/", "chore/", "docs/", "hotfix/"],
+  "requiredPullRequest": {
+    "issueLink": true,
+    "approvals": 1,
+    "dismissStaleApprovals": true,
+    "requireConversationResolution": true,
+    "requireLinearHistory": true,
+    "deleteHeadBranch": true,
+    "mergeMethod": "squash"
+  },
+  "protectedEffects": [
+    "production deployment", "tenant or RBAC change", "secret rotation",
+    "disk formatting or encryption", "WDAC or AppLocker", "firewall lockdown"
+  ]
+}

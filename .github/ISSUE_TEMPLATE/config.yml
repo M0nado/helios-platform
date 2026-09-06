@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/M0nado/helios-platform/security/advisories/new
+    about: Report vulnerabilities privately; never put secrets or exploit evidence in an issue.
+  - name: Architecture discussion
+    url: https://github.com/M0nado/helios-platform/discussions
+    about: Use a discussion for ideas that do not yet have testable acceptance criteria.
