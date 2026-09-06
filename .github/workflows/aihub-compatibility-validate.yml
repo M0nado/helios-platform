@@ -1,0 +1,108 @@
+name: AIHub Compatibility Validation
+
+on:
+  pull_request:
+    paths:
+      - 'python/aihub/secure_cli.py'
+      - 'python/aihub/training_proposal.py'
+      - 'python/x-tier/aihub_control_server.py'
+      - 'python/x-tier/ai.py'
+      - 'python/x-tier/deep_engine_fabric.py'
+      - 'python/x-tier/security_optimizer.py'
+      - 'python/x-tier/vm_orchestrator.py'
+      - 'python/x-tier/ml_registry.py'
+      - 'python/x-tier/build_super_outputs.py'
+      - 'python/x-tier/hermes_xcore_training_loop.py'
+      - 'python/x-tier/hermes_xcore_training_loop_pseudo.py'
+      - 'tests/python/test_aihub_secure_cli.py'
+      - 'tests/python/test_aihub_training_proposal.py'
+      - 'tests/python/test_aihub_legacy_compatibility.py'
+      - '.github/workflows/aihub-compatibility-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile active and compatibility modules
+        run: |
+          python -m compileall -q \
+            python/aihub \
+            python/x-tier
+
+      - name: Run CLI, proposal, and compatibility tests
+        run: |
+          python -m unittest -v \
+            tests.python.test_aihub_secure_cli \
+            tests.python.test_aihub_training_proposal \
+            tests.python.test_aihub_legacy_compatibility
+
+      - name: Enforce retired-entry-point boundary
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          paths = [
+              Path('python/x-tier/aihub_control_server.py'),
+              Path('python/x-tier/ai.py'),
+              Path('python/x-tier/hermes_xcore_training_loop.py'),
+              Path('python/x-tier/hermes_xcore_training_loop_pseudo.py'),
+          ]
+          text = '\n'.join(path.read_text(encoding='utf-8') for path in paths)
+          required = [
+              'secure_runtime.catalog_server',
+              'aihub.secure_cli',
+              'aihub.training_proposal',
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'Missing compatibility target: {token}')
+
+          forbidden = [
+              r'0\.0\.0\.0',
+              r'ThreadingHTTPServer',
+              r'subprocess\.',
+              r'os\.system\(',
+              r'shell\s*=\s*True',
+              r'request\.urlopen',
+              r'sk-proj-[A-Za-z0-9_-]{20,}',
+              r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',
+          ]
+          for pattern in forbidden:
+              if re.search(pattern, text):
+                  raise SystemExit(f'Unsafe legacy-entry behavior remains: {pattern}')
+
+      - name: Verify proposal output remains non-executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          python -m python.aihub.training_proposal \
+            --cycles 3 \
+            --seed 11 \
+            --security-profile offline \
+            --output "$tmp/proposal.json"
+          python - "$tmp/proposal.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          data = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+          assert data['executionMode'] == 'proposal-only'
+          assert data['automaticExecution'] is False
+          assert data['externalNetworkExecution'] is False
+          assert data['privilegedExecution'] is False
+          assert data['productionEnabled'] is False
+          assert data['securityPlan']['egress_policy'] == 'deny'
+          assert all(task['execution_authority'] == 'none' for task in data['tasks'])
+          PY
