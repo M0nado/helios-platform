@@ -33,7 +33,7 @@ byId('report').addEventListener('change', async event => {
   const file = event.target.files?.[0];
   try {
     if (!file || file.size > MAX_REPORT_BYTES) throw new Error('size');
-    lastInput = parseReport(await file.text());
+    lastInput = parseReport(new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer()));
     showProjection();
   } catch {
     clearTimeout(refreshTimer);
