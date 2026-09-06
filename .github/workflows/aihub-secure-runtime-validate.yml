@@ -1,0 +1,92 @@
+name: AIHub Secure Runtime Validation
+
+on:
+  pull_request:
+    paths:
+      - 'python/aihub/secure_runtime/**'
+      - 'tests/python/test_aihub_secure_runtime.py'
+      - 'config/ui/profile-wheel.v3.json'
+      - 'docs/security/AIHUB_SECURE_RUNTIME_V1.md'
+      - '.github/workflows/aihub-secure-runtime-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secure-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile secure runtime
+        run: python -m compileall -q python/aihub/secure_runtime
+
+      - name: Run secure runtime tests
+        run: python -m unittest -v tests.python.test_aihub_secure_runtime
+
+      - name: Validate six-profile and WinUI 3 contract
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path = Path('config/ui/profile-wheel.v3.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          assert data['desktopFramework'] == 'WinUI3'
+          assert [profile['id'] for profile in data['profiles']] == [
+              'core', 'developer', 'studio', 'gamer', 'ai-server', 'sysadmin'
+          ]
+          assert [profile['glyph'] for profile in data['profiles']] == [
+              '核', '創', '響', '迅', '智', '統'
+          ]
+          assert data['profiles'][-1]['administrator'] is True
+          assert data['profiles'][-1]['localOnly'] is True
+          assert all(
+              profile['administrator'] is False
+              for profile in data['profiles'][:-1]
+          )
+          assert [item['id'] for item in data['nonIdentityWorkflows']] == [
+              'recovery', 'quarantine'
+          ]
+          assert data['rules']['wpfAllowedInActiveProduct'] is False
+          assert data['rules']['winui3RequiredInActiveControlCenter'] is True
+
+      - name: Enforce runtime security invariants
+        shell: python
+        run: |
+          import re
+          from pathlib import Path
+
+          root = Path('python/aihub/secure_runtime')
+          text = '\n'.join(
+              path.read_text(encoding='utf-8')
+              for path in root.rglob('*.py')
+          )
+          required = [
+              '127.0.0.1',
+              'hmac.compare_digest',
+              'REQUEST_ENTITY_TOO_LARGE',
+              'TOO_MANY_REQUESTS',
+              'os.replace',
+              'automaticExecution',
+          ]
+          for token in required:
+              if token not in text:
+                  raise SystemExit(f'Missing security invariant: {token}')
+
+          forbidden = [
+              r'subprocess\.',
+              r'os\.system\(',
+              r'shell\s*=\s*True',
+              r'0\.0\.0\.0',
+              r'sk-proj-[A-Za-z0-9_-]{20,}',
+              r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',
+          ]
+          for pattern in forbidden:
+              if re.search(pattern, text):
+                  raise SystemExit(f'Forbidden runtime content: {pattern}')
