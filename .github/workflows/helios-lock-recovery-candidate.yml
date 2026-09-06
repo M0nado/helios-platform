@@ -77,8 +77,6 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
-    env:
-      NUGET_PACKAGES: ${{ runner.temp }}/helios-preview-isolated-packages
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -92,6 +90,7 @@ jobs:
         working-directory: eng/integration-lanes/preview/dotnet
         run: |
           $ErrorActionPreference = 'Stop'
+          $env:NUGET_PACKAGES = Join-Path $env:RUNNER_TEMP 'helios-preview-isolated-packages'
           $out = Join-Path $env:RUNNER_TEMP 'helios-preview-lock-proof'
           New-Item -ItemType Directory -Path $out -Force | Out-Null
           git rev-parse HEAD | Set-Content (Join-Path $out 'source-sha.txt')
@@ -108,9 +107,12 @@ jobs:
           Get-ChildItem $package -Filter '*.nupkg' | Get-FileHash -Algorithm SHA512 | ForEach-Object { [ordered]@{ name = Split-Path $_.Path -Leaf; sha512 = $_.Hash } } | ConvertTo-Json | Set-Content (Join-Path $out 'package-hashes.json')
           if (Test-Path (Join-Path $package '.nupkg.metadata')) {
             $metadata = Get-Content (Join-Path $package '.nupkg.metadata') -Raw | ConvertFrom-Json
-            [ordered]@{ contentHash = $metadata.contentHash; source = $metadata.source } | ConvertTo-Json | Set-Content (Join-Path $out 'package-source.json')
+            $sourceUri = $null
+            $sourceKind = 'local-sdk-or-cache'
+            if ([Uri]::TryCreate([string]$metadata.source, [UriKind]::Absolute, [ref]$sourceUri) -and $sourceUri.Scheme -eq 'https') { $sourceKind = $sourceUri.DnsSafeHost }
+            [ordered]@{ contentHash = $metadata.contentHash; sourceKind = $sourceKind } | ConvertTo-Json | Set-Content (Join-Path $out 'package-source.json')
           }
-          git diff -- eng/integration-lanes/preview/dotnet/FSharpProbe/packages.lock.json | Set-Content (Join-Path $out 'candidate.patch')
+          git -C ../../../.. diff -- eng/integration-lanes/preview/dotnet/FSharpProbe/packages.lock.json | Set-Content (Join-Path $out 'candidate.patch')
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
