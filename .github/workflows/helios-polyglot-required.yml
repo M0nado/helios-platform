@@ -39,7 +39,7 @@ jobs:
         run: |
           dotnet restore tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj
           dotnet restore tests/contracts/HELIOS.Platform.Contracts.Tests/HELIOS.Platform.Contracts.Tests.csproj
-          dotnet restore src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj
+          dotnet restore src/core/HELIOS.Platform.Minimal/HELIOS.Platform.csproj -p:Configuration=Release
       - name: Build portable projects
         run: |
           dotnet build tests/analytics/HELIOS.Analytics.FSharp.Tests/HELIOS.Analytics.FSharp.Tests.fsproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
