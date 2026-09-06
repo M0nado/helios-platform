@@ -1,0 +1,132 @@
+name: HELIOS Mainline Authority
+
+on:
+  pull_request:
+    paths:
+      - 'docs/governance/HELIOS_MAINLINE_CONSOLIDATION_V1.md'
+      - 'config/governance/helios-mainline-authority.v1.json'
+      - 'config/aihub/secure-runtime.v1.json'
+      - 'schemas/governance/helios-mainline-authority.v1.schema.json'
+      - 'tools/validation/validate_helios_mainline_authority.py'
+      - 'tools/validation/Test-HeliosPowerShellAst.ps1'
+      - 'tests/governance/test_helios_mainline_authority.py'
+      - 'tests/aihub/test_secure_runtime.py'
+      - 'python/aihub/secure_runtime/**'
+      - 'scripts/aihub/Start-HeliosSecureAIHub.ps1'
+      - '.github/workflows/helios-mainline-authority.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  GITHUB_TOKEN: ${{ github.token }}
+
+jobs:
+  python-contracts:
+    name: Python contracts and secure runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download exact source SHA without third-party actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir source
+          curl --fail --silent --show-error --location \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${SOURCE_SHA}" \
+            --output source.tgz
+          tar -xzf source.tgz -C source --strip-components=1
+
+      - name: Compile promoted Python modules
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            tools/validation/validate_helios_mainline_authority.py \
+            python/aihub/secure_runtime/config.py \
+            python/aihub/secure_runtime/state.py \
+            python/aihub/secure_runtime/server.py
+
+      - name: Validate mainline authority
+        working-directory: source
+        run: python3 tools/validation/validate_helios_mainline_authority.py
+
+      - name: Run focused regression tests
+        working-directory: source
+        run: |
+          python3 -m unittest -v \
+            tests.governance.test_helios_mainline_authority \
+            tests.aihub.test_secure_runtime
+
+  windows-powershell-ast:
+    name: Native Windows PowerShell AST
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download exact source SHA without third-party actions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          Invoke-WebRequest `
+            -Uri "https://api.github.com/repos/$env:GITHUB_REPOSITORY/tarball/$env:SOURCE_SHA" `
+            -Headers $headers `
+            -OutFile 'source.tgz'
+          New-Item -ItemType Directory -Path 'source' -Force | Out-Null
+          & tar.exe -xzf 'source.tgz' -C 'source' --strip-components=1
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to extract exact source archive.' }
+
+      - name: Parse active PowerShell source
+        working-directory: source
+        shell: pwsh
+        run: |
+          pwsh -NoProfile `
+            -File .\tools\validation\Test-HeliosPowerShellAst.ps1 `
+            -RepositoryRoot $PWD `
+            -OutputPath .\artifacts\validation\powershell-ast.json
+
+      - name: Parse secure AIHub launcher explicitly
+        working-directory: source
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          $path = Resolve-Path '.\scripts\aihub\Start-HeliosSecureAIHub.ps1'
+          [void][Management.Automation.Language.Parser]::ParseFile(
+            $path,
+            [ref]$tokens,
+            [ref]$errors
+          )
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+
+  required-gate:
+    name: HELIOS Mainline Authority Required Gate
+    if: ${{ always() }}
+    needs:
+      - python-contracts
+      - windows-powershell-ast
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all authority jobs
+        shell: bash
+        env:
+          PYTHON_RESULT: ${{ needs.python-contracts.result }}
+          POWERSHELL_RESULT: ${{ needs.windows-powershell-ast.result }}
+        run: |
+          set -euo pipefail
+          test "${PYTHON_RESULT}" = 'success'
+          test "${POWERSHELL_RESULT}" = 'success'
+          echo 'HELIOS mainline authority gate passed for the exact source SHA.'

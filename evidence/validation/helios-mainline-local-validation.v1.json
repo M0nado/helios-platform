@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "capturedUtc": "2026-09-05T00:00:00Z",
+  "repository": "M0nado/helios-platform",
+  "branch": "codex/helios-mainline-final-v1-20260905",
+  "scope": [
+    "config/governance/helios-mainline-authority.v1.json",
+    "tools/validation/validate_helios_mainline_authority.py",
+    "tests/governance/test_helios_mainline_authority.py",
+    "python/aihub/secure_runtime",
+    "tests/aihub/test_secure_runtime.py"
+  ],
+  "results": {
+    "pythonCompilation": "passed",
+    "authorityValidator": "passed",
+    "governanceTests": "passed",
+    "secureRuntimeTests": "passed",
+    "publicBindRejected": true,
+    "missingTokenRejected": true,
+    "oversizedRequestRejected": true,
+    "legacyTrainingRouteProposalOnly": true,
+    "adminRequestExecutionStarted": false,
+    "azureApplyEnabled": false,
+    "productionEnabled": false
+  },
+  "limitations": [
+    "This local validation does not replace hosted GitHub Actions on the exact branch head.",
+    "Native Windows PowerShell AST validation remains a required hosted gate.",
+    "No Azure, Entra, RBAC, Key Vault, connector, workstation, or deployment operation was executed."
+  ]
+}

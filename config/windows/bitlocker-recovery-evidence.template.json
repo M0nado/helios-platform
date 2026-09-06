@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "volume": "C:",
+  "recoveryKeyEscrowVerified": false,
+  "verifiedUtc": "<UTC timestamp>",
+  "verifiedBy": "<operator identifier>",
+  "evidenceLocation": "<offline or approved escrow reference; never the recovery password>",
+  "containsRecoveryPassword": false
+}

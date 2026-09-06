@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "name": "HELIOS Windows environment baseline",
+  "mode": "preserve-and-append",
+  "systemPathSuffixes": [
+    "System32",
+    "",
+    "System32\\Wbem",
+    "System32\\WindowsPowerShell\\v1.0",
+    "System32\\OpenSSH"
+  ],
+  "userPathSuffixes": [
+    "Microsoft\\WindowsApps"
+  ],
+  "criticalTools": [
+    { "name": "sfc.exe", "relativePath": "System32\\sfc.exe" },
+    { "name": "DISM.exe", "relativePath": "System32\\DISM.exe" },
+    { "name": "winmgmt.exe", "relativePath": "System32\\Wbem\\winmgmt.exe" },
+    { "name": "netsh.exe", "relativePath": "System32\\netsh.exe" },
+    { "name": "pnputil.exe", "relativePath": "System32\\pnputil.exe" }
+  ],
+  "machineWrite": {
+    "requiresAdministrator": true,
+    "confirmationPhrase": "REPAIR HELIOS MACHINE ENVIRONMENT"
+  },
+  "safety": {
+    "deleteExistingPathEntries": false,
+    "runSystemRepairCommands": false,
+    "modifySecurityPolicy": false,
+    "restartComputer": false
+  }
+}
