@@ -41,16 +41,18 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-          submodules: true
+          submodules: false
           persist-credentials: false
 
       - name: Discover All Components
         id: discover
         run: |
           set -euo pipefail
+          python3 scripts/integrations/validate_repository_integrity.py
           echo "Discovering components..."
+          # Evidence inventories are checksum manifests, not versioned components.
           COMPONENTS=$(find . -type f \( -name "package.json" -o -name "manifest.json" -o -name "version.json" \) \
-            -not -path '*/node_modules/*' -not -path '*/.git/*' -print \
+            -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path './docs/evidence/*' -print \
             | sed 's#^./##' | sort -u | jq -R 'select(length > 0)' | jq -cs .)
           COMPONENT_COUNT=$(jq 'length' <<<"${COMPONENTS}")
           echo "components=${COMPONENTS}" >> "${GITHUB_OUTPUT}"
@@ -70,7 +72,7 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-          submodules: true
+          submodules: false
           persist-credentials: false
 
       - name: Setup Node.js
@@ -80,8 +82,9 @@ jobs:
 
       - name: Extract Version Info
         id: version-info
+        env:
+          VERSION_FILE: ${{ matrix.component }}
         run: |
-          VERSION_FILE="${{ matrix.component }}"
           if [ ! -f "$VERSION_FILE" ]; then
             echo "::error::Version file not found: $VERSION_FILE"
             exit 1
@@ -110,8 +113,9 @@ jobs:
           echo "version_file=$VERSION_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Validate Version Format
+        env:
+          VERSION: ${{ steps.version-info.outputs.version }}
         run: |
-          VERSION="${{ steps.version-info.outputs.version }}"
           if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
             echo "::error::Invalid version format: $VERSION"
             exit 1
@@ -119,16 +123,16 @@ jobs:
           echo "✓ Version format valid: $VERSION"
 
       - name: Check for Conflicts
+        env:
+          VERSION_FILE: ${{ steps.version-info.outputs.version_file }}
+          VERSION: ${{ steps.version-info.outputs.version }}
+          PACKAGE_NAME: ${{ steps.version-info.outputs.name }}
         run: |
-          VERSION_FILE="${{ steps.version-info.outputs.version_file }}"
-          VERSION="${{ steps.version-info.outputs.version }}"
-
           if [ "$(basename "$VERSION_FILE")" != "package.json" ]; then
             echo "Skipping npm publication lookup for non-package manifest: $VERSION_FILE"
             exit 0
           fi
 
-          PACKAGE_NAME="${{ steps.version-info.outputs.name }}"
           if npm view "$PACKAGE_NAME@$VERSION" > /dev/null 2>&1; then
             echo "::warning::Version $VERSION already published"
           else
@@ -136,8 +140,9 @@ jobs:
           fi
 
       - name: Verify Dependencies
+        env:
+          COMPONENT: ${{ steps.version-info.outputs.component }}
         run: |
-          COMPONENT="${{ steps.version-info.outputs.component }}"
           if [ -f "$COMPONENT/package.json" ]; then
             echo "Checking dependencies for $COMPONENT..."
             jq '.dependencies, .devDependencies' "$COMPONENT/package.json" || true
@@ -145,10 +150,14 @@ jobs:
 
       - name: Report Version Info
         if: github.event.inputs.verbose == 'true'
+        env:
+          COMPONENT_NAME: ${{ steps.version-info.outputs.name }}
+          VERSION: ${{ steps.version-info.outputs.version }}
+          COMPONENT: ${{ steps.version-info.outputs.component }}
         run: |
-          echo "Component: ${{ steps.version-info.outputs.name }}"
-          echo "Version: ${{ steps.version-info.outputs.version }}"
-          echo "Location: ${{ steps.version-info.outputs.component }}"
+          echo "Component: $COMPONENT_NAME"
+          echo "Version: $VERSION"
+          echo "Location: $COMPONENT"
 
   generate-report:
     name: Generate Version Report
@@ -159,7 +168,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          submodules: true
+          submodules: false
           persist-credentials: false
 
       - name: Build Summary

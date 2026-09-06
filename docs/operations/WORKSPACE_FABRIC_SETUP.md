@@ -119,5 +119,19 @@ checks attachment integrity. No native C# code or Azure template changes are mad
 Full ASP.NET serving and visual browser QA must still be checked in the normal app
 build/review path. Publication is a draft PR, not a production-site update.
 
+Component Version Check validates versioned manifests in this repository, not
+private satellite checkouts. It validates the repository registry and pinned
+gitlinks without fetching submodules. Checksum inventories under `docs/evidence/`
+are excluded from component versioning; the workspace workflow verifies their
+bytes and hashes separately. Missing versions in component manifests still fail.
+
+Merge readiness requires successful checks on the current PR head, not historical
+evidence. A skipped validation job caused by an upstream failure is a blocker.
+Azure what-if and deployment jobs intentionally require an explicit workflow
+dispatch and protected-environment approval; they remain skipped on pull requests.
+Do not remove those gates to make a PR appear green. The legacy Node module-build
+matrix has a limited discovery scope and is not proof that platform runtimes
+built; the required polyglot workflow independently builds and tests them.
+
 Rollback: revert this additive panel/helper change. There are no tenant, identity,
 storage, webhook, service-connection, model or device changes to reverse.
